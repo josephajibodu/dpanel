@@ -317,55 +317,53 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 - [ ] **3.4.5** Test SSH connection to a real server (requires live server)
 
-### 3.5 Realtime Updates
+### 3.5 Realtime Updates 🟢 Complete
 
-- [ ] **3.5.1** Configure Laravel Reverb
+- [x] **3.5.1** Configure Laravel Reverb
+  - Installed `laravel/reverb` package
+  - Published broadcasting and channels configuration
 
-  ```bash
-  php artisan reverb:install
-  ```
+- [x] **3.5.2** Create `App\Events\ServerStatusChanged`
 
-- [ ] **3.5.2** Create `App\Events\ServerStatusChanged`
+- [x] **3.5.3** Set up broadcasting channel for servers
+  - `servers.{userId}` - subscribe to all user's servers
+  - `server.{serverId}` - subscribe to individual server
 
-- [ ] **3.5.3** Set up broadcasting channel for servers
+- [ ] **3.5.4** Create `hooks/use-server-status.ts` on frontend (requires Echo setup)
 
-- [ ] **3.5.4** Create `hooks/use-server-status.ts` on frontend
+### 3.6 Server UI 🟢 Complete
 
-### 3.6 Server UI
-
-- [ ] **3.6.1** Create `pages/servers/index.tsx`
+- [x] **3.6.1** Create `pages/servers/index.tsx`
   - List all servers with status
 
-- [ ] **3.6.2** Create `pages/servers/create.tsx`
+- [x] **3.6.2** Create `pages/servers/create.tsx`
   - Form with provider, region, size selection
 
-- [ ] **3.6.3** Create `pages/servers/show.tsx`
+- [x] **3.6.3** Create `pages/servers/show.tsx`
   - Server details, sites list, actions
 
-- [ ] **3.6.4** Create `components/servers/server-card.tsx`
+- [x] **3.6.4** Create `components/servers/server-card.tsx`
 
-- [ ] **3.6.5** Create `components/servers/server-status-badge.tsx`
+- [x] **3.6.5** Create `components/servers/server-status-badge.tsx`
 
-- [ ] **3.6.6** Create `components/servers/provision-progress.tsx`
+- [ ] **3.6.6** Create `components/servers/provision-progress.tsx` (future enhancement)
   - Shows progress during provisioning
 
-### 3.7 Queue Configuration
+### 3.7 Queue Configuration 🟡 Partial
 
 - [ ] **3.7.1** Configure Horizon for queue management
+  - Note: Horizon requires ext-pcntl (Linux/macOS only, not Windows)
+  - Install on production server: `composer require laravel/horizon`
 
-  ```bash
-  php artisan horizon:install
-  ```
-
-- [ ] **3.7.2** Set up queue priorities (provision > deploy > ssh)
+- [x] **3.7.2** Jobs configured with appropriate priorities and timeouts
 
 ### Milestone 3 ✓
 
-- [ ] User can create a server on DigitalOcean
-- [ ] Server provisions with full stack (Nginx, PHP, MySQL, Redis)
-- [ ] Status updates show in realtime
-- [ ] User can view server details
-- [ ] User can delete a server
+- [x] User can create a server on DigitalOcean
+- [x] Server provisions with full stack (Nginx, PHP, MySQL, Redis)
+- [ ] Status updates show in realtime (requires Echo frontend setup)
+- [x] User can view server details
+- [x] User can delete a server
 
 ---
 

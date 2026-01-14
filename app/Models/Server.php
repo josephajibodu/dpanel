@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Provider;
 use App\Enums\ServerStatus;
+use App\Events\ServerStatusChanged;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -53,6 +54,25 @@ class Server extends Model
             'ssh_port' => 'integer',
         ];
     }
+
+    protected static function booted(): void
+    {
+        static::updating(function (Server $server) {
+            // Track the previous status before update
+            if ($server->isDirty('status')) {
+                $server->previousStatus = $server->getOriginal('status');
+            }
+        });
+
+        static::updated(function (Server $server) {
+            // Dispatch event if status changed
+            if (isset($server->previousStatus) && $server->previousStatus !== $server->status) {
+                event(new ServerStatusChanged($server, $server->previousStatus));
+            }
+        });
+    }
+
+    public ?ServerStatus $previousStatus = null;
 
     public function uniqueIds(): array
     {
