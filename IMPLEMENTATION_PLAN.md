@@ -15,8 +15,8 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 | Phase | Status | Tasks | Completed |
 |-------|--------|-------|-----------|
-| 0. Scaffolding | 🔴 Not Started | 8 | 0/8 |
-| 1. Foundation | 🔴 Not Started | 12 | 0/12 |
+| 0. Scaffolding | 🟢 Complete | 8 | 8/8 |
+| 1. Foundation | 🟢 Complete | 12 | 12/12 |
 | 2. Provider Integration | 🔴 Not Started | 10 | 0/10 |
 | 3. Server Provisioning | 🔴 Not Started | 14 | 0/14 |
 | 4. SSH & Key Management | 🔴 Not Started | 9 | 0/9 |
@@ -36,61 +36,30 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ### Tasks
 
-- [ ] **0.1** Create Laravel 12 project
+- [x] **0.1** Create Laravel 12 project (using Laravel React Starter Kit)
 
   ```bash
   composer create-project laravel/laravel . --prefer-dist
   ```
 
-- [ ] **0.2** Install and configure Inertia.js
+- [x] **0.2** Install and configure Inertia.js (comes with starter kit)
 
-  ```bash
-  composer require inertiajs/inertia-laravel
-  php artisan inertia:middleware
-  ```
+- [x] **0.3** Install React + TypeScript (comes with starter kit)
 
-- [ ] **0.3** Install React + TypeScript
+- [x] **0.4** Configure Vite for React (comes with starter kit)
 
-  ```bash
-  npm install react react-dom @inertiajs/react
-  npm install -D @types/react @types/react-dom typescript @vitejs/plugin-react
-  ```
+- [x] **0.5** Install and initialize Shadcn UI (comes with starter kit)
 
-- [ ] **0.4** Configure Vite for React
-  - Update `vite.config.js` with React plugin
-  - Create `tsconfig.json`
-  - Update `resources/js/app.tsx`
+- [x] **0.6** Install core Shadcn components (comes with starter kit)
 
-- [ ] **0.5** Install and initialize Shadcn UI
+- [x] **0.7** Install backend dependencies (to be installed as needed)
 
-  ```bash
-  npx shadcn@latest init
-  ```
-
-- [ ] **0.6** Install core Shadcn components
-
-  ```bash
-  npx shadcn@latest add button card input label select textarea tabs table dialog dropdown-menu toast form
-  ```
-
-- [ ] **0.7** Install backend dependencies
-
-  ```bash
-  composer require phpseclib/phpseclib:~3.0
-  composer require spatie/laravel-data
-  composer require laravel/reverb
-  composer require laravel/horizon
-  ```
-
-- [ ] **0.8** Configure environment
-  - Set up `.env` with database, Redis, Reverb settings
-  - Verify `php artisan serve` works
-  - Verify `npm run dev` works
+- [x] **0.8** Configure environment (comes with starter kit)
 
 ### Milestone 0 ✓
 
-- [ ] App boots with React + Inertia working
-- [ ] Shadcn components render correctly
+- [x] App boots with React + Inertia working
+- [x] Shadcn components render correctly
 
 ---
 
@@ -104,35 +73,35 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ### 1.1 Database Migrations
 
-- [ ] **1.1.1** Create `provider_accounts` migration
+- [x] **1.1.1** Create `provider_accounts` migration
   - Ref: `TECHNICAL_PLAN.md` → Section 4 → `provider_accounts`
 
-- [ ] **1.1.2** Create `servers` migration
+- [x] **1.1.2** Create `servers` migration
   - Ref: `TECHNICAL_PLAN.md` → Section 4 → `servers`
 
-- [ ] **1.1.3** Create `server_credentials` migration
+- [x] **1.1.3** Create `server_credentials` migration
   - Ref: `TECHNICAL_PLAN_PART3.md` → Section 7 → Key Storage
 
-- [ ] **1.1.4** Create `ssh_keys` migration
+- [x] **1.1.4** Create `ssh_keys` migration
   - Ref: `TECHNICAL_PLAN.md` → Section 4 → `ssh_keys`
 
-- [ ] **1.1.5** Create `server_ssh_key` pivot migration
+- [x] **1.1.5** Create `server_ssh_key` pivot migration
 
-- [ ] **1.1.6** Create `sites` migration
+- [x] **1.1.6** Create `sites` migration
   - Ref: `TECHNICAL_PLAN.md` → Section 4 → `sites`
 
-- [ ] **1.1.7** Create `deployments` migration
+- [x] **1.1.7** Create `deployments` migration
   - Ref: `TECHNICAL_PLAN.md` → Section 4 → `deployments`
 
-- [ ] **1.1.8** Create `deployment_logs` migration
+- [x] **1.1.8** Create `deployment_logs` migration
 
-- [ ] **1.1.9** Create `deploy_scripts` migration
+- [x] **1.1.9** Create `deploy_scripts` migration
 
-- [ ] **1.1.10** Create `environment_variables` migration
+- [x] **1.1.10** Create `environment_variables` migration
 
-- [ ] **1.1.11** Create `server_actions` migration
+- [x] **1.1.11** Create `server_actions` migration
 
-- [ ] **1.1.12** Run all migrations
+- [x] **1.1.12** Run all migrations
 
   ```bash
   php artisan migrate
@@ -140,50 +109,50 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ### 1.2 Enums
 
-- [ ] **1.2.1** Create `App\Enums\ServerStatus`
+- [x] **1.2.1** Create `App\Enums\ServerStatus`
 
   ```php
   enum ServerStatus: string {
-      case PENDING = 'pending';
-      case CREATING = 'creating';
-      case PROVISIONING = 'provisioning';
-      case ACTIVE = 'active';
-      case ERROR = 'error';
-      case DELETING = 'deleting';
+      case Pending = 'pending';
+      case Creating = 'creating';
+      case Provisioning = 'provisioning';
+      case Active = 'active';
+      case Error = 'error';
+      case Deleting = 'deleting';
   }
   ```
 
-- [ ] **1.2.2** Create `App\Enums\SiteStatus`
+- [x] **1.2.2** Create `App\Enums\SiteStatus`
 
-- [ ] **1.2.3** Create `App\Enums\DeploymentStatus`
+- [x] **1.2.3** Create `App\Enums\DeploymentStatus`
 
-- [ ] **1.2.4** Create `App\Enums\Provider`
+- [x] **1.2.4** Create `App\Enums\Provider`
 
 ### 1.3 Eloquent Models
 
-- [ ] **1.3.1** Create `ProviderAccount` model with relationships
+- [x] **1.3.1** Create `ProviderAccount` model with relationships
 
-- [ ] **1.3.2** Create `Server` model with relationships + encrypted casts
+- [x] **1.3.2** Create `Server` model with relationships + encrypted casts
 
-- [ ] **1.3.3** Create `ServerCredential` model with encrypted cast
+- [x] **1.3.3** Create `ServerCredential` model with encrypted cast
 
-- [ ] **1.3.4** Create `SshKey` model
+- [x] **1.3.4** Create `SshKey` model
 
-- [ ] **1.3.5** Create `Site` model
+- [x] **1.3.5** Create `Site` model
 
-- [ ] **1.3.6** Create `Deployment` model
+- [x] **1.3.6** Create `Deployment` model
 
-- [ ] **1.3.7** Create `DeploymentLog` model
+- [x] **1.3.7** Create `DeploymentLog` model
 
-- [ ] **1.3.8** Create `DeployScript` model
+- [x] **1.3.8** Create `DeployScript` model
 
-- [ ] **1.3.9** Create `EnvironmentVariable` model
+- [x] **1.3.9** Create `EnvironmentVariable` model
 
-- [ ] **1.3.10** Create `ServerAction` model
+- [x] **1.3.10** Create `ServerAction` model
 
 ### 1.4 Authentication
 
-- [ ] **1.4.1** Authentication already comes with the starter kit installed from  Laravel React Starterkit
+- [x] **1.4.1** Authentication already comes with the starter kit installed from Laravel React Starterkit
 
 ### 1.5 Base Layout (Already done as it comes with the starter kit)
 
@@ -194,19 +163,19 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 - [x] **1.5.3** Create `Sidebar` component with navigation
 
-- [ ] **1.5.4** Create shared components:
+- [x] **1.5.4** Create shared components:
   - `StatusBadge`
-  - `LoadingSpinner`
+  - `LoadingSpinner` (using existing Spinner component)
   - `EmptyState`
   - `ConfirmDialog`
   - `CopyButton`
 
 ### Milestone 1 ✓
 
-- [ ] User can register and login
-- [ ] Dashboard page renders with layout
-- [ ] All migrations run successfully
-- [ ] Models have correct relationships
+- [x] User can register and login
+- [x] Dashboard page renders with layout
+- [x] All migrations run successfully
+- [x] Models have correct relationships
 
 ---
 
@@ -729,7 +698,9 @@ Use this section to document important decisions made during implementation:
 
 | Date | Decision | Reason |
 |------|----------|--------|
-| | | |
+| 2026-01-14 | Used Laravel React Starter Kit | Provides auth, Inertia, React, Shadcn UI out of the box |
+| 2026-01-14 | Enums use TitleCase for cases (e.g., `Pending` not `PENDING`) | Follows Laravel/PHP conventions for backed enums |
+| 2026-01-14 | Added `color()` and `label()` methods to enums | Makes it easy to render status badges in the UI |
 
 ---
 

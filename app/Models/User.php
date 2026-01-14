@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -48,5 +49,25 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function providerAccounts(): HasMany
+    {
+        return $this->hasMany(ProviderAccount::class);
+    }
+
+    public function servers(): HasMany
+    {
+        return $this->hasMany(Server::class);
+    }
+
+    public function sshKeys(): HasMany
+    {
+        return $this->hasMany(SshKey::class);
+    }
+
+    public function deployments(): HasMany
+    {
+        return $this->hasMany(Deployment::class);
     }
 }
