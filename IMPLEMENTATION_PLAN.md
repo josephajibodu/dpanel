@@ -3,6 +3,7 @@
 This document provides a **sequential, trackable guide** for building the Laravel Forge MVP clone. Check off tasks as you complete them.
 
 **Reference Documents:**
+
 - `TECHNICAL_PLAN.md` - Architecture, database schema
 - `TECHNICAL_PLAN_PART2.md` - Workflows, jobs & queues
 - `TECHNICAL_PLAN_PART3.md` - SSH, controllers, API endpoints
@@ -36,17 +37,20 @@ This document provides a **sequential, trackable guide** for building the Larave
 ### Tasks
 
 - [ ] **0.1** Create Laravel 12 project
+
   ```bash
   composer create-project laravel/laravel . --prefer-dist
   ```
 
 - [ ] **0.2** Install and configure Inertia.js
+
   ```bash
   composer require inertiajs/inertia-laravel
   php artisan inertia:middleware
   ```
 
 - [ ] **0.3** Install React + TypeScript
+
   ```bash
   npm install react react-dom @inertiajs/react
   npm install -D @types/react @types/react-dom typescript @vitejs/plugin-react
@@ -58,16 +62,19 @@ This document provides a **sequential, trackable guide** for building the Larave
   - Update `resources/js/app.tsx`
 
 - [ ] **0.5** Install and initialize Shadcn UI
+
   ```bash
   npx shadcn@latest init
   ```
 
 - [ ] **0.6** Install core Shadcn components
+
   ```bash
   npx shadcn@latest add button card input label select textarea tabs table dialog dropdown-menu toast form
   ```
 
 - [ ] **0.7** Install backend dependencies
+
   ```bash
   composer require phpseclib/phpseclib:~3.0
   composer require spatie/laravel-data
@@ -81,6 +88,7 @@ This document provides a **sequential, trackable guide** for building the Larave
   - Verify `npm run dev` works
 
 ### Milestone 0 ✓
+
 - [ ] App boots with React + Inertia working
 - [ ] Shadcn components render correctly
 
@@ -125,6 +133,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **1.1.11** Create `server_actions` migration
 
 - [ ] **1.1.12** Run all migrations
+
   ```bash
   php artisan migrate
   ```
@@ -132,6 +141,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 ### 1.2 Enums
 
 - [ ] **1.2.1** Create `App\Enums\ServerStatus`
+
   ```php
   enum ServerStatus: string {
       case PENDING = 'pending';
@@ -173,22 +183,16 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ### 1.4 Authentication
 
-- [ ] **1.4.1** Install Laravel Breeze with React
-  ```bash
-  composer require laravel/breeze --dev
-  php artisan breeze:install react --typescript
-  ```
+- [ ] **1.4.1** Authentication already comes with the starter kit installed from  Laravel React Starterkit
 
-- [ ] **1.4.2** Customize auth pages with Shadcn styling
+### 1.5 Base Layout (Already done as it comes with the starter kit)
 
-### 1.5 Base Layout
-
-- [ ] **1.5.1** Create `AppLayout` component with sidebar
+- [x] **1.5.1** Create `AppLayout` component with sidebar
   - Ref: `TECHNICAL_PLAN_PART4.md` → Section 10 → Component Structure
 
-- [ ] **1.5.2** Create `Header` component
+- [x] **1.5.2** Create `Header` component
 
-- [ ] **1.5.3** Create `Sidebar` component with navigation
+- [x] **1.5.3** Create `Sidebar` component with navigation
 
 - [ ] **1.5.4** Create shared components:
   - `StatusBadge`
@@ -198,6 +202,7 @@ This document provides a **sequential, trackable guide** for building the Larave
   - `CopyButton`
 
 ### Milestone 1 ✓
+
 - [ ] User can register and login
 - [ ] Dashboard page renders with layout
 - [ ] All migrations run successfully
@@ -275,6 +280,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **2.5.2** Create `VultrProvider` (similar to DO)
 
 ### Milestone 2 ✓
+
 - [ ] User can connect DigitalOcean account
 - [ ] Credentials are validated via API
 - [ ] Regions and sizes can be fetched
@@ -345,6 +351,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 ### 3.5 Realtime Updates
 
 - [ ] **3.5.1** Configure Laravel Reverb
+
   ```bash
   php artisan reverb:install
   ```
@@ -376,6 +383,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 ### 3.7 Queue Configuration
 
 - [ ] **3.7.1** Configure Horizon for queue management
+
   ```bash
   php artisan horizon:install
   ```
@@ -383,6 +391,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **3.7.2** Set up queue priorities (provision > deploy > ssh)
 
 ### Milestone 3 ✓
+
 - [ ] User can create a server on DigitalOcean
 - [ ] Server provisions with full stack (Nginx, PHP, MySQL, Redis)
 - [ ] Status updates show in realtime
@@ -439,6 +448,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **4.4.3** Create `components/servers/restart-dropdown.tsx`
 
 ### Milestone 4 ✓
+
 - [ ] User can add SSH keys
 - [ ] Keys can be synced to selected servers
 - [ ] Keys can be revoked from servers
@@ -513,6 +523,7 @@ This document provides a **sequential, trackable guide** for building the Larave
   - Code editor with syntax highlighting
 
 ### Milestone 5 ✓
+
 - [ ] User can create sites on servers
 - [ ] Nginx is configured automatically
 - [ ] Repository is cloned
@@ -593,6 +604,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **6.6.2** Generate and display API tokens
 
 ### Milestone 6 ✓
+
 - [ ] User can trigger deployments manually
 - [ ] Deployment logs stream in realtime
 - [ ] GitHub webhook triggers auto-deploy
@@ -683,6 +695,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 - [ ] **7.7.3** Create deployment guide
 
 ### Milestone 7 ✓
+
 - [ ] All tests pass
 - [ ] Error handling is comprehensive
 - [ ] UI is polished and responsive
