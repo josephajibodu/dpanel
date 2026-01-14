@@ -20,7 +20,7 @@ class ServerController extends Controller
     {
         $servers = auth()->user()
             ->servers()
-            ->with('providerAccount:id,name,provider')
+            ->with('providerAccount')
             ->withCount('sites')
             ->latest()
             ->paginate(20);
@@ -79,7 +79,7 @@ class ServerController extends Controller
         $this->authorize('view', $server);
 
         $server->load([
-            'providerAccount:id,name,provider',
+            'providerAccount:id,ulid,name,provider,is_valid,validated_at,created_at,updated_at',
             'sites' => fn ($q) => $q->with('latestDeployment')->latest(),
             'actions' => fn ($q) => $q->latest()->limit(10),
         ]);
