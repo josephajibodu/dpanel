@@ -4,6 +4,7 @@ namespace App\Services\Ssh;
 
 use App\Exceptions\SshCommandException;
 use App\Models\Server;
+use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SFTP;
 use phpseclib3\Net\SSH2;
 
@@ -14,6 +15,7 @@ class SshConnection
     public function __construct(
         private SSH2 $ssh,
         private Server $server,
+        private string $username = 'forge',
     ) {}
 
     /**
@@ -127,7 +129,7 @@ class SshConnection
     }
 
     /**
-     * Get the SFTP connection.
+     * Get the SFTP connection using the same credentials as SSH.
      */
     private function getSftp(): SFTP
     {
@@ -137,15 +139,15 @@ class SshConnection
                 $this->server->ssh_port
             );
 
-            // Load and authenticate with same key
             $privateKeyCredential = $this->server->credentials()
                 ->where('type', 'private_key')
                 ->first();
 
-            $key = \phpseclib3\Crypt\PublicKeyLoader::load($privateKeyCredential->value);
+            $key = PublicKeyLoader::load($privateKeyCredential->value);
 
-            if (! $this->sftp->login('forge', $key) && ! $this->sftp->login('root', $key)) {
-                throw new \RuntimeException('Failed to authenticate SFTP connection');
+            // Use the same username as the SSH connection
+            if (! $this->sftp->login($this->username, $key)) {
+                throw new \RuntimeException("Failed to authenticate SFTP connection as {$this->username}");
             }
         }
 

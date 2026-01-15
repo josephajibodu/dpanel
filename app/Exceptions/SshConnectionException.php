@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Exception;
+use Throwable;
 
 class SshConnectionException extends Exception
 {
@@ -10,7 +11,8 @@ class SshConnectionException extends Exception
         string $message,
         public readonly ?string $host = null,
         public readonly ?int $port = null,
+        ?Throwable $previous = null,
     ) {
-        parent::__construct($message);
+        parent::__construct($message, 0, $previous);
     }
 }

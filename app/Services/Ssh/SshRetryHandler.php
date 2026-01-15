@@ -17,22 +17,19 @@ class SshRetryHandler
      */
     public function waitForSsh(
         Server $server,
+        string $username = 'root',
         int $maxAttempts = 20,
         int $initialDelay = 5,
     ): bool {
         $delay = $initialDelay;
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            Log::info("SSH attempt {$attempt}/{$maxAttempts} for server {$server->id}");
+            Log::info("SSH attempt {$attempt}/{$maxAttempts} for server {$server->id} as {$username}");
 
-            try {
-                if ($this->sshService->testConnection($server)) {
-                    Log::info("SSH connection established for server {$server->id}");
+            if ($this->sshService->testConnectionAs($server, $username)) {
+                Log::info("SSH connection established for server {$server->id} as {$username}");
 
-                    return true;
-                }
-            } catch (\Throwable $e) {
-                Log::debug("SSH attempt failed: {$e->getMessage()}");
+                return true;
             }
 
             if ($attempt < $maxAttempts) {
@@ -41,7 +38,7 @@ class SshRetryHandler
             }
         }
 
-        Log::error("SSH connection failed after {$maxAttempts} attempts for server {$server->id}");
+        Log::error("SSH connection failed after {$maxAttempts} attempts for server {$server->id} as {$username}");
 
         return false;
     }

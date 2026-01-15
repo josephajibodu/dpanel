@@ -37,13 +37,13 @@ class InstallStackJob implements ShouldQueue
         Log::info("Starting stack installation for server {$this->server->id}");
 
         try {
-            // Wait for SSH to become available
-            if (! $retryHandler->waitForSsh($this->server)) {
+            // Wait for SSH to become available (as root during provisioning)
+            if (! $retryHandler->waitForSsh($this->server, 'root')) {
                 throw new \Exception('SSH connection not available after maximum retries');
             }
 
-            // Connect to server
-            $connection = $sshService->connect($this->server);
+            // Connect to server as root for provisioning
+            $connection = $sshService->connectAsRoot($this->server);
 
             try {
                 // Generate and upload provisioning script
@@ -52,12 +52,12 @@ class InstallStackJob implements ShouldQueue
                 // Upload script
                 $connection->upload($script, '/tmp/provision.sh');
 
-                // Make executable
-                $connection->sudo('chmod +x /tmp/provision.sh');
+                // Make executable (no sudo needed, we're root)
+                $connection->exec('chmod +x /tmp/provision.sh');
 
                 // Execute provisioning script with streaming output
                 $exitCode = $connection->execWithOutput(
-                    'sudo /tmp/provision.sh',
+                    '/tmp/provision.sh',
                     function ($line) {
                         Log::debug("Provision output: {$line}");
                         // Here we could broadcast progress updates
@@ -70,7 +70,7 @@ class InstallStackJob implements ShouldQueue
                 }
 
                 // Cleanup
-                $connection->sudo('rm -f /tmp/provision.sh');
+                $connection->exec('rm -f /tmp/provision.sh');
 
                 // Mark server as active
                 $this->server->update([
@@ -84,8 +84,20 @@ class InstallStackJob implements ShouldQueue
                 $connection->disconnect();
             }
 
-        } catch (\Exception $e) {
-            Log::error("Failed to install stack on server {$this->server->id}: {$e->getMessage()}");
+        } catch (\Throwable $e) {
+            Log::error(
+                "Failed to install stack on server {$this->server->id}",
+                [
+                    'server_id' => $this->server->id,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'previous' => $e->getPrevious() ? [
+                        'exception' => get_class($e->getPrevious()),
+                        'message' => $e->getPrevious()->getMessage(),
+                    ] : null,
+                ]
+            );
 
             $this->server->update(['status' => ServerStatus::Error]);
 
@@ -98,7 +110,20 @@ class InstallStackJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("InstallStackJob failed for server {$this->server->id}: {$exception->getMessage()}");
+        Log::error(
+            "InstallStackJob failed for server {$this->server->id}",
+            [
+                'server_id' => $this->server->id,
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+                'previous' => $exception->getPrevious() ? [
+                    'exception' => get_class($exception->getPrevious()),
+                    'message' => $exception->getPrevious()->getMessage(),
+                    'trace' => $exception->getPrevious()->getTraceAsString(),
+                ] : null,
+            ]
+        );
 
         $this->server->update(['status' => ServerStatus::Error]);
     }
