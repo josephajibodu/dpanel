@@ -367,7 +367,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ---
 
-## Phase 4: SSH Key Management
+## Phase 4: SSH Key Management 🟢 Complete
 
 **Goal:** Manage SSH keys and sync them to servers.
 
@@ -375,51 +375,51 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 **Dependencies:** Phase 3 complete
 
-### 4.1 SSH Key Backend
+### 4.1 SSH Key Backend 🟢 Complete
 
-- [ ] **4.1.1** Create `SshKeyController` (index, store, destroy)
+- [x] **4.1.1** Create `SshKeyController` (index, store, destroy)
 
-- [ ] **4.1.2** Create `StoreSshKeyRequest`
+- [x] **4.1.2** Create `StoreSshKeyRequest`
   - Validate key format (ssh-rsa, ssh-ed25519)
   - Calculate fingerprint
 
-- [ ] **4.1.3** Create `SshKeyResource`
+- [x] **4.1.3** Create `SshKeyResource`
 
-- [ ] **4.1.4** Create `SshKeyPolicy`
+- [x] **4.1.4** Create `SshKeyPolicy`
 
-### 4.2 Key Sync Jobs
+### 4.2 Key Sync Jobs 🟢 Complete
 
-- [ ] **4.2.1** Create `App\Jobs\SyncSshKeyJob`
+- [x] **4.2.1** Create `App\Jobs\SyncSshKeyJob`
   - Ref: `TECHNICAL_PLAN_PART2.md` → Section 5B → SSH Key Management
 
-- [ ] **4.2.2** Create `App\Jobs\RevokeSshKeyJob`
+- [x] **4.2.2** Create `App\Jobs\RevokeSshKeyJob`
 
-- [ ] **4.2.3** Create `App\Actions\SshKeys\SyncSshKeyAction`
+- [x] **4.2.3** Create `App\Actions\SshKeys\SyncSshKeyAction`
 
-### 4.3 SSH Key UI
+### 4.3 SSH Key UI 🟢 Complete
 
-- [ ] **4.3.1** Create `pages/ssh-keys/index.tsx`
+- [x] **4.3.1** Create `pages/ssh-keys/index.tsx`
 
-- [ ] **4.3.2** Create `components/ssh-keys/ssh-key-card.tsx`
+- [x] **4.3.2** Create `components/ssh-keys/ssh-key-card.tsx`
 
-- [ ] **4.3.3** Create `components/ssh-keys/add-key-dialog.tsx`
+- [x] **4.3.3** Create `components/ssh-keys/add-key-dialog.tsx`
 
-- [ ] **4.3.4** Create `components/ssh-keys/sync-servers-dialog.tsx`
+- [x] **4.3.4** Create `components/ssh-keys/sync-servers-dialog.tsx`
 
-### 4.4 Server Actions
+### 4.4 Server Actions 🟢 Complete
 
-- [ ] **4.4.1** Create `App\Jobs\RestartServiceJob`
+- [x] **4.4.1** Create `App\Jobs\RestartServiceJob`
 
-- [ ] **4.4.2** Add restart endpoints to `ServerController`
+- [x] **4.4.2** Add restart endpoints to `ServerController`
 
-- [ ] **4.4.3** Create `components/servers/restart-dropdown.tsx`
+- [x] **4.4.3** Create `components/servers/restart-dropdown.tsx`
 
 ### Milestone 4 ✓
 
-- [ ] User can add SSH keys
-- [ ] Keys can be synced to selected servers
-- [ ] Keys can be revoked from servers
-- [ ] User can restart Nginx/PHP/MySQL via UI
+- [x] User can add SSH keys
+- [x] Keys can be synced to selected servers
+- [x] Keys can be revoked from servers
+- [x] User can restart Nginx/PHP/MySQL via UI
 
 ---
 

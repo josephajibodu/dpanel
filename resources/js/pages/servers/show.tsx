@@ -1,4 +1,5 @@
 import { CopyButton } from '@/components/copy-button';
+import { RestartDropdown } from '@/components/servers/restart-dropdown';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +61,7 @@ export default function ServersShow({ server }: Props) {
                         </div>
                         <p className="text-muted-foreground text-sm">{data.provider_label}</p>
                     </div>
+                    <RestartDropdown server={data} />
                 </div>
 
                 {/* Status Cards */}

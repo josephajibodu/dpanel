@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Actions\Servers\CreateServerAction;
 use App\Actions\Servers\DeleteServerAction;
 use App\Data\ServerData;
+use App\Enums\ServiceType;
 use App\Http\Requests\StoreServerRequest;
 use App\Http\Resources\ProviderAccountResource;
 use App\Http\Resources\ServerResource;
+use App\Jobs\RestartServiceJob;
 use App\Models\Server;
 use App\Services\Providers\ProviderManager;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -100,5 +104,30 @@ class ServerController extends Controller
         return redirect()
             ->route('servers.index')
             ->with('success', 'Server deletion initiated.');
+    }
+
+    public function restart(Server $server, Request $request): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        $validated = $request->validate([
+            'service' => ['required', 'string', Rule::enum(ServiceType::class)],
+        ]);
+
+        $service = ServiceType::from($validated['service']);
+
+        // Create a server action record
+        $action = $server->actions()->create([
+            'user_id' => auth()->id(),
+            'action' => "restart_{$service->value}",
+            'status' => 'pending',
+        ]);
+
+        // Dispatch the job
+        RestartServiceJob::dispatch($server, $service, $action);
+
+        return redirect()
+            ->back()
+            ->with('success', "{$service->label()} restart initiated.");
     }
 }
