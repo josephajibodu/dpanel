@@ -53,6 +53,21 @@ echo "=== Starting ServerForge Provisioning ==="
 echo "PHP Version: $PHP_VERSION"
 echo "Database: $DATABASE_TYPE"
 
+# --- Wait for package locks ---
+echo "=== Waiting for package locks ==="
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "Waiting for dpkg lock to be released..."
+    sleep 5
+done
+while fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+    echo "Waiting for apt lists lock to be released..."
+    sleep 5
+done
+
+# Fix any interrupted package operations
+echo "=== Fixing any interrupted package operations ==="
+dpkg --configure -a || true
+
 # --- System Update ---
 echo "=== Updating system packages ==="
 apt-get update
