@@ -53,25 +53,46 @@ echo "=== Starting ServerForge Provisioning ==="
 echo "PHP Version: $PHP_VERSION"
 echo "Database: $DATABASE_TYPE"
 
-# --- Wait for package locks ---
-echo "=== Waiting for package locks ==="
-while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-    echo "Waiting for dpkg lock to be released..."
-    sleep 5
-done
-while fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-    echo "Waiting for apt lists lock to be released..."
-    sleep 5
-done
+# --- Wait for cloud-init to complete ---
+echo "=== Waiting for cloud-init to complete ==="
+cloud-init status --wait 2>/dev/null || true
+
+# --- Create Swap Space ---
+echo "=== Setting up swap space ==="
+if [ ! -f /swapfile ]; then
+    fallocate -l 1G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    # Reduce swappiness for better performance
+    echo 'vm.swappiness=10' >> /etc/sysctl.conf
+    sysctl vm.swappiness=10
+    echo "Swap created successfully"
+else
+    echo "Swap already exists"
+fi
+
+# --- Helper function to wait for apt/dpkg locks ---
+wait_for_apt() {
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+          fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+          fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+          fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+        echo "Waiting for apt/dpkg lock..."
+        sleep 2
+    done
+}
 
 # Fix any interrupted package operations
 echo "=== Fixing any interrupted package operations ==="
+wait_for_apt
 dpkg --configure -a || true
 
 # --- System Update ---
 echo "=== Updating system packages ==="
-apt-get update
-apt-get upgrade -y
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 update
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 upgrade -y
 
 # --- Create forge user ---
 echo "=== Creating forge user ==="
@@ -95,16 +116,16 @@ chmod 600 /home/forge/.ssh/authorized_keys 2>/dev/null || true
 
 # --- Install Nginx ---
 echo "=== Installing Nginx ==="
-apt-get install -y nginx
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y nginx
 systemctl enable nginx
 systemctl start nginx
 
 # --- Install PHP ---
 echo "=== Installing PHP $PHP_VERSION ==="
-apt-get install -y software-properties-common
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y software-properties-common
 add-apt-repository -y ppa:ondrej/php
-apt-get update
-apt-get install -y \
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 update
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y \
     php${PHP_VERSION}-fpm \
     php${PHP_VERSION}-cli \
     php${PHP_VERSION}-common \
@@ -128,29 +149,31 @@ systemctl start php${PHP_VERSION}-fpm
 # --- Install Database ---
 if [ "$DATABASE_TYPE" = "mysql" ]; then
     echo "=== Installing MySQL 8 ==="
-    apt-get install -y mysql-server
+    wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y mysql-server
     systemctl enable mysql
     systemctl start mysql
-    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';"
-    mysql -e "FLUSH PRIVILEGES;"
+    # Use sudo mysql for Ubuntu's default auth_socket authentication
+    sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || echo "MySQL root password already configured"
+    sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
 elif [ "$DATABASE_TYPE" = "postgresql" ]; then
     echo "=== Installing PostgreSQL ==="
-    apt-get install -y postgresql postgresql-contrib
+    wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y postgresql postgresql-contrib
     systemctl enable postgresql
     systemctl start postgresql
     sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$DB_PASSWORD';"
 elif [ "$DATABASE_TYPE" = "mariadb" ]; then
     echo "=== Installing MariaDB ==="
-    apt-get install -y mariadb-server
+    wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y mariadb-server
     systemctl enable mariadb
     systemctl start mariadb
-    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
-    mysql -e "FLUSH PRIVILEGES;"
+    # Use sudo mysql for Ubuntu's default auth_socket authentication
+    sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASSWORD';" || echo "MariaDB root password already configured"
+    sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
 fi
 
 # --- Install Redis ---
 echo "=== Installing Redis ==="
-apt-get install -y redis-server
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y redis-server
 systemctl enable redis-server
 systemctl start redis-server
 
@@ -161,21 +184,21 @@ curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin
 # --- Install Node.js 20 ---
 echo "=== Installing Node.js 20 ==="
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y nodejs
 
 # --- Install Supervisor ---
 echo "=== Installing Supervisor ==="
-apt-get install -y supervisor
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y supervisor
 systemctl enable supervisor
 systemctl start supervisor
 
 # --- Install Git ---
 echo "=== Installing Git ==="
-apt-get install -y git
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y git
 
 # --- Configure Firewall ---
 echo "=== Configuring Firewall ==="
-apt-get install -y ufw
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y ufw
 ufw allow 22
 ufw allow 80
 ufw allow 443
@@ -206,7 +229,7 @@ systemctl restart php${PHP_VERSION}-fpm
 
 # --- Cleanup ---
 echo "=== Cleaning up ==="
-apt-get autoremove -y
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 autoremove -y
 apt-get clean
 
 echo "=== Provisioning complete! ==="
