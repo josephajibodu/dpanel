@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
 use App\Services\Providers\ProviderManager;
@@ -93,6 +94,7 @@ class ProvisionServerJob implements ShouldQueue
                     'ip_address' => $status->ipAddress,
                     'private_ip_address' => $status->privateIpAddress,
                     'status' => ServerStatus::Provisioning,
+                    'provisioning_step' => ProvisioningStep::WaitingForServer,
                 ]);
 
                 Log::info("Server {$this->server->id} is active at {$status->ipAddress}");

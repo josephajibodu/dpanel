@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Provider;
+use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Events\ServerStatusChanged;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -28,6 +29,7 @@ class Server extends Model
         'ip_address',
         'private_ip_address',
         'status',
+        'provisioning_step',
         'php_version',
         'database_type',
         'ssh_port',
@@ -46,6 +48,7 @@ class Server extends Model
         return [
             'provider' => Provider::class,
             'status' => ServerStatus::class,
+            'provisioning_step' => ProvisioningStep::class,
             'sudo_password' => 'encrypted',
             'database_password' => 'encrypted',
             'provisioned_at' => 'datetime',

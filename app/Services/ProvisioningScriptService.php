@@ -2,10 +2,19 @@
 
 namespace App\Services;
 
+use App\Enums\ProvisioningStep;
 use App\Models\Server;
 
 class ProvisioningScriptService
 {
+    /**
+     * The marker prefix used to signal step changes in provisioning output.
+     * Format: ###STEP:X### where X is the step number.
+     */
+    public const STEP_MARKER_PREFIX = '###STEP:';
+
+    public const STEP_MARKER_SUFFIX = '###';
+
     /**
      * Generate the provisioning script for a server.
      */
@@ -27,13 +36,42 @@ class ProvisioningScriptService
             'DATABASE_TYPE' => $databaseType,
             'DB_PASSWORD' => $databasePassword,
             'SUDO_PASSWORD' => $sudoPassword,
+            'STEP_PREPARING' => ProvisioningStep::PreparingServer->value,
+            'STEP_SWAP' => ProvisioningStep::ConfiguringSwap->value,
+            'STEP_BASE_DEPS' => ProvisioningStep::InstallingBaseDependencies->value,
+            'STEP_PHP' => ProvisioningStep::InstallingPhp->value,
+            'STEP_NGINX' => ProvisioningStep::InstallingNginx->value,
+            'STEP_DATABASE' => ProvisioningStep::InstallingDatabase->value,
+            'STEP_REDIS' => ProvisioningStep::InstallingRedis->value,
+            'STEP_FINAL' => ProvisioningStep::MakingFinalTouches->value,
+            'STEP_FINISHED' => ProvisioningStep::Finished->value,
         ]);
+    }
+
+    /**
+     * Parse a line of output and extract the step number if it's a step marker.
+     */
+    public static function parseStepMarker(string $line): ?int
+    {
+        if (str_starts_with($line, self::STEP_MARKER_PREFIX) && str_ends_with($line, self::STEP_MARKER_SUFFIX)) {
+            $stepNumber = substr(
+                $line,
+                strlen(self::STEP_MARKER_PREFIX),
+                -strlen(self::STEP_MARKER_SUFFIX)
+            );
+
+            if (is_numeric($stepNumber)) {
+                return (int) $stepNumber;
+            }
+        }
+
+        return null;
     }
 
     /**
      * Build the provisioning script with variables.
      *
-     * @param  array<string, string>  $variables
+     * @param  array<string, string|int>  $variables
      */
     private function buildScript(array $variables): string
     {
@@ -49,6 +87,11 @@ DATABASE_TYPE="{{DATABASE_TYPE}}"
 DB_PASSWORD="{{DB_PASSWORD}}"
 SUDO_PASSWORD="{{SUDO_PASSWORD}}"
 
+# Step markers for progress tracking
+step_marker() {
+    echo "###STEP:$1###"
+}
+
 echo "=== Starting ServerForge Provisioning ==="
 echo "PHP Version: $PHP_VERSION"
 echo "Database: $DATABASE_TYPE"
@@ -57,7 +100,36 @@ echo "Database: $DATABASE_TYPE"
 echo "=== Waiting for cloud-init to complete ==="
 cloud-init status --wait 2>/dev/null || true
 
-# --- Create Swap Space ---
+# =========================================
+# STEP: Preparing Server
+# =========================================
+step_marker {{STEP_PREPARING}}
+
+# --- Create forge user ---
+echo "=== Creating forge user ==="
+if ! id "forge" &>/dev/null; then
+    useradd -m -s /bin/bash forge
+    echo "forge:$SUDO_PASSWORD" | chpasswd
+    usermod -aG sudo forge
+    echo "forge ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/forge
+    chmod 440 /etc/sudoers.d/forge
+fi
+
+# --- SSH Configuration ---
+echo "=== Configuring SSH ==="
+mkdir -p /home/forge/.ssh
+if [ -f /root/.ssh/authorized_keys ]; then
+    cp /root/.ssh/authorized_keys /home/forge/.ssh/
+fi
+chown -R forge:forge /home/forge/.ssh
+chmod 700 /home/forge/.ssh
+chmod 600 /home/forge/.ssh/authorized_keys 2>/dev/null || true
+
+# =========================================
+# STEP: Configuring Swap
+# =========================================
+step_marker {{STEP_SWAP}}
+
 echo "=== Setting up swap space ==="
 if [ ! -f /swapfile ]; then
     fallocate -l 1G /swapfile
@@ -72,6 +144,11 @@ if [ ! -f /swapfile ]; then
 else
     echo "Swap already exists"
 fi
+
+# =========================================
+# STEP: Installing Base Dependencies
+# =========================================
+step_marker {{STEP_BASE_DEPS}}
 
 # --- Helper function to wait for apt/dpkg locks ---
 wait_for_apt() {
@@ -94,33 +171,11 @@ echo "=== Updating system packages ==="
 wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 update
 wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 upgrade -y
 
-# --- Create forge user ---
-echo "=== Creating forge user ==="
-if ! id "forge" &>/dev/null; then
-    useradd -m -s /bin/bash forge
-    echo "forge:$SUDO_PASSWORD" | chpasswd
-    usermod -aG sudo forge
-    echo "forge ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/forge
-    chmod 440 /etc/sudoers.d/forge
-fi
+# =========================================
+# STEP: Installing PHP
+# =========================================
+step_marker {{STEP_PHP}}
 
-# --- SSH Configuration ---
-echo "=== Configuring SSH ==="
-mkdir -p /home/forge/.ssh
-if [ -f /root/.ssh/authorized_keys ]; then
-    cp /root/.ssh/authorized_keys /home/forge/.ssh/
-fi
-chown -R forge:forge /home/forge/.ssh
-chmod 700 /home/forge/.ssh
-chmod 600 /home/forge/.ssh/authorized_keys 2>/dev/null || true
-
-# --- Install Nginx ---
-echo "=== Installing Nginx ==="
-wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y nginx
-systemctl enable nginx
-systemctl start nginx
-
-# --- Install PHP ---
 echo "=== Installing PHP $PHP_VERSION ==="
 wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y software-properties-common
 add-apt-repository -y ppa:ondrej/php
@@ -146,7 +201,21 @@ wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y \
 systemctl enable php${PHP_VERSION}-fpm
 systemctl start php${PHP_VERSION}-fpm
 
-# --- Install Database ---
+# =========================================
+# STEP: Installing Nginx
+# =========================================
+step_marker {{STEP_NGINX}}
+
+echo "=== Installing Nginx ==="
+wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y nginx
+systemctl enable nginx
+systemctl start nginx
+
+# =========================================
+# STEP: Installing Database
+# =========================================
+step_marker {{STEP_DATABASE}}
+
 if [ "$DATABASE_TYPE" = "mysql" ]; then
     echo "=== Installing MySQL 8 ==="
     wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y mysql-server
@@ -169,13 +238,24 @@ elif [ "$DATABASE_TYPE" = "mariadb" ]; then
     # Use sudo mysql for Ubuntu's default auth_socket authentication
     sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASSWORD';" || echo "MariaDB root password already configured"
     sudo mysql -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+else
+    echo "=== No database selected, skipping database installation ==="
 fi
 
-# --- Install Redis ---
+# =========================================
+# STEP: Installing Redis
+# =========================================
+step_marker {{STEP_REDIS}}
+
 echo "=== Installing Redis ==="
 wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 install -y redis-server
 systemctl enable redis-server
 systemctl start redis-server
+
+# =========================================
+# STEP: Making Final Touches
+# =========================================
+step_marker {{STEP_FINAL}}
 
 # --- Install Composer ---
 echo "=== Installing Composer ==="
@@ -232,12 +312,17 @@ echo "=== Cleaning up ==="
 wait_for_apt && apt-get -o DPkg::Lock::Timeout=60 autoremove -y
 apt-get clean
 
+# =========================================
+# STEP: Finished
+# =========================================
+step_marker {{STEP_FINISHED}}
+
 echo "=== Provisioning complete! ==="
 BASH;
 
         // Replace variables
         foreach ($variables as $key => $value) {
-            $script = str_replace("{{{$key}}}", $value, $script);
+            $script = str_replace("{{{$key}}}", (string) $value, $script);
         }
 
         return $script;

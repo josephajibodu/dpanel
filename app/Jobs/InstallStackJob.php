@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
 use App\Services\ProvisioningScriptService;
@@ -36,6 +37,9 @@ class InstallStackJob implements ShouldQueue
     ): void {
         Log::info("Starting stack installation for server {$this->server->id}");
 
+        // Set initial provisioning step
+        $this->updateStep(ProvisioningStep::WaitingForServer);
+
         try {
             // Wait for SSH to become available (as root during provisioning)
             if (! $retryHandler->waitForSsh($this->server, 'root')) {
@@ -60,7 +64,16 @@ class InstallStackJob implements ShouldQueue
                     '/tmp/provision.sh',
                     function ($line) {
                         Log::debug("Provision output: {$line}");
-                        // Here we could broadcast progress updates
+
+                        // Check if this line is a step marker
+                        $stepNumber = ProvisioningScriptService::parseStepMarker($line);
+                        if ($stepNumber !== null) {
+                            $step = ProvisioningStep::tryFrom($stepNumber);
+                            if ($step !== null) {
+                                $this->updateStep($step);
+                                Log::info("Server {$this->server->id} provisioning step: {$step->label()}");
+                            }
+                        }
                     },
                     timeout: 1800,
                 );
@@ -72,9 +85,10 @@ class InstallStackJob implements ShouldQueue
                 // Cleanup
                 $connection->exec('rm -f /tmp/provision.sh');
 
-                // Mark server as active
+                // Mark server as active with finished step
                 $this->server->update([
                     'status' => ServerStatus::Active,
+                    'provisioning_step' => ProvisioningStep::Finished,
                     'provisioned_at' => now(),
                 ]);
 
@@ -103,6 +117,14 @@ class InstallStackJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Update the provisioning step for the server.
+     */
+    private function updateStep(ProvisioningStep $step): void
+    {
+        $this->server->update(['provisioning_step' => $step]);
     }
 
     /**
