@@ -17,9 +17,9 @@ This document provides a **sequential, trackable guide** for building the Larave
 |-------|--------|-------|-----------|
 | 0. Scaffolding | 🟢 Complete | 8 | 8/8 |
 | 1. Foundation | 🟢 Complete | 12 | 12/12 |
-| 2. Provider Integration | 🔴 Not Started | 10 | 0/10 |
-| 3. Server Provisioning | 🔴 Not Started | 14 | 0/14 |
-| 4. SSH & Key Management | 🔴 Not Started | 9 | 0/9 |
+| 2. Provider Integration | 🟢 Complete | 10 | 10/10 |
+| 3. Server Provisioning | 🟢 Complete | 14 | 13/14 |
+| 4. SSH & Key Management | 🟢 Complete | 9 | 9/9 |
 | 5. Sites | 🔴 Not Started | 11 | 0/11 |
 | 6. Deployments | 🔴 Not Started | 12 | 0/12 |
 | 7. Polish & Testing | 🔴 Not Started | 10 | 0/10 |
@@ -315,7 +315,7 @@ This document provides a **sequential, trackable guide** for building the Larave
   - `SshConnectionException`
   - `SshCommandException`
 
-- [ ] **3.4.5** Test SSH connection to a real server (requires live server)
+- [x] **3.4.5** Test SSH connection to a real server (tested with DigitalOcean droplets)
 
 ### 3.5 Realtime Updates 🟢 Complete
 
@@ -699,6 +699,13 @@ Use this section to document important decisions made during implementation:
 | 2026-01-14 | Used Laravel React Starter Kit | Provides auth, Inertia, React, Shadcn UI out of the box |
 | 2026-01-14 | Enums use TitleCase for cases (e.g., `Pending` not `PENDING`) | Follows Laravel/PHP conventions for backed enums |
 | 2026-01-14 | Added `color()` and `label()` methods to enums | Makes it easy to render status badges in the UI |
+| 2026-01-15 | SSH service uses explicit `connectAsRoot` and `connect` methods | SSH protocol doesn't allow username switching on same connection; explicit methods provide clarity |
+| 2026-01-15 | Added `SshConnectionException` with previous exception support | Preserves full stack traces for debugging SSH connection failures |
+| 2026-01-16 | Provisioning script waits for cloud-init to complete | Fresh VPS instances run cloud-init in parallel which can conflict with package operations |
+| 2026-01-16 | Added 1GB swap space during provisioning | MySQL 8 requires significant RAM; swap prevents OOM kills on small VPS (512MB-1GB) |
+| 2026-01-16 | Created `wait_for_apt()` helper function | Checks all 4 dpkg/apt lock files before each package operation to handle unattended-upgrades |
+| 2026-01-16 | Added `-o DPkg::Lock::Timeout=60` to apt-get calls | Defense in depth - waits 60s for locks if acquired between wait_for_apt check and apt-get execution |
+| 2026-01-16 | Use `sudo mysql` for MySQL/MariaDB root password setup | Ubuntu's default MySQL uses auth_socket authentication; `sudo mysql` works with fresh installs |
 
 ---
 
@@ -708,4 +715,9 @@ Track any blockers here:
 
 | Issue | Status | Resolution |
 |-------|--------|------------|
-| | | |
+| SSH connection retry loop with `MaxAttemptsExceededException` | ✅ Resolved | Set `tries=1` and `maxExceptions=0` on InstallStackJob; increased queue `retry_after` timeout |
+| SSH "Change of username not allowed" error | ✅ Resolved | Refactored SshService to use separate connections for root vs forge user; added explicit `connectAsRoot` method |
+| dpkg lock conflicts with unattended-upgrades | ✅ Resolved | Added `wait_for_apt()` helper that checks all 4 lock files; added `-o DPkg::Lock::Timeout=60` to all apt-get calls |
+| MySQL OOM killed during provisioning | ✅ Resolved | Added 1GB swap space creation early in provisioning script |
+| MySQL root password setup fails on re-provision | ✅ Resolved | Changed to `sudo mysql` for auth_socket compatibility; added graceful handling for already-configured passwords |
+| Horizon requires ext-pcntl (Windows) | ⏸️ Deferred | Horizon will be installed on production server (Linux); use database queue driver locally |
