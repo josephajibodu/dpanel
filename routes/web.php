@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\DeployScriptController;
+use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\ServerController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SshKeyController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,6 +32,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['edit', 'update']);
     Route::post('servers/{server}/restart', [ServerController::class, 'restart'])
         ->name('servers.restart');
+
+    // Sites (nested under servers for creation)
+    Route::get('servers/{server}/sites/create', [SiteController::class, 'create'])
+        ->name('servers.sites.create');
+    Route::post('servers/{server}/sites', [SiteController::class, 'store'])
+        ->name('servers.sites.store');
+
+    // Sites (standalone routes)
+    Route::resource('sites', SiteController::class)
+        ->only(['show', 'edit', 'update', 'destroy']);
+
+    // Site Environment & Deploy Script
+    Route::put('sites/{site}/environment', [EnvironmentController::class, 'update'])
+        ->name('sites.environment.update');
+    Route::put('sites/{site}/deploy-script', [DeployScriptController::class, 'update'])
+        ->name('sites.deploy-script.update');
 
     // SSH Keys
     Route::resource('ssh-keys', SshKeyController::class)

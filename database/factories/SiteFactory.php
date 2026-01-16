@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProjectType;
+use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
 use App\Models\Server;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,10 +26,10 @@ class SiteFactory extends Factory
             'domain' => fake()->unique()->domainName(),
             'aliases' => null,
             'directory' => '/public',
-            'repository' => 'git@github.com:'.fake()->userName().'/'.fake()->slug(2).'.git',
-            'repository_provider' => 'github',
+            'repository' => fake()->userName().'/'.fake()->slug(2),
+            'repository_provider' => RepositoryProvider::Github,
             'branch' => 'main',
-            'project_type' => 'laravel',
+            'project_type' => ProjectType::Laravel,
             'php_version' => '8.3',
             'status' => SiteStatus::Deployed,
             'webhook_secret' => Str::random(32),

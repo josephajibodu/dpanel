@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectType;
+use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -40,11 +42,57 @@ class Site extends Model
     {
         return [
             'status' => SiteStatus::class,
+            'project_type' => ProjectType::class,
+            'repository_provider' => RepositoryProvider::class,
             'aliases' => 'array',
             'auto_deploy' => 'boolean',
             'deployment_started_at' => 'datetime',
             'deployment_finished_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the root path for this site on the server.
+     */
+    public function rootPath(): string
+    {
+        return "/home/forge/{$this->domain}";
+    }
+
+    /**
+     * Get the full web root path including the directory.
+     */
+    public function webRoot(): string
+    {
+        $directory = $this->directory ?: '/';
+
+        return rtrim($this->rootPath(), '/').'/'.ltrim($directory, '/');
+    }
+
+    /**
+     * Get the repository URL.
+     */
+    public function repositoryUrl(): ?string
+    {
+        if (! $this->repository) {
+            return null;
+        }
+
+        $baseUrl = $this->repository_provider?->baseUrl();
+
+        if (! $baseUrl) {
+            return $this->repository;
+        }
+
+        return "{$baseUrl}/{$this->repository}";
+    }
+
+    /**
+     * Get short repository name (owner/repo format).
+     */
+    public function shortRepository(): ?string
+    {
+        return $this->repository;
     }
 
     public function uniqueIds(): array

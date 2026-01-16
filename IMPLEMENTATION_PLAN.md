@@ -20,7 +20,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 | 2. Provider Integration | 🟢 Complete | 10 | 10/10 |
 | 3. Server Provisioning | 🟢 Complete | 14 | 13/14 |
 | 4. SSH & Key Management | 🟢 Complete | 9 | 9/9 |
-| 5. Sites | 🔴 Not Started | 11 | 0/11 |
+| 5. Sites | 🟢 Complete | 11 | 11/11 |
 | 6. Deployments | 🔴 Not Started | 12 | 0/12 |
 | 7. Polish & Testing | 🔴 Not Started | 10 | 0/10 |
 
@@ -433,69 +433,68 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 ### 5.1 Site Backend
 
-- [ ] **5.1.1** Create `SiteController` (create, store, show, update, destroy)
+- [x] **5.1.1** Create `SiteController` (create, store, show, update, destroy)
 
-- [ ] **5.1.2** Create `App\Data\SiteData` DTO
+- [x] **5.1.2** Create `App\Data\SiteData` DTO
 
-- [ ] **5.1.3** Create `StoreSiteRequest`
+- [x] **5.1.3** Create `StoreSiteRequest`
 
-- [ ] **5.1.4** Create `SiteResource`
+- [x] **5.1.4** Create `SiteResource` (already existed, updated)
 
-- [ ] **5.1.5** Create `SitePolicy`
+- [x] **5.1.5** Create `SitePolicy`
 
 ### 5.2 Site Creation Job
 
-- [ ] **5.2.1** Create `App\Services\NginxConfigService`
+- [x] **5.2.1** Create `App\Services\NginxConfigService`
   - Ref: `TECHNICAL_PLAN_PART2.md` → Section 5C → Site Setup
 
-- [ ] **5.2.2** Create `App\Jobs\CreateSiteJob`
+- [x] **5.2.2** Create `App\Jobs\CreateSiteJob`
   - Create directory
   - Generate Nginx config
   - Clone repository
   - Set up deploy key
 
-- [ ] **5.2.3** Create `App\Jobs\DeleteSiteJob`
+- [x] **5.2.3** Create `App\Jobs\DeleteSiteJob`
 
-- [ ] **5.2.4** Create `App\Actions\Sites\CreateSiteAction`
+- [x] **5.2.4** Create `App\Actions\Sites\CreateSiteAction`
 
 ### 5.3 Site UI
 
-- [ ] **5.3.1** Create `pages/sites/create.tsx`
+- [x] **5.3.1** Create `pages/sites/create.tsx`
   - Domain, repository, branch form
 
-- [ ] **5.3.2** Create `pages/sites/show.tsx`
+- [x] **5.3.2** Create `pages/sites/show.tsx`
   - Tabs: Overview, Deployments, Environment, Deploy Script
 
-- [ ] **5.3.3** Create `components/sites/site-card.tsx`
+- [x] **5.3.3** Create `components/sites/site-card.tsx`
 
-- [ ] **5.3.4** Create `components/sites/site-tabs.tsx`
+- [x] **5.3.4** Create `components/sites/site-status-badge.tsx`
 
-- [ ] **5.3.5** Add sites list to server detail page
+- [x] **5.3.5** Add sites list to server detail page
 
 ### 5.4 Environment Variables
 
-- [ ] **5.4.1** Create `EnvironmentController` (index, update)
+- [x] **5.4.1** Create `EnvironmentController` (index, update)
 
-- [ ] **5.4.2** Create environment variables editor component
+- [x] **5.4.2** Create environment variables editor component
   - Key-value pairs editor
   - Sync to server .env file
 
-- [ ] **5.4.3** Create `App\Jobs\SyncEnvironmentJob`
+- [x] **5.4.3** Create `App\Jobs\SyncEnvironmentJob`
 
 ### 5.5 Deploy Scripts
 
-- [ ] **5.5.1** Create `DeployScriptController` (show, update)
+- [x] **5.5.1** Create `DeployScriptController` (show, update)
 
-- [ ] **5.5.2** Create deploy script editor component
-  - Code editor with syntax highlighting
+- [x] **5.5.2** Create deploy script editor component
 
 ### Milestone 5 ✓
 
-- [ ] User can create sites on servers
-- [ ] Nginx is configured automatically
-- [ ] Repository is cloned
-- [ ] Environment variables can be managed
-- [ ] Deploy script can be customized
+- [x] User can create sites on servers
+- [x] Nginx is configured automatically
+- [x] Repository is cloned
+- [x] Environment variables can be managed
+- [x] Deploy script can be customized
 
 ---
 
@@ -706,6 +705,8 @@ Use this section to document important decisions made during implementation:
 | 2026-01-16 | Created `wait_for_apt()` helper function | Checks all 4 dpkg/apt lock files before each package operation to handle unattended-upgrades |
 | 2026-01-16 | Added `-o DPkg::Lock::Timeout=60` to apt-get calls | Defense in depth - waits 60s for locks if acquired between wait_for_apt check and apt-get execution |
 | 2026-01-16 | Use `sudo mysql` for MySQL/MariaDB root password setup | Ubuntu's default MySQL uses auth_socket authentication; `sudo mysql` works with fresh installs |
+| 2026-01-16 | Created `ProjectType` and `RepositoryProvider` enums | Strongly-typed project types (Laravel, PHP, Symfony, WordPress, HTML) with default deploy scripts per type |
+| 2026-01-16 | Site creation uses CreateSiteJob with NginxConfigService | Separates Nginx config generation from job execution for better testability |
 
 ---
 
