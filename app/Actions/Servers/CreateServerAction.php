@@ -5,6 +5,8 @@ namespace App\Actions\Servers;
 use App\Data\ServerData;
 use App\Enums\ServerStatus;
 use App\Jobs\ProvisionServerJob;
+use App\Models\ProviderRegion;
+use App\Models\ProviderSize;
 use App\Models\Server;
 use App\Models\User;
 use App\Services\Providers\ProviderManager;
@@ -43,6 +45,15 @@ class CreateServerAction
             publicKey: $keyPair->publicKey,
         );
 
+        // Look up the provider region and size records
+        $providerRegion = ProviderRegion::where('provider', $providerAccount->provider)
+            ->where('code', $data->region)
+            ->first();
+
+        $providerSize = ProviderSize::where('provider', $providerAccount->provider)
+            ->where('code', $data->size)
+            ->first();
+
         // Create server record
         $server = DB::transaction(function () use (
             $user,
@@ -50,6 +61,8 @@ class CreateServerAction
             $providerAccount,
             $keyPair,
             $providerKeyId,
+            $providerRegion,
+            $providerSize,
         ) {
             $server = $user->servers()->create([
                 'provider_account_id' => $providerAccount->id,
@@ -57,6 +70,8 @@ class CreateServerAction
                 'name' => $data->name,
                 'size' => $data->size,
                 'region' => $data->region,
+                'provider_region_id' => $providerRegion?->id,
+                'provider_size_id' => $providerSize?->id,
                 'php_version' => $data->phpVersion,
                 'database_type' => $data->databaseType,
                 'status' => ServerStatus::Pending,

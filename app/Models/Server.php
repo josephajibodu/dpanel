@@ -30,6 +30,8 @@ class Server extends Model
         'type',
         'size',
         'region',
+        'provider_region_id',
+        'provider_size_id',
         'ip_address',
         'private_ip_address',
         'status',
@@ -103,6 +105,16 @@ class Server extends Model
     public function providerAccount(): BelongsTo
     {
         return $this->belongsTo(ProviderAccount::class);
+    }
+
+    public function providerRegion(): BelongsTo
+    {
+        return $this->belongsTo(ProviderRegion::class);
+    }
+
+    public function providerSize(): BelongsTo
+    {
+        return $this->belongsTo(ProviderSize::class);
     }
 
     public function sites(): HasMany
