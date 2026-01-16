@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ConnectionStatus;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
@@ -19,6 +20,13 @@ class InstallStackJob implements ShouldQueue
     public int $tries = 1;
 
     public int $timeout = 1800; // 30 minutes
+
+    /**
+     * Collected data from provisioning script output.
+     *
+     * @var array<string, string>
+     */
+    private array $collectedData = [];
 
     /**
      * Create a new job instance.
@@ -73,6 +81,15 @@ class InstallStackJob implements ShouldQueue
                                 $this->updateStep($step);
                                 Log::info("Server {$this->server->id} provisioning step: {$step->label()}");
                             }
+
+                            return;
+                        }
+
+                        // Check if this line is a data marker
+                        $data = ProvisioningScriptService::parseDataMarker($line);
+                        if ($data !== null) {
+                            $this->collectedData[$data['key']] = $data['value'];
+                            Log::info("Server {$this->server->id} collected data: {$data['key']}");
                         }
                     },
                     timeout: 1800,
@@ -85,14 +102,30 @@ class InstallStackJob implements ShouldQueue
                 // Cleanup
                 $connection->exec('rm -f /tmp/provision.sh');
 
-                // Mark server as active with finished step
-                $this->server->update([
+                // Mark server as active with finished step and collected data
+                $updateData = [
                     'status' => ServerStatus::Active,
                     'provisioning_step' => ProvisioningStep::Finished,
+                    'connection_status' => ConnectionStatus::Successful,
                     'provisioned_at' => now(),
-                ]);
+                ];
 
-                Log::info("Server {$this->server->id} provisioned successfully");
+                // Add collected ubuntu_version if available
+                if (isset($this->collectedData['ubuntu_version'])) {
+                    $updateData['ubuntu_version'] = $this->collectedData['ubuntu_version'];
+                }
+
+                // Add collected local_public_key if available
+                if (isset($this->collectedData['local_public_key'])) {
+                    $updateData['local_public_key'] = $this->collectedData['local_public_key'];
+                }
+
+                $this->server->update($updateData);
+
+                Log::info("Server {$this->server->id} provisioned successfully", [
+                    'ubuntu_version' => $this->collectedData['ubuntu_version'] ?? 'unknown',
+                    'has_local_public_key' => isset($this->collectedData['local_public_key']),
+                ]);
 
             } finally {
                 $connection->disconnect();

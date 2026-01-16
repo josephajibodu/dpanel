@@ -16,6 +16,14 @@ class ProvisioningScriptService
     public const STEP_MARKER_SUFFIX = '###';
 
     /**
+     * The marker prefix used to output data from the provisioning script.
+     * Format: ###DATA:key=value###
+     */
+    public const DATA_MARKER_PREFIX = '###DATA:';
+
+    public const DATA_MARKER_SUFFIX = '###';
+
+    /**
      * Generate the provisioning script for a server.
      */
     public function generate(Server $server): string
@@ -69,6 +77,32 @@ class ProvisioningScriptService
     }
 
     /**
+     * Parse a line of output and extract key-value data if it's a data marker.
+     *
+     * @return array{key: string, value: string}|null
+     */
+    public static function parseDataMarker(string $line): ?array
+    {
+        if (str_starts_with($line, self::DATA_MARKER_PREFIX) && str_ends_with($line, self::DATA_MARKER_SUFFIX)) {
+            $data = substr(
+                $line,
+                strlen(self::DATA_MARKER_PREFIX),
+                -strlen(self::DATA_MARKER_SUFFIX)
+            );
+
+            $parts = explode('=', $data, 2);
+            if (count($parts) === 2) {
+                return [
+                    'key' => $parts[0],
+                    'value' => $parts[1],
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Build the provisioning script with variables.
      *
      * @param  array<string, string|int>  $variables
@@ -92,9 +126,19 @@ step_marker() {
     echo "###STEP:$1###"
 }
 
+# Data markers for capturing server info
+data_marker() {
+    echo "###DATA:$1=$2###"
+}
+
 echo "=== Starting ServerForge Provisioning ==="
 echo "PHP Version: $PHP_VERSION"
 echo "Database: $DATABASE_TYPE"
+
+# --- Capture Ubuntu version ---
+UBUNTU_VERSION=$(lsb_release -rs 2>/dev/null || cat /etc/os-release | grep VERSION_ID | cut -d'"' -f2)
+data_marker "ubuntu_version" "$UBUNTU_VERSION"
+echo "Ubuntu Version: $UBUNTU_VERSION"
 
 # --- Wait for cloud-init to complete ---
 echo "=== Waiting for cloud-init to complete ==="
@@ -124,6 +168,19 @@ fi
 chown -R forge:forge /home/forge/.ssh
 chmod 700 /home/forge/.ssh
 chmod 600 /home/forge/.ssh/authorized_keys 2>/dev/null || true
+
+# --- Generate server's local SSH key (for deployments) ---
+echo "=== Generating server SSH key ==="
+if [ ! -f /home/forge/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -f /home/forge/.ssh/id_ed25519 -N "" -C "forge@$(hostname)"
+    chown forge:forge /home/forge/.ssh/id_ed25519 /home/forge/.ssh/id_ed25519.pub
+    chmod 600 /home/forge/.ssh/id_ed25519
+    chmod 644 /home/forge/.ssh/id_ed25519.pub
+fi
+
+# Output the local public key for storage
+LOCAL_PUBLIC_KEY=$(cat /home/forge/.ssh/id_ed25519.pub)
+data_marker "local_public_key" "$LOCAL_PUBLIC_KEY"
 
 # =========================================
 # STEP: Configuring Swap

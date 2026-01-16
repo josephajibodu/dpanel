@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\ConnectionStatus;
 use App\Enums\Provider;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
+use App\Enums\ServerType;
 use App\Events\ServerStatusChanged;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,18 +25,26 @@ class Server extends Model
         'provider_account_id',
         'provider',
         'provider_server_id',
+        'cloud_provider_url',
         'name',
+        'type',
         'size',
         'region',
         'ip_address',
         'private_ip_address',
         'status',
         'provisioning_step',
+        'connection_status',
         'php_version',
         'database_type',
+        'ubuntu_version',
+        'timezone',
+        'notes',
+        'archived',
         'ssh_port',
         'sudo_password',
         'database_password',
+        'local_public_key',
         'provisioned_at',
         'last_ssh_connection_at',
         'meta',
@@ -47,8 +57,11 @@ class Server extends Model
     {
         return [
             'provider' => Provider::class,
+            'type' => ServerType::class,
             'status' => ServerStatus::class,
             'provisioning_step' => ProvisioningStep::class,
+            'connection_status' => ConnectionStatus::class,
+            'archived' => 'boolean',
             'sudo_password' => 'encrypted',
             'database_password' => 'encrypted',
             'provisioned_at' => 'datetime',
@@ -117,5 +130,32 @@ class Server extends Model
     public function credential(string $type = 'private_key'): ?ServerCredential
     {
         return $this->credentials()->where('type', $type)->first();
+    }
+
+    /**
+     * Check if the server is ready (active and connected).
+     */
+    public function isReady(): bool
+    {
+        return $this->status === ServerStatus::Active
+            && $this->connection_status === ConnectionStatus::Successful;
+    }
+
+    /**
+     * Check if the server supports sites based on its type.
+     */
+    public function supportsSites(): bool
+    {
+        return $this->type?->supportsSites() ?? true;
+    }
+
+    /**
+     * Get the installed services for this server.
+     *
+     * @return array<string, bool>
+     */
+    public function services(): array
+    {
+        return $this->meta['services'] ?? $this->type?->defaultServices() ?? [];
     }
 }
