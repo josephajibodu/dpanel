@@ -317,12 +317,12 @@ export default function ServersShow({ server }: Props) {
                         <CardContent>
                             <div className="flex items-center gap-2 rounded-lg bg-muted p-3 font-mono text-sm">
                                 <code>
-                                    ssh forge@{data.ip_address}
+                                    ssh artisan@{data.ip_address}
                                     {data.ssh_port !== 22 &&
                                         ` -p ${data.ssh_port}`}
                                 </code>
                                 <CopyButton
-                                    value={`ssh forge@${data.ip_address}${data.ssh_port !== 22 ? ` -p ${data.ssh_port}` : ''}`}
+                                    value={`ssh artisan@${data.ip_address}${data.ssh_port !== 22 ? ` -p ${data.ssh_port}` : ''}`}
                                     className="ml-auto h-7 w-7"
                                 />
                             </div>

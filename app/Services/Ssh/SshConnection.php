@@ -15,7 +15,7 @@ class SshConnection
     public function __construct(
         private SSH2 $ssh,
         private Server $server,
-        private string $username = 'forge',
+        private string $username = 'artisan',
     ) {}
 
     /**

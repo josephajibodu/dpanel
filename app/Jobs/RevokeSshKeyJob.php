@@ -49,9 +49,11 @@ class RevokeSshKeyJob implements ShouldQueue
             $escapedKey = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $publicKey);
 
             // Remove the line containing this key
+            $serverUser = config('server.user');
             $command = sprintf(
-                'sed -i "\\|%s|d" /home/forge/.ssh/authorized_keys',
-                substr($escapedKey, 0, 50) // Use first 50 chars for matching
+                'sed -i "\\|%s|d" /home/%s/.ssh/authorized_keys',
+                substr($escapedKey, 0, 50), // Use first 50 chars for matching
+                $serverUser
             );
 
             $connection->exec($command);

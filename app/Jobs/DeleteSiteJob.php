@@ -70,7 +70,8 @@ class DeleteSiteJob implements ShouldQueue
             $connection->exec('sudo systemctl reload nginx');
 
             // Remove site directory (with caution)
-            if ($this->siteRoot && str_starts_with($this->siteRoot, '/home/forge/')) {
+            $serverUser = config('server.user');
+            if ($this->siteRoot && str_starts_with($this->siteRoot, "/home/{$serverUser}/")) {
                 $connection->exec("rm -rf {$this->siteRoot}");
             }
 

@@ -61,8 +61,9 @@ class SyncEnvironmentJob implements ShouldQueue
             $connection->exec("echo '{$escapedContent}' > {$envPath}");
 
             // Set proper permissions
+            $serverUser = config('server.user');
             $connection->exec("chmod 600 {$envPath}");
-            $connection->exec("chown forge:forge {$envPath}");
+            $connection->exec("chown {$serverUser}:{$serverUser} {$envPath}");
 
             $connection->disconnect();
 

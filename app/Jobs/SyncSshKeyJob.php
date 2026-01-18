@@ -46,9 +46,11 @@ class SyncSshKeyJob implements ShouldQueue
             $fingerprint = $this->sshKey->fingerprint;
 
             // Check if key already exists
+            $serverUser = config('server.user');
             $checkCommand = sprintf(
-                'grep -q "%s" /home/forge/.ssh/authorized_keys && echo "exists" || echo "not_found"',
-                substr($publicKey, 0, 50) // Use first 50 chars for matching
+                'grep -q "%s" /home/%s/.ssh/authorized_keys && echo "exists" || echo "not_found"',
+                substr($publicKey, 0, 50), // Use first 50 chars for matching
+                $serverUser
             );
 
             $result = trim($connection->exec($checkCommand));
@@ -56,8 +58,9 @@ class SyncSshKeyJob implements ShouldQueue
             if ($result !== 'exists') {
                 // Append the key
                 $appendCommand = sprintf(
-                    'echo "%s" >> /home/forge/.ssh/authorized_keys',
-                    $publicKey
+                    'echo "%s" >> /home/%s/.ssh/authorized_keys',
+                    $publicKey,
+                    $serverUser
                 );
                 $connection->exec($appendCommand);
             }

@@ -44,6 +44,7 @@ class ProvisioningScriptService
             'DATABASE_TYPE' => $databaseType,
             'DB_PASSWORD' => $databasePassword,
             'SUDO_PASSWORD' => $sudoPassword,
+            'SERVER_USER' => config('server.user'),
             'STEP_PREPARING' => ProvisioningStep::PreparingServer->value,
             'STEP_SWAP' => ProvisioningStep::ConfiguringSwap->value,
             'STEP_BASE_DEPS' => ProvisioningStep::InstallingBaseDependencies->value,
@@ -120,6 +121,7 @@ PHP_VERSION="{{PHP_VERSION}}"
 DATABASE_TYPE="{{DATABASE_TYPE}}"
 DB_PASSWORD="{{DB_PASSWORD}}"
 SUDO_PASSWORD="{{SUDO_PASSWORD}}"
+SERVER_USER="{{SERVER_USER}}"
 
 # Step markers for progress tracking
 step_marker() {
@@ -149,37 +151,37 @@ cloud-init status --wait 2>/dev/null || true
 # =========================================
 step_marker {{STEP_PREPARING}}
 
-# --- Create forge user ---
-echo "=== Creating forge user ==="
-if ! id "forge" &>/dev/null; then
-    useradd -m -s /bin/bash forge
-    echo "forge:$SUDO_PASSWORD" | chpasswd
-    usermod -aG sudo forge
-    echo "forge ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/forge
-    chmod 440 /etc/sudoers.d/forge
+# --- Create server user ---
+echo "=== Creating $SERVER_USER user ==="
+if ! id "$SERVER_USER" &>/dev/null; then
+    useradd -m -s /bin/bash $SERVER_USER
+    echo "$SERVER_USER:$SUDO_PASSWORD" | chpasswd
+    usermod -aG sudo $SERVER_USER
+    echo "$SERVER_USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$SERVER_USER
+    chmod 440 /etc/sudoers.d/$SERVER_USER
 fi
 
 # --- SSH Configuration ---
 echo "=== Configuring SSH ==="
-mkdir -p /home/forge/.ssh
+mkdir -p /home/$SERVER_USER/.ssh
 if [ -f /root/.ssh/authorized_keys ]; then
-    cp /root/.ssh/authorized_keys /home/forge/.ssh/
+    cp /root/.ssh/authorized_keys /home/$SERVER_USER/.ssh/
 fi
-chown -R forge:forge /home/forge/.ssh
-chmod 700 /home/forge/.ssh
-chmod 600 /home/forge/.ssh/authorized_keys 2>/dev/null || true
+chown -R $SERVER_USER:$SERVER_USER /home/$SERVER_USER/.ssh
+chmod 700 /home/$SERVER_USER/.ssh
+chmod 600 /home/$SERVER_USER/.ssh/authorized_keys 2>/dev/null || true
 
 # --- Generate server's local SSH key (for deployments) ---
 echo "=== Generating server SSH key ==="
-if [ ! -f /home/forge/.ssh/id_ed25519 ]; then
-    ssh-keygen -t ed25519 -f /home/forge/.ssh/id_ed25519 -N "" -C "forge@$(hostname)"
-    chown forge:forge /home/forge/.ssh/id_ed25519 /home/forge/.ssh/id_ed25519.pub
-    chmod 600 /home/forge/.ssh/id_ed25519
-    chmod 644 /home/forge/.ssh/id_ed25519.pub
+if [ ! -f /home/$SERVER_USER/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -f /home/$SERVER_USER/.ssh/id_ed25519 -N "" -C "$SERVER_USER@$(hostname)"
+    chown $SERVER_USER:$SERVER_USER /home/$SERVER_USER/.ssh/id_ed25519 /home/$SERVER_USER/.ssh/id_ed25519.pub
+    chmod 600 /home/$SERVER_USER/.ssh/id_ed25519
+    chmod 644 /home/$SERVER_USER/.ssh/id_ed25519.pub
 fi
 
 # Output the local public key for storage
-LOCAL_PUBLIC_KEY=$(cat /home/forge/.ssh/id_ed25519.pub)
+LOCAL_PUBLIC_KEY=$(cat /home/$SERVER_USER/.ssh/id_ed25519.pub)
 data_marker "local_public_key" "$LOCAL_PUBLIC_KEY"
 
 # =========================================
@@ -343,16 +345,16 @@ ufw --force enable
 
 # --- Create sites directory ---
 echo "=== Setting up directories ==="
-mkdir -p /home/forge/sites
-chown -R forge:forge /home/forge
+mkdir -p /home/$SERVER_USER/sites
+chown -R $SERVER_USER:$SERVER_USER /home/$SERVER_USER
 
 # --- Configure PHP-FPM pool ---
 echo "=== Configuring PHP-FPM ==="
-cat > /etc/php/${PHP_VERSION}/fpm/pool.d/forge.conf <<EOF
-[forge]
-user = forge
-group = forge
-listen = /run/php/php${PHP_VERSION}-fpm-forge.sock
+cat > /etc/php/${PHP_VERSION}/fpm/pool.d/$SERVER_USER.conf <<EOF
+[$SERVER_USER]
+user = $SERVER_USER
+group = $SERVER_USER
+listen = /run/php/php${PHP_VERSION}-fpm-$SERVER_USER.sock
 listen.owner = www-data
 listen.group = www-data
 pm = dynamic

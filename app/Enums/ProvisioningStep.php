@@ -38,7 +38,7 @@ enum ProvisioningStep: int
         return match ($this) {
             self::Pending => 'Waiting to start provisioning.',
             self::WaitingForServer => 'We are waiting to hear from your server to confirm the provisioning process has started.',
-            self::PreparingServer => 'Creating the forge user and configuring SSH access.',
+            self::PreparingServer => 'Creating the server user and configuring SSH access.',
             self::ConfiguringSwap => 'Setting up swap space for better memory management.',
             self::InstallingBaseDependencies => 'Installing the basic dependencies required to provision your server. It will be updated to the latest Ubuntu patch version.',
             self::InstallingPhp => 'PHP will be installed along with common extensions required for Laravel applications.',

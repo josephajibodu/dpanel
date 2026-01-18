@@ -94,7 +94,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                     />
                                     {form.errors.domain && <p className="text-destructive text-sm">{form.errors.domain}</p>}
                                     <p className="text-muted-foreground text-xs">
-                                        Your site will be served from <code className="bg-muted rounded px-1">/home/forge/{form.data.domain || 'example.com'}</code>
+                                        Your site will be served from <code className="bg-muted rounded px-1">/home/artisan/{form.data.domain || 'example.com'}</code>
                                     </p>
                                 </div>
 

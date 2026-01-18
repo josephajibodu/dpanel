@@ -56,7 +56,9 @@ class Site extends Model
      */
     public function rootPath(): string
     {
-        return "/home/forge/{$this->domain}";
+        $serverUser = config('server.user');
+
+        return "/home/{$serverUser}/{$this->domain}";
     }
 
     /**

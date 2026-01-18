@@ -13,16 +13,16 @@ class SshService
     private const CONNECT_TIMEOUT = 10;
 
     /**
-     * Connect to a server via SSH as the default user (forge).
+     * Connect to a server via SSH as the default user.
      */
     public function connect(Server $server): SshConnection
     {
-        return $this->connectAs($server, 'forge');
+        return $this->connectAs($server, config('server.user'));
     }
 
     /**
      * Connect to a server via SSH as root.
-     * Used during initial provisioning before the forge user exists.
+     * Used during initial provisioning before the default user exists.
      */
     public function connectAsRoot(Server $server): SshConnection
     {
@@ -138,7 +138,7 @@ class SshService
      */
     public function testConnection(Server $server): bool
     {
-        return $this->testConnectionAs($server, 'forge');
+        return $this->testConnectionAs($server, config('server.user'));
     }
 
     /**

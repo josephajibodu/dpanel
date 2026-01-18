@@ -316,7 +316,7 @@ describe('site model', function () {
             'domain' => 'test.example.com',
         ]);
 
-        expect($site->rootPath())->toBe('/home/forge/test.example.com');
+        expect($site->rootPath())->toBe('/home/artisan/test.example.com');
     });
 
     it('generates correct web root with directory', function () {
@@ -325,7 +325,7 @@ describe('site model', function () {
             'directory' => '/public',
         ]);
 
-        expect($site->webRoot())->toBe('/home/forge/test.example.com/public');
+        expect($site->webRoot())->toBe('/home/artisan/test.example.com/public');
     });
 
     it('generates correct repository URL', function () {

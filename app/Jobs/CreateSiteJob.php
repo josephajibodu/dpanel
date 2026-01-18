@@ -44,7 +44,8 @@ class CreateSiteJob implements ShouldQueue
             $connection->exec("mkdir -p {$siteRoot}");
 
             // Set ownership
-            $connection->exec("chown -R forge:forge {$siteRoot}");
+            $serverUser = config('server.user');
+            $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
 
             // Generate Nginx config
             $nginxConfig = $nginxService->generate($site);
@@ -76,7 +77,8 @@ class CreateSiteJob implements ShouldQueue
             }
 
             // Set proper permissions
-            $connection->exec("chown -R forge:forge {$siteRoot}");
+            $serverUser = config('server.user');
+            $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
             $connection->exec("chmod -R 755 {$siteRoot}");
 
             $connection->disconnect();
