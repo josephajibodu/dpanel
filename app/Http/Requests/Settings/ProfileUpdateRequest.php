@@ -17,6 +17,9 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        return array_merge($this->profileRules($this->user()->id), [
+            'git_name' => ['nullable', 'string', 'max:255'],
+            'git_email' => ['nullable', 'string', 'email', 'max:255'],
+        ]);
     }
 }

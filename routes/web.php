@@ -56,6 +56,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('ssh-keys.sync');
     Route::post('ssh-keys/{sshKey}/revoke', [SshKeyController::class, 'revoke'])
         ->name('ssh-keys.revoke');
+
+    // Source Control Accounts
+    Route::get('source-control', [\App\Http\Controllers\SourceControlAccountController::class, 'index'])
+        ->name('source-control.index');
+    Route::get('auth/{provider}/redirect', [\App\Http\Controllers\SourceControlAccountController::class, 'redirect'])
+        ->name('source-control.redirect')
+        ->where('provider', 'github|gitlab|bitbucket');
+    Route::get('auth/{provider}/callback', [\App\Http\Controllers\SourceControlAccountController::class, 'callback'])
+        ->name('source-control.callback')
+        ->where('provider', 'github|gitlab|bitbucket');
+    Route::delete('source-control/{sourceControlAccount}', [\App\Http\Controllers\SourceControlAccountController::class, 'destroy'])
+        ->name('source-control.destroy');
 });
 
 require __DIR__.'/settings.php';

@@ -23,6 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'git_name',
+        'git_email',
     ];
 
     /**
@@ -69,5 +71,10 @@ class User extends Authenticatable
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
+    }
+
+    public function sourceControlAccounts(): HasMany
+    {
+        return $this->hasMany(SourceControlAccount::class);
     }
 }

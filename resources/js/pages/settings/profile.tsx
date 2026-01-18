@@ -91,6 +91,42 @@ export default function Profile({
                                     />
                                 </div>
 
+                                <div className="space-y-4 border-t pt-6">
+                                    <HeadingSmall
+                                        title="Git settings"
+                                        description="The Git name and email are used to identify the author of commits made when using applications such as Statamic."
+                                    />
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="git_name">Git name</Label>
+                                        <p className="text-muted-foreground -mt-1 text-xs">The name to associate Git commits with.</p>
+                                        <Input
+                                            id="git_name"
+                                            className="mt-1 block w-full"
+                                            defaultValue={auth.user.git_name || ''}
+                                            name="git_name"
+                                            autoComplete="name"
+                                            placeholder="Git name"
+                                        />
+                                        <InputError className="mt-2" message={errors.git_name} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="git_email">Git email</Label>
+                                        <p className="text-muted-foreground -mt-1 text-xs">The email to associate Git commits with.</p>
+                                        <Input
+                                            id="git_email"
+                                            type="email"
+                                            className="mt-1 block w-full"
+                                            defaultValue={auth.user.git_email || ''}
+                                            name="git_email"
+                                            autoComplete="email"
+                                            placeholder="Git email"
+                                        />
+                                        <InputError className="mt-2" message={errors.git_email} />
+                                    </div>
+                                </div>
+
                                 {mustVerifyEmail &&
                                     auth.user.email_verified_at === null && (
                                         <div>

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, CloudIcon, Folder, KeyIcon, LayoutGrid, ServerIcon } from 'lucide-react';
+import { BookOpen, CloudIcon, CodeIcon, Folder, KeyIcon, LayoutGrid, ServerIcon } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -38,6 +38,11 @@ const mainNavItems: NavItem[] = [
         title: 'Provider Accounts',
         href: '/provider-accounts',
         icon: CloudIcon,
+    },
+    {
+        title: 'Source Control',
+        href: '/source-control',
+        icon: CodeIcon,
     },
 ];
 
