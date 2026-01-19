@@ -11,19 +11,35 @@ use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
+use App\Http\Resources\SourceControlAccountResource;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SourceControlAccount;
+use App\Services\SourceControlService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SiteController extends Controller
 {
-    public function create(Server $server): Response
+    public function create(Server $server, SourceControlService $sourceControlService): Response
     {
         $this->authorize('create', [Site::class, $server]);
 
         $server->load('providerAccount');
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, SourceControlAccount> $sourceControlAccounts */
+        $sourceControlAccounts = auth()->user()
+            ->sourceControlAccounts()
+            ->get();
+
+        $repositoriesByAccount = [];
+
+        foreach ($sourceControlAccounts as $account) {
+            $repositoriesByAccount[$account->id] = $sourceControlService
+                ->listRepositories($account)
+                ->all();
+        }
 
         return Inertia::render('sites/create', [
             'server' => new ServerResource($server),
@@ -41,6 +57,10 @@ class SiteController extends Controller
                 ['value' => '8.3', 'label' => 'PHP 8.3'],
                 ['value' => '8.2', 'label' => 'PHP 8.2'],
                 ['value' => '8.1', 'label' => 'PHP 8.1'],
+            ],
+            'sourceControl' => [
+                'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
+                'repositories' => $repositoriesByAccount,
             ],
         ]);
     }

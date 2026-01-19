@@ -73,8 +73,8 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Source Control</h1>
                         <p className="text-muted-foreground text-sm">
-                            Connecting to your source control providers allows ServerForge to access your project's codebase, making it
-                            possible to deploy your applications.
+                            Connecting to your source control providers allows your deployment platform to access your project's codebase,
+                            making it possible to deploy your applications.
                         </p>
                     </div>
                     {providers.length > 0 && (

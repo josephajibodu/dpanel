@@ -45,6 +45,7 @@ class ProvisioningScriptService
             'DB_PASSWORD' => $databasePassword,
             'SUDO_PASSWORD' => $sudoPassword,
             'SERVER_USER' => config('server.user'),
+            'APP_NAME' => config('app.name'),
             'STEP_PREPARING' => ProvisioningStep::PreparingServer->value,
             'STEP_SWAP' => ProvisioningStep::ConfiguringSwap->value,
             'STEP_BASE_DEPS' => ProvisioningStep::InstallingBaseDependencies->value,
@@ -133,7 +134,7 @@ data_marker() {
     echo "###DATA:$1=$2###"
 }
 
-echo "=== Starting ServerForge Provisioning ==="
+echo "=== Starting {{APP_NAME}} Provisioning ==="
 echo "PHP Version: $PHP_VERSION"
 echo "Database: $DATABASE_TYPE"
 

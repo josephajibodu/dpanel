@@ -16,6 +16,7 @@ readonly class SiteData
         public ?array $aliases = null,
         public string $directory = '/public',
         public ?string $repository = null,
+        public ?int $sourceControlAccountId = null,
         public RepositoryProvider $repositoryProvider = RepositoryProvider::Github,
         public string $branch = 'main',
         public ProjectType $projectType = ProjectType::Laravel,
@@ -34,6 +35,7 @@ readonly class SiteData
             aliases: $data['aliases'] ?? null,
             directory: $data['directory'] ?? '/public',
             repository: $data['repository'] ?? null,
+            sourceControlAccountId: $data['source_control_account_id'] ?? null,
             repositoryProvider: isset($data['repository_provider'])
                 ? RepositoryProvider::from($data['repository_provider'])
                 : RepositoryProvider::Github,
@@ -57,6 +59,7 @@ readonly class SiteData
             'aliases' => $this->aliases,
             'directory' => $this->directory,
             'repository' => $this->repository,
+            'source_control_account_id' => $this->sourceControlAccountId,
             'repository_provider' => $this->repositoryProvider->value,
             'branch' => $this->branch,
             'project_type' => $this->projectType->value,

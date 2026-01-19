@@ -49,6 +49,11 @@ class StoreSiteRequest extends FormRequest
                 'max:255',
                 'regex:/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\.-]+$/',
             ],
+            'source_control_account_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('source_control_accounts', 'id')->where('user_id', $this->user()->id),
+            ],
             'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],

@@ -19,6 +19,7 @@ class Site extends Model
 
     protected $fillable = [
         'server_id',
+        'source_control_account_id',
         'domain',
         'aliases',
         'directory',
@@ -105,6 +106,11 @@ class Site extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    public function sourceControlAccount(): BelongsTo
+    {
+        return $this->belongsTo(SourceControlAccount::class);
     }
 
     public function deployments(): HasMany

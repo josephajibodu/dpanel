@@ -6,9 +6,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
+import { SourceControlAccount } from '@/types/source-control';
 import { PhpVersion, ProjectType, RepositoryProvider } from '@/types/site';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, GlobeIcon, Loader2Icon } from 'lucide-react';
+
+interface SourceControlData {
+    accounts: {
+        data: SourceControlAccount[];
+    };
+    repositories: Record<
+        number,
+        Array<{
+            id: number;
+            name: string;
+            full_name: string;
+            ssh_url: string;
+            html_url: string;
+            default_branch: string;
+            private: boolean;
+        }>
+    >;
+}
 
 interface Props {
     server: {
@@ -17,9 +36,10 @@ interface Props {
     projectTypes: ProjectType[];
     repositoryProviders: RepositoryProvider[];
     phpVersions: PhpVersion[];
+    sourceControl?: SourceControlData;
 }
 
-export default function SitesCreate({ server, projectTypes, repositoryProviders, phpVersions }: Props) {
+export default function SitesCreate({ server, projectTypes, repositoryProviders, phpVersions, sourceControl }: Props) {
     const { data: serverData } = server;
 
     const form = useForm({
@@ -32,6 +52,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
         project_type: 'laravel',
         php_version: serverData.php_version || '8.3',
         auto_deploy: false,
+        source_control_account_id: undefined as number | undefined,
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -198,6 +219,79 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                     {form.errors.repository && <p className="text-destructive text-sm">{form.errors.repository}</p>}
                                     <p className="text-muted-foreground text-xs">Leave empty to create a site without a repository.</p>
                                 </div>
+
+                                {sourceControl && sourceControl.accounts.data.length > 0 && (
+                                    <div className="space-y-3 border-t pt-4">
+                                        <div className="space-y-1">
+                                            <Label>Source control provider</Label>
+                                            <p className="text-muted-foreground text-xs">
+                                                Choose a connected source control account to quickly select a repository.
+                                            </p>
+                                        </div>
+
+                                        <Select
+                                            value={form.data.source_control_account_id ? String(form.data.source_control_account_id) : ''}
+                                            onValueChange={(value) => {
+                                                const accountId = Number(value);
+                                                const account = sourceControl.accounts.data.find((a) => a.id === accountId);
+
+                                                form.setData({
+                                                    ...form.data,
+                                                    source_control_account_id: accountId,
+                                                    repository_provider: account?.provider ?? form.data.repository_provider,
+                                                });
+                                            }}
+                                        >
+                                            <SelectTrigger id="source_control_account_id">
+                                                <SelectValue placeholder="Select a connected account" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {sourceControl.accounts.data.map((account) => (
+                                                    <SelectItem key={account.id} value={String(account.id)}>
+                                                        {account.provider_label} · @{account.provider_username}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        {form.data.source_control_account_id &&
+                                            sourceControl.repositories[form.data.source_control_account_id]?.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <Label>Select repository</Label>
+                                                    <Select
+                                                        value={form.data.repository}
+                                                        onValueChange={(fullName) => {
+                                                            form.setData({
+                                                                ...form.data,
+                                                                repository: fullName,
+                                                            });
+                                                        }}
+                                                    >
+                                                        <SelectTrigger id="source_control_repository">
+                                                            <SelectValue placeholder="Select a repository" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {sourceControl.repositories[
+                                                                form.data.source_control_account_id
+                                                            ]?.map((repo) => (
+                                                                <SelectItem key={repo.id} value={repo.full_name}>
+                                                                    {repo.full_name}
+                                                                    {repo.private && (
+                                                                        <span className="text-muted-foreground ml-1 text-xs">
+                                                                            (private)
+                                                                        </span>
+                                                                    )}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-muted-foreground text-xs">
+                                                        This will use SSH deploy keys so the server can clone the repository securely.
+                                                    </p>
+                                                </div>
+                                            )}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 

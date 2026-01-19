@@ -40,8 +40,10 @@ class CreateServerAction
         $keyPair = $this->keyGenerator->generate();
 
         // Create SSH key at provider
+        $appSlug = \Illuminate\Support\Str::slug((string) config('app.name'), '-');
+
         $providerKeyId = $provider->createSshKey(
-            name: 'serverforge-'.$data->name.'-'.Str::random(8),
+            name: $appSlug.'-'.$data->name.'-'.Str::random(8),
             publicKey: $keyPair->publicKey,
         );
 

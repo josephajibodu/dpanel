@@ -6,6 +6,7 @@ use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Services\NginxConfigService;
 use App\Services\Ssh\SshService;
+use App\Services\SourceControlService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,7 +28,11 @@ class CreateSiteJob implements ShouldQueue
         public Site $site,
     ) {}
 
-    public function handle(SshService $sshService, NginxConfigService $nginxService): void
+    public function handle(
+        SshService $sshService,
+        NginxConfigService $nginxService,
+        SourceControlService $sourceControlService,
+    ): void
     {
         $site = $this->site;
         $server = $site->server;
@@ -35,6 +40,7 @@ class CreateSiteJob implements ShouldQueue
         Log::info("Creating site {$site->domain} on server {$server->name}");
 
         try {
+            $appName = config('app.name');
             $site->update(['status' => SiteStatus::Installing]);
 
             $connection = $sshService->connect($server);
@@ -70,6 +76,9 @@ class CreateSiteJob implements ShouldQueue
 
             // Clone repository if provided
             if ($site->repository) {
+                // Ensure deploy key exists for this repository if using a supported provider.
+                $sourceControlService->ensureDeployKey($site);
+
                 $this->cloneRepository($connection, $site);
             } else {
                 // Create a simple index.php as placeholder
@@ -135,10 +144,12 @@ class CreateSiteJob implements ShouldQueue
 
         $placeholderPath = $webDir ? "{$siteRoot}/{$webDir}/index.php" : "{$siteRoot}/index.php";
 
-        $placeholder = <<<'PHP'
+            $appName = addslashes((string) config('app.name'));
+
+            $placeholder = <<<PHP
 <?php
 echo '<h1>Site coming soon!</h1>';
-echo '<p>This site is hosted by ServerForge.</p>';
+echo "This site is hosted by {$appName}.";
 PHP;
 
         $escapedPlaceholder = str_replace("'", "'\\''", $placeholder);
