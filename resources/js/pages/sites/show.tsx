@@ -1,6 +1,14 @@
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +28,7 @@ import {
     GitBranchIcon,
     GlobeIcon,
     Loader2Icon,
+    MoreVerticalIcon,
     PlusIcon,
     RocketIcon,
     ServerIcon,
@@ -46,12 +55,28 @@ type TabType = 'overview' | 'deployments' | 'environment' | 'deploy-script';
 export default function SitesShow({ site }: Props) {
     const { data: siteData } = site;
     const [activeTab, setActiveTab] = useState<TabType>('overview');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
         { title: siteData.server?.name || 'Server', href: `/servers/${siteData.server?.id}` },
         { title: siteData.domain, href: `/sites/${siteData.id}` },
     ];
+
+    const handleDelete = () => {
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        setIsDeleting(true);
+        router.delete(`/sites/${siteData.id}`, {
+            onFinish: () => {
+                setIsDeleting(false);
+                setDeleteDialogOpen(false);
+            },
+        });
+    };
 
     const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
         { id: 'overview', label: 'Overview', icon: GlobeIcon },
@@ -79,12 +104,31 @@ export default function SitesShow({ site }: Props) {
                         </div>
                         <p className="text-muted-foreground text-sm">{siteData.project_type_label}</p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <a href={`https://${siteData.domain}`} target="_blank" rel="noopener noreferrer">
-                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                            Visit Site
-                        </a>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
+                            <a href={`https://${siteData.domain}`} target="_blank" rel="noopener noreferrer">
+                                <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                                Visit Site
+                            </a>
+                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon">
+                                    <MoreVerticalIcon className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/sites/${siteData.id}/edit`}>Edit Site</Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive" disabled={siteData.status === 'installing'}>
+                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                    Delete Site
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
 
                 {/* Tabs */}
@@ -111,6 +155,17 @@ export default function SitesShow({ site }: Props) {
                 {activeTab === 'environment' && <EnvironmentTab site={siteData} />}
                 {activeTab === 'deploy-script' && <DeployScriptTab site={siteData} />}
             </div>
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Delete Site"
+                description={`Are you sure you want to delete "${siteData.domain}"? This will permanently remove the site, its files, Nginx configuration, and any associated deploy keys. This action cannot be undone.`}
+                confirmLabel="Delete Site"
+                variant="destructive"
+                onConfirm={confirmDelete}
+                loading={isDeleting}
+            />
         </AppLayout>
     );
 }

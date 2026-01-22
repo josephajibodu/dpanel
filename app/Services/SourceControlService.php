@@ -231,4 +231,118 @@ class SourceControlService
             return false;
         }
     }
+
+    /**
+     * Delete a deploy key from a repository.
+     */
+    public function deleteDeployKey(Site $site): void
+    {
+        $account = $site->sourceControlAccount;
+
+        if (! $account) {
+            return;
+        }
+
+        if ($account->provider !== RepositoryProvider::Github) {
+            // Only GitHub is supported for deploy keys for now.
+            return;
+        }
+
+        $server = $site->server;
+
+        if (! $server || ! $server->local_public_key || ! $site->repository) {
+            return;
+        }
+
+        $this->deleteGithubDeployKey(
+            account: $account,
+            repositoryFullName: $site->repository,
+            publicKey: $server->local_public_key,
+        );
+    }
+
+    /**
+     * Delete a deploy key from a GitHub repository by matching the public key.
+     */
+    private function deleteGithubDeployKey(
+        SourceControlAccount $account,
+        string $repositoryFullName,
+        string $publicKey,
+    ): void {
+        try {
+            // First, find the deploy key ID by matching the public key
+            $response = Http::withToken($account->token)
+                ->acceptJson()
+                ->withHeaders([
+                    'X-GitHub-Api-Version' => '2022-11-28',
+                ])
+                ->get("https://api.github.com/repos/{$repositoryFullName}/keys", [
+                    'per_page' => 100,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('Failed to list GitHub deploy keys for deletion', [
+                    'account_id' => $account->id,
+                    'repository' => $repositoryFullName,
+                    'status' => $response->status(),
+                ]);
+
+                return;
+            }
+
+            /** @var array<int, array<string, mixed>> $keys */
+            $keys = $response->json();
+
+            $publicKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', $publicKey));
+
+            foreach ($keys as $key) {
+                $existingKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', (string) ($key['key'] ?? '')));
+
+                if ($existingKeyNormalized === $publicKeyNormalized) {
+                    $keyId = $key['id'] ?? null;
+
+                    if (! $keyId) {
+                        continue;
+                    }
+
+                    // Delete the deploy key
+                    $deleteResponse = Http::withToken($account->token)
+                        ->acceptJson()
+                        ->withHeaders([
+                            'X-GitHub-Api-Version' => '2022-11-28',
+                        ])
+                        ->delete("https://api.github.com/repos/{$repositoryFullName}/keys/{$keyId}");
+
+                    if ($deleteResponse->status() === 204) {
+                        Log::info('GitHub deploy key deleted', [
+                            'account_id' => $account->id,
+                            'repository' => $repositoryFullName,
+                            'key_id' => $keyId,
+                        ]);
+                    } else {
+                        Log::warning('Failed to delete GitHub deploy key', [
+                            'account_id' => $account->id,
+                            'repository' => $repositoryFullName,
+                            'key_id' => $keyId,
+                            'status' => $deleteResponse->status(),
+                            'body' => $deleteResponse->body(),
+                        ]);
+                    }
+
+                    return;
+                }
+            }
+
+            Log::info('GitHub deploy key not found (may have been deleted already)', [
+                'account_id' => $account->id,
+                'repository' => $repositoryFullName,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Exception while deleting GitHub deploy key', [
+                'account_id' => $account->id,
+                'repository' => $repositoryFullName,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
 }
