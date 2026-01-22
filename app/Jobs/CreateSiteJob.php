@@ -5,8 +5,8 @@ namespace App\Jobs;
 use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Services\NginxConfigService;
-use App\Services\Ssh\SshService;
 use App\Services\SourceControlService;
+use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -32,8 +32,7 @@ class CreateSiteJob implements ShouldQueue
         SshService $sshService,
         NginxConfigService $nginxService,
         SourceControlService $sourceControlService,
-    ): void
-    {
+    ): void {
         $site = $this->site;
         $server = $site->server;
 
@@ -144,9 +143,9 @@ class CreateSiteJob implements ShouldQueue
 
         $placeholderPath = $webDir ? "{$siteRoot}/{$webDir}/index.php" : "{$siteRoot}/index.php";
 
-            $appName = addslashes((string) config('app.name'));
+        $appName = addslashes((string) config('app.name'));
 
-            $placeholder = <<<PHP
+        $placeholder = <<<PHP
 <?php
 echo '<h1>Site coming soon!</h1>';
 echo "This site is hosted by {$appName}.";

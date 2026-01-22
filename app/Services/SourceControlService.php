@@ -55,11 +55,12 @@ class SourceControlService
             return;
         }
 
+        $websiteName = config('app.name');
         $this->createGithubDeployKey(
             account: $account,
             repositoryFullName: $site->repository,
             publicKey: $server->local_public_key,
-            title: 'ServerForge - '.$server->name
+            title: "$websiteName ($server->name)"
         );
     }
 
@@ -69,28 +70,45 @@ class SourceControlService
     private function listGithubRepositories(SourceControlAccount $account): Collection
     {
         try {
-            $response = Http::withToken($account->token)
-                ->acceptJson()
-                ->get('https://api.github.com/user/repos', [
-                    'per_page' => 100,
-                    'sort' => 'full_name',
-                    'direction' => 'asc',
-                ]);
+            $allRepos = collect();
+            $page = 1;
+            $perPage = 100;
 
-            if ($response->failed()) {
-                Log::warning('Failed to fetch GitHub repositories', [
-                    'account_id' => $account->id,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
+            do {
+                $response = Http::withToken($account->token)
+                    ->acceptJson()
+                    ->withHeaders([
+                        'X-GitHub-Api-Version' => '2022-11-28',
+                    ])
+                    ->get('https://api.github.com/user/repos', [
+                        'per_page' => $perPage,
+                        'page' => $page,
+                        'sort' => 'full_name',
+                        'direction' => 'asc',
+                    ]);
 
-                return collect();
-            }
+                if ($response->failed()) {
+                    Log::warning('Failed to fetch GitHub repositories', [
+                        'account_id' => $account->id,
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
 
-            /** @var array<int, array<string, mixed>> $repos */
-            $repos = $response->json();
+                    break;
+                }
 
-            return collect($repos)->map(function (array $repo): array {
+                /** @var array<int, array<string, mixed>> $repos */
+                $repos = $response->json();
+
+                if (empty($repos)) {
+                    break;
+                }
+
+                $allRepos = $allRepos->merge($repos);
+                $page++;
+            } while (count($repos) === $perPage);
+
+            return $allRepos->map(function (array $repo): array {
                 return [
                     'id' => $repo['id'],
                     'name' => $repo['name'],
@@ -119,16 +137,30 @@ class SourceControlService
     ): void {
         try {
             $appName = (string) config('app.name');
+            $publicKeyTrimmed = trim($publicKey);
+
+            // Check if deploy key already exists
+            if ($this->deployKeyExists($account, $repositoryFullName, $publicKeyTrimmed)) {
+                Log::info('GitHub deploy key already exists', [
+                    'account_id' => $account->id,
+                    'repository' => $repositoryFullName,
+                ]);
+
+                return;
+            }
 
             $response = Http::withToken($account->token)
                 ->acceptJson()
+                ->withHeaders([
+                    'X-GitHub-Api-Version' => '2022-11-28',
+                ])
                 ->post("https://api.github.com/repos/{$repositoryFullName}/keys", [
                     'title' => $title ?: $appName,
-                    'key' => trim($publicKey),
+                    'key' => $publicKeyTrimmed,
                     'read_only' => true,
                 ]);
 
-            if ($response->successful()) {
+            if ($response->status() === 201) {
                 Log::info('GitHub deploy key created', [
                     'account_id' => $account->id,
                     'repository' => $repositoryFullName,
@@ -152,5 +184,51 @@ class SourceControlService
             ]);
         }
     }
-}
 
+    /**
+     * Check if a deploy key already exists for the given repository.
+     */
+    private function deployKeyExists(
+        SourceControlAccount $account,
+        string $repositoryFullName,
+        string $publicKey,
+    ): bool {
+        try {
+            $response = Http::withToken($account->token)
+                ->acceptJson()
+                ->withHeaders([
+                    'X-GitHub-Api-Version' => '2022-11-28',
+                ])
+                ->get("https://api.github.com/repos/{$repositoryFullName}/keys", [
+                    'per_page' => 100,
+                ]);
+
+            if ($response->failed()) {
+                return false;
+            }
+
+            /** @var array<int, array<string, mixed>> $keys */
+            $keys = $response->json();
+
+            $publicKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', $publicKey));
+
+            foreach ($keys as $key) {
+                $existingKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', (string) ($key['key'] ?? '')));
+
+                if ($existingKeyNormalized === $publicKeyNormalized) {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::warning('Exception while checking for existing deploy key', [
+                'account_id' => $account->id,
+                'repository' => $repositoryFullName,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+}
