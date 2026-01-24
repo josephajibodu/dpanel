@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Nginx;
+namespace App\Services\Nginx\ConfigGenerators;
 
 use App\Models\Site;
 
@@ -60,7 +60,8 @@ abstract class BaseNginxConfigGenerator
             $subdomain = 'site';
         }
 
-        return "{$subdomain}-{$ipAddress}.nip.io";
+        // Use dot notation: subdomain.IP.nip.io
+        return "{$subdomain}.{$ipAddress}.nip.io";
     }
 
     /**

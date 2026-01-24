@@ -3,7 +3,7 @@
 use App\Enums\ProjectType;
 use App\Models\Server;
 use App\Models\Site;
-use App\Services\NginxConfigService;
+use App\Services\Nginx\NginxConfigService;
 
 describe('NginxConfigService', function () {
     it('includes nip.io domain in server_name when server has IP address', function () {
@@ -20,9 +20,9 @@ describe('NginxConfigService', function () {
         $config = $service->generate($site);
 
         expect($config)
-            ->toContain('server_name myapp.com myapp-203.0.113.42.nip.io')
+            ->toContain('server_name myapp.com myapp.203.0.113.42.nip.io')
             ->toContain('myapp.com')
-            ->toContain('myapp-203.0.113.42.nip.io');
+            ->toContain('myapp.203.0.113.42.nip.io');
     });
 
     it('does not include nip.io domain when server has no IP address', function () {
@@ -57,8 +57,8 @@ describe('NginxConfigService', function () {
         $config = $service->generateWithSsl($site);
 
         expect($config)
-            ->toContain('server_name example.com example-192.168.1.100.nip.io')
-            ->toContain('example-192.168.1.100.nip.io');
+            ->toContain('server_name example.com example.192.168.1.100.nip.io')
+            ->toContain('example.192.168.1.100.nip.io');
     });
 
     it('includes aliases along with nip.io domain', function () {
@@ -79,7 +79,7 @@ describe('NginxConfigService', function () {
             ->toContain('mysite.com')
             ->toContain('www.mysite.com')
             ->toContain('app.mysite.com')
-            ->toContain('mysite-10.0.0.1.nip.io');
+            ->toContain('mysite.10.0.0.1.nip.io');
     });
 
     it('generates correct nip.io domain format for subdomain domains', function () {
@@ -97,7 +97,7 @@ describe('NginxConfigService', function () {
 
         // Should extract "app" from "app.example.com"
         expect($config)
-            ->toContain('app-172.16.0.1.nip.io')
+            ->toContain('app.172.16.0.1.nip.io')
             ->toContain('app.example.com');
     });
 
@@ -116,7 +116,7 @@ describe('NginxConfigService', function () {
 
         // Should sanitize and use "my-site" or "mysite"
         expect($config)
-            ->toContain('192.168.1.50.nip.io')
+            ->toContain('my-site.192.168.1.50.nip.io')
             ->toContain('my-site.com');
     });
 
@@ -138,10 +138,10 @@ describe('NginxConfigService', function () {
         $httpsBlock = substr($config, strpos($config, '# HTTPS server'));
 
         expect($httpBlock)
-            ->toContain('test-203.0.113.10.nip.io');
+            ->toContain('test.203.0.113.10.nip.io');
 
         expect($httpsBlock)
-            ->toContain('test-203.0.113.10.nip.io');
+            ->toContain('test.203.0.113.10.nip.io');
     });
 
     describe('project type configurations', function () {

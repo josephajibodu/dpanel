@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\Nginx;
+namespace App\Services\Nginx\ConfigGenerators;
 
 use App\Models\Site;
 
-class PhpNginxConfigGenerator extends BaseNginxConfigGenerator
+class WordPressNginxConfigGenerator extends BaseNginxConfigGenerator
 {
     /**
-     * Generate the server block content for generic PHP applications.
+     * Generate the server block content for WordPress sites.
      */
     protected function generateServerBlock(Site $site): string
     {
@@ -23,9 +23,14 @@ class PhpNginxConfigGenerator extends BaseNginxConfigGenerator
 
     charset utf-8;
 
-    # Handle static files and directories
+    # WordPress permalink structure
     location / {
-        try_files \$uri \$uri/ /index.php /index.html =404;
+        try_files \$uri \$uri/ /index.php?\$args;
+    }
+
+    # WordPress admin and login
+    location ~ ^/wp-admin/ {
+        try_files \$uri \$uri/ /index.php?\$args;
     }
 
 {$this->getCommonLocations()}
@@ -40,6 +45,11 @@ class PhpNginxConfigGenerator extends BaseNginxConfigGenerator
     }
 
 {$this->getHiddenFilesProtection()}
+
+    # Deny access to wp-config.php
+    location ~ /wp-config.php {
+        deny all;
+    }
 NGINX;
     }
 }

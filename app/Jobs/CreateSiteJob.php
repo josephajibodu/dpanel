@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\SiteStatus;
 use App\Models\Site;
-use App\Services\NginxConfigService;
+use App\Services\Nginx\NginxConfigService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
@@ -48,6 +48,10 @@ class CreateSiteJob implements ShouldQueue
             $siteRoot = $site->rootPath();
             $connection->exec("mkdir -p {$siteRoot}");
 
+            // Ensure parent directory is accessible (like Forge does)
+            $parentDir = dirname($siteRoot);
+            $connection->exec("sudo chmod 755 {$parentDir}");
+
             // Set ownership
             $serverUser = config('server.user');
             $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
@@ -84,10 +88,11 @@ class CreateSiteJob implements ShouldQueue
                 $this->createPlaceholder($connection, $site);
             }
 
-            // Set proper permissions
+            // Set proper permissions (matching Forge: 775 for dirs, 664 for files)
             $serverUser = config('server.user');
             $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
-            $connection->exec("chmod -R 755 {$siteRoot}");
+            $connection->exec("find {$siteRoot} -type d -exec chmod 775 {} \\;");
+            $connection->exec("find {$siteRoot} -type f -exec chmod 664 {} \\;");
 
             $connection->disconnect();
 

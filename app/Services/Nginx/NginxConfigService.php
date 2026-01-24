@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Nginx;
 
 use App\Models\Site;
-use App\Services\Nginx\NginxConfigGeneratorFactory;
+use App\Services\Nginx\ConfigGenerators\NginxConfigGeneratorFactory;
 
 class NginxConfigService
 {

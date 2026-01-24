@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Nginx;
+namespace App\Services\Nginx\ConfigGenerators;
 
 use App\Models\Site;
 

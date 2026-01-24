@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Site;
-use App\Services\NginxConfigService;
+use App\Services\Nginx\NginxConfigService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
