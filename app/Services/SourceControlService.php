@@ -26,6 +26,20 @@ class SourceControlService
     }
 
     /**
+     * List branches for a given repository.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function listBranches(SourceControlAccount $account, string $repositoryFullName): Collection
+    {
+        return match ($account->provider) {
+            RepositoryProvider::Github => $this->listGithubBranches($account, $repositoryFullName),
+            // @todo Implement GitLab and Bitbucket branches when needed.
+            default => collect(),
+        };
+    }
+
+    /**
      * Ensure a deploy key exists for the given site / repository on the provider.
      *
      * This uses the server's local public key as the deploy key, allowing the server
@@ -122,6 +136,66 @@ class SourceControlService
         } catch (\Throwable $e) {
             Log::error('Exception while fetching GitHub repositories', [
                 'account_id' => $account->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function listGithubBranches(SourceControlAccount $account, string $repositoryFullName): Collection
+    {
+        try {
+            $allBranches = collect();
+            $page = 1;
+            $perPage = 100;
+
+            do {
+                $response = Http::withToken($account->token)
+                    ->acceptJson()
+                    ->withHeaders([
+                        'X-GitHub-Api-Version' => '2022-11-28',
+                    ])
+                    ->get("https://api.github.com/repos/{$repositoryFullName}/branches", [
+                        'per_page' => $perPage,
+                        'page' => $page,
+                    ]);
+
+                if ($response->failed()) {
+                    Log::warning('Failed to fetch GitHub branches', [
+                        'account_id' => $account->id,
+                        'repository' => $repositoryFullName,
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
+
+                    break;
+                }
+
+                /** @var array<int, array<string, mixed>> $branches */
+                $branches = $response->json();
+
+                if (empty($branches)) {
+                    break;
+                }
+
+                $allBranches = $allBranches->merge($branches);
+                $page++;
+            } while (count($branches) === $perPage);
+
+            return $allBranches->map(function (array $branch): array {
+                return [
+                    'name' => $branch['name'],
+                    'protected' => (bool) ($branch['protected'] ?? false),
+                ];
+            });
+        } catch (\Throwable $e) {
+            Log::error('Exception while fetching GitHub branches', [
+                'account_id' => $account->id,
+                'repository' => $repositoryFullName,
                 'message' => $e->getMessage(),
             ]);
 

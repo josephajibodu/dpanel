@@ -68,6 +68,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('provider', 'github|gitlab|bitbucket');
     Route::delete('source-control/{sourceControlAccount}', [\App\Http\Controllers\SourceControlAccountController::class, 'destroy'])
         ->name('source-control.destroy');
+    Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
+        ->where('repository', '.*')
+        ->name('source-control.branches');
 });
 
 require __DIR__.'/settings.php';

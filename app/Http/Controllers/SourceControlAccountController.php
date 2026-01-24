@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\RepositoryProvider;
 use App\Http\Resources\SourceControlAccountResource;
 use App\Models\SourceControlAccount;
+use App\Services\SourceControlService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -132,5 +134,25 @@ class SourceControlAccountController extends Controller
         return redirect()
             ->route('source-control.index')
             ->with('success', "{$providerLabel} account disconnected.");
+    }
+
+    public function branches(
+        SourceControlAccount $sourceControlAccount,
+        string $repository,
+        SourceControlService $sourceControlService,
+    ): JsonResponse {
+        $this->authorize('view', $sourceControlAccount);
+
+        // Decode the repository name in case it's URL-encoded
+        $repository = urldecode($repository);
+
+        $branches = $sourceControlService->listBranches($sourceControlAccount, $repository);
+
+        return response()->json([
+            'branches' => $branches->map(fn ($branch) => [
+                'name' => $branch['name'],
+                'protected' => $branch['protected'],
+            ]),
+        ]);
     }
 }

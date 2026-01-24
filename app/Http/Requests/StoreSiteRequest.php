@@ -31,10 +31,18 @@ class StoreSiteRequest extends FormRequest
                 Rule::exists('servers', 'id')->where('user_id', $this->user()->id),
             ],
             'domain' => [
-                'required',
+                'nullable',
+                'required_without:site_name',
                 'string',
                 'max:255',
                 'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/',
+            ],
+            'site_name' => [
+                'nullable',
+                'required_without:domain',
+                'string',
+                'max:255',
+                'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$/',
             ],
             'aliases' => ['nullable', 'array'],
             'aliases.*' => [
@@ -58,6 +66,8 @@ class StoreSiteRequest extends FormRequest
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
             'php_version' => ['sometimes', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
+            'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
+            'build_command' => ['nullable', 'string', 'max:500'],
             'auto_deploy' => ['sometimes', 'boolean'],
         ];
     }
@@ -72,8 +82,9 @@ class StoreSiteRequest extends FormRequest
         return [
             'server_id.required' => 'Please select a server.',
             'server_id.exists' => 'The selected server is invalid or does not belong to you.',
-            'domain.required' => 'Please provide a domain name.',
             'domain.regex' => 'Please enter a valid domain name (e.g., example.com).',
+            'site_name.regex' => 'Site name can only contain letters, numbers, and hyphens.',
+            'package_manager.in' => 'Package manager must be one of: none, npm, pnpm, yarn, bun.',
             'aliases.*.regex' => 'Please enter valid domain aliases.',
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
             'repository.regex' => 'Repository should be in format: username/repository.',

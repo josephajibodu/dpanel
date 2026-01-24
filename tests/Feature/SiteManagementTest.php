@@ -126,6 +126,66 @@ describe('site creation', function () {
         $response->assertSessionHasErrors('domain');
     });
 
+    it('can create a site with site_name instead of domain', function () {
+        Queue::fake();
+
+        $this->server->update(['ip_address' => '146.190.253.93']);
+
+        $response = $this->actingAs($this->user)
+            ->post("/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'site_name' => 'react-blog',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('sites', [
+            'server_id' => $this->server->id,
+            'site_name' => 'react-blog',
+            'domain' => 'react-blog.146-190-253-93.nip.io',
+            'directory' => '/public',
+            'project_type' => 'laravel',
+            'php_version' => '8.3',
+            'status' => 'pending',
+        ]);
+
+        Queue::assertPushed(CreateSiteJob::class);
+    });
+
+    it('validates site_name format', function () {
+        $response = $this->actingAs($this->user)
+            ->post("/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'site_name' => 'invalid site name!',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertSessionHasErrors('site_name');
+    });
+
+    it('requires either domain or site_name', function () {
+        $response = $this->actingAs($this->user)
+            ->post("/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertSessionHasErrors(['domain', 'site_name']);
+    });
+
     it('validates repository format', function () {
         $response = $this->actingAs($this->user)
             ->post("/servers/{$this->server->id}/sites", [

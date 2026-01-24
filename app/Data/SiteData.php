@@ -12,7 +12,8 @@ readonly class SiteData
      */
     public function __construct(
         public int $serverId,
-        public string $domain,
+        public ?string $domain = null,
+        public ?string $siteName = null,
         public ?array $aliases = null,
         public string $directory = '/public',
         public ?string $repository = null,
@@ -21,6 +22,8 @@ readonly class SiteData
         public string $branch = 'main',
         public ProjectType $projectType = ProjectType::Laravel,
         public string $phpVersion = '8.3',
+        public ?string $packageManager = null,
+        public ?string $buildCommand = null,
         public bool $autoDeploy = false,
     ) {}
 
@@ -31,7 +34,8 @@ readonly class SiteData
     {
         return new self(
             serverId: $data['server_id'],
-            domain: $data['domain'],
+            domain: $data['domain'] ?? null,
+            siteName: $data['site_name'] ?? null,
             aliases: $data['aliases'] ?? null,
             directory: $data['directory'] ?? '/public',
             repository: $data['repository'] ?? null,
@@ -44,6 +48,8 @@ readonly class SiteData
                 ? ProjectType::from($data['project_type'])
                 : ProjectType::Laravel,
             phpVersion: $data['php_version'] ?? '8.3',
+            packageManager: $data['package_manager'] ?? null,
+            buildCommand: $data['build_command'] ?? null,
             autoDeploy: $data['auto_deploy'] ?? false,
         );
     }
@@ -56,6 +62,7 @@ readonly class SiteData
         return [
             'server_id' => $this->serverId,
             'domain' => $this->domain,
+            'site_name' => $this->siteName,
             'aliases' => $this->aliases,
             'directory' => $this->directory,
             'repository' => $this->repository,
@@ -64,6 +71,8 @@ readonly class SiteData
             'branch' => $this->branch,
             'project_type' => $this->projectType->value,
             'php_version' => $this->phpVersion,
+            'package_manager' => $this->packageManager,
+            'build_command' => $this->buildCommand,
             'auto_deploy' => $this->autoDeploy,
         ];
     }
