@@ -21,7 +21,7 @@ This document provides a **sequential, trackable guide** for building the Larave
 | 3. Server Provisioning | 🟢 Complete | 14 | 13/14 |
 | 4. SSH & Key Management | 🟢 Complete | 9 | 9/9 |
 | 5. Sites | 🟢 Complete | 11 | 11/11 |
-| 6. Deployments | 🔴 Not Started | 12 | 0/12 |
+| 6. Deployments | 🟡 In Progress | 12 | 8/12 |
 | 7. Polish & Testing | 🔴 Not Started | 10 | 0/10 |
 
 **Legend:** 🔴 Not Started | 🟡 In Progress | 🟢 Complete
@@ -506,48 +506,57 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 **Dependencies:** Phase 5 complete
 
-### 6.1 Deployment Backend
+### 6.1 Deployment Backend 🟢 Complete
 
-- [ ] **6.1.1** Create `DeploymentController` (index, store, show)
+- [x] **6.1.1** Create `DeploymentController` (index, store, show)
 
-- [ ] **6.1.2** Create `DeploymentResource`
+- [x] **6.1.2** Create `DeploymentResource`
 
-- [ ] **6.1.3** Create `App\Actions\Sites\TriggerDeploymentAction`
+- [x] **6.1.3** Create `App\Actions\Sites\TriggerDeploymentAction`
 
-### 6.2 Deployment Job
+### 6.2 Deployment Job 🟢 Complete
 
-- [ ] **6.2.1** Create `App\Jobs\DeploySiteJob`
+- [x] **6.2.1** Create `App\Jobs\DeploySiteJob`
   - Ref: `TECHNICAL_PLAN_PART2.md` → Section 6 → DeploySiteJob
 
-- [ ] **6.2.2** Implement log streaming to database
+- [x] **6.2.2** Implement log streaming to database
 
-- [ ] **6.2.3** Create `App\Events\DeploymentStatusChanged`
+- [x] **6.2.3** Create `App\Events\DeploymentStatusChanged`
 
-- [ ] **6.2.4** Create `App\Events\DeploymentOutput`
+- [x] **6.2.4** Create `App\Events\DeploymentOutput`
 
-### 6.3 Realtime Logs
+### 6.3 Realtime Logs 🟢 Complete
 
-- [ ] **6.3.1** Set up deployment broadcasting channel
+- [x] **6.3.1** Set up deployment broadcasting channel
 
-- [ ] **6.3.2** Create `hooks/use-deployment-logs.ts`
+- [x] **6.3.2** Create `hooks/use-deployment-logs.ts`
   - Ref: `TECHNICAL_PLAN_PART4.md` → Section 11 → Frontend Integration
+  - Also created `hooks/use-deployment-updates.ts` for status change notifications
 
-- [ ] **6.3.3** Handle WebSocket reconnection gracefully
+- [x] **6.3.3** Handle WebSocket reconnection gracefully
+  - Echo handles reconnection automatically; hooks use lightweight notifications with Inertia partial reloads
 
-### 6.4 Deployment UI
+### 6.4 Deployment UI 🟢 Complete
 
-- [ ] **6.4.1** Create `components/deployments/deployment-card.tsx`
+- [x] **6.4.1** Create `components/deployments/deployment-card.tsx`
 
-- [ ] **6.4.2** Create `components/deployments/deployment-list.tsx`
+- [x] **6.4.2** Create `components/deployments/deployment-list.tsx`
 
-- [ ] **6.4.3** Create `pages/deployments/show.tsx`
+- [x] **6.4.3** Create `pages/deployments/show.tsx`
   - Realtime log viewer
   - Ref: `TECHNICAL_PLAN_PART4.md` → Section 10 → Deployment Detail
 
-- [ ] **6.4.4** Create `components/deployments/deployment-log.tsx`
+- [x] **6.4.4** Create `components/deployments/deployment-log.tsx`
   - Terminal-style output
   - Auto-scroll
   - Color-coded errors
+
+- [x] **6.4.5** Updated `pages/sites/show.tsx` DeploymentsTab
+  - Uses new deployment components
+  - Triggers deployments via `TriggerDeploymentAction`
+
+- [x] **6.4.6** Set up Laravel Echo with Reverb
+  - Created `resources/js/echo.ts` with Reverb configuration
 
 ### 6.5 Webhooks
 
@@ -569,13 +578,13 @@ This document provides a **sequential, trackable guide** for building the Larave
 
 - [ ] **6.6.2** Generate and display API tokens
 
-### Milestone 6 ✓
+### Milestone 6 🟡 Partial
 
-- [ ] User can trigger deployments manually
-- [ ] Deployment logs stream in realtime
-- [ ] GitHub webhook triggers auto-deploy
-- [ ] Deployment history is tracked
-- [ ] Failed deployments show errors clearly
+- [x] User can trigger deployments manually
+- [x] Deployment logs stream in realtime
+- [ ] GitHub webhook triggers auto-deploy (Phase 6.5)
+- [x] Deployment history is tracked
+- [x] Failed deployments show errors clearly
 
 ---
 
@@ -707,6 +716,8 @@ Use this section to document important decisions made during implementation:
 | 2026-01-16 | Use `sudo mysql` for MySQL/MariaDB root password setup | Ubuntu's default MySQL uses auth_socket authentication; `sudo mysql` works with fresh installs |
 | 2026-01-16 | Created `ProjectType` and `RepositoryProvider` enums | Strongly-typed project types (Laravel, PHP, Symfony, WordPress, HTML) with default deploy scripts per type |
 | 2026-01-16 | Site creation uses CreateSiteJob with NginxConfigService | Separates Nginx config generation from job execution for better testability |
+| 2026-01-24 | Switched from repository-level deploy keys to account-level SSH keys for GitHub | Reduces API calls and key clutter; one key per server grants access to all user's repositories |
+| 2026-01-24 | WebSocket events send minimal data; frontend uses Inertia partial reloads | Keeps WebSocket payloads lightweight; status changes trigger partial reloads to fetch fresh data |
 
 ---
 
