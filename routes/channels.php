@@ -18,3 +18,12 @@ Broadcast::channel('server.{serverId}', function ($user, $serverId) {
         ->where('user_id', $user->id)
         ->exists();
 });
+
+// Deployment channel - user can subscribe to deployment logs
+use App\Models\Deployment;
+
+Broadcast::channel('deployments.{deploymentId}', function ($user, $deploymentId) {
+    $deployment = Deployment::find($deploymentId);
+
+    return $deployment && $deployment->site->server->user_id === $user->id;
+});

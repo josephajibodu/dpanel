@@ -1,5 +1,6 @@
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
+import { DeploymentList } from '@/components/deployments/deployment-list';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,8 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { EnvironmentVariable, Site } from '@/types/site';
 import { Head, Link, useForm, router } from '@inertiajs/react';
+import { store } from '@/routes/sites/deployments';
+import { DeploymentList } from '@/components/deployments/deployment-list';
 import { format } from 'date-fns';
 import {
     ArrowLeftIcon,
@@ -37,6 +40,7 @@ import {
     XIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import { store } from '@/routes/sites/deployments';
 
 interface Props {
     site: {
@@ -344,6 +348,16 @@ function OverviewTab({ site }: { site: Props['site']['data'] }) {
 
 function DeploymentsTab({ site }: { site: Props['site']['data'] }) {
     const deployments = site.deployments || [];
+    const [isDeploying, setIsDeploying] = useState(false);
+
+    const handleDeploy = () => {
+        setIsDeploying(true);
+        router.post(store.url({ site: site.id }), {}, {
+            onFinish: () => {
+                setIsDeploying(false);
+            },
+        });
+    };
 
     return (
         <Card>
@@ -353,70 +367,23 @@ function DeploymentsTab({ site }: { site: Props['site']['data'] }) {
                         <CardTitle>Deployment History</CardTitle>
                         <CardDescription>Recent deployments for this site.</CardDescription>
                     </div>
-                    <Button disabled>
-                        <RocketIcon className="mr-2 h-4 w-4" />
-                        Deploy Now
+                    <Button onClick={handleDeploy} disabled={isDeploying || site.status === 'installing'}>
+                        {isDeploying ? (
+                            <>
+                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                Deploying...
+                            </>
+                        ) : (
+                            <>
+                                <RocketIcon className="mr-2 h-4 w-4" />
+                                Deploy Now
+                            </>
+                        )}
                     </Button>
                 </div>
             </CardHeader>
             <CardContent>
-                {deployments.length > 0 ? (
-                    <div className="space-y-3">
-                        {deployments.map((deployment) => (
-                            <div key={deployment.id} className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="flex items-center gap-4">
-                                    <div
-                                        className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                                            deployment.status === 'finished'
-                                                ? 'bg-green-100 text-green-600 dark:bg-green-900'
-                                                : deployment.status === 'failed'
-                                                  ? 'bg-red-100 text-red-600 dark:bg-red-900'
-                                                  : 'bg-amber-100 text-amber-600 dark:bg-amber-900'
-                                        }`}
-                                    >
-                                        <RocketIcon className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{deployment.status_label}</p>
-                                        <p className="text-muted-foreground text-sm">
-                                            {deployment.commit_hash ? (
-                                                <>
-                                                    <code className="mr-2">{deployment.commit_hash.slice(0, 7)}</code>
-                                                    {deployment.commit_message && (
-                                                        <span className="max-w-[200px] truncate">{deployment.commit_message}</span>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <span>Manual deployment</span>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm">
-                                        {deployment.finished_at
-                                            ? format(new Date(deployment.finished_at), 'MMM d, HH:mm')
-                                            : deployment.started_at
-                                              ? 'In progress...'
-                                              : 'Pending'}
-                                    </p>
-                                    {deployment.duration_seconds && (
-                                        <p className="text-muted-foreground flex items-center justify-end gap-1 text-sm">
-                                            <ClockIcon className="h-3 w-3" />
-                                            {deployment.duration_seconds}s
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <RocketIcon className="text-muted-foreground mb-3 h-12 w-12" />
-                        <h3 className="mb-1 font-medium">No deployments yet</h3>
-                        <p className="text-muted-foreground text-sm">Deploy your site to see deployment history here.</p>
-                    </div>
-                )}
+                <DeploymentList deployments={deployments} siteId={site.id} />
             </CardContent>
         </Card>
     );

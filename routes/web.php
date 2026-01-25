@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeployScriptController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
@@ -48,6 +49,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('sites.environment.update');
     Route::put('sites/{site}/deploy-script', [DeployScriptController::class, 'update'])
         ->name('sites.deploy-script.update');
+
+    // Deployments
+    Route::get('sites/{site}/deployments', [DeploymentController::class, 'index'])
+        ->name('sites.deployments.index');
+    Route::post('sites/{site}/deployments', [DeploymentController::class, 'store'])
+        ->name('sites.deployments.store');
+    Route::get('deployments/{deployment}', [DeploymentController::class, 'show'])
+        ->name('deployments.show');
 
     // SSH Keys
     Route::resource('ssh-keys', SshKeyController::class)
