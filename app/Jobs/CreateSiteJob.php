@@ -78,9 +78,12 @@ class CreateSiteJob implements ShouldQueue
             $connection->exec('sudo systemctl reload nginx');
 
             // Clone repository if provided
-            if ($site->repository) {
-                // Ensure deploy key exists for this repository if using a supported provider.
-                $sourceControlService->ensureDeployKey($site);
+            if ($site->repository && $site->sourceControlAccount) {
+                // Ensure account-level SSH key exists for this server/account combination.
+                $sourceControlService->ensureAccountSshKey($server, $site->sourceControlAccount);
+
+                // Configure SSH for GitHub if needed
+                $this->configureSshForGit($connection, $site);
 
                 $this->cloneRepository($connection, $site);
             } else {
@@ -109,13 +112,44 @@ class CreateSiteJob implements ShouldQueue
         }
     }
 
+    private function configureSshForGit($connection, Site $site): void
+    {
+        $serverUser = config('server.user');
+        $sshDir = "/home/{$serverUser}/.ssh";
+
+        // Ensure .ssh directory exists and has correct permissions
+        $connection->exec("mkdir -p {$sshDir}");
+        $connection->exec("chmod 700 {$sshDir}");
+
+        // Add GitHub to known_hosts if not already present
+        // Use ssh-keyscan to get the current GitHub host keys (more reliable)
+        $knownHostsFile = "{$sshDir}/known_hosts";
+        $hasGithub = trim($connection->exec("grep -q '^github.com' {$knownHostsFile} 2>/dev/null && echo 'yes' || echo 'no'"));
+
+        if ($hasGithub === 'no') {
+            // Use ssh-keyscan to get GitHub's host keys and append to known_hosts
+            $connection->exec("ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> {$knownHostsFile} 2>/dev/null || true");
+        }
+
+        // Ensure known_hosts has correct permissions
+        $connection->exec("chmod 600 {$sshDir}/known_hosts 2>/dev/null || true");
+        $connection->exec("chown -R {$serverUser}:{$serverUser} {$sshDir}");
+    }
+
     private function cloneRepository($connection, Site $site): void
     {
         $siteRoot = $site->rootPath();
         $repoUrl = $this->buildGitUrl($site);
+        $serverUser = config('server.user');
 
-        // Clone the repository
-        $connection->exec("cd {$siteRoot} && git clone --branch {$site->branch} {$repoUrl} .");
+        // Use GIT_SSH_COMMAND to ensure we use the server's local SSH key
+        // The key should be at ~/.ssh/id_ed25519 (default location)
+        $sshKeyPath = "/home/{$serverUser}/.ssh/id_ed25519";
+
+        // Clone the repository using the server's local SSH key
+        // GIT_SSH_COMMAND ensures git uses the correct SSH key
+        $gitCommand = "GIT_SSH_COMMAND='ssh -i {$sshKeyPath} -o StrictHostKeyChecking=accept-new' git clone --branch {$site->branch} {$repoUrl} .";
+        $connection->exec("cd {$siteRoot} && {$gitCommand}");
     }
 
     private function buildGitUrl(Site $site): string

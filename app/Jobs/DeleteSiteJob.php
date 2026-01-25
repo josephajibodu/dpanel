@@ -66,14 +66,14 @@ class DeleteSiteJob implements ShouldQueue
             return;
         }
 
-        // Delete deploy key from source control provider if applicable
-        if ($site && $site->repository && $site->sourceControlAccount) {
+        // Delete account-level SSH key from source control provider if no other sites use it
+        if ($site && $site->sourceControlAccount && $server) {
             try {
-                $sourceControlService->deleteDeployKey($site);
-                Log::info("Deploy key cleanup attempted for site {$this->domain}");
+                $sourceControlService->deleteAccountSshKeyIfUnused($server, $site->sourceControlAccount);
+                Log::info("SSH key cleanup attempted for site {$this->domain}");
             } catch (\Throwable $e) {
-                Log::warning("Failed to delete deploy key for site {$this->domain}: {$e->getMessage()}");
-                // Continue with other cleanup even if deploy key deletion fails
+                Log::warning("Failed to delete SSH key for site {$this->domain}: {$e->getMessage()}");
+                // Continue with other cleanup even if SSH key deletion fails
             }
         }
 

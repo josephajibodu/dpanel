@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ServerStatus;
 use App\Models\Server;
 use App\Services\Providers\ProviderManager;
+use App\Services\SourceControlService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -29,8 +30,10 @@ class DeleteServerJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(ProviderManager $providerManager): void
-    {
+    public function handle(
+        ProviderManager $providerManager,
+        SourceControlService $sourceControlService,
+    ): void {
         Log::info("Starting deletion of server {$this->server->id} ({$this->server->name})");
 
         try {
@@ -56,6 +59,15 @@ class DeleteServerJob implements ShouldQueue
                 } catch (\Exception $e) {
                     Log::warning("Failed to delete SSH key at provider: {$e->getMessage()}");
                 }
+            }
+
+            // Delete account-level SSH keys from GitHub accounts
+            try {
+                $sourceControlService->deleteAllAccountSshKeysForServer($this->server);
+                Log::info("Deleted GitHub account SSH keys for server {$this->server->id}");
+            } catch (\Exception $e) {
+                Log::warning("Failed to delete GitHub account SSH keys: {$e->getMessage()}");
+                // Continue with server deletion even if SSH key cleanup fails
             }
 
             // Delete local server record and related data

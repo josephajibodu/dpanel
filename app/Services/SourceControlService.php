@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\RepositoryProvider;
+use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
 use Illuminate\Support\Collection;
@@ -40,10 +41,36 @@ class SourceControlService
     }
 
     /**
+     * Ensure an account-level SSH key exists for the given server and source control account.
+     *
+     * This uses the server's local public key as an SSH key on the GitHub account,
+     * allowing the server to clone any repository the account has access to via SSH.
+     * The key is added once per server/account combination.
+     */
+    public function ensureAccountSshKey(Server $server, SourceControlAccount $account): void
+    {
+        if ($account->provider !== RepositoryProvider::Github) {
+            // Only GitHub is supported for account-level SSH keys for now.
+            return;
+        }
+
+        if (! $server->local_public_key) {
+            // Nothing we can do without a server public key.
+            return;
+        }
+
+        $websiteName = config('app.name');
+        $this->createGithubAccountSshKey(
+            account: $account,
+            publicKey: $server->local_public_key,
+            title: "$websiteName ($server->name)"
+        );
+    }
+
+    /**
      * Ensure a deploy key exists for the given site / repository on the provider.
      *
-     * This uses the server's local public key as the deploy key, allowing the server
-     * to clone the repository via SSH without additional credentials.
+     * @deprecated Use ensureAccountSshKey() instead for account-level keys
      */
     public function ensureDeployKey(Site $site): void
     {
@@ -53,29 +80,14 @@ class SourceControlService
             return;
         }
 
-        if ($account->provider !== RepositoryProvider::Github) {
-            // Only GitHub is supported for deploy keys for now.
-            return;
-        }
-
         $server = $site->server;
 
-        if (! $server || ! $server->local_public_key) {
-            // Nothing we can do without a server public key.
+        if (! $server) {
             return;
         }
 
-        if (! $site->repository) {
-            return;
-        }
-
-        $websiteName = config('app.name');
-        $this->createGithubDeployKey(
-            account: $account,
-            repositoryFullName: $site->repository,
-            publicKey: $server->local_public_key,
-            title: "$websiteName ($server->name)"
-        );
+        // Use account-level SSH key instead of repository deploy key
+        $this->ensureAccountSshKey($server, $account);
     }
 
     /**
@@ -203,9 +215,11 @@ class SourceControlService
         }
     }
 
-    private function createGithubDeployKey(
+    /**
+     * Create an account-level SSH key on GitHub for the given account.
+     */
+    private function createGithubAccountSshKey(
         SourceControlAccount $account,
-        string $repositoryFullName,
         string $publicKey,
         string $title,
     ): void {
@@ -213,11 +227,10 @@ class SourceControlService
             $appName = (string) config('app.name');
             $publicKeyTrimmed = trim($publicKey);
 
-            // Check if deploy key already exists
-            if ($this->deployKeyExists($account, $repositoryFullName, $publicKeyTrimmed)) {
-                Log::info('GitHub deploy key already exists', [
+            // Check if SSH key already exists on the account
+            if ($this->accountSshKeyExists($account, $publicKeyTrimmed)) {
+                Log::info('GitHub account SSH key already exists', [
                     'account_id' => $account->id,
-                    'repository' => $repositoryFullName,
                 ]);
 
                 return;
@@ -228,65 +241,86 @@ class SourceControlService
                 ->withHeaders([
                     'X-GitHub-Api-Version' => '2022-11-28',
                 ])
-                ->post("https://api.github.com/repos/{$repositoryFullName}/keys", [
+                ->post('https://api.github.com/user/keys', [
                     'title' => $title ?: $appName,
                     'key' => $publicKeyTrimmed,
-                    'read_only' => true,
                 ]);
 
             if ($response->status() === 201) {
-                Log::info('GitHub deploy key created', [
+                Log::info('GitHub account SSH key created', [
                     'account_id' => $account->id,
-                    'repository' => $repositoryFullName,
+                    'key_id' => $response->json()['id'] ?? null,
+                ]);
+
+                return;
+            }
+
+            // Handle specific error cases
+            if ($response->status() === 404 || $response->status() === 403) {
+                Log::error('GitHub account SSH key creation failed - missing permissions. The OAuth token may need the "admin:public_key" scope. User should reconnect their GitHub account.', [
+                    'account_id' => $account->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
                 ]);
 
                 return;
             }
 
             // If the key already exists, GitHub may return 422; log and continue.
-            Log::warning('Failed to create GitHub deploy key', [
+            Log::warning('Failed to create GitHub account SSH key', [
                 'account_id' => $account->id,
-                'repository' => $repositoryFullName,
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
         } catch (\Throwable $e) {
-            Log::error('Exception while creating GitHub deploy key', [
+            Log::error('Exception while creating GitHub account SSH key', [
                 'account_id' => $account->id,
-                'repository' => $repositoryFullName,
                 'message' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Check if a deploy key already exists for the given repository.
+     * Check if an SSH key already exists on the GitHub account.
      */
-    private function deployKeyExists(
+    private function accountSshKeyExists(
         SourceControlAccount $account,
-        string $repositoryFullName,
         string $publicKey,
     ): bool {
         try {
-            $response = Http::withToken($account->token)
-                ->acceptJson()
-                ->withHeaders([
-                    'X-GitHub-Api-Version' => '2022-11-28',
-                ])
-                ->get("https://api.github.com/repos/{$repositoryFullName}/keys", [
-                    'per_page' => 100,
-                ]);
+            $allKeys = collect();
+            $page = 1;
+            $perPage = 100;
 
-            if ($response->failed()) {
-                return false;
-            }
+            do {
+                $response = Http::withToken($account->token)
+                    ->acceptJson()
+                    ->withHeaders([
+                        'X-GitHub-Api-Version' => '2022-11-28',
+                    ])
+                    ->get('https://api.github.com/user/keys', [
+                        'per_page' => $perPage,
+                        'page' => $page,
+                    ]);
 
-            /** @var array<int, array<string, mixed>> $keys */
-            $keys = $response->json();
+                if ($response->failed()) {
+                    return false;
+                }
+
+                /** @var array<int, array<string, mixed>> $keys */
+                $keys = $response->json();
+
+                if (empty($keys)) {
+                    break;
+                }
+
+                $allKeys = $allKeys->merge($keys);
+                $page++;
+            } while (count($keys) === $perPage);
 
             $publicKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', $publicKey));
 
-            foreach ($keys as $key) {
+            foreach ($allKeys as $key) {
                 $existingKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', (string) ($key['key'] ?? '')));
 
                 if ($existingKeyNormalized === $publicKeyNormalized) {
@@ -296,9 +330,8 @@ class SourceControlService
 
             return false;
         } catch (\Throwable $e) {
-            Log::warning('Exception while checking for existing deploy key', [
+            Log::warning('Exception while checking for existing account SSH key', [
                 'account_id' => $account->id,
-                'repository' => $repositoryFullName,
                 'message' => $e->getMessage(),
             ]);
 
@@ -307,7 +340,76 @@ class SourceControlService
     }
 
     /**
+     * Delete all account-level SSH keys for a server from all GitHub accounts.
+     * Used when a server is being deleted.
+     */
+    public function deleteAllAccountSshKeysForServer(Server $server): void
+    {
+        if (! $server->local_public_key) {
+            return;
+        }
+
+        // Get all unique GitHub source control accounts that have sites on this server
+        $accountIds = Site::where('server_id', $server->id)
+            ->whereNotNull('source_control_account_id')
+            ->distinct()
+            ->pluck('source_control_account_id');
+
+        $accounts = SourceControlAccount::where('provider', RepositoryProvider::Github)
+            ->whereIn('id', $accountIds)
+            ->get();
+
+        foreach ($accounts as $account) {
+            try {
+                $this->deleteGithubAccountSshKey($account, $server->local_public_key);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to delete SSH key for account during server deletion', [
+                    'server_id' => $server->id,
+                    'account_id' => $account->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Delete an account-level SSH key from GitHub if no other sites on the server use that account.
+     */
+    public function deleteAccountSshKeyIfUnused(Server $server, SourceControlAccount $account): void
+    {
+        if ($account->provider !== RepositoryProvider::Github) {
+            // Only GitHub is supported for account-level SSH keys for now.
+            return;
+        }
+
+        if (! $server->local_public_key) {
+            return;
+        }
+
+        // Check if any other sites on this server use this source control account
+        $otherSitesUsingAccount = Site::where('server_id', $server->id)
+            ->where('source_control_account_id', $account->id)
+            ->exists();
+
+        if ($otherSitesUsingAccount) {
+            Log::info('Not deleting GitHub account SSH key - other sites on server still use this account', [
+                'server_id' => $server->id,
+                'account_id' => $account->id,
+            ]);
+
+            return;
+        }
+
+        $this->deleteGithubAccountSshKey(
+            account: $account,
+            publicKey: $server->local_public_key,
+        );
+    }
+
+    /**
      * Delete a deploy key from a repository.
+     *
+     * @deprecated Use deleteAccountSshKeyIfUnused() instead for account-level keys
      */
     public function deleteDeployKey(Site $site): void
     {
@@ -317,59 +419,63 @@ class SourceControlService
             return;
         }
 
-        if ($account->provider !== RepositoryProvider::Github) {
-            // Only GitHub is supported for deploy keys for now.
-            return;
-        }
-
         $server = $site->server;
 
-        if (! $server || ! $server->local_public_key || ! $site->repository) {
+        if (! $server) {
             return;
         }
 
-        $this->deleteGithubDeployKey(
-            account: $account,
-            repositoryFullName: $site->repository,
-            publicKey: $server->local_public_key,
-        );
+        // Use account-level SSH key deletion instead
+        $this->deleteAccountSshKeyIfUnused($server, $account);
     }
 
     /**
-     * Delete a deploy key from a GitHub repository by matching the public key.
+     * Delete an account-level SSH key from GitHub by matching the public key.
      */
-    private function deleteGithubDeployKey(
+    private function deleteGithubAccountSshKey(
         SourceControlAccount $account,
-        string $repositoryFullName,
         string $publicKey,
     ): void {
         try {
-            // First, find the deploy key ID by matching the public key
-            $response = Http::withToken($account->token)
-                ->acceptJson()
-                ->withHeaders([
-                    'X-GitHub-Api-Version' => '2022-11-28',
-                ])
-                ->get("https://api.github.com/repos/{$repositoryFullName}/keys", [
-                    'per_page' => 100,
-                ]);
+            // First, find the SSH key ID by matching the public key
+            $allKeys = collect();
+            $page = 1;
+            $perPage = 100;
 
-            if ($response->failed()) {
-                Log::warning('Failed to list GitHub deploy keys for deletion', [
-                    'account_id' => $account->id,
-                    'repository' => $repositoryFullName,
-                    'status' => $response->status(),
-                ]);
+            do {
+                $response = Http::withToken($account->token)
+                    ->acceptJson()
+                    ->withHeaders([
+                        'X-GitHub-Api-Version' => '2022-11-28',
+                    ])
+                    ->get('https://api.github.com/user/keys', [
+                        'per_page' => $perPage,
+                        'page' => $page,
+                    ]);
 
-                return;
-            }
+                if ($response->failed()) {
+                    Log::warning('Failed to list GitHub account SSH keys for deletion', [
+                        'account_id' => $account->id,
+                        'status' => $response->status(),
+                    ]);
 
-            /** @var array<int, array<string, mixed>> $keys */
-            $keys = $response->json();
+                    return;
+                }
+
+                /** @var array<int, array<string, mixed>> $keys */
+                $keys = $response->json();
+
+                if (empty($keys)) {
+                    break;
+                }
+
+                $allKeys = $allKeys->merge($keys);
+                $page++;
+            } while (count($keys) === $perPage);
 
             $publicKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', $publicKey));
 
-            foreach ($keys as $key) {
+            foreach ($allKeys as $key) {
                 $existingKeyNormalized = trim(str_replace(["\r\n", "\r", "\n"], '', (string) ($key['key'] ?? '')));
 
                 if ($existingKeyNormalized === $publicKeyNormalized) {
@@ -379,24 +485,22 @@ class SourceControlService
                         continue;
                     }
 
-                    // Delete the deploy key
+                    // Delete the SSH key
                     $deleteResponse = Http::withToken($account->token)
                         ->acceptJson()
                         ->withHeaders([
                             'X-GitHub-Api-Version' => '2022-11-28',
                         ])
-                        ->delete("https://api.github.com/repos/{$repositoryFullName}/keys/{$keyId}");
+                        ->delete("https://api.github.com/user/keys/{$keyId}");
 
                     if ($deleteResponse->status() === 204) {
-                        Log::info('GitHub deploy key deleted', [
+                        Log::info('GitHub account SSH key deleted', [
                             'account_id' => $account->id,
-                            'repository' => $repositoryFullName,
                             'key_id' => $keyId,
                         ]);
                     } else {
-                        Log::warning('Failed to delete GitHub deploy key', [
+                        Log::warning('Failed to delete GitHub account SSH key', [
                             'account_id' => $account->id,
-                            'repository' => $repositoryFullName,
                             'key_id' => $keyId,
                             'status' => $deleteResponse->status(),
                             'body' => $deleteResponse->body(),
@@ -407,14 +511,12 @@ class SourceControlService
                 }
             }
 
-            Log::info('GitHub deploy key not found (may have been deleted already)', [
+            Log::info('GitHub account SSH key not found (may have been deleted already)', [
                 'account_id' => $account->id,
-                'repository' => $repositoryFullName,
             ]);
         } catch (\Throwable $e) {
-            Log::error('Exception while deleting GitHub deploy key', [
+            Log::error('Exception while deleting GitHub account SSH key', [
                 'account_id' => $account->id,
-                'repository' => $repositoryFullName,
                 'message' => $e->getMessage(),
             ]);
         }

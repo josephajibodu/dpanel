@@ -44,7 +44,7 @@ class SourceControlAccountController extends Controller
         session()->put('source_control_redirect', $request->get('redirect', route('source-control.index')));
 
         $socialite = match ($provider) {
-            'github' => Socialite::driver('github')->scopes(['repo', 'read:user']),
+            'github' => Socialite::driver('github')->scopes(['repo', 'read:user', 'admin:public_key']),
             'gitlab' => Socialite::driver('gitlab')->scopes(['api', 'read_user']),
             'bitbucket' => Socialite::driver('bitbucket')->scopes(['repository', 'account']),
             default => throw new \InvalidArgumentException("Unsupported provider: {$provider}"),
