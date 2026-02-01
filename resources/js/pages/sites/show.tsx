@@ -1,30 +1,7 @@
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { CopyButton } from '@/components/copy-button';
-import { DeploymentList } from '@/components/deployments/deployment-list';
-import { SiteStatusBadge } from '@/components/sites/site-status-badge';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { EnvironmentVariable, Site } from '@/types/site';
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import { store } from '@/routes/sites/deployments';
-import { DeploymentList } from '@/components/deployments/deployment-list';
 import { format } from 'date-fns';
 import {
     ArrowLeftIcon,
-    ClockIcon,
     CodeIcon,
     ExternalLinkIcon,
     FileCodeIcon,
@@ -40,7 +17,30 @@ import {
     XIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CopyButton } from '@/components/copy-button';
+import { DeploymentList } from '@/components/deployments/deployment-list';
+import { SiteStatusBadge } from '@/components/sites/site-status-badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
 import { store } from '@/routes/sites/deployments';
+import { type BreadcrumbItem } from '@/types';
+import { EnvironmentVariable, Site } from '@/types/site';
+
+
 
 interface Props {
     site: {
@@ -397,24 +397,30 @@ function EnvironmentTab({ site }: { site: Props['site']['data'] }) {
     });
 
     function addVariable() {
-        setVariables([...variables, { key: '', value: '' }]);
+        const newVariables = [...variables, { key: '', value: '' }];
+        setVariables(newVariables);
+        form.setData('variables', newVariables);
     }
 
     function removeVariable(index: number) {
         const newVariables = variables.filter((_, i) => i !== index);
-        setVariables(newVariables.length > 0 ? newVariables : [{ key: '', value: '' }]);
+        const finalVariables = newVariables.length > 0 ? newVariables : [{ key: '', value: '' }];
+        setVariables(finalVariables);
+        form.setData('variables', finalVariables);
     }
 
     function updateVariable(index: number, field: 'key' | 'value', value: string) {
         const newVariables = [...variables];
         newVariables[index][field] = value;
         setVariables(newVariables);
+        form.setData('variables', newVariables);
     }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         const filteredVariables = variables.filter((v) => v.key.trim() !== '');
-        router.put(`/sites/${site.id}/environment`, { variables: filteredVariables });
+        form.setData('variables', filteredVariables);
+        form.put(`/sites/${site.id}/environment`);
     }
 
     return (

@@ -2,7 +2,7 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
 // Make Pusher available globally
-window.Pusher = Pusher;
+(window as any).Pusher = Pusher;
 
 // Initialize Echo
 export const echo = new Echo({
@@ -18,9 +18,9 @@ export const echo = new Echo({
 // Make Echo available globally for convenience
 declare global {
     interface Window {
-        Pusher: typeof Pusher;
-        Echo: Echo;
+        Pusher: any;
+        Echo: any;
     }
 }
 
-window.Echo = echo;
+(window as any).Echo = echo;

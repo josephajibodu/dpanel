@@ -37,8 +37,21 @@ interface Props {
 }
 
 export default function DeploymentsShow({ deployment, site, logs: initialLogs }: Props) {
+    // Safety check - ensure we have required data
+    if (!deployment || !site) {
+        return (
+            <AppLayout breadcrumbs={[]}>
+                <div className="flex h-full flex-1 flex-col gap-6 p-4">
+                    <div className="text-center">
+                        <p className="text-muted-foreground">Loading deployment...</p>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
+
     // Convert initial logs to DeploymentLogLine format
-    const initialLogLines: DeploymentLogLine[] = initialLogs.map((log) => ({
+    const initialLogLines: DeploymentLogLine[] = (initialLogs || []).map((log) => ({
         id: log.id,
         type: log.type as DeploymentLogLine['type'],
         message: log.message,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Sites\TriggerDeploymentAction;
 use App\Http\Resources\DeploymentResource;
+use App\Http\Resources\SiteResource;
 use App\Models\Deployment;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
@@ -54,9 +55,11 @@ class DeploymentController extends Controller
 
         $this->authorize('view', $deployment->site);
 
+        $site = $deployment->site;
+
         return Inertia::render('deployments/show', [
             'deployment' => new DeploymentResource($deployment),
-            'site' => $deployment->site,
+            'site' => new SiteResource($site->load('server')),
             'logs' => $deployment->logs()->orderBy('created_at')->get()->map(fn ($log) => [
                 'id' => $log->id,
                 'type' => $log->type,

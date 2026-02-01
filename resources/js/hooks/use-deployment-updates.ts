@@ -26,8 +26,6 @@ export function useDeploymentUpdates(deploymentId: number | string) {
             // Use Inertia's partial reload to get fresh deployment data
             router.reload({
                 only: ['deployment'],
-                preserveState: true,
-                preserveScroll: true,
             });
         });
 
