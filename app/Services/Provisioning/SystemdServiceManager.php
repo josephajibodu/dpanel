@@ -46,6 +46,13 @@ class SystemdServiceManager implements ServiceManager
         }
     }
 
+    public function reload(string|array $services): void
+    {
+        foreach ($this->normalizeServices($services) as $service) {
+            $this->runner->runQuietly("systemctl reload {$service}");
+        }
+    }
+
     public function isAvailable(): bool
     {
         try {

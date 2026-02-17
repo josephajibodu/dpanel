@@ -139,6 +139,98 @@ class Server extends Model
         return $this->hasMany(ServerAction::class);
     }
 
+    public function databases(): HasMany
+    {
+        return $this->hasMany(ServerDatabase::class, 'server_id');
+    }
+
+    public function databaseUsers(): HasMany
+    {
+        return $this->hasMany(DatabaseUser::class);
+    }
+
+    public function firewallRules(): HasMany
+    {
+        return $this->hasMany(FirewallRule::class);
+    }
+
+    public function cronJobs(): HasMany
+    {
+        return $this->hasMany(CronJob::class);
+    }
+
+    public function workers(): HasMany
+    {
+        return $this->hasMany(Worker::class);
+    }
+
+    /**
+     * Workers not tied to a specific site (daemons).
+     */
+    public function daemons(): HasMany
+    {
+        return $this->hasMany(Worker::class)->whereNull('site_id');
+    }
+
+    public function metrics(): HasMany
+    {
+        return $this->hasMany(Metric::class);
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(ServerLog::class);
+    }
+
+    /**
+     * Installed software services (PHP, Nginx, Redis, etc.) on this server.
+     */
+    public function installedServices(): HasMany
+    {
+        return $this->hasMany(Service::class, 'server_id');
+    }
+
+    /**
+     * Get or create the Service record for the given type. Only allowed for types this server type includes.
+     */
+    public function service(string $type): Service
+    {
+        $defaults = $this->type?->defaultServices() ?? [];
+        if (! ($defaults[$type] ?? false)) {
+            throw new \InvalidArgumentException("Server type [{$this->type?->value}] does not include service [{$type}].");
+        }
+
+        return $this->installedServices()->firstOrCreate(
+            ['type' => $type],
+            ['status' => 'pending']
+        );
+    }
+
+    public function php(): Service
+    {
+        return $this->service('php');
+    }
+
+    public function nginx(): Service
+    {
+        return $this->service('nginx');
+    }
+
+    public function database(): Service
+    {
+        return $this->service('database');
+    }
+
+    public function redis(): Service
+    {
+        return $this->service('redis');
+    }
+
+    public function supervisor(): Service
+    {
+        return $this->service('supervisor');
+    }
+
     public function credential(string $type = 'private_key'): ?ServerCredential
     {
         return $this->credentials()->where('type', $type)->first();

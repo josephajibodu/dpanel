@@ -9,6 +9,7 @@ use App\Services\Provisioning\FinalTouchesService;
 use App\Services\Provisioning\NginxService;
 use App\Services\Provisioning\PhpService;
 use App\Services\Provisioning\RedisService;
+use App\Services\Provisioning\StackInstaller;
 use App\Services\Provisioning\SystemService;
 use App\Services\Ssh\SshRetryHandler;
 use App\Services\Ssh\SshService;
@@ -33,6 +34,10 @@ it('orchestrates provisioning steps in order', function () {
         [
             'type' => 'database_password',
             'value' => 'secret-password',
+        ],
+        [
+            'type' => 'sudo_password',
+            'value' => 'sudo-secret',
         ],
     ]);
 
@@ -74,12 +79,7 @@ it('orchestrates provisioning steps in order', function () {
     $job->handle(
         app(SshService::class),
         app(SshRetryHandler::class),
-        app(SystemService::class),
-        app(PhpService::class),
-        app(NginxService::class),
-        app(DatabaseService::class),
-        app(RedisService::class),
-        app(FinalTouchesService::class),
+        app(StackInstaller::class),
     );
 
     $server->refresh();

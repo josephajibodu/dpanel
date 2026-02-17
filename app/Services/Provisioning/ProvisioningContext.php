@@ -19,5 +19,6 @@ class ProvisioningContext
         public string $serverUser,
         public string $sudoPassword,
         public string $databasePassword,
+        public ?ServiceInstallationRunner $installationRunner = null,
     ) {}
 }

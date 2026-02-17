@@ -40,6 +40,13 @@ interface ServiceManager
     public function disable(string|array $services): void;
 
     /**
+     * Reload the given service or services (reload configuration without full restart).
+     *
+     * @param  string|array<int, string>  $services
+     */
+    public function reload(string|array $services): void;
+
+    /**
      * Determine if the service manager is available on the system.
      */
     public function isAvailable(): bool;
