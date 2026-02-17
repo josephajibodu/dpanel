@@ -6,7 +6,17 @@ use App\Enums\ConnectionStatus;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
-use App\Services\ProvisioningScriptService;
+use App\Services\Provisioning\AptPackageManager;
+use App\Services\Provisioning\DatabaseService;
+use App\Services\Provisioning\FinalTouchesService;
+use App\Services\Provisioning\NginxService;
+use App\Services\Provisioning\PhpService;
+use App\Services\Provisioning\ProvisioningContext;
+use App\Services\Provisioning\RedisService;
+use App\Services\Provisioning\SystemdServiceManager;
+use App\Services\Provisioning\SystemService;
+use App\Services\Remote\SshRemoteCommandRunner;
+use App\Services\Remote\SshRemoteFilesystem;
 use App\Services\Ssh\SshRetryHandler;
 use App\Services\Ssh\SshService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,13 +32,6 @@ class InstallStackJob implements ShouldQueue
     public int $timeout = 1800; // 30 minutes
 
     /**
-     * Collected data from provisioning script output.
-     *
-     * @var array<string, string>
-     */
-    private array $collectedData = [];
-
-    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -41,7 +44,12 @@ class InstallStackJob implements ShouldQueue
     public function handle(
         SshService $sshService,
         SshRetryHandler $retryHandler,
-        ProvisioningScriptService $scriptService,
+        SystemService $systemService,
+        PhpService $phpService,
+        NginxService $nginxService,
+        DatabaseService $databaseService,
+        RedisService $redisService,
+        FinalTouchesService $finalTouchesService,
     ): void {
         Log::info("Starting stack installation for server {$this->server->id}");
 
@@ -58,51 +66,65 @@ class InstallStackJob implements ShouldQueue
             $connection = $sshService->connectAsRoot($this->server);
 
             try {
-                // Generate and upload provisioning script
-                $script = $scriptService->generate($this->server);
+                $runner = new SshRemoteCommandRunner($connection);
+                $files = new SshRemoteFilesystem($connection);
 
-                // Upload script
-                $connection->upload($script, '/tmp/provision.sh');
+                $packages = new AptPackageManager($runner);
+                $services = new SystemdServiceManager($runner);
 
-                // Make executable (no sudo needed, we're root)
-                $connection->exec('chmod +x /tmp/provision.sh');
+                $databasePassword = $this->server->credentials()
+                    ->where('type', 'database_password')
+                    ->first()?->value ?? '';
 
-                // Execute provisioning script with streaming output
-                $exitCode = $connection->execWithOutput(
-                    '/tmp/provision.sh',
-                    function ($line) {
-                        Log::debug("Provision output: {$line}");
+                $sudoPassword = $this->server->credentials()
+                    ->where('type', 'sudo_password')
+                    ->first()?->value ?? '';
 
-                        // Check if this line is a step marker
-                        $stepNumber = ProvisioningScriptService::parseStepMarker($line);
-                        if ($stepNumber !== null) {
-                            $step = ProvisioningStep::tryFrom($stepNumber);
-                            if ($step !== null) {
-                                $this->updateStep($step);
-                                Log::info("Server {$this->server->id} provisioning step: {$step->label()}");
-                            }
-
-                            return;
-                        }
-
-                        // Check if this line is a data marker
-                        $data = ProvisioningScriptService::parseDataMarker($line);
-                        if ($data !== null) {
-                            $this->collectedData[$data['key']] = $data['value'];
-                            Log::info("Server {$this->server->id} collected data: {$data['key']}");
-                        }
-                    },
-                    timeout: 1800,
+                $context = new ProvisioningContext(
+                    server: $this->server,
+                    runner: $runner,
+                    files: $files,
+                    packages: $packages,
+                    services: $services,
+                    serverUser: config('server.user'),
+                    sudoPassword: $sudoPassword,
+                    databasePassword: $databasePassword,
                 );
 
-                if ($exitCode !== 0) {
-                    throw new \Exception("Provisioning script failed with exit code {$exitCode}");
-                }
+                // Preparing server
+                $this->updateStep(ProvisioningStep::PreparingServer);
+                $systemService->prepareServer($context);
 
-                // Cleanup
-                $connection->exec('rm -f /tmp/provision.sh');
+                // Configuring swap
+                $this->updateStep(ProvisioningStep::ConfiguringSwap);
+                $systemService->configureSwap($context);
 
-                // Mark server as active with finished step and collected data
+                // Base dependencies
+                $this->updateStep(ProvisioningStep::InstallingBaseDependencies);
+                $systemService->installBaseDependencies($context);
+
+                // PHP
+                $this->updateStep(ProvisioningStep::InstallingPhp);
+                $phpService->install($context, $this->server->php_version);
+                $phpService->configureFpmPool($context);
+
+                // Nginx
+                $this->updateStep(ProvisioningStep::InstallingNginx);
+                $nginxService->install($context);
+
+                // Database
+                $this->updateStep(ProvisioningStep::InstallingDatabase);
+                $databaseService->installForServer($context);
+
+                // Redis
+                $this->updateStep(ProvisioningStep::InstallingRedis);
+                $redisService->install($context);
+
+                // Final touches
+                $this->updateStep(ProvisioningStep::MakingFinalTouches);
+                $finalTouchesService->run($context);
+
+                // Mark server as active with finished step
                 $updateData = [
                     'status' => ServerStatus::Active,
                     'provisioning_step' => ProvisioningStep::Finished,
@@ -110,22 +132,28 @@ class InstallStackJob implements ShouldQueue
                     'provisioned_at' => now(),
                 ];
 
-                // Add collected ubuntu_version if available
-                if (isset($this->collectedData['ubuntu_version'])) {
-                    $updateData['ubuntu_version'] = $this->collectedData['ubuntu_version'];
+                // Collect simple metadata.
+                try {
+                    $ubuntuVersion = trim($runner->run('lsb_release -rs 2>/dev/null || cat /etc/os-release | grep VERSION_ID | cut -d\"\\\"\" -f2', 30));
+                    if ($ubuntuVersion !== '') {
+                        $updateData['ubuntu_version'] = $ubuntuVersion;
+                    }
+                } catch (\Throwable) {
+                    // Ignore metadata errors.
                 }
 
-                // Add collected local_public_key if available
-                if (isset($this->collectedData['local_public_key'])) {
-                    $updateData['local_public_key'] = $this->collectedData['local_public_key'];
+                try {
+                    $localPublicKey = trim($runner->run('cat /home/'.config('server.user').'/.ssh/id_ed25519.pub 2>/dev/null || echo ""', 15));
+                    if ($localPublicKey !== '') {
+                        $updateData['local_public_key'] = $localPublicKey;
+                    }
+                } catch (\Throwable) {
+                    // Ignore metadata errors.
                 }
 
                 $this->server->update($updateData);
 
-                Log::info("Server {$this->server->id} provisioned successfully", [
-                    'ubuntu_version' => $this->collectedData['ubuntu_version'] ?? 'unknown',
-                    'has_local_public_key' => isset($this->collectedData['local_public_key']),
-                ]);
+                Log::info("Server {$this->server->id} provisioned successfully");
 
             } finally {
                 $connection->disconnect();
