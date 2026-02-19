@@ -13,6 +13,7 @@
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/fortify": "^1.30",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.44",
         "laravel/reverb": "^1.7",
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
@@ -54,6 +55,10 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+        ],
+        "dev:horizon": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"npm run dev\" --names='server,horizon,vite'"
         ],
         "dev:ssr": [
             "npm run build:ssr",

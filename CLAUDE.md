@@ -12,6 +12,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - inertiajs/inertia-laravel (INERTIA) - v2
 - laravel/fortify (FORTIFY) - v1
 - laravel/framework (LARAVEL) - v12
+- laravel/horizon (HORIZON) - v5
 - laravel/prompts (PROMPTS) - v0
 - laravel/reverb (REVERB) - v1
 - laravel/socialite (SOCIALITE) - v5
@@ -22,11 +23,11 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
 - @inertiajs/react (INERTIA) - v2
-- laravel-echo (ECHO) - v2
 - react (REACT) - v19
 - tailwindcss (TAILWINDCSS) - v4
 - @laravel/vite-plugin-wayfinder (WAYFINDER) - v0
 - eslint (ESLINT) - v9
+- laravel-echo (ECHO) - v2
 - prettier (PRETTIER) - v3
 
 ## Conventions
