@@ -25,7 +25,9 @@ class ProvisionServerJob implements ShouldQueue
      */
     public function __construct(
         public Server $server
-    ) {}
+    ) {
+        $this->onQueue('provisioning');
+    }
 
     /**
      * Execute the job.

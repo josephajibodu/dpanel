@@ -16,6 +16,14 @@ return [
     'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
+    | Queues used by the application (run workers as needed):
+    | - default: general jobs
+    | - ssh: SyncSshKeyJob, RevokeSshKeyJob, RestartServiceJob
+    | - deploy: DeploySiteJob
+    | - provisioning: ProvisionServerJob, InstallStackJob (long-running; use a dedicated worker)
+    */
+
+    /*
     |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------

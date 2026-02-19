@@ -6,10 +6,12 @@ use App\Contracts\Remote\RemoteCommandRunner;
 use App\Enums\ConnectionStatus;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
+use App\Enums\ServiceStatus;
 use App\Models\Server;
 use App\Services\Remote\SshRemoteCommandRunner;
 use App\Services\Remote\SshRemoteFilesystem;
 use App\Services\Ssh\SshConnection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Single entry point for installing the full stack on a server over SSH.
@@ -88,7 +90,7 @@ class StackInstaller
         if ($defaults['supervisor'] ?? false) {
             $server->supervisor()->update([
                 'unit' => 'supervisor',
-                'status' => 'ready',
+                'status' => ServiceStatus::Active,
             ]);
         }
 
@@ -114,7 +116,7 @@ class StackInstaller
                 $updateData['ubuntu_version'] = $ubuntuVersion;
             }
         } catch (\Throwable) {
-            // Ignore
+            Log::error('Failed to get Ubuntu version', ['updateData' => $updateData]);
         }
 
         try {
@@ -123,7 +125,7 @@ class StackInstaller
                 $updateData['local_public_key'] = $localPublicKey;
             }
         } catch (\Throwable) {
-            // Ignore
+            Log::error('Failed to get local public key', ['updateData' => $updateData]);
         }
     }
 }

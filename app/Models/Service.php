@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Contracts\Provisioning\ServiceManager;
 use App\Enums\ProvisioningStep;
+use App\Enums\ServiceStatus;
 use App\Services\Provisioning\ProvisioningContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,7 @@ class Service extends Model
         return [
             'type_data' => 'array',
             'is_default' => 'boolean',
+            'status' => ServiceStatus::class,
         ];
     }
 
@@ -54,7 +56,7 @@ class Service extends Model
             throw new \RuntimeException('ProvisioningContext has no installation runner; cannot install service.');
         }
 
-        $this->update(['status' => 'installing']);
+        $this->update(['status' => ServiceStatus::Installing]);
         $this->refresh();
 
         $step = ProvisioningStep::forServiceType($this->type);
@@ -68,10 +70,10 @@ class Service extends Model
             $this->update([
                 'unit' => $result['unit'],
                 'installed_version' => $result['installed_version'],
-                'status' => 'ready',
+                'status' => ServiceStatus::Active,
             ]);
         } catch (\Throwable $e) {
-            $this->update(['status' => 'failed']);
+            $this->update(['status' => ServiceStatus::Failed]);
             throw $e;
         }
     }
