@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 
 import AppearanceTabs from '@/components/appearance-tabs';
 import HeadingSmall from '@/components/heading-small';
+import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -16,7 +17,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Appearance() {
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems()}>
             <Head title="Appearance settings" />
 
             <h1 className="sr-only">Appearance Settings</h1>

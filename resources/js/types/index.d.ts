@@ -22,6 +22,11 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface SubNavItem {
+    title: string;
+    href: string;
+}
+
 export interface SharedData {
     name: string;
     auth: Auth;

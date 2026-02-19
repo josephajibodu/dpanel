@@ -10,6 +10,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { getServerSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
@@ -57,7 +58,10 @@ export default function ServersShow({ server }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout
+            breadcrumbs={breadcrumbs}
+            subNavItems={getServerSubNavItems(data.id)}
+        >
             <Head title={data.name} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">

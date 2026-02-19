@@ -8,6 +8,7 @@ import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
+import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { disable, enable, show } from '@/routes/two-factor';
@@ -42,7 +43,7 @@ export default function TwoFactor({
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems()}>
             <Head title="Two-Factor Authentication" />
 
             <h1 className="sr-only">Two-Factor Authentication Settings</h1>

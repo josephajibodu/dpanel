@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { store } from '@/routes/sites/deployments';
 import { type BreadcrumbItem } from '@/types';
@@ -90,7 +91,13 @@ export default function SitesShow({ site }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout
+            breadcrumbs={breadcrumbs}
+            subNavItems={getSiteSubNavItems(
+                siteData.server?.id ?? '',
+                siteData.id,
+            )}
+        >
             <Head title={siteData.domain} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
