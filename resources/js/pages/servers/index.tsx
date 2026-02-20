@@ -1,19 +1,53 @@
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
-import { ServerCard } from '@/components/servers/server-card';
+import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+    getPaginationUrls,
+    Pagination,
+    type PaginationMeta,
+} from '@/components/ui/pagination';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
 import { Head, Link, router } from '@inertiajs/react';
-import { PlusIcon, ServerIcon } from 'lucide-react';
-import { useState } from 'react';
+import { format } from 'date-fns';
+import {
+    BookOpenIcon,
+    EyeIcon,
+    MoreVerticalIcon,
+    PlusIcon,
+    SearchIcon,
+    ServerIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 interface Props {
     servers: {
         data: Server[];
+        links?: unknown;
+        meta?: PaginationMeta;
     };
 }
+
+const DOCS_URL = 'https://laravel.com/docs/starter-kits#react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -26,6 +60,18 @@ export default function ServersIndex({ servers }: Props) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [serverToDelete, setServerToDelete] = useState<Server | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const filteredServers = useMemo(() => {
+        if (!search.trim()) return servers.data;
+        const q = search.toLowerCase().trim();
+        return servers.data.filter(
+            (s) =>
+                s.name.toLowerCase().includes(q) ||
+                (s.ip_address ?? '').toLowerCase().includes(q) ||
+                s.region?.toLowerCase().includes(q),
+        );
+    }, [servers.data, search]);
 
     const handleDelete = (server: Server) => {
         setServerToDelete(server);
@@ -45,22 +91,34 @@ export default function ServersIndex({ servers }: Props) {
         });
     };
 
+    const { prevUrl, nextUrl } = getPaginationUrls(servers.links);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Servers" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Servers</h1>
-                        <p className="text-muted-foreground text-sm">Manage your cloud servers and their configurations.</p>
+                        <p className="text-muted-foreground text-sm">
+                            All of the servers of your project listed here.
+                        </p>
                     </div>
-                    <Button asChild>
-                        <Link href="/servers/create">
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            Create Server
-                        </Link>
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <a href={DOCS_URL} target="_blank" rel="noreferrer">
+                                <BookOpenIcon className="mr-2 h-4 w-4" />
+                                Docs
+                            </a>
+                        </Button>
+                        <Button asChild>
+                            <Link href="/servers/create">
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                Create server
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {servers.data.length === 0 ? (
@@ -78,11 +136,116 @@ export default function ServersIndex({ servers }: Props) {
                         }
                     />
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {servers.data.map((server) => (
-                            <ServerCard key={server.id} server={server} onDelete={() => handleDelete(server)} />
-                        ))}
-                    </div>
+                    <>
+                        <div className="w-full max-w-sm">
+                            <div className="relative">
+                                <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-9"
+                                    aria-label="Search servers"
+                                />
+                            </div>
+                        </div>
+
+                        <Card>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12">ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>IP</TableHead>
+                                        <TableHead>Created at</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="w-[70px]" />
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredServers.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">
+                                                <span className="text-muted-foreground text-sm">
+                                                    No servers match your search.
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredServers.map((server) => (
+                                            <TableRow key={server.id}>
+                                                <TableCell className="font-mono text-muted-foreground text-xs">
+                                                    {server.id}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Link
+                                                        href={`/servers/${server.id}`}
+                                                        className="font-medium hover:underline"
+                                                    >
+                                                        {server.name}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm">
+                                                    {server.ip_address ?? '—'}
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-sm">
+                                                    {format(new Date(server.created_at), 'yyyy-MM-dd HH:mm:ss')}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <ServerStatusBadge
+                                                        status={server.status}
+                                                        statusLabel={server.status_label}
+                                                        statusColor={server.status_color}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                                                            <Link href={`/servers/${server.id}`} aria-label="View server">
+                                                                <EyeIcon className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="outline" size="icon" className="h-8 w-8">
+                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                    <span className="sr-only">Actions</span>
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link href={`/servers/${server.id}`}>
+                                                                        View Details
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                                {server.status !== 'deleting' && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleDelete(server)}
+                                                                        className="text-destructive focus:text-destructive"
+                                                                    >
+                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+
+                            <Pagination
+                                meta={servers.meta}
+                                prevUrl={prevUrl}
+                                nextUrl={nextUrl}
+                                resultsLabel="results"
+                            />
+                        </Card>
+                    </>
                 )}
             </div>
 
