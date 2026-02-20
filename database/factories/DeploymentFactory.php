@@ -84,4 +84,18 @@ class DeploymentFactory extends Factory
             'user_id' => null,
         ]);
     }
+
+    public function forSite(Site $site): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'site_id' => $site->id,
+        ]);
+    }
+
+    public function forUser(User $user): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_id' => $user->id,
+        ]);
+    }
 }

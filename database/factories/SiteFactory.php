@@ -6,6 +6,7 @@ use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
 use App\Models\Server;
+use App\Models\SourceControlAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -21,20 +22,43 @@ class SiteFactory extends Factory
      */
     public function definition(): array
     {
+        $domain = fake()->unique()->domainName();
+        $repo = fake()->userName().'/'.fake()->slug(2);
+
         return [
             'server_id' => Server::factory(),
-            'domain' => fake()->unique()->domainName(),
+            'source_control_account_id' => null,
+            'domain' => $domain,
+            'site_name' => $domain,
             'aliases' => null,
             'directory' => '/public',
-            'repository' => fake()->userName().'/'.fake()->slug(2),
+            'repository' => $repo,
             'repository_provider' => RepositoryProvider::Github,
             'branch' => 'main',
             'project_type' => ProjectType::Laravel,
             'php_version' => '8.3',
+            'package_manager' => 'composer',
+            'build_command' => null,
             'status' => SiteStatus::Deployed,
             'webhook_secret' => Str::random(32),
             'auto_deploy' => false,
+            'deployment_finished_at' => now(),
         ];
+    }
+
+    public function forServer(Server $server): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'server_id' => $server->id,
+            'php_version' => $server->php_version,
+        ]);
+    }
+
+    public function forSourceControlAccount(SourceControlAccount $account): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'source_control_account_id' => $account->id,
+        ]);
     }
 
     public function pending(): static

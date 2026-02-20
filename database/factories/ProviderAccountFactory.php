@@ -28,6 +28,13 @@ class ProviderAccountFactory extends Factory
         ];
     }
 
+    public function forUser(User $user): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_id' => $user->id,
+        ]);
+    }
+
     public function digitalocean(): static
     {
         return $this->state(fn (array $attributes) => [

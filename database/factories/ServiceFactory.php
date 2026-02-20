@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ServiceStatus;
 use App\Models\Server;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,7 +27,7 @@ class ServiceFactory extends Factory
             'installed_version' => null,
             'unit' => 'nginx',
             'logs' => null,
-            'status' => 'ready',
+            'status' => ServiceStatus::Active,
             'is_default' => false,
         ];
     }
@@ -37,8 +38,8 @@ class ServiceFactory extends Factory
             'type' => 'php',
             'version' => $version,
             'installed_version' => $version,
-            'unit' => "php{$version}-fpm",
-            'status' => 'ready',
+            'unit' => 'php'.str_replace('.', '', $version).'-fpm',
+            'status' => ServiceStatus::Active,
         ]);
     }
 
@@ -47,7 +48,7 @@ class ServiceFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'type' => 'nginx',
             'unit' => 'nginx',
-            'status' => 'ready',
+            'status' => ServiceStatus::Active,
         ]);
     }
 
@@ -56,14 +57,32 @@ class ServiceFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'type' => 'redis',
             'unit' => 'redis-server',
-            'status' => 'ready',
+            'status' => ServiceStatus::Active,
+        ]);
+    }
+
+    public function database(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => 'database',
+            'unit' => 'mysql',
+            'status' => ServiceStatus::Active,
+        ]);
+    }
+
+    public function supervisor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => 'supervisor',
+            'unit' => 'supervisor',
+            'status' => ServiceStatus::Active,
         ]);
     }
 
     public function pending(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'pending',
+            'status' => ServiceStatus::Pending,
             'installed_version' => null,
         ]);
     }
