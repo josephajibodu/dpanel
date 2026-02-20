@@ -1,14 +1,13 @@
-import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type EnvironmentVariable, type Site } from '@/types/site';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, Loader2Icon, PlusIcon, SettingsIcon, XIcon } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import { Loader2Icon, PlusIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 
 interface Props {
@@ -25,6 +24,7 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
+
     const initialVars = site.environment_variables?.length
         ? site.environment_variables
         : [{ key: '', value: '' }];
@@ -76,32 +76,17 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
             <Head title={`Environment - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/servers/${serverId}/sites/${site.id}`}>
-                            <ArrowLeftIcon className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">{site.domain}</h1>
-                            <SiteStatusBadge status={site.status} statusLabel={site.status_label} statusColor={site.status_color} />
-                        </div>
-                        <p className="text-muted-foreground text-sm">Environment variables</p>
-                    </div>
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Environment Variables
+                    </h1>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Manage environment variables for your application. These will be synced to the .env file on your server.
+                    </p>
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <SettingsIcon className="h-5 w-5" />
-                            Environment Variables
-                        </CardTitle>
-                        <CardDescription>
-                            Manage environment variables for your application. These will be synced to the .env file on your server.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-3">
                                 {variables.map((variable, index) => (
