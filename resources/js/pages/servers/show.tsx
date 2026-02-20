@@ -1,6 +1,6 @@
-import { CopyButton } from '@/components/copy-button';
-import { RestartDropdown } from '@/components/servers/restart-dropdown';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
+import { CreateDatabaseDrawer } from '@/components/databases/create-database-drawer';
+import { CreateSiteDrawer } from '@/components/sites/create-site-drawer';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -18,15 +26,12 @@ import { Site } from '@/types/site';
 import { Head, Link } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    ArrowLeftIcon,
-    CloudIcon,
-    DatabaseIcon,
+    ActivityIcon,
     ExternalLinkIcon,
     GlobeIcon,
     HardDriveIcon,
     PlusIcon,
     ServerIcon,
-    TerminalIcon,
 } from 'lucide-react';
 
 interface Props {
@@ -45,6 +50,7 @@ interface Props {
 
 export default function ServersShow({ server }: Props) {
     const { data } = server;
+    const sites = data.sites ?? [];
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -65,275 +71,379 @@ export default function ServersShow({ server }: Props) {
             <Head title={data.name} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href="/servers">
-                            <ArrowLeftIcon className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">
-                                {data.name}
-                            </h1>
-                            <ServerStatusBadge
-                                status={data.status}
-                                statusLabel={data.status_label}
-                                statusColor={data.status_color}
-                            />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            {data.provider_label}
-                        </p>
-                    </div>
-                    <RestartDropdown server={data} />
-                </div>
+                <ServerMetricsOverview serverId={data.id} />
 
-                {/* Status Cards */}
-                <div className="grid gap-4 md:grid-cols-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>IP Address</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <GlobeIcon className="h-5 w-5" />
-                                <span className="font-mono">
-                                    {data.ip_address || 'Pending...'}
-                                </span>
-                                {data.ip_address && (
-                                    <CopyButton
-                                        value={data.ip_address}
-                                        className="h-7 w-7"
-                                    />
-                                )}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Region</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <CloudIcon className="h-5 w-5" />
-                                {data.region}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>PHP Version</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <TerminalIcon className="h-5 w-5" />
-                                PHP {data.php_version}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Database</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <DatabaseIcon className="h-5 w-5" />
-                                {data.database_type === 'mysql'
-                                    ? 'MySQL'
-                                    : data.database_type === 'postgresql'
-                                      ? 'PostgreSQL'
-                                      : 'MariaDB'}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-                </div>
-
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Server Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ServerIcon className="h-5 w-5" />
-                                Server Details
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">
-                                    Size
-                                </span>
-                                <span className="font-medium">{data.size}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">
-                                    SSH Port
-                                </span>
-                                <span className="font-mono">
-                                    {data.ssh_port}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">
-                                    Provider Account
-                                </span>
-                                <span>{data.provider_account?.name}</span>
-                            </div>
-                            {data.provisioned_at && (
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+                    {/* Left column: Sites & databases, SSH, events */}
+                    <div className="space-y-6">
+                        {/* Sites */}
+                        <Card id="sites">
+                            <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">
-                                        Provisioned
-                                    </span>
-                                    <span>
-                                        {format(
-                                            new Date(data.provisioned_at),
-                                            'MMM d, yyyy HH:mm',
-                                        )}
-                                    </span>
-                                </div>
-                            )}
-                            {data.last_ssh_connection_at && (
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">
-                                        Last SSH Connection
-                                    </span>
-                                    <span>
-                                        {format(
-                                            new Date(
-                                                data.last_ssh_connection_at,
-                                            ),
-                                            'MMM d, yyyy HH:mm',
-                                        )}
-                                    </span>
-                                </div>
-                            )}
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">
-                                    Created
-                                </span>
-                                <span>
-                                    {format(
-                                        new Date(data.created_at),
-                                        'MMM d, yyyy HH:mm',
-                                    )}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Sites */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <HardDriveIcon className="h-5 w-5" />
-                                    Sites
-                                </CardTitle>
-                                {data.status === 'active' && (
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link
-                                            href={`/servers/${data.id}/sites/create`}
-                                        >
-                                            <PlusIcon className="mr-2 h-4 w-4" />
-                                            Add Site
-                                        </Link>
-                                    </Button>
-                                )}
-                            </div>
-                            <CardDescription>
-                                Websites deployed on this server.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {data.sites && data.sites.length > 0 ? (
-                                <div className="space-y-2">
-                                    {data.sites.map((site) => (
-                                        <Link
-                                            key={site.id}
-                                            href={`/sites/${site.id}`}
-                                            className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <GlobeIcon className="h-4 w-4 text-muted-foreground" />
-                                                <div>
-                                                    <span className="font-medium">
-                                                        {site.domain}
-                                                    </span>
-                                                    {site.project_type_label && (
-                                                        <span className="ml-2 text-sm text-muted-foreground">
-                                                            (
-                                                            {
-                                                                site.project_type_label
-                                                            }
-                                                            )
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <SiteStatusBadge
-                                                    status={site.status}
-                                                    statusLabel={
-                                                        site.status_label
-                                                    }
-                                                    statusColor={
-                                                        site.status_color
-                                                    }
-                                                />
-                                                <ExternalLinkIcon className="h-4 w-4 text-muted-foreground" />
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-8 text-center">
-                                    <HardDriveIcon className="mb-2 h-8 w-8 text-muted-foreground" />
-                                    <p className="mb-3 text-sm text-muted-foreground">
-                                        No sites deployed yet.
-                                    </p>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <HardDriveIcon className="h-5 w-5" />
+                                        Sites
+                                    </CardTitle>
                                     {data.status === 'active' && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={`/servers/${data.id}/sites/create`}
-                                            >
-                                                <PlusIcon className="mr-2 h-4 w-4" />
-                                                Add Your First Site
-                                            </Link>
-                                        </Button>
+                                        <CreateSiteDrawer serverId={data.id} />
                                     )}
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                                <CardDescription>
+                                    Websites deployed on this server.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {sites.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
+                                        <HardDriveIcon className="text-muted-foreground h-10 w-10" />
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                No sites on this server yet
+                                            </p>
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                Get started by creating your
+                                                first site.
+                                            </p>
+                                        </div>
+                                        {data.status === 'active' && (
+                                            <CreateSiteDrawer
+                                                serverId={data.id}
+                                            />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Domain</TableHead>
+                                                    <TableHead>
+                                                        Type
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {sites.map((site) => (
+                                                    <TableRow key={site.id}>
+                                                        <TableCell>
+                                                            <Link
+                                                                href={`/sites/${site.id}`}
+                                                                className="font-medium hover:underline"
+                                                            >
+                                                                {site.domain}
+                                                            </Link>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm text-muted-foreground">
+                                                            {site.project_type_label ??
+                                                                '—'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <SiteStatusBadge
+                                                                status={
+                                                                    site.status
+                                                                }
+                                                                statusLabel={
+                                                                    site.status_label
+                                                                }
+                                                                statusColor={
+                                                                    site.status_color
+                                                                }
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                {/* SSH Connection Info */}
-                {data.status === 'active' && data.ip_address && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <TerminalIcon className="h-5 w-5" />
-                                SSH Connection
-                            </CardTitle>
-                            <CardDescription>
-                                Connect to your server via SSH.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center gap-2 rounded-lg bg-muted p-3 font-mono text-sm">
-                                <code>
-                                    ssh artisan@{data.ip_address}
-                                    {data.ssh_port !== 22 &&
-                                        ` -p ${data.ssh_port}`}
-                                </code>
-                                <CopyButton
-                                    value={`ssh artisan@${data.ip_address}${data.ssh_port !== 22 ? ` -p ${data.ssh_port}` : ''}`}
-                                    className="ml-auto h-7 w-7"
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                        {/* Databases at a glance (placeholder) */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <ServerIcon className="h-5 w-5" />
+                                        Databases
+                                    </CardTitle>
+                                    {data.status === 'active' && (
+                                        <CreateDatabaseDrawer
+                                            serverId={data.id}
+                                        />
+                                    )}
+                                </div>
+                                <CardDescription>
+                                    Databases provisioned on this server.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={3}
+                                                    className="h-16 text-center text-sm text-muted-foreground"
+                                                >
+                                                    No databases yet.
+                                                </TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+
+                        {/* Recent events (optional) */}
+                        {data.actions && data.actions.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <ActivityIcon className="h-5 w-5" />
+                                        Recent events
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Latest provisioning and management
+                                        actions.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    {data.actions.slice(0, 5).map((action) => (
+                                        <div
+                                            key={action.id}
+                                            className="flex items-center justify-between rounded-md border px-3 py-2"
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">
+                                                    {action.action}
+                                                </span>
+                                                <span className="text-muted-foreground text-xs">
+                                                    {format(
+                                                        new Date(
+                                                            action.created_at,
+                                                        ),
+                                                        'MMM d, yyyy HH:mm',
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <span className="text-muted-foreground text-xs">
+                                                {action.status}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+
+                    {/* Right column: unified sidebar */}
+                    <div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ServerIcon className="h-5 w-5" />
+                                    Server details
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-5 text-sm">
+                                <div className="space-y-2">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Server
+                                    </p>
+                                    <DetailRow
+                                        label="Name"
+                                        value={data.name}
+                                    />
+                                    <DetailRow
+                                        label="Provider account"
+                                        value={
+                                            data.provider_account?.name ??
+                                            data.provider_label
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Size"
+                                        value={data.size}
+                                    />
+                                    <DetailRow
+                                        label="Region"
+                                        value={data.region}
+                                    />
+                                    <DetailRow
+                                        label="SSH port"
+                                        value={String(data.ssh_port)}
+                                        valueClassName="font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-2 border-t pt-4">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        IP addresses
+                                    </p>
+                                    <DetailRow
+                                        label="Public"
+                                        value={
+                                            data.ip_address || 'Pending...'
+                                        }
+                                        valueClassName="font-mono"
+                                    />
+                                    <DetailRow
+                                        label="Private"
+                                        value={
+                                            data.private_ip_address ?? '—'
+                                        }
+                                        valueClassName="font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-2 border-t pt-4">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Runtime
+                                    </p>
+                                    <p className="text-sm font-medium">
+                                        PHP {data.php_version} ·{' '}
+                                        {data.database_type === 'mysql'
+                                            ? 'MySQL'
+                                            : data.database_type === 'postgresql'
+                                              ? 'PostgreSQL'
+                                              : 'MariaDB'}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2 border-t pt-4">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Status
+                                    </p>
+                                    <p className="text-sm font-medium">
+                                        {data.status_label}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        Created{' '}
+                                        {format(
+                                            new Date(data.created_at),
+                                            'MMM d, yyyy',
+                                        )}
+                                    </p>
+                                    {data.provisioned_at && (
+                                        <p className="text-muted-foreground text-xs">
+                                            Provisioned{' '}
+                                            {format(
+                                                new Date(data.provisioned_at),
+                                                'MMM d, yyyy',
+                                            )}
+                                        </p>
+                                    )}
+                                    {data.last_ssh_connection_at && (
+                                        <p className="text-muted-foreground text-xs">
+                                            Last SSH connection{' '}
+                                            {format(
+                                                new Date(
+                                                    data.last_ssh_connection_at,
+                                                ),
+                                                'MMM d, yyyy',
+                                            )}
+                                        </p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
 }
+
+interface DetailRowProps {
+    label: string;
+    value: string;
+    valueClassName?: string;
+}
+
+function DetailRow({ label, value, valueClassName }: DetailRowProps) {
+    return (
+        <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground text-xs">{label}</span>
+            <span className={`text-sm font-medium ${valueClassName ?? ''}`}>
+                {value}
+            </span>
+        </div>
+    );
+}
+
+interface ServerMetricsOverviewProps {
+    serverId: number;
+}
+
+function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
+    return (
+        <section className="space-y-3">
+            <div>
+                <h2 className="text-base font-semibold">Overview</h2>
+                <p className="text-muted-foreground text-sm">
+                    Here you can see an overview of your server.
+                </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+                <MetricCard
+                    label="CPU load"
+                    value="N/A"
+                    description="No data yet"
+                    href={`/servers/${serverId}/observe`}
+                />
+                <MetricCard
+                    label="Memory usage"
+                    value="N/A"
+                    description="No data yet"
+                    href={`/servers/${serverId}/observe`}
+                />
+                <MetricCard
+                    label="Disk usage"
+                    value="N/A"
+                    description="No data yet"
+                    href={`/servers/${serverId}/observe`}
+                />
+            </div>
+        </section>
+    );
+}
+
+interface MetricCardProps {
+    label: string;
+    value: string;
+    description: string;
+    href: string;
+}
+
+function MetricCard({ label, value, description, href }: MetricCardProps) {
+    return (
+        <div className="flex flex-col justify-between rounded-lg border bg-background p-3">
+            <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{label}</span>
+                <Link
+                    href={href}
+                    className="text-muted-foreground hover:text-foreground text-[11px] font-medium"
+                >
+                    View
+                </Link>
+            </div>
+            <div className="mt-3 text-2xl font-semibold">{value}</div>
+            <div className="text-muted-foreground mt-1 text-[11px]">
+                {description}
+            </div>
+        </div>
+    );
+}
+

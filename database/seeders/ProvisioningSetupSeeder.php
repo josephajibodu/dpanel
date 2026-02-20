@@ -157,8 +157,11 @@ class ProvisioningSetupSeeder extends Seeder
             ->forUser($user)
             ->forProviderAccount($hetzner ?? $digitalOcean)
             ->app()
-            ->pending()
-            ->create(['name' => 'pending-server']);
+            ->active()
+            ->create([
+                'name' => 'pending-server',
+                'ip_address' => '65.21.100.42',
+            ]);
 
         return $servers;
     }
