@@ -40,7 +40,9 @@ export function SubNav({ items, selectedHref, className }: SubNavProps) {
                 <NavigationMenu className="flex h-full w-full justify-start">
                     <NavigationMenuList className="flex h-full items-center gap-1 space-x-0">
                         {items.map((item) => {
-                            const isActive = urlIsActive(item.href);
+                            const isActive = urlIsActive(item.href, undefined, {
+                                exact: item.exactMatch,
+                            });
                             const isSelected =
                                 !isActive &&
                                 selectedHref &&

@@ -7,7 +7,7 @@ import type { SubNavItem } from '@/types';
 export function getServerSubNavItems(serverId: number | string): SubNavItem[] {
     const base = `/servers/${serverId}`;
     return [
-        { title: 'Overview', href: base },
+        { title: 'Overview', href: base, exactMatch: true },
         { title: 'Sites', href: `${base}/sites` },
         { title: 'Storage', href: `${base}/storage` },
         { title: 'Processes', href: `${base}/processes` },
@@ -23,7 +23,7 @@ export function getSiteSubNavItems(
 ): SubNavItem[] {
     const base = `/servers/${serverId}/sites/${siteId}`;
     return [
-        { title: 'Overview', href: base },
+        { title: 'Overview', href: base, exactMatch: true },
         { title: 'Deployments', href: `${base}/deployments` },
         { title: 'Environment', href: `${base}/environment` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },

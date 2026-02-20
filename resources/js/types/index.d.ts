@@ -25,6 +25,8 @@ export interface NavItem {
 export interface SubNavItem {
     title: string;
     href: string;
+    /** When true, active only on exact path match (e.g. Overview base pages). */
+    exactMatch?: boolean;
 }
 
 export interface SharedData {
