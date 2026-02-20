@@ -2,12 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\SiteResource;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DeployScriptController extends Controller
 {
+    public function show(Site $site): Response
+    {
+        $this->authorize('view', $site);
+
+        $site->load(['server', 'deployScript']);
+
+        return Inertia::render('sites/deploy-script/show', [
+            'site' => new SiteResource($site),
+        ]);
+    }
+
     public function update(Request $request, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);

@@ -24,9 +24,9 @@ export function getSiteSubNavItems(
     const base = `/sites/${siteId}`;
     return [
         { title: 'Overview', href: base },
-        { title: 'Deployments', href: `${base}#deployments` },
-        { title: 'Environment', href: `${base}#environment` },
-        { title: 'Deploy Script', href: `${base}#deploy-script` },
+        { title: 'Deployments', href: `${base}/deployments` },
+        { title: 'Environment', href: `${base}/environment` },
+        { title: 'Deploy Script', href: `${base}/deploy-script` },
     ];
 }
 

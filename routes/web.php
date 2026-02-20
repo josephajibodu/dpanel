@@ -45,8 +45,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['show', 'edit', 'update', 'destroy']);
 
     // Site Environment & Deploy Script
+    Route::get('sites/{site}/environment', [EnvironmentController::class, 'show'])
+        ->name('sites.environment.show');
     Route::put('sites/{site}/environment', [EnvironmentController::class, 'update'])
         ->name('sites.environment.update');
+    Route::get('sites/{site}/deploy-script', [DeployScriptController::class, 'show'])
+        ->name('sites.deploy-script.show');
     Route::put('sites/{site}/deploy-script', [DeployScriptController::class, 'update'])
         ->name('sites.deploy-script.update');
 

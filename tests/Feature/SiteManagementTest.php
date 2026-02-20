@@ -290,6 +290,54 @@ describe('site deletion', function () {
     });
 });
 
+describe('site sub-pages', function () {
+    it('can view site deployments index', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/sites/{$site->id}/deployments");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/deployments/index')
+                ->has('site.data')
+                ->has('deployments.data')
+            );
+    });
+
+    it('can view site environment page', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/sites/{$site->id}/environment");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/environment/show')
+                ->has('site.data')
+            );
+    });
+
+    it('can view site deploy script page', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/sites/{$site->id}/deploy-script");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/deploy-script/show')
+                ->has('site.data')
+            );
+    });
+});
+
 describe('environment variables', function () {
     it('can update environment variables', function () {
         Queue::fake();

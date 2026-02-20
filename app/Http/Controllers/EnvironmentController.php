@@ -2,13 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\SiteResource;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class EnvironmentController extends Controller
 {
+    public function show(Site $site): Response
+    {
+        $this->authorize('view', $site);
+
+        $site->load(['server', 'environmentVariables']);
+
+        return Inertia::render('sites/environment/show', [
+            'site' => new SiteResource($site),
+        ]);
+    }
+
     public function update(Request $request, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);

@@ -43,6 +43,7 @@ class SiteResource extends JsonResource
             'latest_deployment' => new DeploymentResource($this->whenLoaded('latestDeployment')),
             'deployments' => DeploymentResource::collection($this->whenLoaded('deployments')),
             'deploy_script' => $this->whenLoaded('deployScript', fn () => $this->deployScript?->script),
+            'environment_variables' => $this->whenLoaded('environmentVariables', fn () => $this->environmentVariables->map(fn ($v) => ['key' => $v->key, 'value' => $v->value])->values()->all()),
             'deployment_started_at' => $this->deployment_started_at?->toIso8601String(),
             'deployment_finished_at' => $this->deployment_finished_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),

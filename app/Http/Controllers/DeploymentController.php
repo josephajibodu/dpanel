@@ -26,8 +26,8 @@ class DeploymentController extends Controller
             ->latest()
             ->paginate(20);
 
-        return Inertia::render('sites/deployments', [
-            'site' => $site->load('server'),
+        return Inertia::render('sites/deployments/index', [
+            'site' => new SiteResource($site->load('server')),
             'deployments' => DeploymentResource::collection($deployments),
         ]);
     }

@@ -27,6 +27,7 @@ export interface Site {
     latest_deployment?: Deployment;
     deployments?: Deployment[];
     deploy_script?: string;
+    environment_variables?: EnvironmentVariable[];
     deployment_started_at: string | null;
     deployment_finished_at: string | null;
     created_at: string;
