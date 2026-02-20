@@ -22,6 +22,20 @@ use Inertia\Response;
 
 class SiteController extends Controller
 {
+    public function index(Server $server): Response
+    {
+        $this->authorize('view', $server);
+
+        $sites = $server->sites()
+            ->latest()
+            ->paginate(20);
+
+        return Inertia::render('servers/sites/index', [
+            'server' => new ServerResource($server),
+            'sites' => SiteResource::collection($sites),
+        ]);
+    }
+
     public function create(Server $server, SourceControlService $sourceControlService): Response
     {
         $this->authorize('create', [Site::class, $server]);
@@ -78,11 +92,11 @@ class SiteController extends Controller
         );
 
         return redirect()
-            ->route('sites.show', $site)
+            ->route('servers.sites.show', [$server, $site])
             ->with('success', 'Site is being created...');
     }
 
-    public function show(Site $site): Response
+    public function show(Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
 
@@ -90,21 +104,23 @@ class SiteController extends Controller
             'server.providerAccount',
             'latestDeployment',
             'deployScript',
-            'deployments' => fn ($q) => $q->latest()->limit(10),
+            'deployments' => fn ($q) => $q->with('user')->latest()->limit(10),
         ]);
 
         return Inertia::render('sites/show', [
+            'server' => new ServerResource($server),
             'site' => new SiteResource($site),
         ]);
     }
 
-    public function edit(Site $site): Response
+    public function edit(Server $server, Site $site): Response
     {
         $this->authorize('update', $site);
 
         $site->load('server.providerAccount');
 
         return Inertia::render('sites/edit', [
+            'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
                 'value' => $type->value,
@@ -124,27 +140,25 @@ class SiteController extends Controller
         ]);
     }
 
-    public function update(UpdateSiteRequest $request, Site $site): RedirectResponse
+    public function update(UpdateSiteRequest $request, Server $server, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 
         $site->update($request->validated());
 
         return redirect()
-            ->route('sites.show', $site)
+            ->route('servers.sites.show', [$server, $site])
             ->with('success', 'Site updated successfully.');
     }
 
-    public function destroy(Site $site, DeleteSiteAction $action): RedirectResponse
+    public function destroy(Server $server, Site $site, DeleteSiteAction $action): RedirectResponse
     {
         $this->authorize('delete', $site);
-
-        $serverId = $site->server_id;
 
         $action->execute($site);
 
         return redirect()
-            ->route('servers.show', $serverId)
+            ->route('servers.sites.index', $server)
             ->with('success', 'Site deletion initiated.');
     }
 }

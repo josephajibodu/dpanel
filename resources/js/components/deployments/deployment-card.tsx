@@ -5,14 +5,14 @@ import { Deployment } from '@/types/deployment';
 import { Link } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { ClockIcon, GitCommitIcon, RocketIcon, UserIcon } from 'lucide-react';
-import { show } from '@/routes/deployments';
 
 interface DeploymentCardProps {
     deployment: Deployment;
+    serverId: number;
     siteId: number;
 }
 
-export function DeploymentCard({ deployment, siteId }: DeploymentCardProps) {
+export function DeploymentCard({ deployment, serverId, siteId }: DeploymentCardProps) {
     const statusColors = {
         pending: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
         running: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -51,7 +51,9 @@ export function DeploymentCard({ deployment, siteId }: DeploymentCardProps) {
                         </div>
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                        <Link href={show.url({ deployment: deployment.id })}>View Details</Link>
+                        <Link href={`/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}`}>
+                            View Details
+                        </Link>
                     </Button>
                 </div>
             </CardHeader>

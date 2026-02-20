@@ -5,10 +5,11 @@ import { RocketIcon } from 'lucide-react';
 
 interface DeploymentListProps {
     deployments: Deployment[];
+    serverId: number;
     siteId: number;
 }
 
-export function DeploymentList({ deployments, siteId }: DeploymentListProps) {
+export function DeploymentList({ deployments, serverId, siteId }: DeploymentListProps) {
     if (deployments.length === 0) {
         return (
             <EmptyState
@@ -22,7 +23,12 @@ export function DeploymentList({ deployments, siteId }: DeploymentListProps) {
     return (
         <div className="space-y-4">
             {deployments.map((deployment) => (
-                <DeploymentCard key={deployment.id} deployment={deployment} siteId={siteId} />
+                <DeploymentCard
+                    key={deployment.id}
+                    deployment={deployment}
+                    serverId={serverId}
+                    siteId={siteId}
+                />
             ))}
         </div>
     );

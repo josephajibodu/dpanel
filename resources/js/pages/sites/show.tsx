@@ -1,11 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    ArrowLeftIcon,
+    CalendarIcon,
     ExternalLinkIcon,
     GitBranchIcon,
-    GlobeIcon,
     MoreVerticalIcon,
+    PlayIcon,
     RocketIcon,
     ServerIcon,
     Trash2Icon,
@@ -13,10 +13,15 @@ import {
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { CopyButton } from '@/components/copy-button';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,33 +29,59 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { type Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
 
 interface Props {
+    server: { data: { id: number; name: string } };
     site: {
         data: Site & {
-            server?: {
-                id: number;
-                name: string;
-                ip_address: string;
-            };
+            server?: { id: number; name: string; ip_address: string };
+            deployments?: (Deployment & { user?: { id: number; name: string } })[];
         };
     };
 }
 
-export default function SitesShow({ site }: Props) {
-    const { data: siteData } = site;
+export default function SitesShow({ server: serverProp, site }: Props) {
+    const server = serverProp?.data ?? serverProp;
+    const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
+    const serverId = server?.id ?? siteData?.server?.id;
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    if (!siteData?.id) {
+        return (
+            <AppLayout breadcrumbs={[]}>
+                <Head title="Site" />
+                <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-4">
+                    <p className="text-muted-foreground text-sm">
+                        Loading site...
+                    </p>
+                </div>
+            </AppLayout>
+        );
+    }
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
-        { title: siteData.server?.name || 'Server', href: `/servers/${siteData.server?.id}` },
-        { title: siteData.domain, href: `/sites/${siteData.id}` },
+        { title: server?.name || siteData.server?.name || 'Server', href: `/servers/${serverId}` },
+        { title: siteData.domain, href: `/servers/${serverId}/sites/${siteData.id}` },
     ];
+
+    const deployments = (siteData.deployments ?? []) as (Deployment & {
+        user?: { id: number; name: string };
+    })[];
 
     const handleDelete = () => {
         setDeleteDialogOpen(true);
@@ -58,7 +89,7 @@ export default function SitesShow({ site }: Props) {
 
     const confirmDelete = () => {
         setIsDeleting(true);
-        router.delete(`/sites/${siteData.id}`, {
+        router.delete(`/servers/${serverId}/sites/${siteData.id}`, {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -70,30 +101,42 @@ export default function SitesShow({ site }: Props) {
         <AppLayout
             breadcrumbs={breadcrumbs}
             subNavItems={getSiteSubNavItems(
-                siteData.server?.id ?? '',
+                String(serverId ?? ''),
                 siteData.id,
             )}
         >
             <Head title={siteData.domain} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                {/* Header */}
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/servers/${siteData.server?.id}`}>
-                            <ArrowLeftIcon className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">{siteData.domain}</h1>
-                            <SiteStatusBadge status={siteData.status} statusLabel={siteData.status_label} statusColor={siteData.status_color} />
+                {/* Header: no back arrow */}
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-2xl font-semibold tracking-tight">
+                                {siteData.domain}
+                            </h1>
+                            <SiteStatusBadge
+                                status={siteData.status}
+                                statusLabel={siteData.status_label}
+                                statusColor={siteData.status_color}
+                            />
                         </div>
-                        <p className="text-muted-foreground text-sm">{siteData.project_type_label}</p>
+                        {siteData.repository && (
+                            <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-sm">
+                                <GitBranchIcon className="h-4 w-4 shrink-0" />
+                                <span className="truncate">
+                                    {siteData.short_repository}:{siteData.branch}
+                                </span>
+                            </p>
+                        )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                         <Button variant="outline" asChild>
-                            <a href={`https://${siteData.domain}`} target="_blank" rel="noopener noreferrer">
+                            <a
+                                href={`https://${siteData.domain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <ExternalLinkIcon className="mr-2 h-4 w-4" />
                                 Visit Site
                             </a>
@@ -106,10 +149,16 @@ export default function SitesShow({ site }: Props) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href={`/sites/${siteData.id}/edit`}>Edit Site</Link>
+                                    <Link href={`/servers/${serverId}/sites/${siteData.id}/edit`}>
+                                        Edit Site
+                                    </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive" disabled={siteData.status === 'installing'}>
+                                <DropdownMenuItem
+                                    onClick={handleDelete}
+                                    className="text-destructive focus:text-destructive"
+                                    disabled={siteData.status === 'installing'}
+                                >
                                     <Trash2Icon className="mr-2 h-4 w-4" />
                                     Delete Site
                                 </DropdownMenuItem>
@@ -118,173 +167,264 @@ export default function SitesShow({ site }: Props) {
                     </div>
                 </div>
 
-                {/* Overview */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Site Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <GlobeIcon className="h-5 w-5" />
-                                Site Details
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Domain</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-medium">{siteData.domain}</span>
-                                    <CopyButton value={siteData.domain} className="h-7 w-7" />
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+                    {/* Left column: Deployments, Background processes, Scheduled jobs */}
+                    <div className="space-y-6">
+                        {/* Deployments */}
+                        <Card id="deployments">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <RocketIcon className="h-5 w-5" />
+                                        Deployments
+                                    </CardTitle>
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={`/servers/${serverId}/sites/${siteData.id}/deployments`}>
+                                            View all
+                                        </Link>
+                                    </Button>
                                 </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Project Type</span>
-                                <span className="font-medium">{siteData.project_type_label}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">PHP Version</span>
-                                <span className="font-medium">PHP {siteData.php_version}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Web Directory</span>
-                                <code className="bg-muted rounded px-2 py-0.5 text-sm">{siteData.directory}</code>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Root Path</span>
-                                <code className="bg-muted max-w-[200px] truncate rounded px-2 py-0.5 text-sm">{siteData.root_path}</code>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Created</span>
-                                <span>{format(new Date(siteData.created_at), 'MMM d, yyyy HH:mm')}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Repository Info */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <GitBranchIcon className="h-5 w-5" />
-                                Repository
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {siteData.repository ? (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Provider</span>
-                                        <span className="font-medium">{siteData.repository_provider_label}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Repository</span>
-                                        <a
-                                            href={siteData.repository_url || '#'}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-sm font-medium hover:underline"
-                                        >
-                                            {siteData.short_repository}
-                                            <ExternalLinkIcon className="h-3 w-3" />
-                                        </a>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Branch</span>
-                                        <code className="bg-muted rounded px-2 py-0.5 text-sm">{siteData.branch}</code>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Auto Deploy</span>
-                                        <span className={siteData.auto_deploy ? 'text-green-600' : 'text-muted-foreground'}>
-                                            {siteData.auto_deploy ? 'Enabled' : 'Disabled'}
-                                        </span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-8 text-center">
-                                    <GitBranchIcon className="text-muted-foreground mb-2 h-8 w-8" />
-                                    <p className="text-muted-foreground text-sm">No repository connected.</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Server Info */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ServerIcon className="h-5 w-5" />
-                                Server
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Name</span>
-                                <Link href={`/servers/${siteData.server?.id}`} className="font-medium hover:underline">
-                                    {siteData.server?.name}
-                                </Link>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">IP Address</span>
-                                <div className="flex items-center gap-2">
-                                    <code className="bg-muted rounded px-2 py-0.5 text-sm">{siteData.server?.ip_address}</code>
-                                    {siteData.server?.ip_address && <CopyButton value={siteData.server.ip_address} className="h-7 w-7" />}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Latest Deployment */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <RocketIcon className="h-5 w-5" />
-                                Latest Deployment
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {siteData.latest_deployment ? (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Status</span>
-                                        <span
-                                            className={`font-medium ${
-                                                siteData.latest_deployment.status === 'finished'
-                                                    ? 'text-green-600'
-                                                    : siteData.latest_deployment.status === 'failed'
-                                                      ? 'text-red-600'
-                                                      : 'text-amber-600'
-                                            }`}
-                                        >
-                                            {siteData.latest_deployment.status_label}
-                                        </span>
-                                    </div>
-                                    {siteData.latest_deployment.commit_hash && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Commit</span>
-                                            <code className="bg-muted rounded px-2 py-0.5 text-sm">
-                                                {siteData.latest_deployment.commit_hash.slice(0, 7)}
-                                            </code>
+                                <CardDescription>
+                                    Recent deployments for this site.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {deployments.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
+                                        <RocketIcon className="text-muted-foreground h-10 w-10" />
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                No deployments yet
+                                            </p>
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                Deployments will appear here once
+                                                you trigger your first deployment.
+                                            </p>
                                         </div>
-                                    )}
-                                    {siteData.latest_deployment.finished_at && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Deployed</span>
-                                            <span>{format(new Date(siteData.latest_deployment.finished_at), 'MMM d, yyyy HH:mm')}</span>
-                                        </div>
-                                    )}
-                                    {siteData.latest_deployment.duration_seconds && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Duration</span>
-                                            <span>{siteData.latest_deployment.duration_seconds}s</span>
-                                        </div>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/servers/${serverId}/sites/${siteData.id}/deployments`}>
+                                                Go to Deployments
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Commit</TableHead>
+                                                    <TableHead>Message</TableHead>
+                                                    <TableHead>Deployed</TableHead>
+                                                    <TableHead className="w-0" />
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {deployments.map((d) => (
+                                                    <TableRow key={d.id}>
+                                                        <TableCell>
+                                                            <StatusBadge
+                                                                status={d.status}
+                                                                label={d.status_label}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-sm">
+                                                            {d.commit_hash
+                                                                ? d.commit_hash.slice(0, 7)
+                                                                : '—'}
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
+                                                            {d.commit_message ?? '—'}
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                                                            {d.finished_at
+                                                                ? format(
+                                                                      new Date(d.finished_at),
+                                                                      'MMM d, HH:mm',
+                                                                  )
+                                                                : d.started_at
+                                                                  ? 'Running...'
+                                                                  : '—'}
+                                                            {d.user?.name && (
+                                                                <span className="ml-1">
+                                                                    by {d.user.name}
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={`/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`}
+                                                                >
+                                                                    View
+                                                                </Link>
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Background processes */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <PlayIcon className="h-5 w-5" />
+                                    Background processes
+                                </CardTitle>
+                                <CardDescription>
+                                    Process managers and workers for this site.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
+                                    <PlayIcon className="text-muted-foreground h-10 w-10" />
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            No background processes yet
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Add process managers or workers when
+                                            ready.
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Scheduled jobs */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <CalendarIcon className="h-5 w-5" />
+                                    Scheduled jobs
+                                </CardTitle>
+                                <CardDescription>
+                                    Cron jobs and scheduled tasks for this site.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
+                                    <CalendarIcon className="text-muted-foreground h-10 w-10" />
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            No scheduled jobs yet
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Add cron jobs or scheduled tasks when
+                                            ready.
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Right column: Details sidebar */}
+                    <div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ServerIcon className="h-5 w-5" />
+                                    Details
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-5 text-sm">
+                                <div className="space-y-2">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Server
+                                    </p>
+                                    <DetailRow
+                                        label="Server"
+                                        value={
+                                            siteData.server?.name
+                                                ? `#${siteData.server.id} ${siteData.server.name}`
+                                                : `#${siteData.server?.id ?? '—'}`
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Site ID"
+                                        value={String(siteData.id)}
+                                        valueClassName="font-mono"
+                                    />
+                                    <DetailRow
+                                        label="Framework"
+                                        value={
+                                            siteData.project_type_label ?? '—'
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="PHP"
+                                        value={`PHP ${siteData.php_version}`}
+                                    />
+                                    <DetailRow
+                                        label="Public IP"
+                                        value={
+                                            siteData.server?.ip_address ?? '—'
+                                        }
+                                        valueClassName="font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-2 border-t pt-4">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Repository
+                                    </p>
+                                    {siteData.repository ? (
+                                        <>
+                                            <DetailRow
+                                                label="Branch"
+                                                value={siteData.branch}
+                                                valueClassName="font-mono"
+                                            />
+                                            <DetailRow
+                                                label="Auto deploy"
+                                                value={
+                                                    siteData.auto_deploy
+                                                        ? 'Enabled'
+                                                        : 'Disabled'
+                                                }
+                                            />
+                                        </>
+                                    ) : (
+                                        <p className="text-muted-foreground text-xs">
+                                            No repository connected.
+                                        </p>
                                     )}
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-8 text-center">
-                                    <RocketIcon className="text-muted-foreground mb-2 h-8 w-8" />
-                                    <p className="text-muted-foreground text-sm">No deployments yet.</p>
+
+                                <div className="space-y-2 border-t pt-4">
+                                    <p className="text-muted-foreground text-xs font-medium uppercase">
+                                        Status
+                                    </p>
+                                    <p className="text-sm font-medium">
+                                        {siteData.status_label}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        Created{' '}
+                                        {format(
+                                            new Date(siteData.created_at),
+                                            'MMM d, yyyy',
+                                        )}
+                                    </p>
+                                    <Link
+                                        href={`/servers/${serverId}`}
+                                        className="text-muted-foreground hover:text-foreground mt-2 block text-xs font-medium"
+                                    >
+                                        View server →
+                                    </Link>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
 
@@ -299,5 +439,59 @@ export default function SitesShow({ site }: Props) {
                 loading={isDeleting}
             />
         </AppLayout>
+    );
+}
+
+interface DetailRowProps {
+    label: string;
+    value: string;
+    valueClassName?: string;
+}
+
+function DetailRow({
+    label,
+    value,
+    valueClassName,
+}: DetailRowProps) {
+    return (
+        <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground text-xs">{label}</span>
+            <span
+                className={`text-sm font-medium ${valueClassName ?? ''}`}
+            >
+                {value}
+            </span>
+        </div>
+    );
+}
+
+const statusColors: Record<
+    string,
+    string
+> = {
+    pending: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+    running: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    finished:
+        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    cancelled:
+        'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+};
+
+function StatusBadge({
+    status,
+    label,
+}: {
+    status: string;
+    label: string;
+}) {
+    return (
+        <span
+            className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                statusColors[status] ?? 'bg-gray-100 text-gray-800'
+            }`}
+        >
+            {label}
+        </span>
     );
 }

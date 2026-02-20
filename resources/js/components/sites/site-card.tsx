@@ -9,10 +9,12 @@ import { ExternalLinkIcon, GitBranchIcon, GlobeIcon, MoreVerticalIcon, Trash2Ico
 
 interface SiteCardProps {
     site: Site;
+    serverId?: number;
     onDelete?: () => void;
 }
 
-export function SiteCard({ site, onDelete }: SiteCardProps) {
+export function SiteCard({ site, serverId, onDelete }: SiteCardProps) {
+    const baseUrl = `/servers/${serverId ?? site.server?.id ?? ''}/sites/${site.id}`;
     return (
         <Card className="relative">
             <CardHeader className="pb-3">
@@ -36,7 +38,7 @@ export function SiteCard({ site, onDelete }: SiteCardProps) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href={`/sites/${site.id}`}>View Details</Link>
+                                    <Link href={baseUrl}>View Details</Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <a href={`https://${site.domain}`} target="_blank" rel="noopener noreferrer">
@@ -89,7 +91,7 @@ export function SiteCard({ site, onDelete }: SiteCardProps) {
 
                 <div className="pt-2">
                     <Button variant="outline" size="sm" className="w-full" asChild>
-                        <Link href={`/sites/${site.id}`}>View Details</Link>
+                        <Link href={baseUrl}>View Details</Link>
                     </Button>
                 </div>
             </CardContent>

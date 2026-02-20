@@ -18,10 +18,10 @@ export function getServerSubNavItems(serverId: number | string): SubNavItem[] {
 }
 
 export function getSiteSubNavItems(
-    _serverId: number | string,
+    serverId: number | string,
     siteId: number | string,
 ): SubNavItem[] {
-    const base = `/sites/${siteId}`;
+    const base = `/servers/${serverId}/sites/${siteId}`;
     return [
         { title: 'Overview', href: base },
         { title: 'Deployments', href: `${base}/deployments` },

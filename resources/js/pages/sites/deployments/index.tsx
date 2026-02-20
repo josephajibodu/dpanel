@@ -17,13 +17,10 @@ import { Loader2Icon, ArrowLeftIcon, RocketIcon } from 'lucide-react';
 import { useState } from 'react';
 
 interface Props {
+    server: { data: { id: number; name: string } };
     site: {
         data: Site & {
-            server?: {
-                id: number;
-                name: string;
-                ip_address: string;
-            };
+            server?: { id: number; name: string; ip_address: string };
         };
     };
     deployments: {
@@ -33,20 +30,22 @@ interface Props {
     };
 }
 
-export default function SiteDeploymentsIndex({ site: siteProp, deployments }: Props) {
+export default function SiteDeploymentsIndex({ server: serverProp, site: siteProp, deployments }: Props) {
+    const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
+    const serverId = server?.id ?? site.server?.id;
     const [isDeploying, setIsDeploying] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
-        { title: site.server?.name || 'Server', href: `/servers/${site.server?.id}` },
-        { title: site.domain, href: `/sites/${site.id}` },
-        { title: 'Deployments', href: `/sites/${site.id}/deployments` },
+        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
+        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
+        { title: 'Deployments', href: `/servers/${serverId}/sites/${site.id}/deployments` },
     ];
 
     const handleDeploy = () => {
         setIsDeploying(true);
-        router.post(`/sites/${site.id}/deployments`, {}, {
+        router.post(`/servers/${serverId}/sites/${site.id}/deployments`, {}, {
             onFinish: () => {
                 setIsDeploying(false);
             },
@@ -59,14 +58,14 @@ export default function SiteDeploymentsIndex({ site: siteProp, deployments }: Pr
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(site.server?.id ?? '', site.id)}
+            subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}
         >
             <Head title={`Deployments - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/sites/${site.id}`}>
+                        <Link href={`/servers/${serverId}/sites/${site.id}`}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -98,7 +97,11 @@ export default function SiteDeploymentsIndex({ site: siteProp, deployments }: Pr
                         <CardDescription>Recent deployments for this site.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <DeploymentList deployments={deploymentList} siteId={site.id} />
+                        <DeploymentList
+                            deployments={deploymentList}
+                            serverId={Number(serverId)}
+                            siteId={site.id}
+                        />
                         {(prevUrl || nextUrl) && (
                             <Pagination
                                 prevUrl={prevUrl}

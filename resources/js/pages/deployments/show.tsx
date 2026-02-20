@@ -22,11 +22,9 @@ import {
 interface Props {
     deployment: Deployment & {
         site?: Site;
-        user?: {
-            id: number;
-            name: string;
-        };
+        user?: { id: number; name: string };
     };
+    server: { data: { id: number; name: string } };
     site: Site;
     logs: Array<{
         id: number;
@@ -36,8 +34,10 @@ interface Props {
     }>;
 }
 
-export default function DeploymentsShow({ deployment, site, logs: initialLogs }: Props) {
-    // Safety check - ensure we have required data
+export default function DeploymentsShow({ deployment, server: serverProp, site, logs: initialLogs }: Props) {
+    const server = serverProp?.data ?? serverProp;
+    const serverId = server?.id ?? site.server?.id;
+
     if (!deployment || !site) {
         return (
             <AppLayout breadcrumbs={[]}>
@@ -64,9 +64,9 @@ export default function DeploymentsShow({ deployment, site, logs: initialLogs }:
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
-        { title: site.server?.name || 'Server', href: `/servers/${site.server?.id}` },
-        { title: site.domain, href: `/sites/${site.id}` },
-        { title: `Deployment #${deployment.id}`, href: `/deployments/${deployment.id}` },
+        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
+        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
+        { title: `Deployment #${deployment.id}`, href: `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}` },
     ];
 
     const statusColors = {
@@ -87,7 +87,7 @@ export default function DeploymentsShow({ deployment, site, logs: initialLogs }:
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/sites/${site.id}`}>
+                        <Link href={`/servers/${serverId}/sites/${site.id}`}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -207,7 +207,7 @@ export default function DeploymentsShow({ deployment, site, logs: initialLogs }:
                             </CardHeader>
                             <CardContent>
                                 <Button variant="outline" className="w-full" asChild>
-                                    <Link href={`/sites/${site.id}`}>View Site</Link>
+                                    <Link href={`/servers/${serverId}/sites/${site.id}`}>View Site</Link>
                                 </Button>
                             </CardContent>
                         </Card>

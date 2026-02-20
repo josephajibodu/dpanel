@@ -208,8 +208,6 @@ describe('site creation', function () {
             'user_id' => $otherUser->id,
         ]);
 
-        // The form request validation checks that the server belongs to the user
-        // so we expect a validation error rather than a 403
         $response = $this->actingAs($this->user)
             ->post("/servers/{$otherServer->id}/sites", [
                 'server_id' => $otherServer->id,
@@ -221,7 +219,38 @@ describe('site creation', function () {
                 'repository_provider' => 'github',
             ]);
 
-        $response->assertSessionHasErrors('server_id');
+        $response->assertForbidden();
+    });
+});
+
+describe('sites index (under server)', function () {
+    it('can view the sites index for a server', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/servers/{$this->server->id}/sites");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('servers/sites/index')
+                ->has('server.data')
+                ->has('sites.data')
+                ->where('sites.data.0.domain', $site->domain)
+            );
+    });
+
+    it('cannot view sites index for other users server', function () {
+        $otherUser = User::factory()->create();
+        $otherServer = Server::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/servers/{$otherServer->id}/sites");
+
+        $response->assertForbidden();
     });
 });
 
@@ -232,11 +261,12 @@ describe('site viewing', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/sites/{$site->id}");
+            ->get("/servers/{$this->server->id}/sites/{$site->id}");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('sites/show')
+                ->has('server.data')
                 ->has('site.data')
                 ->where('site.data.domain', $site->domain)
             );
@@ -252,7 +282,7 @@ describe('site viewing', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/sites/{$site->id}");
+            ->get("/servers/{$otherServer->id}/sites/{$site->id}");
 
         $response->assertForbidden();
     });
@@ -267,9 +297,9 @@ describe('site deletion', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->delete("/sites/{$site->id}");
+            ->delete("/servers/{$this->server->id}/sites/{$site->id}");
 
-        $response->assertRedirect("/servers/{$this->server->id}");
+        $response->assertRedirect("/servers/{$this->server->id}/sites");
 
         Queue::assertPushed(DeleteSiteJob::class);
     });
@@ -284,7 +314,7 @@ describe('site deletion', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->delete("/sites/{$site->id}");
+            ->delete("/servers/{$otherServer->id}/sites/{$site->id}");
 
         $response->assertForbidden();
     });
@@ -297,11 +327,12 @@ describe('site sub-pages', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/sites/{$site->id}/deployments");
+            ->get("/servers/{$this->server->id}/sites/{$site->id}/deployments");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('sites/deployments/index')
+                ->has('server.data')
                 ->has('site.data')
                 ->has('deployments.data')
             );
@@ -313,11 +344,12 @@ describe('site sub-pages', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/sites/{$site->id}/environment");
+            ->get("/servers/{$this->server->id}/sites/{$site->id}/environment");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('sites/environment/show')
+                ->has('server.data')
                 ->has('site.data')
             );
     });
@@ -328,11 +360,12 @@ describe('site sub-pages', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/sites/{$site->id}/deploy-script");
+            ->get("/servers/{$this->server->id}/sites/{$site->id}/deploy-script");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('sites/deploy-script/show')
+                ->has('server.data')
                 ->has('site.data')
             );
     });
@@ -347,7 +380,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/sites/{$site->id}/environment", [
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'variables' => [
                     ['key' => 'APP_KEY', 'value' => 'base64:test'],
                     ['key' => 'DB_HOST', 'value' => 'localhost'],
@@ -374,7 +407,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/sites/{$site->id}/environment", [
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'variables' => [
                     ['key' => '123INVALID', 'value' => 'test'],
                 ],
@@ -394,7 +427,7 @@ describe('deploy script', function () {
         $newScript = 'cd $SITE_ROOT && git pull';
 
         $response = $this->actingAs($this->user)
-            ->put("/sites/{$site->id}/deploy-script", [
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
                 'script' => $newScript,
             ]);
 
@@ -410,7 +443,7 @@ describe('deploy script', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/sites/{$site->id}/deploy-script", [
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
                 'script' => '',
             ]);
 

@@ -11,47 +11,46 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, FileCodeIcon, Loader2Icon } from 'lucide-react';
 
 interface Props {
+    server: { data: { id: number; name: string } };
     site: {
         data: Site & {
-            server?: {
-                id: number;
-                name: string;
-                ip_address: string;
-            };
+            server?: { id: number; name: string; ip_address: string };
             deploy_script?: string;
         };
     };
 }
 
-export default function SiteDeployScriptShow({ site: siteProp }: Props) {
+export default function SiteDeployScriptShow({ server: serverProp, site: siteProp }: Props) {
+    const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
+    const serverId = server?.id ?? site.server?.id;
     const form = useForm({
         script: site.deploy_script ?? '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        form.put(`/sites/${site.id}/deploy-script`);
+        form.put(`/servers/${serverId}/sites/${site.id}/deploy-script`);
     }
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
-        { title: site.server?.name || 'Server', href: `/servers/${site.server?.id}` },
-        { title: site.domain, href: `/sites/${site.id}` },
-        { title: 'Deploy Script', href: `/sites/${site.id}/deploy-script` },
+        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
+        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
+        { title: 'Deploy Script', href: `/servers/${serverId}/sites/${site.id}/deploy-script` },
     ];
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(site.server?.id ?? '', site.id)}
+            subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}
         >
             <Head title={`Deploy Script - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/sites/${site.id}`}>
+                        <Link href={`/servers/${serverId}/sites/${site.id}`}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>

@@ -12,20 +12,19 @@ import { ArrowLeftIcon, Loader2Icon, PlusIcon, SettingsIcon, XIcon } from 'lucid
 import { useState } from 'react';
 
 interface Props {
+    server: { data: { id: number; name: string } };
     site: {
         data: Site & {
-            server?: {
-                id: number;
-                name: string;
-                ip_address: string;
-            };
+            server?: { id: number; name: string; ip_address: string };
             environment_variables?: EnvironmentVariable[];
         };
     };
 }
 
-export default function SiteEnvironmentShow({ site: siteProp }: Props) {
+export default function SiteEnvironmentShow({ server: serverProp, site: siteProp }: Props) {
+    const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
+    const serverId = server?.id ?? site.server?.id;
     const initialVars = site.environment_variables?.length
         ? site.environment_variables
         : [{ key: '', value: '' }];
@@ -59,27 +58,27 @@ export default function SiteEnvironmentShow({ site: siteProp }: Props) {
         e.preventDefault();
         const filteredVariables = variables.filter((v) => v.key.trim() !== '');
         form.setData('variables', filteredVariables);
-        form.put(`/sites/${site.id}/environment`);
+        form.put(`/servers/${serverId}/sites/${site.id}/environment`);
     }
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
-        { title: site.server?.name || 'Server', href: `/servers/${site.server?.id}` },
-        { title: site.domain, href: `/sites/${site.id}` },
-        { title: 'Environment', href: `/sites/${site.id}/environment` },
+        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
+        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
+        { title: 'Environment', href: `/servers/${serverId}/sites/${site.id}/environment` },
     ];
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(site.server?.id ?? '', site.id)}
+            subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}
         >
             <Head title={`Environment - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/sites/${site.id}`}>
+                        <Link href={`/servers/${serverId}/sites/${site.id}`}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>

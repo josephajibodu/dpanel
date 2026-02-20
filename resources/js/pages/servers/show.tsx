@@ -130,7 +130,7 @@ export default function ServersShow({ server }: Props) {
                                                     <TableRow key={site.id}>
                                                         <TableCell>
                                                             <Link
-                                                                href={`/sites/${site.id}`}
+                                                                href={`/servers/${data.id}/sites/${site.id}`}
                                                                 className="font-medium hover:underline"
                                                             >
                                                                 {site.domain}

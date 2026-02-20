@@ -22,6 +22,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
+    // Redirect standalone /sites to /servers (sites are always in server context)
+    Route::get('sites', fn () => redirect()->route('servers.index'))->name('sites.redirect');
+
     // Provider Accounts
     Route::resource('provider-accounts', ProviderAccountController::class)
         ->except(['edit', 'update']);
@@ -34,33 +37,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('servers/{server}/restart', [ServerController::class, 'restart'])
         ->name('servers.restart');
 
-    // Sites (nested under servers for creation)
-    Route::get('servers/{server}/sites/create', [SiteController::class, 'create'])
-        ->name('servers.sites.create');
-    Route::post('servers/{server}/sites', [SiteController::class, 'store'])
-        ->name('servers.sites.store');
+    // Sites and deployments (nested under servers) – scopeBindings ensures site belongs to server, deployment to site
+    Route::middleware(['can:view,server'])->scopeBindings()->group(function () {
+        // Sites index for a server
+        Route::get('servers/{server}/sites', [SiteController::class, 'index'])
+            ->name('servers.sites.index');
+        Route::get('servers/{server}/sites/create', [SiteController::class, 'create'])
+            ->name('servers.sites.create');
+        Route::post('servers/{server}/sites', [SiteController::class, 'store'])
+            ->name('servers.sites.store');
 
-    // Sites (standalone routes)
-    Route::resource('sites', SiteController::class)
-        ->only(['show', 'edit', 'update', 'destroy']);
+        // Site show, edit, update, destroy
+        Route::get('servers/{server}/sites/{site}', [SiteController::class, 'show'])
+            ->name('servers.sites.show');
+        Route::get('servers/{server}/sites/{site}/edit', [SiteController::class, 'edit'])
+            ->name('servers.sites.edit');
+        Route::put('servers/{server}/sites/{site}', [SiteController::class, 'update'])
+            ->name('servers.sites.update');
+        Route::delete('servers/{server}/sites/{site}', [SiteController::class, 'destroy'])
+            ->name('servers.sites.destroy');
 
-    // Site Environment & Deploy Script
-    Route::get('sites/{site}/environment', [EnvironmentController::class, 'show'])
-        ->name('sites.environment.show');
-    Route::put('sites/{site}/environment', [EnvironmentController::class, 'update'])
-        ->name('sites.environment.update');
-    Route::get('sites/{site}/deploy-script', [DeployScriptController::class, 'show'])
-        ->name('sites.deploy-script.show');
-    Route::put('sites/{site}/deploy-script', [DeployScriptController::class, 'update'])
-        ->name('sites.deploy-script.update');
+        // Site environment & deploy script
+        Route::get('servers/{server}/sites/{site}/environment', [EnvironmentController::class, 'show'])
+            ->name('servers.sites.environment.show');
+        Route::put('servers/{server}/sites/{site}/environment', [EnvironmentController::class, 'update'])
+            ->name('servers.sites.environment.update');
+        Route::get('servers/{server}/sites/{site}/deploy-script', [DeployScriptController::class, 'show'])
+            ->name('servers.sites.deploy-script.show');
+        Route::put('servers/{server}/sites/{site}/deploy-script', [DeployScriptController::class, 'update'])
+            ->name('servers.sites.deploy-script.update');
 
-    // Deployments
-    Route::get('sites/{site}/deployments', [DeploymentController::class, 'index'])
-        ->name('sites.deployments.index');
-    Route::post('sites/{site}/deployments', [DeploymentController::class, 'store'])
-        ->name('sites.deployments.store');
-    Route::get('deployments/{deployment}', [DeploymentController::class, 'show'])
-        ->name('deployments.show');
+        // Deployments (under server/site)
+        Route::get('servers/{server}/sites/{site}/deployments', [DeploymentController::class, 'index'])
+            ->name('servers.sites.deployments.index');
+        Route::post('servers/{server}/sites/{site}/deployments', [DeploymentController::class, 'store'])
+            ->name('servers.sites.deployments.store');
+        Route::get('servers/{server}/sites/{site}/deployments/{deployment}', [DeploymentController::class, 'show'])
+            ->name('servers.sites.deployments.show');
+    });
 
     // SSH Keys
     Route::resource('ssh-keys', SshKeyController::class)
