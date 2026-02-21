@@ -1,12 +1,17 @@
 <?php
 
+use App\Http\Controllers\CronJobController;
+use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeployScriptController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\ServerController;
+use App\Http\Controllers\ServerDatabaseController;
+use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SshKeyController;
+use App\Http\Controllers\WorkerController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -74,6 +79,48 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('servers.sites.deployments.store');
         Route::get('servers/{server}/sites/{site}/deployments/{deployment}', [DeploymentController::class, 'show'])
             ->name('servers.sites.deployments.show');
+
+        // Databases and database users (nested under server)
+        Route::get('servers/{server}/databases', [ServerDatabaseController::class, 'index'])
+            ->name('servers.databases.index');
+        Route::post('servers/{server}/databases', [ServerDatabaseController::class, 'store'])
+            ->name('servers.databases.store');
+        Route::delete('servers/{server}/databases/{server_database}', [ServerDatabaseController::class, 'destroy'])
+            ->name('servers.databases.destroy');
+        Route::post('servers/{server}/database-users', [DatabaseUserController::class, 'store'])
+            ->name('servers.database-users.store');
+        Route::put('servers/{server}/database-users/{database_user}', [DatabaseUserController::class, 'update'])
+            ->name('servers.database-users.update');
+        Route::delete('servers/{server}/database-users/{database_user}', [DatabaseUserController::class, 'destroy'])
+            ->name('servers.database-users.destroy');
+
+        // Processes (workers and cron jobs)
+        Route::get('servers/{server}/processes', [ServerProcessController::class, 'index'])
+            ->name('servers.processes.index');
+        Route::post('servers/{server}/workers', [WorkerController::class, 'store'])
+            ->name('servers.workers.store');
+        Route::put('servers/{server}/workers/{worker}', [WorkerController::class, 'update'])
+            ->name('servers.workers.update');
+        Route::delete('servers/{server}/workers/{worker}', [WorkerController::class, 'destroy'])
+            ->name('servers.workers.destroy');
+        Route::post('servers/{server}/workers/{worker}/start', [WorkerController::class, 'start'])
+            ->name('servers.workers.start');
+        Route::post('servers/{server}/workers/{worker}/stop', [WorkerController::class, 'stop'])
+            ->name('servers.workers.stop');
+        Route::post('servers/{server}/workers/{worker}/restart', [WorkerController::class, 'restart'])
+            ->name('servers.workers.restart');
+        Route::get('servers/{server}/workers/{worker}/logs', [WorkerController::class, 'logs'])
+            ->name('servers.workers.logs');
+        Route::post('servers/{server}/cron-jobs', [CronJobController::class, 'store'])
+            ->name('servers.cron-jobs.store');
+        Route::put('servers/{server}/cron-jobs/{cron_job}', [CronJobController::class, 'update'])
+            ->name('servers.cron-jobs.update');
+        Route::delete('servers/{server}/cron-jobs/{cron_job}', [CronJobController::class, 'destroy'])
+            ->name('servers.cron-jobs.destroy');
+        Route::patch('servers/{server}/cron-jobs/{cron_job}/disable', [CronJobController::class, 'disable'])
+            ->name('servers.cron-jobs.disable');
+        Route::patch('servers/{server}/cron-jobs/{cron_job}/enable', [CronJobController::class, 'enable'])
+            ->name('servers.cron-jobs.enable');
     });
 
     // SSH Keys

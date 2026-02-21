@@ -1,5 +1,4 @@
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
-import { CreateDatabaseDrawer } from '@/components/databases/create-database-drawer';
 import { CreateSiteDrawer } from '@/components/sites/create-site-drawer';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
@@ -162,47 +161,27 @@ export default function ServersShow({ server }: Props) {
                             </CardContent>
                         </Card>
 
-                        {/* Databases at a glance (placeholder) */}
-                        <Card>
+                        {/* Databases */}
+                        <Card id="databases">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="flex items-center gap-2">
                                         <ServerIcon className="h-5 w-5" />
                                         Databases
                                     </CardTitle>
-                                    {data.status === 'active' && (
-                                        <CreateDatabaseDrawer
-                                            serverId={data.id}
-                                        />
-                                    )}
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link
+                                            href={`/servers/${data.id}/databases`}
+                                        >
+                                            View databases
+                                        </Link>
+                                    </Button>
                                 </div>
                                 <CardDescription>
-                                    Databases provisioned on this server.
+                                    Manage databases and database users on this
+                                    server.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Name</TableHead>
-                                                <TableHead>Type</TableHead>
-                                                <TableHead>Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell
-                                                    colSpan={3}
-                                                    className="h-16 text-center text-sm text-muted-foreground"
-                                                >
-                                                    No databases yet.
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
                         </Card>
 
 

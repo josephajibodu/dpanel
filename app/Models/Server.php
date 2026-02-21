@@ -144,6 +144,14 @@ class Server extends Model
         return $this->hasMany(ServerDatabase::class, 'server_id');
     }
 
+    /**
+     * Alias for scope binding (route parameter server_database).
+     */
+    public function serverDatabases(): HasMany
+    {
+        return $this->databases();
+    }
+
     public function databaseUsers(): HasMany
     {
         return $this->hasMany(DatabaseUser::class);

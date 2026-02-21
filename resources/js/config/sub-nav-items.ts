@@ -9,6 +9,7 @@ export function getServerSubNavItems(serverId: number | string): SubNavItem[] {
     return [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Sites', href: `${base}/sites` },
+        { title: 'Databases', href: `${base}/databases` },
         { title: 'Storage', href: `${base}/storage` },
         { title: 'Processes', href: `${base}/processes` },
         { title: 'Runtime', href: `${base}/runtime` },

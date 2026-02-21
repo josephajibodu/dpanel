@@ -39,3 +39,73 @@ export interface ProviderSize {
     price_monthly: number;
     description: string;
 }
+
+export interface ServerDatabase {
+    id: number;
+    server_id: number;
+    name: string;
+    collation: string | null;
+    charset: string | null;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DatabaseUser {
+    id: number;
+    server_id: number;
+    username: string;
+    databases: string[];
+    permission: string | null;
+    host: string | null;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WorkerSite {
+    id: number;
+    domain: string;
+}
+
+export interface Worker {
+    id: number;
+    server_id: number;
+    site_id: number | null;
+    command: string;
+    user: string;
+    status: string;
+    name: string;
+    numprocs: number;
+    auto_start: boolean;
+    auto_restart: boolean;
+    redirect_stderr: boolean | null;
+    stdout_logfile: string | null;
+    site?: WorkerSite | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CronJobSite {
+    id: number;
+    domain: string;
+}
+
+export interface CronJob {
+    id: number;
+    server_id: number;
+    site_id: number | null;
+    command: string;
+    user: string;
+    frequency: string;
+    hidden: boolean;
+    status: string;
+    site?: CronJobSite | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProcessSite {
+    id: number;
+    domain: string;
+}
