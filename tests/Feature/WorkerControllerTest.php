@@ -1,10 +1,14 @@
 <?php
 
 use App\Enums\ServerStatus;
+use App\Jobs\CreateWorkerJob;
+use App\Jobs\DestroyWorkerJob;
+use App\Jobs\UpdateWorkerJob;
 use App\Models\Server;
 use App\Models\User;
 use App\Models\Worker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -16,7 +20,9 @@ beforeEach(function () {
     ]);
 });
 
-it('stores a new worker', function () {
+it('stores a new worker and dispatches job', function () {
+    Queue::fake();
+
     $response = $this->actingAs($this->user)
         ->post("/servers/{$this->server->id}/workers", [
             'name' => 'queue-worker',
@@ -38,8 +44,10 @@ it('stores a new worker', function () {
         'numprocs' => 2,
         'auto_start' => true,
         'auto_restart' => true,
-        'status' => 'stopped',
+        'status' => 'pending',
     ]);
+
+    Queue::assertPushed(CreateWorkerJob::class);
 });
 
 it('validates worker name and command are required', function () {
@@ -74,7 +82,9 @@ it('validates worker site_id belongs to server', function () {
     $this->assertDatabaseCount('workers', 0);
 });
 
-it('updates a worker', function () {
+it('updates a worker and dispatches job', function () {
+    Queue::fake();
+
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'name' => 'old-name',
@@ -101,9 +111,13 @@ it('updates a worker', function () {
         ->and($worker->user)->toBe('www-data')
         ->and($worker->numprocs)->toBe(4)
         ->and($worker->auto_start)->toBeFalse();
+
+    Queue::assertPushed(UpdateWorkerJob::class);
 });
 
-it('destroys a worker', function () {
+it('dispatches job to destroy a worker', function () {
+    Queue::fake();
+
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'name' => 'to_delete',
@@ -113,7 +127,8 @@ it('destroys a worker', function () {
         ->delete("/servers/{$this->server->id}/workers/{$worker->id}");
 
     $response->assertRedirect();
-    $this->assertDatabaseMissing('workers', ['id' => $worker->id]);
+    Queue::assertPushed(DestroyWorkerJob::class);
+    $this->assertDatabaseHas('workers', ['id' => $worker->id]);
 });
 
 it('starts a worker', function () {

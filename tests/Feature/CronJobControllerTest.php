@@ -1,10 +1,16 @@
 <?php
 
 use App\Enums\ServerStatus;
+use App\Jobs\CreateCronJobJob;
+use App\Jobs\DestroyCronJobJob;
+use App\Jobs\DisableCronJobJob;
+use App\Jobs\EnableCronJobJob;
+use App\Jobs\UpdateCronJobJob;
 use App\Models\CronJob;
 use App\Models\Server;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -16,7 +22,9 @@ beforeEach(function () {
     ]);
 });
 
-it('stores a new cron job', function () {
+it('stores a new cron job and dispatches job', function () {
+    Queue::fake();
+
     $response = $this->actingAs($this->user)
         ->post("/servers/{$this->server->id}/cron-jobs", [
             'command' => 'php artisan schedule:run',
@@ -33,8 +41,10 @@ it('stores a new cron job', function () {
         'user' => 'deploy',
         'frequency' => '* * * * *',
         'hidden' => false,
-        'status' => 'active',
+        'status' => 'pending',
     ]);
+
+    Queue::assertPushed(CreateCronJobJob::class);
 });
 
 it('validates cron job command and frequency are required', function () {
@@ -67,7 +77,9 @@ it('validates cron job site_id belongs to server', function () {
     $this->assertDatabaseCount('cron_jobs', 0);
 });
 
-it('updates a cron job', function () {
+it('updates a cron job and dispatches job', function () {
+    Queue::fake();
+
     $cronJob = CronJob::factory()->create([
         'server_id' => $this->server->id,
         'command' => 'old command',
@@ -88,9 +100,13 @@ it('updates a cron job', function () {
     expect($cronJob->command)->toBe('php artisan custom:task')
         ->and($cronJob->user)->toBe('www-data')
         ->and($cronJob->frequency)->toBe('0 * * * *');
+
+    Queue::assertPushed(UpdateCronJobJob::class);
 });
 
-it('destroys a cron job', function () {
+it('dispatches job to destroy a cron job', function () {
+    Queue::fake();
+
     $cronJob = CronJob::factory()->create([
         'server_id' => $this->server->id,
         'command' => 'to delete',
@@ -100,10 +116,13 @@ it('destroys a cron job', function () {
         ->delete("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}");
 
     $response->assertRedirect();
-    $this->assertDatabaseMissing('cron_jobs', ['id' => $cronJob->id]);
+    Queue::assertPushed(DestroyCronJobJob::class);
+    $this->assertDatabaseHas('cron_jobs', ['id' => $cronJob->id]);
 });
 
-it('disables a cron job', function () {
+it('disables a cron job and dispatches job', function () {
+    Queue::fake();
+
     $cronJob = CronJob::factory()->create([
         'server_id' => $this->server->id,
         'hidden' => false,
@@ -115,9 +134,12 @@ it('disables a cron job', function () {
     $response->assertRedirect();
     $cronJob->refresh();
     expect($cronJob->hidden)->toBeTrue();
+    Queue::assertPushed(DisableCronJobJob::class);
 });
 
-it('enables a cron job', function () {
+it('enables a cron job and dispatches job', function () {
+    Queue::fake();
+
     $cronJob = CronJob::factory()->create([
         'server_id' => $this->server->id,
         'hidden' => true,
@@ -129,6 +151,7 @@ it('enables a cron job', function () {
     $response->assertRedirect();
     $cronJob->refresh();
     expect($cronJob->hidden)->toBeFalse();
+    Queue::assertPushed(EnableCronJobJob::class);
 });
 
 it('denies access to cron job from another server', function () {

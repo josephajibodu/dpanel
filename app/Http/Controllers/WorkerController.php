@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Worker\CreateWorker;
+use App\Actions\Worker\DestroyWorker;
+use App\Actions\Worker\UpdateWorker;
 use App\Http\Requests\StoreWorkerRequest;
 use App\Http\Requests\UpdateWorkerRequest;
 use App\Models\Server;
@@ -21,20 +24,7 @@ class WorkerController extends Controller
                 ->with('error', 'Server must be active and connected to create workers.');
         }
 
-        $validated = $request->validated();
-
-        $server->workers()->create([
-            'name' => $validated['name'],
-            'command' => $validated['command'],
-            'site_id' => $validated['site_id'] ?? null,
-            'user' => $validated['user'],
-            'numprocs' => $validated['numprocs'],
-            'auto_start' => $validated['auto_start'] ?? true,
-            'auto_restart' => $validated['auto_restart'] ?? true,
-            'redirect_stderr' => $validated['redirect_stderr'] ?? true,
-            'stdout_logfile' => $validated['stdout_logfile'] ?? null,
-            'status' => 'stopped',
-        ]);
+        app(CreateWorker::class)->create($server, $request->validated());
 
         return redirect()
             ->back()
@@ -48,19 +38,7 @@ class WorkerController extends Controller
     ): RedirectResponse {
         $this->authorize('view', $server);
 
-        $validated = $request->validated();
-
-        $worker->update([
-            'name' => $validated['name'],
-            'command' => $validated['command'],
-            'site_id' => $validated['site_id'] ?? null,
-            'user' => $validated['user'],
-            'numprocs' => $validated['numprocs'],
-            'auto_start' => $validated['auto_start'] ?? true,
-            'auto_restart' => $validated['auto_restart'] ?? true,
-            'redirect_stderr' => $validated['redirect_stderr'] ?? true,
-            'stdout_logfile' => $validated['stdout_logfile'] ?? null,
-        ]);
+        app(UpdateWorker::class)->update($worker, $request->validated());
 
         return redirect()
             ->back()
@@ -71,7 +49,7 @@ class WorkerController extends Controller
     {
         $this->authorize('view', $server);
 
-        $worker->delete();
+        app(DestroyWorker::class)->delete($worker);
 
         return redirect()
             ->back()

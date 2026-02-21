@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CronJob\CreateCronJob;
+use App\Actions\CronJob\DestroyCronJob;
+use App\Actions\CronJob\DisableCronJob;
+use App\Actions\CronJob\EnableCronJob;
+use App\Actions\CronJob\UpdateCronJob;
 use App\Http\Requests\StoreCronJobRequest;
 use App\Http\Requests\UpdateCronJobRequest;
 use App\Models\CronJob;
@@ -18,16 +23,7 @@ class CronJobController extends Controller
                 ->with('error', 'Server must be active and connected to create cron jobs.');
         }
 
-        $validated = $request->validated();
-
-        $server->cronJobs()->create([
-            'command' => $validated['command'],
-            'site_id' => $validated['site_id'] ?? null,
-            'user' => $validated['user'],
-            'frequency' => $validated['frequency'],
-            'hidden' => false,
-            'status' => 'active',
-        ]);
+        app(CreateCronJob::class)->create($server, $request->validated());
 
         return redirect()
             ->back()
@@ -41,14 +37,7 @@ class CronJobController extends Controller
     ): RedirectResponse {
         $this->authorize('view', $server);
 
-        $validated = $request->validated();
-
-        $cron_job->update([
-            'command' => $validated['command'],
-            'site_id' => $validated['site_id'] ?? null,
-            'user' => $validated['user'],
-            'frequency' => $validated['frequency'],
-        ]);
+        app(UpdateCronJob::class)->update($cron_job, $request->validated());
 
         return redirect()
             ->back()
@@ -59,7 +48,7 @@ class CronJobController extends Controller
     {
         $this->authorize('view', $server);
 
-        $cron_job->delete();
+        app(DestroyCronJob::class)->delete($cron_job);
 
         return redirect()
             ->back()
@@ -70,7 +59,7 @@ class CronJobController extends Controller
     {
         $this->authorize('view', $server);
 
-        $cron_job->update(['hidden' => true]);
+        app(DisableCronJob::class)->disable($cron_job);
 
         return redirect()
             ->back()
@@ -81,7 +70,7 @@ class CronJobController extends Controller
     {
         $this->authorize('view', $server);
 
-        $cron_job->update(['hidden' => false]);
+        app(EnableCronJob::class)->enable($cron_job);
 
         return redirect()
             ->back()
