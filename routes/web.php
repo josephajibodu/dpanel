@@ -8,6 +8,7 @@ use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
+use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SshKeyController;
@@ -93,6 +94,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('servers.database-users.update');
         Route::delete('servers/{server}/database-users/{database_user}', [DatabaseUserController::class, 'destroy'])
             ->name('servers.database-users.destroy');
+
+        // PHP (versions and settings)
+        Route::get('servers/{server}/php', [ServerPhpController::class, 'index'])
+            ->name('servers.php.index');
+        Route::put('servers/{server}/php/settings', [ServerPhpController::class, 'updateSettings'])
+            ->name('servers.php.settings.update');
+        Route::post('servers/{server}/php/versions', [ServerPhpController::class, 'installVersion'])
+            ->name('servers.php.versions.install');
+        Route::patch('servers/{server}/php/default-version', [ServerPhpController::class, 'setDefaultVersion'])
+            ->name('servers.php.default-version.update');
 
         // Processes (workers and cron jobs)
         Route::get('servers/{server}/processes', [ServerProcessController::class, 'index'])

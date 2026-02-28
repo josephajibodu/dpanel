@@ -7,6 +7,7 @@ use App\Contracts\Provisioning\ServiceManager;
 use App\Contracts\Remote\RemoteCommandRunner;
 use App\Contracts\Remote\RemoteFilesystem;
 use App\Models\Server;
+use App\Models\Service;
 
 class ProvisioningContext
 {
@@ -20,5 +21,6 @@ class ProvisioningContext
         public string $sudoPassword,
         public string $databasePassword,
         public ?ServiceInstallationRunner $installationRunner = null,
+        public ?Service $service = null,
     ) {}
 }

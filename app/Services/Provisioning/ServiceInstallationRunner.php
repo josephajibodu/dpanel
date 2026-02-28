@@ -37,9 +37,9 @@ class ServiceInstallationRunner
      */
     private function installPhp(ProvisioningContext $context): array
     {
-        $version = $context->server->php_version;
+        $version = $context->service?->version ?? $context->server->php_version;
         $this->phpService->install($context, $version);
-        $this->phpService->configureFpmPool($context);
+        $this->phpService->configureFpmPool($context, $version);
 
         return [
             'unit' => "php{$version}-fpm",

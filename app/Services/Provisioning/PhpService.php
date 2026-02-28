@@ -40,9 +40,9 @@ class PhpService
         $context->services->start($serviceName);
     }
 
-    public function configureFpmPool(ProvisioningContext $context): void
+    public function configureFpmPool(ProvisioningContext $context, ?string $phpVersion = null): void
     {
-        $phpVersion = $context->server->php_version;
+        $phpVersion = $phpVersion ?? $context->server->php_version;
         $serverUser = $context->serverUser;
 
         $poolConfig = <<<CONF

@@ -76,19 +76,38 @@ class StackInstaller
         $this->systemService->installBaseDependencies($context);
 
         $defaults = $server->type?->defaultServices() ?? [];
-        $serviceTypes = ['php', 'nginx', 'database', 'redis'];
 
-        foreach ($serviceTypes as $type) {
-            if ($defaults[$type] ?? false) {
-                $server->service($type)->install($context);
-            }
+        if ($defaults['php'] ?? false) {
+            $phpService = $server->createService('php', $server->php_version, true);
+            $context->service = $phpService;
+            $phpService->install($context);
+            $server->update(['php_version' => $phpService->installed_version ?? $phpService->version]);
+        }
+
+        if ($defaults['nginx'] ?? false) {
+            $service = $server->createService('nginx', null, true);
+            $context->service = $service;
+            $service->install($context);
+        }
+
+        if ($defaults['database'] ?? false) {
+            $service = $server->createService('database', null, true);
+            $context->service = $service;
+            $service->install($context);
+        }
+
+        if ($defaults['redis'] ?? false) {
+            $service = $server->createService('redis', null, true);
+            $context->service = $service;
+            $service->install($context);
         }
 
         $server->update(['provisioning_step' => ProvisioningStep::MakingFinalTouches]);
         $this->finalTouchesService->run($context);
 
         if ($defaults['supervisor'] ?? false) {
-            $server->supervisor()->update([
+            $supervisor = $server->createService('supervisor', null, true);
+            $supervisor->update([
                 'unit' => 'supervisor',
                 'status' => ServiceStatus::Active,
             ]);

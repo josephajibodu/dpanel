@@ -7,6 +7,7 @@ use App\Enums\Provider;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
+use App\Enums\ServiceStatus;
 use App\Events\ServerStatusChanged;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -199,44 +200,102 @@ class Server extends Model
     }
 
     /**
-     * Get or create the Service record for the given type. Only allowed for types this server type includes.
+     * Get the default Service for the given type (is_default = true), or first usable one.
      */
-    public function service(string $type): Service
+    public function defaultService(string $type): ?Service
+    {
+        $service = $this->installedServices()
+            ->where('type', $type)
+            ->where('is_default', true)
+            ->first();
+
+        if ($service !== null) {
+            return $service;
+        }
+
+        $service = $this->installedServices()
+            ->where('type', $type)
+            ->whereIn('status', [ServiceStatus::Active, ServiceStatus::Inactive])
+            ->first();
+
+        if ($service !== null) {
+            $service->update(['is_default' => true]);
+
+            return $service;
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a Service by type and optional version. Does not create. Returns default when version is empty.
+     */
+    public function service(string $type, ?string $version = null): ?Service
+    {
+        if ($version === null || $version === '' || $version === '0') {
+            return $this->defaultService($type);
+        }
+
+        return $this->installedServices()
+            ->where('type', $type)
+            ->where('version', $version)
+            ->first();
+    }
+
+    /**
+     * Create a Service record (no install). Only for types this server type includes.
+     */
+    public function createService(string $type, ?string $version = null, bool $isDefault = false): Service
     {
         $defaults = $this->type?->defaultServices() ?? [];
         if (! ($defaults[$type] ?? false)) {
             throw new \InvalidArgumentException("Server type [{$this->type?->value}] does not include service [{$type}].");
         }
 
-        return $this->installedServices()->firstOrCreate(
-            ['type' => $type],
-            ['status' => 'pending']
-        );
+        $exists = $this->installedServices()
+            ->where('type', $type)
+            ->when($version !== null && $version !== '', fn ($q) => $q->where('version', $version))
+            ->exists();
+
+        if ($exists) {
+            throw new \InvalidArgumentException("Service [{$type}]".($version ? " version [{$version}]" : '').' already exists on this server.');
+        }
+
+        if ($isDefault) {
+            $this->installedServices()->where('type', $type)->update(['is_default' => false]);
+        }
+
+        return $this->installedServices()->create([
+            'type' => $type,
+            'version' => $version,
+            'status' => ServiceStatus::Pending,
+            'is_default' => $isDefault,
+        ]);
     }
 
-    public function php(): Service
+    public function php(?string $version = null): ?Service
     {
-        return $this->service('php');
+        return $this->service('php', $version);
     }
 
-    public function nginx(): Service
+    public function nginx(?string $version = null): ?Service
     {
-        return $this->service('nginx');
+        return $this->service('nginx', $version);
     }
 
-    public function database(): Service
+    public function database(?string $version = null): ?Service
     {
-        return $this->service('database');
+        return $this->service('database', $version);
     }
 
-    public function redis(): Service
+    public function redis(?string $version = null): ?Service
     {
-        return $this->service('redis');
+        return $this->service('redis', $version);
     }
 
-    public function supervisor(): Service
+    public function supervisor(?string $version = null): ?Service
     {
-        return $this->service('supervisor');
+        return $this->service('supervisor', $version);
     }
 
     public function credential(string $type = 'private_key'): ?ServerCredential
@@ -262,12 +321,26 @@ class Server extends Model
     }
 
     /**
-     * Get the installed services for this server.
+     * Get the service types and whether they are enabled for this server type.
      *
      * @return array<string, bool>
      */
-    public function services(): array
+    public function defaultServiceTypes(): array
     {
         return $this->meta['services'] ?? $this->type?->defaultServices() ?? [];
+    }
+
+    /**
+     * PHP version for backward compatibility (denormalized from default PHP Service).
+     */
+    public function getDefaultPhpVersion(): ?string
+    {
+        $php = $this->php();
+
+        if ($php !== null) {
+            return $php->installed_version ?? $php->version ?? null;
+        }
+
+        return $this->getAttribute('php_version');
     }
 }
