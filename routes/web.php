@@ -10,6 +10,7 @@ use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
+use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SshKeyController;
 use App\Http\Controllers\WorkerController;
@@ -80,6 +81,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('servers.sites.deployments.store');
         Route::get('servers/{server}/sites/{site}/deployments/{deployment}', [DeploymentController::class, 'show'])
             ->name('servers.sites.deployments.show');
+
+        // Command runs (under server/site)
+        Route::get('servers/{server}/sites/{site}/command-runs', [SiteCommandRunController::class, 'index'])
+            ->name('servers.sites.command-runs.index');
+        Route::post('servers/{server}/sites/{site}/command-runs', [SiteCommandRunController::class, 'store'])
+            ->name('servers.sites.command-runs.store');
+        Route::get('servers/{server}/sites/{site}/command-runs/{command_run}', [SiteCommandRunController::class, 'show'])
+            ->name('servers.sites.command-runs.show');
 
         // Databases and database users (nested under server)
         Route::get('servers/{server}/databases', [ServerDatabaseController::class, 'index'])

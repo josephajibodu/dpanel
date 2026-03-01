@@ -135,4 +135,9 @@ class Site extends Model
     {
         return $this->hasOne(DeployScript::class);
     }
+
+    public function commandRuns(): HasMany
+    {
+        return $this->hasMany(SiteCommandRun::class);
+    }
 }

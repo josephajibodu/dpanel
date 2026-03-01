@@ -27,6 +27,7 @@ export function getSiteSubNavItems(
     return [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Deployments', href: `${base}/deployments` },
+        { title: 'Commands', href: `${base}/command-runs` },
         { title: 'Environment', href: `${base}/environment` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },
     ];
