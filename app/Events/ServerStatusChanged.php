@@ -33,6 +33,7 @@ class ServerStatusChanged implements ShouldBroadcast
         return [
             new PrivateChannel('servers.'.$this->server->user_id),
             new PrivateChannel('server.'.$this->server->id),
+            new PrivateChannel("realtime.diagnostics.1"),
         ];
     }
 

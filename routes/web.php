@@ -6,6 +6,7 @@ use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeployScriptController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
+use App\Http\Controllers\RealtimeDiagnosticsController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerPhpController;
@@ -28,6 +29,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+
+    Route::get('realtime/test', [RealtimeDiagnosticsController::class, 'index'])
+        ->name('realtime.test');
+    Route::post('realtime/test/trigger', [RealtimeDiagnosticsController::class, 'trigger'])
+        ->name('realtime.test.trigger');
 
     // Redirect standalone /sites to /servers (sites are always in server context)
     Route::get('sites', fn () => redirect()->route('servers.index'))->name('sites.redirect');

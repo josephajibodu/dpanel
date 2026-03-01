@@ -230,6 +230,12 @@ class DeploySiteJob implements ShouldQueue
             'created_at' => now(),
         ]);
 
+        Log::debug('Broadcasting deployment output event', [
+            'deployment_id' => $this->deployment->id,
+            'type' => $type,
+            'line_preview' => Str::limit($line, 120),
+        ]);
+
         broadcast(new DeploymentOutputEvent(
             deployment: $this->deployment,
             line: $line,
@@ -242,6 +248,12 @@ class DeploySiteJob implements ShouldQueue
      */
     private function broadcastStatus(string $event): void
     {
+        Log::debug('Broadcasting deployment status event', [
+            'deployment_id' => $this->deployment->id,
+            'status_event' => $event,
+            'status' => $this->deployment->status->value,
+        ]);
+
         broadcast(new DeploymentStatusChanged(
             deployment: $this->deployment,
             event: $event,
