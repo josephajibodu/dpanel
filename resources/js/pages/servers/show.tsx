@@ -1,5 +1,4 @@
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
-import { CreateSiteDrawer } from '@/components/sites/create-site-drawer';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,7 +83,12 @@ export default function ServersShow({ server }: Props) {
                                         Sites
                                     </CardTitle>
                                     {data.status === 'active' && (
-                                        <CreateSiteDrawer serverId={data.id} />
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/servers/${data.id}/sites/create`}>
+                                                <PlusIcon className="mr-2 h-4 w-4" />
+                                                New site
+                                            </Link>
+                                        </Button>
                                     )}
                                 </div>
                                 <CardDescription>
@@ -105,9 +109,12 @@ export default function ServersShow({ server }: Props) {
                                             </p>
                                         </div>
                                         {data.status === 'active' && (
-                                            <CreateSiteDrawer
-                                                serverId={data.id}
-                                            />
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/servers/${data.id}/sites/create`}>
+                                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                                    New site
+                                                </Link>
+                                            </Button>
                                         )}
                                     </div>
                                 ) : (

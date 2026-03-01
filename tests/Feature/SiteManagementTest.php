@@ -4,6 +4,7 @@ use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
 use App\Jobs\CreateSiteJob;
 use App\Jobs\DeleteSiteJob;
+use App\Jobs\DeploySiteJob;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
@@ -88,6 +89,34 @@ describe('site creation', function () {
             'branch' => 'main',
             'auto_deploy' => true,
         ]);
+    });
+
+    it('does not trigger deployment when a site is created', function () {
+        Queue::fake();
+
+        $response = $this->actingAs($this->user)
+            ->post("/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'domain' => 'manual-deploy.com',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertRedirect();
+
+        $site = Site::where('domain', 'manual-deploy.com')->firstOrFail();
+
+        $this->assertDatabaseHas('sites', [
+            'id' => $site->id,
+            'status' => 'pending',
+        ]);
+        expect($site->deployments()->count())->toBe(0);
+
+        Queue::assertPushed(CreateSiteJob::class);
+        Queue::assertNotPushed(DeploySiteJob::class);
     });
 
     it('creates a default deploy script for laravel projects', function () {
@@ -368,6 +397,30 @@ describe('site sub-pages', function () {
                 ->has('server.data')
                 ->has('site.data')
             );
+    });
+});
+
+describe('deployment triggering', function () {
+    it('can trigger deployment manually from deployments endpoint', function () {
+        Queue::fake();
+
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post("/servers/{$this->server->id}/sites/{$site->id}/deployments");
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('deployments', [
+            'site_id' => $site->id,
+            'user_id' => $this->user->id,
+            'status' => 'pending',
+            'triggered_by' => 'manual',
+        ]);
+
+        Queue::assertPushed(DeploySiteJob::class);
     });
 });
 
