@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\ServerStatus;
+use App\Events\ServerDeleted;
 use App\Models\Server;
 use App\Services\Providers\ProviderManager;
 use App\Services\SourceControlService;
@@ -69,6 +70,12 @@ class DeleteServerJob implements ShouldQueue
                 Log::warning("Failed to delete GitHub account SSH keys: {$e->getMessage()}");
                 // Continue with server deletion even if SSH key cleanup fails
             }
+
+            // Broadcast deletion before removing the record so list subscribers can update
+            event(new ServerDeleted(
+                serverId: $this->server->id,
+                userId: $this->server->user_id,
+            ));
 
             // Delete local server record and related data
             $this->server->delete();

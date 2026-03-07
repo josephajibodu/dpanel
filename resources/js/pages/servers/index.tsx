@@ -23,10 +23,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useServersListUpdates } from '@/hooks/use-servers-list-updates';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server } from '@/types/server';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     BookOpenIcon,
@@ -57,6 +58,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function ServersIndex({ servers }: Props) {
+    const userId = usePage<SharedData>().props.auth.user?.id ?? 0;
+    useServersListUpdates(userId);
+
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [serverToDelete, setServerToDelete] = useState<Server | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
