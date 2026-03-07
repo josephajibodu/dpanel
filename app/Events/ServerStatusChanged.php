@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
@@ -21,6 +22,7 @@ class ServerStatusChanged implements ShouldBroadcast
     public function __construct(
         public Server $server,
         public ServerStatus $previousStatus,
+        public ?ProvisioningStep $previousProvisioningStep = null,
     ) {}
 
     /**
@@ -33,7 +35,6 @@ class ServerStatusChanged implements ShouldBroadcast
         return [
             new PrivateChannel('servers.'.$this->server->user_id),
             new PrivateChannel('server.'.$this->server->id),
-            new PrivateChannel("realtime.diagnostics.1"),
         ];
     }
 
@@ -48,6 +49,8 @@ class ServerStatusChanged implements ShouldBroadcast
             'server' => new ServerResource($this->server),
             'previous_status' => $this->previousStatus->value,
             'current_status' => $this->server->status->value,
+            'previous_provisioning_step' => $this->previousProvisioningStep?->value,
+            'current_provisioning_step' => $this->server->provisioning_step?->value,
         ];
     }
 

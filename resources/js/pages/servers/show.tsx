@@ -1,4 +1,5 @@
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
+import { ProvisioningStepTimeline } from '@/components/servers/provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
@@ -47,8 +49,9 @@ interface Props {
 }
 
 export default function ServersShow({ server }: Props) {
-    const { data } = server;
+    const { server: data, connectionState } = useServerProvisioningUpdates(server.data);
     const sites = data.sites ?? [];
+    const isProvisioningLifecycle = ['pending', 'creating', 'provisioning'].includes(data.status);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -74,6 +77,10 @@ export default function ServersShow({ server }: Props) {
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
                     {/* Left column: Sites & databases, SSH, events */}
                     <div className="space-y-6">
+                        {isProvisioningLifecycle && (
+                            <ProvisioningStepTimeline server={data} />
+                        )}
+
                         {/* Sites */}
                         <Card id="sites">
                             <CardHeader>
@@ -314,6 +321,9 @@ export default function ServersShow({ server }: Props) {
                                     </p>
                                     <p className="text-sm font-medium">
                                         {data.status_label}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        Realtime {connectionState === 'connected' ? 'connected' : 'fallback mode'}
                                     </p>
                                     <p className="text-muted-foreground text-xs">
                                         Created{' '}

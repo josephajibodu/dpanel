@@ -79,19 +79,44 @@ class Server extends Model
         static::updating(function (Server $server) {
             // Track the previous status before update
             if ($server->isDirty('status')) {
-                $server->previousStatus = $server->getOriginal('status');
+                $originalStatus = $server->getOriginal('status');
+
+                if ($originalStatus instanceof ServerStatus) {
+                    $server->previousStatus = $originalStatus;
+                } elseif (is_string($originalStatus)) {
+                    $server->previousStatus = ServerStatus::tryFrom($originalStatus);
+                }
+            }
+
+            if ($server->isDirty('provisioning_step')) {
+                $originalProvisioningStep = $server->getOriginal('provisioning_step');
+
+                if ($originalProvisioningStep instanceof ProvisioningStep) {
+                    $server->previousProvisioningStep = $originalProvisioningStep;
+                } elseif (is_numeric($originalProvisioningStep)) {
+                    $server->previousProvisioningStep = ProvisioningStep::tryFrom((int) $originalProvisioningStep);
+                }
             }
         });
 
         static::updated(function (Server $server) {
-            // Dispatch event if status changed
-            if (isset($server->previousStatus) && $server->previousStatus !== $server->status) {
-                event(new ServerStatusChanged($server, $server->previousStatus));
+            // Dispatch event if status or provisioning step changed
+            $statusChanged = $server->wasChanged('status');
+            $provisioningStepChanged = $server->wasChanged('provisioning_step');
+
+            if ($statusChanged || $provisioningStepChanged) {
+                event(new ServerStatusChanged(
+                    server: $server,
+                    previousStatus: $server->previousStatus ?? $server->status,
+                    previousProvisioningStep: $server->previousProvisioningStep,
+                ));
             }
         });
     }
 
     public ?ServerStatus $previousStatus = null;
+
+    public ?ProvisioningStep $previousProvisioningStep = null;
 
     public function uniqueIds(): array
     {

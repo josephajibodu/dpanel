@@ -1,3 +1,9 @@
+export interface ProvisioningStep {
+    value: number;
+    label: string;
+    description: string;
+}
+
 export interface Server {
     id: number;
     ulid: string;
@@ -16,6 +22,8 @@ export interface Server {
     status: 'pending' | 'creating' | 'provisioning' | 'active' | 'error' | 'deleting';
     status_label: string;
     status_color: 'gray' | 'blue' | 'yellow' | 'green' | 'red' | 'orange';
+    provisioning_step: ProvisioningStep | null;
+    provisioning_steps: ProvisioningStep[];
     php_version: string;
     database_type: string;
     ssh_port: number;
