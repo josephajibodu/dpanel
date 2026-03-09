@@ -72,291 +72,275 @@ export default function ServersShow({ server }: Props) {
             <Head title={data.name} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <ServerMetricsOverview serverId={data.id} />
+                {isProvisioningLifecycle ? (
+                    <div className="mx-auto w-full max-w-2xl">
+                        <ProvisioningStepTimeline server={data} />
+                    </div>
+                ) : (
+                    <>
+                        <ServerMetricsOverview serverId={data.id} />
 
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
-                    {/* Left column: Sites & databases, SSH, events */}
-                    <div className="space-y-6">
-                        {isProvisioningLifecycle && (
-                            <ProvisioningStepTimeline server={data} />
-                        )}
-
-                        {/* Sites */}
-                        <Card id="sites">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <HardDriveIcon className="h-5 w-5" />
-                                        Sites
-                                    </CardTitle>
-                                    {data.status === 'active' && (
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/servers/${data.id}/sites/create`}>
-                                                <PlusIcon className="mr-2 h-4 w-4" />
-                                                New site
-                                            </Link>
-                                        </Button>
-                                    )}
-                                </div>
-                                <CardDescription>
-                                    Websites deployed on this server.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {sites.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
-                                        <HardDriveIcon className="text-muted-foreground h-10 w-10" />
-                                        <div>
-                                            <p className="text-sm font-medium">
-                                                No sites on this server yet
-                                            </p>
-                                            <p className="text-muted-foreground mt-1 text-xs">
-                                                Get started by creating your
-                                                first site.
-                                            </p>
+                        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+                            {/* Left column: Sites & databases, SSH, events */}
+                            <div className="space-y-6">
+                                {/* Sites */}
+                                <Card id="sites">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="flex items-center gap-2">
+                                                <HardDriveIcon className="h-5 w-5" />
+                                                Sites
+                                            </CardTitle>
+                                            {data.status === 'active' && (
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link href={`/servers/${data.id}/sites/create`}>
+                                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                                        New site
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </div>
-                                        {data.status === 'active' && (
+                                        <CardDescription>
+                                            Websites deployed on this server.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {sites.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
+                                                <HardDriveIcon className="text-muted-foreground h-10 w-10" />
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        No sites on this server yet
+                                                    </p>
+                                                    <p className="text-muted-foreground mt-1 text-xs">
+                                                        Get started by creating your
+                                                        first site.
+                                                    </p>
+                                                </div>
+                                                {data.status === 'active' && (
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <Link href={`/servers/${data.id}/sites/create`}>
+                                                            <PlusIcon className="mr-2 h-4 w-4" />
+                                                            New site
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Domain</TableHead>
+                                                            <TableHead>Type</TableHead>
+                                                            <TableHead>Status</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {sites.map((site) => (
+                                                            <TableRow key={site.id}>
+                                                                <TableCell>
+                                                                    <Link
+                                                                        href={`/servers/${data.id}/sites/${site.id}`}
+                                                                        className="font-medium hover:underline"
+                                                                    >
+                                                                        {site.domain}
+                                                                    </Link>
+                                                                </TableCell>
+                                                                <TableCell className="text-sm text-muted-foreground">
+                                                                    {site.project_type_label ?? '—'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <SiteStatusBadge
+                                                                        status={site.status}
+                                                                        statusLabel={site.status_label}
+                                                                        statusColor={site.status_color}
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Databases */}
+                                <Card id="databases">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="flex items-center gap-2">
+                                                <ServerIcon className="h-5 w-5" />
+                                                Databases
+                                            </CardTitle>
                                             <Button variant="outline" size="sm" asChild>
-                                                <Link href={`/servers/${data.id}/sites/create`}>
-                                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                                    New site
+                                                <Link href={`/servers/${data.id}/databases`}>
+                                                    View databases
                                                 </Link>
                                             </Button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Domain</TableHead>
-                                                    <TableHead>
-                                                        Type
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Status
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {sites.map((site) => (
-                                                    <TableRow key={site.id}>
-                                                        <TableCell>
-                                                            <Link
-                                                                href={`/servers/${data.id}/sites/${site.id}`}
-                                                                className="font-medium hover:underline"
-                                                            >
-                                                                {site.domain}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell className="text-sm text-muted-foreground">
-                                                            {site.project_type_label ??
-                                                                '—'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <SiteStatusBadge
-                                                                status={
-                                                                    site.status
-                                                                }
-                                                                statusLabel={
-                                                                    site.status_label
-                                                                }
-                                                                statusColor={
-                                                                    site.status_color
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                        </div>
+                                        <CardDescription>
+                                            Manage databases and database users on this server.
+                                        </CardDescription>
+                                    </CardHeader>
+                                </Card>
+
+                                {/* Recent events (optional) */}
+                                {data.actions && data.actions.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <ActivityIcon className="h-5 w-5" />
+                                                Recent events
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Latest provisioning and management actions.
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-2 text-sm">
+                                            {data.actions.slice(0, 5).map((action) => (
+                                                <div
+                                                    key={action.id}
+                                                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                                                >
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{action.action}</span>
+                                                        <span className="text-muted-foreground text-xs">
+                                                            {format(
+                                                                new Date(action.created_at),
+                                                                'MMM d, yyyy HH:mm',
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-muted-foreground text-xs">
+                                                        {action.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
                                 )}
-                            </CardContent>
-                        </Card>
+                            </div>
 
-                        {/* Databases */}
-                        <Card id="databases">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <ServerIcon className="h-5 w-5" />
-                                        Databases
-                                    </CardTitle>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link
-                                            href={`/servers/${data.id}/databases`}
-                                        >
-                                            View databases
-                                        </Link>
-                                    </Button>
-                                </div>
-                                <CardDescription>
-                                    Manage databases and database users on this
-                                    server.
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
+                            {/* Right column: unified sidebar */}
+                            <div>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <ServerIcon className="h-5 w-5" />
+                                            Server details
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-5 text-sm">
+                                        <div className="space-y-2">
+                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                                Server
+                                            </p>
+                                            <DetailRow
+                                                label="Name"
+                                                value={data.name}
+                                            />
+                                            <DetailRow
+                                                label="Provider account"
+                                                value={
+                                                    data.provider_account?.name ??
+                                                    data.provider_label
+                                                }
+                                            />
+                                            <DetailRow
+                                                label="Size"
+                                                value={data.size}
+                                            />
+                                            <DetailRow
+                                                label="Region"
+                                                value={data.region}
+                                            />
+                                            <DetailRow
+                                                label="SSH port"
+                                                value={String(data.ssh_port)}
+                                                valueClassName="font-mono"
+                                            />
+                                        </div>
 
+                                        <div className="space-y-2 border-t pt-4">
+                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                                IP addresses
+                                            </p>
+                                            <DetailRow
+                                                label="Public"
+                                                value={
+                                                    data.ip_address || 'Pending...'
+                                                }
+                                                valueClassName="font-mono"
+                                            />
+                                            <DetailRow
+                                                label="Private"
+                                                value={
+                                                    data.private_ip_address ?? '—'
+                                                }
+                                                valueClassName="font-mono"
+                                            />
+                                        </div>
 
-                        {/* Recent events (optional) */}
-                        {data.actions && data.actions.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <ActivityIcon className="h-5 w-5" />
-                                        Recent events
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Latest provisioning and management
-                                        actions.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-2 text-sm">
-                                    {data.actions.slice(0, 5).map((action) => (
-                                        <div
-                                            key={action.id}
-                                            className="flex items-center justify-between rounded-md border px-3 py-2"
-                                        >
-                                            <div className="flex flex-col">
-                                                <span className="font-medium">
-                                                    {action.action}
-                                                </span>
-                                                <span className="text-muted-foreground text-xs">
+                                        <div className="space-y-2 border-t pt-4">
+                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                                Runtime
+                                            </p>
+                                            <p className="text-sm font-medium">
+                                                PHP {data.php_version} ·{' '}
+                                                {data.database_type === 'mysql'
+                                                    ? 'MySQL'
+                                                    : data.database_type === 'postgresql'
+                                                      ? 'PostgreSQL'
+                                                      : 'MariaDB'}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2 border-t pt-4">
+                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                                Status
+                                            </p>
+                                            <p className="text-sm font-medium">
+                                                {data.status_label}
+                                            </p>
+                                            <p className="text-muted-foreground text-xs">
+                                                Realtime {connectionState === 'connected' ? 'connected' : 'fallback mode'}
+                                            </p>
+                                            <p className="text-muted-foreground text-xs">
+                                                Created{' '}
+                                                {format(
+                                                    new Date(data.created_at),
+                                                    'MMM d, yyyy',
+                                                )}
+                                            </p>
+                                            {data.provisioned_at && (
+                                                <p className="text-muted-foreground text-xs">
+                                                    Provisioned{' '}
+                                                    {format(
+                                                        new Date(data.provisioned_at),
+                                                        'MMM d, yyyy',
+                                                    )}
+                                                </p>
+                                            )}
+                                            {data.last_ssh_connection_at && (
+                                                <p className="text-muted-foreground text-xs">
+                                                    Last SSH connection{' '}
                                                     {format(
                                                         new Date(
-                                                            action.created_at,
+                                                            data.last_ssh_connection_at,
                                                         ),
-                                                        'MMM d, yyyy HH:mm',
+                                                        'MMM d, yyyy',
                                                     )}
-                                                </span>
-                                            </div>
-                                            <span className="text-muted-foreground text-xs">
-                                                {action.status}
-                                            </span>
+                                                </p>
+                                            )}
                                         </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        )}
-                    </div>
-
-                    {/* Right column: unified sidebar */}
-                    <div>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <ServerIcon className="h-5 w-5" />
-                                    Server details
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-5 text-sm">
-                                <div className="space-y-2">
-                                    <p className="text-muted-foreground text-xs font-medium uppercase">
-                                        Server
-                                    </p>
-                                    <DetailRow
-                                        label="Name"
-                                        value={data.name}
-                                    />
-                                    <DetailRow
-                                        label="Provider account"
-                                        value={
-                                            data.provider_account?.name ??
-                                            data.provider_label
-                                        }
-                                    />
-                                    <DetailRow
-                                        label="Size"
-                                        value={data.size}
-                                    />
-                                    <DetailRow
-                                        label="Region"
-                                        value={data.region}
-                                    />
-                                    <DetailRow
-                                        label="SSH port"
-                                        value={String(data.ssh_port)}
-                                        valueClassName="font-mono"
-                                    />
-                                </div>
-
-                                <div className="space-y-2 border-t pt-4">
-                                    <p className="text-muted-foreground text-xs font-medium uppercase">
-                                        IP addresses
-                                    </p>
-                                    <DetailRow
-                                        label="Public"
-                                        value={
-                                            data.ip_address || 'Pending...'
-                                        }
-                                        valueClassName="font-mono"
-                                    />
-                                    <DetailRow
-                                        label="Private"
-                                        value={
-                                            data.private_ip_address ?? '—'
-                                        }
-                                        valueClassName="font-mono"
-                                    />
-                                </div>
-
-                                <div className="space-y-2 border-t pt-4">
-                                    <p className="text-muted-foreground text-xs font-medium uppercase">
-                                        Runtime
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                        PHP {data.php_version} ·{' '}
-                                        {data.database_type === 'mysql'
-                                            ? 'MySQL'
-                                            : data.database_type === 'postgresql'
-                                              ? 'PostgreSQL'
-                                              : 'MariaDB'}
-                                    </p>
-                                </div>
-
-                                <div className="space-y-2 border-t pt-4">
-                                    <p className="text-muted-foreground text-xs font-medium uppercase">
-                                        Status
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                        {data.status_label}
-                                    </p>
-                                    <p className="text-muted-foreground text-xs">
-                                        Realtime {connectionState === 'connected' ? 'connected' : 'fallback mode'}
-                                    </p>
-                                    <p className="text-muted-foreground text-xs">
-                                        Created{' '}
-                                        {format(
-                                            new Date(data.created_at),
-                                            'MMM d, yyyy',
-                                        )}
-                                    </p>
-                                    {data.provisioned_at && (
-                                        <p className="text-muted-foreground text-xs">
-                                            Provisioned{' '}
-                                            {format(
-                                                new Date(data.provisioned_at),
-                                                'MMM d, yyyy',
-                                            )}
-                                        </p>
-                                    )}
-                                    {data.last_ssh_connection_at && (
-                                        <p className="text-muted-foreground text-xs">
-                                            Last SSH connection{' '}
-                                            {format(
-                                                new Date(
-                                                    data.last_ssh_connection_at,
-                                                ),
-                                                'MMM d, yyyy',
-                                            )}
-                                        </p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </AppLayout>
     );
