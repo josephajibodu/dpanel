@@ -11,11 +11,20 @@ export function ProvisioningStepTimeline({ server, className }: ProvisioningStep
     const currentStepValue = server.provisioning_step?.value ?? 0;
     const currentStepLabel = server.provisioning_step?.label ?? 'Pending';
     const currentStepDescription = server.provisioning_step?.description ?? 'Waiting to start provisioning.';
+    const isStarting = currentStepValue === 0;
 
     return (
         <div className={cn('rounded-lg border bg-card p-4', className)}>
             <div className="mb-4">
-                <h3 className="text-sm font-semibold tracking-tight">Provisioning progress</h3>
+                <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+                    Provisioning progress
+                    {isStarting && (
+                        <Loader2Icon
+                            className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400"
+                            aria-hidden
+                        />
+                    )}
+                </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                     {currentStepLabel}
                 </p>
