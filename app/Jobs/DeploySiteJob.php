@@ -6,10 +6,13 @@ use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentOutput as DeploymentOutputEvent;
 use App\Events\DeploymentStatusChanged;
+use App\Exceptions\DeploymentFailedException;
 use App\Models\Deployment;
+use App\Models\Site;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -48,10 +51,9 @@ class DeploySiteJob implements ShouldQueue
         $this->broadcastStatus('started');
 
         try {
-            // Connect to server
+            // Deployment execution (remote)
             $connection = $sshService->connect($server);
 
-            // Get current commit info from git
             $this->logOutput('Fetching latest commit information...', 'info');
             $commitInfo = $this->getCommitInfo($connection, $site);
 
@@ -68,62 +70,46 @@ class DeploySiteJob implements ShouldQueue
             if (! $site->repository) {
                 $this->logOutput('No repository connected — deployment skipped.', 'info');
             } else {
-                // Get deploy script
                 $script = $site->deployScript?->script ?? $this->getDefaultScript($site);
-
-                // Prepare script with variable replacements
                 $preparedScript = $this->prepareScript($connection, $script, $site);
 
-                // Execute script with streaming output
                 $this->logOutput('Starting deployment script...', 'info');
                 $exitCode = $connection->execWithOutput(
                     $preparedScript,
                     fn (string $line) => $this->logOutput($line, 'output'),
                     $this->timeout
                 );
-                $this->logOutput('Deployment script exited with code ' . $exitCode, 'info');
+                $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
             }
 
             $connection->disconnect();
 
-            // Check if deployment succeeded
-            if ($exitCode === 0) {
-                $this->deployment->update([
-                    'status' => DeploymentStatus::Finished,
-                    'finished_at' => now(),
-                    'duration_seconds' => now()->diffInSeconds($this->deployment->started_at),
-                ]);
-
-                $site->update([
-                    'status' => $site->repository ? SiteStatus::Deployed : SiteStatus::Provisioned,
-                    'deployment_finished_at' => now(),
-                ]);
-
-                $this->logOutput('Deployment completed successfully!', 'success');
-                $this->broadcastStatus('finished');
-
-                Log::info("Deployment {$this->deployment->id} completed successfully");
-            } else {
-                throw new \RuntimeException("Deployment script exited with code {$exitCode}");
+            if ($exitCode !== 0) {
+                throw new DeploymentFailedException("Deployment script exited with code {$exitCode}");
             }
+
+            // Persistence (local DB) — separate so failures don't pollute deployment logs
+            try {
+                $this->completeDeploymentSuccess($site);
+            } catch (\Throwable $e) {
+                Log::error("Failed to persist deployment success for {$this->deployment->id}: {$e->getMessage()}");
+                throw $e;
+            }
+
+            Log::info("Deployment {$this->deployment->id} completed successfully");
+        } catch (DeploymentFailedException $e) {
+            $this->logOutput("[ERROR] {$e->getMessage()}", 'error');
+            Log::error("Deployment {$this->deployment->id} failed: {$e->getMessage()}");
+            $this->markDeploymentFailed($site);
+            throw $e;
+        } catch (QueryException $e) {
+            Log::error("Deployment {$this->deployment->id} persistence failed: {$e->getMessage()}");
+            $this->markDeploymentFailed($site);
+            throw $e;
         } catch (\Throwable $e) {
             $this->logOutput("[ERROR] {$e->getMessage()}", 'error');
             Log::error("Deployment {$this->deployment->id} failed: {$e->getMessage()}");
-
-            $this->deployment->update([
-                'status' => DeploymentStatus::Failed,
-                'finished_at' => now(),
-                'duration_seconds' => $this->deployment->started_at
-                    ? now()->diffInSeconds($this->deployment->started_at)
-                    : 0,
-            ]);
-
-            $site->update([
-                'status' => SiteStatus::Failed,
-            ]);
-
-            $this->broadcastStatus('failed');
-
+            $this->markDeploymentFailed($site);
             throw $e;
         }
     }
@@ -277,22 +263,49 @@ class DeploySiteJob implements ShouldQueue
     }
 
     /**
+     * Persist deployment success and update site status.
+     */
+    private function completeDeploymentSuccess(Site $site): void
+    {
+        $this->deployment->update([
+            'status' => DeploymentStatus::Finished,
+            'finished_at' => now(),
+            'duration_seconds' => (int) now()->diffInSeconds($this->deployment->started_at, true),
+        ]);
+
+        $site->update([
+            'status' => $site->repository ? SiteStatus::Deployed : SiteStatus::Provisioned,
+            'deployment_finished_at' => now(),
+        ]);
+
+        $this->logOutput('Deployment completed successfully!', 'success');
+        $this->broadcastStatus('finished');
+    }
+
+    /**
+     * Persist deployment failure and update site status.
+     */
+    private function markDeploymentFailed(Site $site): void
+    {
+        $this->deployment->update([
+            'status' => DeploymentStatus::Failed,
+            'finished_at' => now(),
+            'duration_seconds' => $this->deployment->started_at
+                ? (int) now()->diffInSeconds($this->deployment->started_at, true)
+                : 0,
+        ]);
+
+        $site->update(['status' => SiteStatus::Failed]);
+        $this->broadcastStatus('failed');
+    }
+
+    /**
      * Handle job failure (timeout, worker crash, etc.) — ensure status is updated.
      */
     public function failed(\Throwable $e): void
     {
         Log::error("DeploySiteJob failed for deployment {$this->deployment->id}: {$e->getMessage()}");
 
-        $this->deployment->update([
-            'status' => DeploymentStatus::Failed,
-            'finished_at' => now(),
-            'duration_seconds' => $this->deployment->started_at
-                ? now()->diffInSeconds($this->deployment->started_at)
-                : 0,
-        ]);
-
-        $this->deployment->site->update(['status' => SiteStatus::Failed]);
-
-        broadcast(new DeploymentStatusChanged($this->deployment, 'failed'));
+        $this->markDeploymentFailed($this->deployment->site);
     }
 }
