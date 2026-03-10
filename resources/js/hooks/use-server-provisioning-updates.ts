@@ -96,8 +96,29 @@ export function useServerProvisioningUpdates(initialServer: Server) {
             }));
         });
 
+        channel.listen('.server.sites.updated', (event: { server?: Server }) => {
+            const incomingServer = (event.server as { data?: Server })?.data ?? (event.server as Server | undefined);
+
+            if (!incomingServer || incomingServer.id !== initialServer.id) {
+                return;
+            }
+
+            if (debugEnabled) {
+                console.debug('[realtime][server] sites update', {
+                    serverId: incomingServer.id,
+                    sitesCount: incomingServer.sites?.length ?? 0,
+                });
+            }
+
+            setServer((previousServer) => ({
+                ...previousServer,
+                ...incomingServer,
+            }));
+        });
+
         return () => {
             channel.stopListening('.server.status.changed');
+            channel.stopListening('.server.sites.updated');
             window.Echo.leave(`server.${initialServer.id}`);
             pusherConnection?.unbind('state_change', onStateChange);
         };

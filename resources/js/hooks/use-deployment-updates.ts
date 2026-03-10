@@ -6,13 +6,22 @@ import { useEffect, useRef } from 'react';
  * When a change is detected, triggers an Inertia partial reload to get fresh data.
  *
  * This approach keeps WebSocket payloads minimal - only notifications, not heavy data.
+ *
+ * @param reloadOnly - Optional array of page props to reload (default: ['deployment'])
  */
-export function useDeploymentUpdates(deploymentId: number | string) {
+export function useDeploymentUpdates(
+    deploymentId: number | string,
+    reloadOnly: string[] = ['deployment'],
+) {
     const channelRef = useRef<any>(null);
     const isSubscribedRef = useRef(false);
     const debugEnabled = import.meta.env.VITE_REALTIME_DEBUG === 'true';
 
     useEffect(() => {
+        if (!deploymentId) {
+            return;
+        }
+
         // Only subscribe if Echo is available
         if (!window.Echo || isSubscribedRef.current) {
             if (debugEnabled && !window.Echo) {
@@ -55,9 +64,9 @@ export function useDeploymentUpdates(deploymentId: number | string) {
                 });
             }
 
-            // Use Inertia's partial reload to get fresh deployment data
+            // Use Inertia's partial reload to get fresh data
             router.reload({
-                only: ['deployment'],
+                only: reloadOnly,
             });
         });
 
@@ -73,5 +82,5 @@ export function useDeploymentUpdates(deploymentId: number | string) {
                 isSubscribedRef.current = false;
             }
         };
-    }, [debugEnabled, deploymentId]);
+    }, [debugEnabled, deploymentId, reloadOnly]);
 }

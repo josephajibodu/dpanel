@@ -60,8 +60,11 @@ class DeploymentController extends Controller
 
         $site = $deployment->site;
 
+        $deploymentResource = new DeploymentResource($deployment);
+        $deploymentResource->wrap(null);
+
         return Inertia::render('deployments/show', [
-            'deployment' => new DeploymentResource($deployment),
+            'deployment' => $deploymentResource,
             'server' => new ServerResource($server),
             'site' => new SiteResource($site->load('server')),
             'logs' => $deployment->logs()->orderBy('created_at')->get()->map(fn ($log) => [

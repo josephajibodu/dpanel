@@ -23,6 +23,10 @@ export function useDeploymentLogs(
     const debugEnabled = import.meta.env.VITE_REALTIME_DEBUG === 'true';
 
     useEffect(() => {
+        if (!deploymentId) {
+            return;
+        }
+
         // Only subscribe if Echo is available
         if (!window.Echo || isSubscribedRef.current) {
             if (debugEnabled && !window.Echo) {

@@ -63,19 +63,26 @@ class DeploySiteJob implements ShouldQueue
                 ]);
             }
 
-            // Get deploy script
-            $script = $site->deployScript?->script ?? $this->getDefaultScript($site);
+            $exitCode = 0;
 
-            // Prepare script with variable replacements
-            $preparedScript = $this->prepareScript($connection, $script, $site);
+            if (! $site->repository) {
+                $this->logOutput('No repository connected — deployment skipped.', 'info');
+            } else {
+                // Get deploy script
+                $script = $site->deployScript?->script ?? $this->getDefaultScript($site);
 
-            // Execute script with streaming output
-            $this->logOutput('Starting deployment script...', 'info');
-            $exitCode = $connection->execWithOutput(
-                $preparedScript,
-                fn (string $line) => $this->logOutput($line, 'output'),
-                $this->timeout
-            );
+                // Prepare script with variable replacements
+                $preparedScript = $this->prepareScript($connection, $script, $site);
+
+                // Execute script with streaming output
+                $this->logOutput('Starting deployment script...', 'info');
+                $exitCode = $connection->execWithOutput(
+                    $preparedScript,
+                    fn (string $line) => $this->logOutput($line, 'output'),
+                    $this->timeout
+                );
+                $this->logOutput('Deployment script exited with code ' . $exitCode, 'info');
+            }
 
             $connection->disconnect();
 
@@ -88,7 +95,7 @@ class DeploySiteJob implements ShouldQueue
                 ]);
 
                 $site->update([
-                    'status' => SiteStatus::Deployed,
+                    'status' => $site->repository ? SiteStatus::Deployed : SiteStatus::Provisioned,
                     'deployment_finished_at' => now(),
                 ]);
 
@@ -182,32 +189,41 @@ class DeploySiteJob implements ShouldQueue
 
     /**
      * Prepare deploy script by replacing variables and upload to server.
+     * Prepends variable assignments so $SITE_ROOT, $BRANCH, $PHP, etc. are available in the script.
      */
     private function prepareScript($connection, string $script, $site): string
     {
         $siteRoot = $site->rootPath();
         $webRoot = $site->webRoot();
+        $phpVersion = $site->php_version ?? '8.4';
+        $phpBinary = "php{$phpVersion}";
+        $phpFpm = "php{$phpVersion}-fpm";
 
-        // Replace variables in script
+        // Preamble: set shell variables that default scripts use ($SITE_ROOT, $BRANCH, $PHP, etc.)
+        $preamble = "SITE_ROOT='{$siteRoot}'\n";
+        $preamble .= "WEB_ROOT='{$webRoot}'\n";
+        $preamble .= "BRANCH='{$site->branch}'\n";
+        $preamble .= "PHP='{$phpBinary}'\n";
+        $preamble .= "COMPOSER='composer'\n";
+        $preamble .= "PHP_FPM='{$phpFpm}'\n\n";
+
+        // Replace placeholder variables in script ({{SITE_PATH}}, {{BRANCH}}, etc.)
         $replacements = [
             '{{SITE_PATH}}' => $siteRoot,
             '{{WEB_ROOT}}' => $webRoot,
             '{{BRANCH}}' => $site->branch,
             '{{DOMAIN}}' => $site->domain,
-            '{{PHP_VERSION}}' => $site->php_version,
+            '{{PHP_VERSION}}' => $phpVersion,
         ];
 
-        $prepared = str_replace(array_keys($replacements), array_values($replacements), $script);
+        $prepared = $preamble.str_replace(array_keys($replacements), array_values($replacements), $script);
 
         // Create a temporary script file and execute it
-        // This allows for multi-line scripts and better error handling
         $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
 
-        // Upload script to server
         $connection->upload("#!/bin/bash\nset -e\n\n{$prepared}", $scriptPath);
         $connection->exec("chmod +x {$scriptPath}");
 
-        // Return command to execute the script (always cleanup, even on failure)
         return "{$scriptPath}; EXIT_CODE=\$?; rm -f {$scriptPath}; exit \$EXIT_CODE";
     }
 
@@ -258,5 +274,25 @@ class DeploySiteJob implements ShouldQueue
             deployment: $this->deployment,
             event: $event,
         ));
+    }
+
+    /**
+     * Handle job failure (timeout, worker crash, etc.) — ensure status is updated.
+     */
+    public function failed(\Throwable $e): void
+    {
+        Log::error("DeploySiteJob failed for deployment {$this->deployment->id}: {$e->getMessage()}");
+
+        $this->deployment->update([
+            'status' => DeploymentStatus::Failed,
+            'finished_at' => now(),
+            'duration_seconds' => $this->deployment->started_at
+                ? now()->diffInSeconds($this->deployment->started_at)
+                : 0,
+        ]);
+
+        $this->deployment->site->update(['status' => SiteStatus::Failed]);
+
+        broadcast(new DeploymentStatusChanged($this->deployment, 'failed'));
     }
 }

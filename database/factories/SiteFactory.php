@@ -68,6 +68,13 @@ class SiteFactory extends Factory
         ]);
     }
 
+    public function provisioned(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => SiteStatus::Provisioned,
+        ]);
+    }
+
     public function deploying(): static
     {
         return $this->state(fn (array $attributes) => [

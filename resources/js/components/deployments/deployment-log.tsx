@@ -1,11 +1,14 @@
 import { cn } from '@/lib/utils';
 import { DeploymentLogLine } from '@/hooks/use-deployment-logs';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { AnsiUp } from 'ansi_up';
 
 interface DeploymentLogProps {
     logs: DeploymentLogLine[];
     className?: string;
 }
+
+const ansiUp = new AnsiUp();
 
 export function DeploymentLog({ logs, className }: DeploymentLogProps) {
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -28,6 +31,15 @@ export function DeploymentLog({ logs, className }: DeploymentLogProps) {
         }
     };
 
+    const renderedLogs = useMemo(
+        () =>
+            logs.map((log) => ({
+                ...log,
+                html: ansiUp.ansi_to_html(log.message),
+            })),
+        [logs],
+    );
+
     if (logs.length === 0) {
         return (
             <div className={cn('flex items-center justify-center py-12 text-center', className)}>
@@ -40,13 +52,15 @@ export function DeploymentLog({ logs, className }: DeploymentLogProps) {
         <div className={cn('bg-muted font-mono text-sm', className)}>
             <div className="max-h-[600px] overflow-y-auto p-4">
                 <div className="space-y-1">
-                    {logs.map((log, index) => (
+                    {renderedLogs.map((log, index) => (
                         <div
                             key={index}
-                            className={cn('whitespace-pre-wrap break-words', getLineColor(log.type))}
-                        >
-                            {log.message}
-                        </div>
+                            className={cn(
+                                'whitespace-pre-wrap break-words [&_span]:text-inherit',
+                                getLineColor(log.type),
+                            )}
+                            dangerouslySetInnerHTML={{ __html: log.html }}
+                        />
                     ))}
                     <div ref={logEndRef} />
                 </div>

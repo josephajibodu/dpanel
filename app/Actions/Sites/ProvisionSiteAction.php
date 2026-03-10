@@ -3,6 +3,7 @@
 namespace App\Actions\Sites;
 
 use App\Enums\SiteStatus;
+use App\Events\ServerSitesUpdated;
 use App\Models\Site;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\SourceControlService;
@@ -26,6 +27,7 @@ class ProvisionSiteAction
 
         try {
             $site->update(['status' => SiteStatus::Installing]);
+            $this->broadcastServerSitesUpdated($server);
 
             $connection = $this->sshService->connect($server);
 
@@ -80,13 +82,17 @@ class ProvisionSiteAction
             $connection->disconnect();
 
             // Site setup completed, deployment remains user-triggered.
-            $site->update(['status' => SiteStatus::Pending]);
+            $site->update(['status' => SiteStatus::Provisioned]);
 
             Log::info("Site {$site->domain} created successfully");
+
+            $this->broadcastServerSitesUpdated($server);
         } catch (\Throwable $e) {
             Log::error("Failed to create site {$site->domain}: {$e->getMessage()}");
 
             $site->update(['status' => SiteStatus::Failed]);
+
+            $this->broadcastServerSitesUpdated($server);
 
             throw $e;
         }
@@ -130,6 +136,9 @@ class ProvisionSiteAction
         // GIT_SSH_COMMAND ensures git uses the correct SSH key
         $gitCommand = "GIT_SSH_COMMAND='ssh -i {$sshKeyPath} -o StrictHostKeyChecking=accept-new' git clone --branch {$site->branch} {$repoUrl} .";
         $connection->exec("cd {$siteRoot} && {$gitCommand}");
+
+        // Git 2.35.2+ requires safe.directory when repo ownership differs from git user
+        $connection->exec("git -C {$siteRoot} config --global --add safe.directory {$siteRoot}");
     }
 
     private function buildGitUrl(Site $site): string
@@ -167,5 +176,11 @@ PHP;
 
         $escapedPlaceholder = str_replace("'", "'\\''", $placeholder);
         $connection->exec("echo '{$escapedPlaceholder}' > {$placeholderPath}");
+    }
+
+    private function broadcastServerSitesUpdated($server): void
+    {
+        $server->load(['sites' => fn ($q) => $q->with('latestDeployment')->latest()]);
+        broadcast(new ServerSitesUpdated($server));
     }
 }
