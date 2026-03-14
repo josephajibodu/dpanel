@@ -73,8 +73,11 @@ class ProvisionSiteAction
                 $this->createPlaceholder($connection, $site);
             }
 
-            // Set proper permissions (matching Forge: 775 for dirs, 664 for files)
+            // Copy .env.example to .env if it exists (Forge-style)
             $serverUser = config('server.user');
+            $connection->exec("if [ -f {$siteRoot}/.env.example ]; then cp {$siteRoot}/.env.example {$siteRoot}/.env && chown {$serverUser}:{$serverUser} {$siteRoot}/.env && chmod 600 {$siteRoot}/.env; fi");
+
+            // Set proper permissions (matching Forge: 775 for dirs, 664 for files)
             $webUser = config('server.web_user');
             $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
             $connection->exec("find {$siteRoot} -type d -exec chmod 775 {} \\;");

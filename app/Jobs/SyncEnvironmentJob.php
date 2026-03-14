@@ -21,6 +21,8 @@ class SyncEnvironmentJob implements ShouldQueue
 
     public function __construct(
         public Site $site,
+        public bool $clearConfigCache = false,
+        public bool $restartQueue = false,
     ) {}
 
     public function handle(SshService $sshService): void
@@ -64,6 +66,17 @@ class SyncEnvironmentJob implements ShouldQueue
             $serverUser = config('server.user');
             $connection->exec("chmod 600 {$envPath}");
             $connection->exec("chown {$serverUser}:{$serverUser} {$envPath}");
+
+            $phpVersion = $site->php_version ?? '8.4';
+            $phpBinary = "php{$phpVersion}";
+
+            if ($this->clearConfigCache) {
+                $connection->exec("cd {$siteRoot} && {$phpBinary} artisan config:cache");
+            }
+
+            if ($this->restartQueue) {
+                $connection->exec("cd {$siteRoot} && {$phpBinary} artisan queue:restart");
+            }
 
             $connection->disconnect();
 

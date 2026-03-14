@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
@@ -18,9 +19,10 @@ interface Props {
             environment_variables?: EnvironmentVariable[];
         };
     };
+    has_workers: boolean;
 }
 
-export default function SiteEnvironmentShow({ server: serverProp, site: siteProp }: Props) {
+export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false }: Props) {
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -32,6 +34,8 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
 
     const form = useForm({
         variables,
+        clear_config_cache: false,
+        restart_queue: false,
     });
 
     function addVariable() {
@@ -117,6 +121,29 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                                 <PlusIcon className="mr-2 h-4 w-4" />
                                 Add Variable
                             </Button>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        checked={form.data.clear_config_cache}
+                                        onCheckedChange={(checked) =>
+                                            form.setData('clear_config_cache', !!checked)
+                                        }
+                                    />
+                                    Clear config cache
+                                </label>
+                                {has_workers && (
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <Checkbox
+                                            checked={form.data.restart_queue}
+                                            onCheckedChange={(checked) =>
+                                                form.setData('restart_queue', !!checked)
+                                            }
+                                        />
+                                        Restart queue workers
+                                    </label>
+                                )}
+                            </div>
 
                             <Separator />
 

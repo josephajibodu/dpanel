@@ -2,11 +2,15 @@ import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deployment-logs';
 import { useDeploymentUpdates } from '@/hooks/use-deployment-updates';
-import { Head } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { formatDistanceToNow } from 'date-fns';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
+import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon } from 'lucide-react';
 
 type SiteData = Site & { server?: { id: number; name: string } };
 
@@ -30,6 +34,19 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     const server = serverProp?.data ?? serverProp;
     const site = (siteProp as { data?: SiteData })?.data ?? (siteProp as SiteData);
     const serverId = server?.id ?? site?.server?.id;
+    const { flash } = usePage<SharedData>().props;
+
+    const isDeploying = deployment.status === 'pending' || deployment.status === 'running';
+    const commitShort = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : `#${deployment.id}`;
+
+    useEffect(() => {
+        const started = flash?.deployment_started;
+        if (started) {
+            toast.info(`Deploying ${started.commit} on ${started.site}`, {
+                icon: <Loader2Icon className="h-4 w-4 animate-spin" />,
+            });
+        }
+    }, [flash?.deployment_started]);
 
     if (!deployment || !site) {
         return (
@@ -61,24 +78,68 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
         { title: `#${deployment.id}`, href: `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}` },
     ];
 
+    const siteUrl = site.server?.ip_address
+        ? `http://${site.domain}`
+        : `https://${site.domain}`;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}>
-            <Head title={`Deployment #${deployment.id} - ${site.domain}`} />
+            <Head title={`Deployment ${commitShort} - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-semibold tracking-tight">
-                                Deployment logs
+                                Deployment details • {commitShort}
                             </h1>
-                            <p className="text-muted-foreground mt-1 text-sm">
-                                Output from this deployment.
-                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                <span className="inline-flex items-center gap-1.5">
+                                    {isDeploying ? (
+                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                    ) : null}
+                                    <StatusBadge status={deployment.status} label={deployment.status_label} />
+                                </span>
+                                {deployment.triggered_by === 'manual' && (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <WrenchIcon className="h-4 w-4 shrink-0" />
+                                        Manual
+                                    </span>
+                                )}
+                                {deployment.commit_message && (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <GitBranchIcon className="h-4 w-4 shrink-0" />
+                                        {deployment.commit_message}
+                                    </span>
+                                )}
+                                <span className="inline-flex items-center gap-1.5">
+                                    <ClockIcon className="h-4 w-4 shrink-0" />
+                                    {deployment.created_at
+                                        ? formatDistanceToNow(new Date(deployment.created_at), { addSuffix: true })
+                                        : 'Just now'}
+                                </span>
+                            </div>
                         </div>
-                        <StatusBadge status={deployment.status} label={deployment.status_label} />
+                        <Link
+                            href={siteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                        >
+                            <GlobeIcon className="h-4 w-4" />
+                            Visit
+                        </Link>
                     </div>
-                    <DeploymentLog logs={logs} />
+
+                    <div className="rounded-lg border bg-card">
+                        <div className="flex items-center gap-2 border-b px-4 py-3">
+                            {isDeploying ? (
+                                <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                            ) : null}
+                            <h2 className="font-medium">Build logs</h2>
+                        </div>
+                        <DeploymentLog logs={logs} isDeploying={isDeploying} />
+                    </div>
                 </div>
             </div>
         </AppLayout>

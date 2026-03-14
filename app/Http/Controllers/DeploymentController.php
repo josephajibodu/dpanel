@@ -46,7 +46,11 @@ class DeploymentController extends Controller
 
         return redirect()
             ->route('servers.sites.deployments.show', [$server, $site, $deployment])
-            ->with('success', 'Deployment started successfully.');
+            ->with('success', 'Deployment started successfully.')
+            ->with('deployment_started', [
+                'commit' => $deployment->commit_hash ? substr($deployment->commit_hash, 0, 7) : (string) $deployment->id,
+                'site' => $site->domain,
+            ]);
     }
 
     /**

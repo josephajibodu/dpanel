@@ -3,14 +3,21 @@ import { DeploymentLogLine } from '@/hooks/use-deployment-logs';
 import { useEffect, useMemo, useRef } from 'react';
 import { AnsiUp } from 'ansi_up';
 
+const PLACEHOLDER_LOGS: DeploymentLogLine[] = [
+    { type: 'info', message: '=> Warming up deployment workers' },
+    { type: 'info', message: '=> Preparing to build site...' },
+];
+
 interface DeploymentLogProps {
     logs: DeploymentLogLine[];
+    /** When true and logs are empty, show placeholder lines (Forge-style) */
+    isDeploying?: boolean;
     className?: string;
 }
 
 const ansiUp = new AnsiUp();
 
-export function DeploymentLog({ logs, className }: DeploymentLogProps) {
+export function DeploymentLog({ logs, isDeploying = false, className }: DeploymentLogProps) {
     const logEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new logs arrive
@@ -31,16 +38,18 @@ export function DeploymentLog({ logs, className }: DeploymentLogProps) {
         }
     };
 
+    const displayLogs = logs.length > 0 ? logs : (isDeploying ? PLACEHOLDER_LOGS : []);
+
     const renderedLogs = useMemo(
         () =>
-            logs.map((log) => ({
+            displayLogs.map((log) => ({
                 ...log,
                 html: ansiUp.ansi_to_html(log.message),
             })),
-        [logs],
+        [displayLogs],
     );
 
-    if (logs.length === 0) {
+    if (displayLogs.length === 0) {
         return (
             <div className={cn('flex items-center justify-center py-12 text-center', className)}>
                 <p className="text-muted-foreground text-sm">No logs yet. Deployment will start shortly...</p>

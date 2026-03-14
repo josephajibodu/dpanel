@@ -33,6 +33,11 @@ export interface SharedData {
     name: string;
     auth: Auth;
     sidebarOpen: boolean;
+    flash?: {
+        success?: string;
+        error?: string;
+        deployment_started?: { commit: string; site: string };
+    };
     [key: string]: unknown;
 }
 

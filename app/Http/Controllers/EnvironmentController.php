@@ -20,9 +20,12 @@ class EnvironmentController extends Controller
 
         $site->load(['server', 'environmentVariables']);
 
+        $hasWorkers = $site->server->workers()->where('site_id', $site->id)->exists();
+
         return Inertia::render('sites/environment/show', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
+            'has_workers' => $hasWorkers,
         ]);
     }
 
@@ -34,9 +37,14 @@ class EnvironmentController extends Controller
             'variables' => ['required', 'array'],
             'variables.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Z_][A-Z0-9_]*$/i'],
             'variables.*.value' => ['nullable', 'string', 'max:65535'],
+            'clear_config_cache' => ['sometimes', 'boolean'],
+            'restart_queue' => ['sometimes', 'boolean'],
         ], [
             'variables.*.key.regex' => 'Variable names should start with a letter or underscore and contain only letters, numbers, and underscores.',
         ]);
+
+        $clearConfigCache = (bool) ($validated['clear_config_cache'] ?? false);
+        $restartQueue = (bool) ($validated['restart_queue'] ?? false);
 
         // Get existing variables to detect deletions
         $existingKeys = $site->environmentVariables()->pluck('key')->all();
@@ -57,7 +65,7 @@ class EnvironmentController extends Controller
         }
 
         // Dispatch job to sync environment to server
-        SyncEnvironmentJob::dispatch($site);
+        SyncEnvironmentJob::dispatch($site, $clearConfigCache, $restartQueue);
 
         return redirect()
             ->back()
