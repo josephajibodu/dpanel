@@ -37,6 +37,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -57,6 +58,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const server = serverProp?.data ?? serverProp;
     const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
     const serverId = server?.id ?? siteData?.server?.id;
+    useServerDeploymentUpdates(Number(serverId ?? 0), siteData?.id, ['site']);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 

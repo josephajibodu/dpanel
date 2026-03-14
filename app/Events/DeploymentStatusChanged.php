@@ -45,6 +45,7 @@ class DeploymentStatusChanged implements ShouldBroadcast
         return [
             'deployment_id' => $this->deployment->id,
             'deployment_ulid' => $this->deployment->ulid,
+            'site_id' => $this->deployment->site_id,
             'status' => $this->deployment->status->value,
             'event' => $this->event,
         ];

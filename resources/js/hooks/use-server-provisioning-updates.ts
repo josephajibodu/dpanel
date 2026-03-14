@@ -116,9 +116,22 @@ export function useServerProvisioningUpdates(initialServer: Server) {
             }));
         });
 
+        channel.listen('.deployment.status.changed', () => {
+            if (debugEnabled) {
+                console.debug('[realtime][server] deployment status changed, reloading server', {
+                    serverId: initialServer.id,
+                });
+            }
+            router.reload({
+                only: ['server'],
+                preserveScroll: true,
+            });
+        });
+
         return () => {
             channel.stopListening('.server.status.changed');
             channel.stopListening('.server.sites.updated');
+            channel.stopListening('.deployment.status.changed');
             window.Echo.leave(`server.${initialServer.id}`);
             pusherConnection?.unbind('state_change', onStateChange);
         };

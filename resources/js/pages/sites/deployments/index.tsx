@@ -5,6 +5,7 @@ import {
     Pagination,
     type PaginationMeta,
 } from '@/components/ui/pagination';
+import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -32,6 +33,7 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
+    useServerDeploymentUpdates(Number(serverId ?? 0), site.id, ['deployments']);
     const [isDeploying, setIsDeploying] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [

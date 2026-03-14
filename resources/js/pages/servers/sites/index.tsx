@@ -23,6 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useServerSitesListUpdates } from '@/hooks/use-server-sites-list-updates';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -51,6 +52,7 @@ interface Props {
 
 export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     const server = serverProp?.data ?? serverProp;
+    useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
