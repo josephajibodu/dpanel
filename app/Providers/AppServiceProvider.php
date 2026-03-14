@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Deployment\DeploymentStrategy;
+use App\Services\Deployment\SimpleDeploymentStrategy;
 use App\Services\Providers\ProviderManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Events\RequestSending;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ProviderManager::class);
+        $this->app->bind(DeploymentStrategy::class, SimpleDeploymentStrategy::class);
     }
 
     /**

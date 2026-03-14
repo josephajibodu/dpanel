@@ -49,61 +49,45 @@ enum ProjectType: string
     private function laravelDeployScript(): string
     {
         return <<<'SCRIPT'
-cd $SITE_ROOT
-
 git pull origin $BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-( flock -w 10 9 || exit 1
-    echo 'Restarting FPM...'; sudo -S service $PHP_FPM reload ) 9>/tmp/fpmlock
+npm ci
+npm run build
 
-if [ -f artisan ]; then
-    $PHP artisan migrate --force
-    $PHP artisan config:cache
-    $PHP artisan route:cache
-    $PHP artisan view:cache
-    $PHP artisan event:cache
-fi
+$PHP artisan migrate --force
+$PHP artisan config:cache
+$PHP artisan route:cache
+$PHP artisan view:cache
+$PHP artisan event:cache
 SCRIPT;
     }
 
     private function symfonyDeployScript(): string
     {
         return <<<'SCRIPT'
-cd $SITE_ROOT
-
 git pull origin $BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 $PHP bin/console cache:clear --env=prod
 $PHP bin/console cache:warmup --env=prod
-
-( flock -w 10 9 || exit 1
-    echo 'Restarting FPM...'; sudo -S service $PHP_FPM reload ) 9>/tmp/fpmlock
 SCRIPT;
     }
 
     private function phpDeployScript(): string
     {
         return <<<'SCRIPT'
-cd $SITE_ROOT
-
 git pull origin $BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
-( flock -w 10 9 || exit 1
-    echo 'Restarting FPM...'; sudo -S service $PHP_FPM reload ) 9>/tmp/fpmlock
 SCRIPT;
     }
 
     private function htmlDeployScript(): string
     {
         return <<<'SCRIPT'
-cd $SITE_ROOT
-
 git pull origin $BRANCH
 SCRIPT;
     }
@@ -111,12 +95,7 @@ SCRIPT;
     private function wordpressDeployScript(): string
     {
         return <<<'SCRIPT'
-cd $SITE_ROOT
-
 git pull origin $BRANCH
-
-( flock -w 10 9 || exit 1
-    echo 'Restarting FPM...'; sudo -S service $PHP_FPM reload ) 9>/tmp/fpmlock
 SCRIPT;
     }
 }

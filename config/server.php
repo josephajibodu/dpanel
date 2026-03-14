@@ -16,6 +16,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Web Server User
+    |--------------------------------------------------------------------------
+    |
+    | The user that PHP-FPM runs as for web requests. This user needs write
+    | access to storage and bootstrap/cache so Laravel can compile views,
+    | write logs, and manage sessions.
+    |
+    */
+
+    'web_user' => env('SERVER_WEB_USER', 'www-data'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Server Home Directory
     |--------------------------------------------------------------------------
     |

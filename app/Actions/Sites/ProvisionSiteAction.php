@@ -75,9 +75,16 @@ class ProvisionSiteAction
 
             // Set proper permissions (matching Forge: 775 for dirs, 664 for files)
             $serverUser = config('server.user');
+            $webUser = config('server.web_user');
             $connection->exec("chown -R {$serverUser}:{$serverUser} {$siteRoot}");
             $connection->exec("find {$siteRoot} -type d -exec chmod 775 {} \\;");
             $connection->exec("find {$siteRoot} -type f -exec chmod 664 {} \\;");
+
+            // Allow web server (www-data) to write to Laravel paths (storage, bootstrap/cache, database)
+            $connection->exec("if [ -d {$siteRoot}/storage ]; then sudo chown -R {$serverUser}:{$webUser} {$siteRoot}/storage {$siteRoot}/bootstrap/cache {$siteRoot}/database && sudo chmod -R 775 {$siteRoot}/storage {$siteRoot}/bootstrap/cache {$siteRoot}/database; fi");
+
+            // Allow web server (www-data) to write to Symfony paths (var/cache, var/log)
+            $connection->exec("if [ -d {$siteRoot}/var ]; then mkdir -p {$siteRoot}/var/cache {$siteRoot}/var/log && sudo chown -R {$serverUser}:{$webUser} {$siteRoot}/var/cache {$siteRoot}/var/log && sudo chmod -R 775 {$siteRoot}/var/cache {$siteRoot}/var/log; fi");
 
             $connection->disconnect();
 

@@ -9,6 +9,7 @@ use App\Events\DeploymentStatusChanged;
 use App\Exceptions\DeploymentFailedException;
 use App\Models\Deployment;
 use App\Models\Site;
+use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -186,12 +187,16 @@ class DeploySiteJob implements ShouldQueue
         $phpFpm = "php{$phpVersion}-fpm";
 
         // Preamble: set shell variables that default scripts use ($SITE_ROOT, $BRANCH, $PHP, etc.)
+        $serverUser = config('server.user');
+        $webUser = config('server.web_user');
         $preamble = "SITE_ROOT='{$siteRoot}'\n";
         $preamble .= "WEB_ROOT='{$webRoot}'\n";
         $preamble .= "BRANCH='{$site->branch}'\n";
         $preamble .= "PHP='{$phpBinary}'\n";
         $preamble .= "COMPOSER='composer'\n";
-        $preamble .= "PHP_FPM='{$phpFpm}'\n\n";
+        $preamble .= "PHP_FPM='{$phpFpm}'\n";
+        $preamble .= "SERVER_USER='{$serverUser}'\n";
+        $preamble .= "WEB_USER='{$webUser}'\n\n";
 
         // Replace placeholder variables in script ({{SITE_PATH}}, {{BRANCH}}, etc.)
         $replacements = [
@@ -202,7 +207,9 @@ class DeploySiteJob implements ShouldQueue
             '{{PHP_VERSION}}' => $phpVersion,
         ];
 
-        $prepared = $preamble.str_replace(array_keys($replacements), array_values($replacements), $script);
+        $strategy = app(DeploymentStrategy::class);
+        $userScript = str_replace(array_keys($replacements), array_values($replacements), $script);
+        $prepared = $preamble.$strategy->prepend($site).$userScript.$strategy->append($site);
 
         // Create a temporary script file and execute it
         $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
