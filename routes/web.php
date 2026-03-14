@@ -147,6 +147,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('servers.cron-jobs.disable');
         Route::patch('servers/{server}/cron-jobs/{cron_job}/enable', [CronJobController::class, 'enable'])
             ->name('servers.cron-jobs.enable');
+        Route::get('servers/{server}/settings', [ServerController::class, 'settings'])
+            ->name('servers.settings');
     });
 
     // SSH Keys

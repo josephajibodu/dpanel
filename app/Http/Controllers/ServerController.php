@@ -133,6 +133,28 @@ class ServerController extends Controller
         ]);
     }
 
+    public function settings(Server $server): Response
+    {
+        $this->authorize('view', $server);
+
+        $serverUser = config('server.user');
+        $sshCommand = $server->ip_address
+            ? ($server->ssh_port === 22
+                ? "ssh {$serverUser}@{$server->ip_address}"
+                : "ssh {$serverUser}@{$server->ip_address} -p {$server->ssh_port}")
+            : null;
+
+        $hasSshKey = $server->sshKeys()
+            ->where('user_id', auth()->id())
+            ->exists();
+
+        return Inertia::render('servers/settings', [
+            'server' => new ServerResource($server),
+            'ssh_command' => $sshCommand,
+            'has_ssh_key' => $hasSshKey,
+        ]);
+    }
+
     public function destroy(
         Server $server,
         DeleteServerAction $action,

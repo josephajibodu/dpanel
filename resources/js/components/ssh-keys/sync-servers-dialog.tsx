@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 interface SyncServersDialogProps {
     sshKey: SshKey;
-    servers: Server[];
+    servers: Server[] | { data: Server[] };
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
@@ -20,9 +20,11 @@ export function SyncServersDialog({ sshKey, servers, open, onOpenChange }: SyncS
     const [selectedServerIds, setSelectedServerIds] = useState<number[]>([]);
     const [processing, setProcessing] = useState(false);
 
+    const serversList = Array.isArray(servers) ? servers : (servers?.data ?? []);
+
     // Filter out servers that already have this key synced
     const syncedServerIds = sshKey.servers?.filter((s) => s.status === 'synced').map((s) => s.id) ?? [];
-    const availableServers = servers.filter((s) => !syncedServerIds.includes(s.id) && s.status === 'active');
+    const availableServers = serversList.filter((s) => !syncedServerIds.includes(s.id) && s.status === 'active');
 
     const handleToggleServer = (serverId: number) => {
         setSelectedServerIds((prev) => (prev.includes(serverId) ? prev.filter((id) => id !== serverId) : [...prev, serverId]));
@@ -70,7 +72,7 @@ export function SyncServersDialog({ sshKey, servers, open, onOpenChange }: SyncS
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                         <ServerIcon className="text-muted-foreground mb-2 h-8 w-8" />
                         <p className="text-muted-foreground text-sm">
-                            {servers.length === 0 ? 'No active servers available.' : 'This key is already synced to all available servers.'}
+                            {serversList.length === 0 ? 'No active servers available.' : 'This key is already synced to all available servers.'}
                         </p>
                     </div>
                 ) : (
