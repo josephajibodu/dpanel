@@ -13,22 +13,20 @@ import { Server } from '@/types/server';
 import { PhpVersion, ProjectType, RepositoryProvider } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
 
+interface Repository {
+    id: number;
+    name: string;
+    full_name: string;
+    ssh_url: string;
+    html_url: string;
+    default_branch: string;
+    private: boolean;
+}
+
 interface SourceControlData {
     accounts: {
         data: SourceControlAccount[];
     };
-    repositories: Record<
-        number,
-        Array<{
-            id: number;
-            name: string;
-            full_name: string;
-            ssh_url: string;
-            html_url: string;
-            default_branch: string;
-            private: boolean;
-        }>
-    >;
 }
 
 interface Branch {
@@ -66,6 +64,8 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
     const { data: serverData } = server;
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loadingBranches, setLoadingBranches] = useState(false);
+    const [repositories, setRepositories] = useState<Repository[]>([]);
+    const [loadingRepositories, setLoadingRepositories] = useState(false);
     const [useCustomDomain, setUseCustomDomain] = useState(false);
 
     const form = useForm({
@@ -89,6 +89,48 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
         { title: serverData.name, href: `/servers/${serverData.id}` },
         { title: 'New Site', href: `/servers/${serverData.id}/sites/create` },
     ];
+
+    // Fetch repositories when source control account is selected
+    useEffect(() => {
+        if (!form.data.source_control_account_id) {
+            setRepositories([]);
+            setLoadingRepositories(false);
+            return;
+        }
+
+        setLoadingRepositories(true);
+        const accountId = form.data.source_control_account_id;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const url = `/source-control/${accountId}/repositories`;
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    return res.text().then((text) => {
+                        throw new Error(`HTTP ${res.status}: ${text}`);
+                    });
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setRepositories(data.repositories || []);
+            })
+            .catch(() => {
+                setRepositories([]);
+            })
+            .finally(() => {
+                setLoadingRepositories(false);
+            });
+    }, [form.data.source_control_account_id]);
 
     // Fetch branches when repository is selected
     useEffect(() => {
@@ -361,6 +403,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                                             branch: 'main',
                                                         });
                                                         setBranches([]);
+                                                        setRepositories([]);
                                                     }}
                                                 >
                                                     <SelectTrigger id="source_control_account_id">
@@ -376,39 +419,56 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                                 </Select>
                                             </div>
 
-                                            {form.data.source_control_account_id &&
-                                                sourceControl.repositories[form.data.source_control_account_id]?.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="repository">Repository</Label>
-                                                        <Select
-                                                            value={form.data.repository}
-                                                            onValueChange={(fullName) => {
-                                                                const repos = sourceControl.repositories[form.data.source_control_account_id!];
-                                                                const selectedRepo = repos.find((r) => r.full_name === fullName);
+                                            {form.data.source_control_account_id && (
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="repository">Repository</Label>
+                                                    <Select
+                                                        value={form.data.repository}
+                                                        onValueChange={(fullName) => {
+                                                            const selectedRepo = repositories.find((r) => r.full_name === fullName);
 
-                                                                form.setData({
-                                                                    ...form.data,
-                                                                    repository: fullName,
-                                                                    branch: selectedRepo?.default_branch || form.data.branch,
-                                                                });
-                                                            }}
-                                                        >
-                                                            <SelectTrigger id="repository">
-                                                                <SelectValue placeholder="Select a repository" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {sourceControl.repositories[form.data.source_control_account_id].map((repo) => (
+                                                            form.setData({
+                                                                ...form.data,
+                                                                repository: fullName,
+                                                                branch: selectedRepo?.default_branch || form.data.branch,
+                                                            });
+                                                        }}
+                                                        disabled={loadingRepositories}
+                                                    >
+                                                        <SelectTrigger id="repository">
+                                                            <SelectValue
+                                                                placeholder={
+                                                                    loadingRepositories ? 'Loading repositories...' : 'Select a repository'
+                                                                }
+                                                            />
+                                                            {loadingRepositories && (
+                                                                <Loader2Icon className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                                            )}
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {loadingRepositories ? (
+                                                                <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
+                                                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                                    Loading repositories...
+                                                                </div>
+                                                            ) : repositories.length > 0 ? (
+                                                                repositories.map((repo) => (
                                                                     <SelectItem key={repo.id} value={repo.full_name}>
                                                                         {repo.full_name}
                                                                         {repo.private && (
                                                                             <span className="text-muted-foreground ml-1 text-xs">(private)</span>
                                                                         )}
                                                                     </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
+                                                                ))
+                                                            ) : (
+                                                                <div className="py-4 text-center text-muted-foreground text-sm">
+                                                                    No repositories available
+                                                                </div>
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {form.data.repository && (
@@ -462,7 +522,8 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                         )}
 
                                         {form.data.source_control_account_id &&
-                                            sourceControl.repositories[form.data.source_control_account_id]?.length === 0 && (
+                                            !loadingRepositories &&
+                                            repositories.length === 0 && (
                                                 <div className="rounded-lg border border-dashed p-4 text-center">
                                                     <p className="text-muted-foreground text-sm">No repositories found for this account.</p>
                                                 </div>

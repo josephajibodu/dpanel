@@ -136,6 +136,19 @@ class SourceControlAccountController extends Controller
             ->with('success', "{$providerLabel} account disconnected.");
     }
 
+    public function repositories(
+        SourceControlAccount $sourceControlAccount,
+        SourceControlService $sourceControlService,
+    ): JsonResponse {
+        $this->authorize('view', $sourceControlAccount);
+
+        $repositories = $sourceControlService->listRepositories($sourceControlAccount);
+
+        return response()->json([
+            'repositories' => $repositories->all(),
+        ]);
+    }
+
     public function branches(
         SourceControlAccount $sourceControlAccount,
         string $repository,

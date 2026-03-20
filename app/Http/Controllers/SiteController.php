@@ -15,7 +15,6 @@ use App\Http\Resources\SourceControlAccountResource;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
-use App\Services\SourceControlService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,7 +35,7 @@ class SiteController extends Controller
         ]);
     }
 
-    public function create(Server $server, SourceControlService $sourceControlService): Response
+    public function create(Server $server): Response
     {
         $this->authorize('create', [Site::class, $server]);
 
@@ -46,14 +45,6 @@ class SiteController extends Controller
         $sourceControlAccounts = auth()->user()
             ->sourceControlAccounts()
             ->get();
-
-        $repositoriesByAccount = [];
-
-        foreach ($sourceControlAccounts as $account) {
-            $repositoriesByAccount[$account->id] = $sourceControlService
-                ->listRepositories($account)
-                ->all();
-        }
 
         return Inertia::render('sites/create', [
             'server' => new ServerResource($server),
@@ -74,7 +65,6 @@ class SiteController extends Controller
             ],
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
-                'repositories' => $repositoriesByAccount,
             ],
         ]);
     }
