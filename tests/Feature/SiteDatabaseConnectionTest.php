@@ -313,4 +313,40 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_DATABASE')))->toBeFalse();
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_USERNAME')))->toBeFalse();
     });
+
+    it('correctly escapes URLs with forward slashes in sed commands', function () {
+        Event::fake([ServerSitesUpdated::class]);
+
+        $site = Site::factory()->forServer($this->server)->pending()->create([
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::Laravel,
+            'server_database_id' => null,
+            'domain' => 'app.68-183-76-255.nip.io',
+        ]);
+        $site->deployScript()->create(['script' => 'echo "test"']);
+
+        $execCalls = [];
+        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection->shouldReceive('exec')
+            ->andReturnUsing(function (string $cmd) use (&$execCalls) {
+                $execCalls[] = $cmd;
+
+                return str_contains($cmd, 'nginx -t') ? 'syntax is ok' : '';
+            });
+        $mockConnection->shouldReceive('disconnect')->andReturn(null);
+
+        $sshService = \Mockery::mock(SshService::class);
+        $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
+        $this->app->instance(SshService::class, $sshService);
+
+        app(ProvisionSiteAction::class)->execute($site);
+
+        $sedCalls = collect($execCalls)->filter(fn ($c) => str_contains($c, 'sed'));
+
+        $appUrlCall = $sedCalls->first(fn ($c) => str_contains($c, 'APP_URL'));
+        expect($appUrlCall)->not->toBeNull();
+        expect($appUrlCall)->toContain('APP_URL=https://app.68-183-76-255.nip.io');
+        expect($appUrlCall)->not->toContain('\\/');
+    });
 });

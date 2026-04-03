@@ -68,11 +68,11 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
      */
     private function sedEnv(string $envPath, string $key, string $value): void
     {
-        $escapedValue = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $value);
+        $escapedValue = str_replace(['\\', '#', '&'], ['\\\\', '\\#', '\\&'], $value);
 
         $this->connection->exec(
             "if [ -f {$envPath} ] && grep -q '^{$key}=' {$envPath}; then "
-            ."sed -i 's/^{$key}=.*/{$key}={$escapedValue}/' {$envPath}; "
+            ."sed -i 's#^{$key}=.*#{$key}={$escapedValue}#' {$envPath}; "
             ."elif [ -f {$envPath} ]; then "
             ."echo '{$key}={$value}' >> {$envPath}; fi"
         );
