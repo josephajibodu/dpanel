@@ -32,6 +32,7 @@ class CreateSiteAction
             'repository_provider' => $data->repositoryProvider->value,
             'branch' => $data->branch,
             'project_type' => $data->projectType->value,
+            'server_database_id' => $data->serverDatabaseId,
             'php_version' => $data->phpVersion,
             'package_manager' => $data->packageManager,
             'build_command' => $data->buildCommand,

@@ -66,6 +66,11 @@ class StoreSiteRequest extends FormRequest
             'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
+            'server_database_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('server_databases', 'id')->where('server_id', $this->input('server_id')),
+            ],
             'php_version' => ['sometimes', 'string', Rule::in($this->getServerInstalledPhpVersions())],
             'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
             'build_command' => ['nullable', 'string', 'max:500'],
@@ -90,6 +95,7 @@ class StoreSiteRequest extends FormRequest
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
+            'server_database_id.exists' => 'The selected database does not belong to this server.',
         ];
     }
 

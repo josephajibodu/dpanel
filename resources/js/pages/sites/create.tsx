@@ -1,6 +1,6 @@
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, GlobeIcon, Loader2Icon, PackageIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { ArrowLeftIcon, DatabaseIcon, EyeIcon, EyeOffIcon, GlobeIcon, Loader2Icon, PackageIcon, PlusIcon } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { RepositorySelector } from '@/components/sites/repository-selector';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Server } from '@/types/server';
+import { Server, ServerDatabase } from '@/types/server';
 import { PhpVersion, ProjectType, RepositoryProvider } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
 
@@ -42,6 +44,7 @@ interface Props {
     projectTypes: ProjectType[];
     repositoryProviders: RepositoryProvider[];
     phpVersions: PhpVersion[];
+    databases: { data: ServerDatabase[] };
     sourceControl?: SourceControlData;
 }
 
@@ -61,13 +64,19 @@ const DEFAULT_BUILD_COMMANDS: Record<string, string> = {
     bun: 'bun run build',
 };
 
-export default function SitesCreate({ server, projectTypes, repositoryProviders, phpVersions, sourceControl }: Props) {
+export default function SitesCreate({ server, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
     const { data: serverData } = server;
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loadingBranches, setLoadingBranches] = useState(false);
     const [repositories, setRepositories] = useState<Repository[]>([]);
     const [loadingRepositories, setLoadingRepositories] = useState(false);
     const [useCustomDomain, setUseCustomDomain] = useState(false);
+    const [connectDatabase, setConnectDatabase] = useState(false);
+    const [createDbOpen, setCreateDbOpen] = useState(false);
+    const [isCreatingDb, setIsCreatingDb] = useState(false);
+    const [showDbPassword, setShowDbPassword] = useState(false);
+    const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+    const pendingDbNameRef = useRef<string | null>(null);
 
     const firstAccountId = sourceControl?.accounts.data[0]?.id;
 
@@ -81,11 +90,87 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
         branch: 'main',
         project_type: 'laravel',
         php_version: serverData.php_version || phpVersions[0]?.value || '8.3',
+        server_database_id: undefined as number | undefined,
         package_manager: 'npm',
         build_command: 'npm run build',
         auto_deploy: false,
         source_control_account_id: firstAccountId ?? undefined,
     });
+
+    const dbList = databases?.data ?? [];
+    const readyDatabases = dbList.filter((db) => db.status === 'ready');
+    const pendingDatabases = dbList.filter((db) => db.status === 'pending');
+
+    useEffect(() => {
+        if (!serverData.id || !window.Echo) {
+            return;
+        }
+
+        const channel = window.Echo.private(`server.${serverData.id}`);
+
+        channel.listen('.server.databases.updated', () => {
+            router.reload({ only: ['databases'], preserveScroll: true });
+        });
+
+        return () => {
+            channel.stopListening('.server.databases.updated');
+            window.Echo.leave(`server.${serverData.id}`);
+        };
+    }, [serverData.id]);
+
+    useEffect(() => {
+        if (pendingDbNameRef.current) {
+            const newDb = readyDatabases.find((db) => db.name === pendingDbNameRef.current);
+            if (newDb) {
+                form.setData('server_database_id', newDb.id);
+                pendingDbNameRef.current = null;
+            }
+        }
+    }, [readyDatabases]);
+
+    const generatePassword = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let password = '';
+        const array = new Uint32Array(24);
+        crypto.getRandomValues(array);
+        for (let i = 0; i < 24; i++) {
+            password += chars[array[i] % chars.length];
+        }
+        return password;
+    };
+
+    function handleCreateDatabase(e: React.FormEvent) {
+        e.preventDefault();
+        setIsCreatingDb(true);
+        pendingDbNameRef.current = dbForm.name;
+        router.post(
+            `/servers/${serverData.id}/databases`,
+            {
+                name: dbForm.name,
+                charset: dbForm.charset || undefined,
+                collation: dbForm.collation || undefined,
+                db_user: dbForm.db_user || undefined,
+                db_password: dbForm.db_password || undefined,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setCreateDbOpen(false);
+                    setDbForm({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+                    setShowDbPassword(false);
+                },
+                onFinish: () => setIsCreatingDb(false),
+            },
+        );
+    }
+
+    function handleDatabaseToggle(checked: boolean) {
+        setConnectDatabase(checked);
+        if (!checked) {
+            form.setData('server_database_id', undefined);
+        }
+    }
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: '/servers' },
@@ -610,6 +695,86 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                             </CardContent>
                         </Card>
 
+                        {/* Database Connection */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <DatabaseIcon className="h-5 w-5" />
+                                            Connect to Database
+                                        </CardTitle>
+                                        <CardDescription>Select or create a database to connect to your site.</CardDescription>
+                                    </div>
+                                    <Switch checked={connectDatabase} onCheckedChange={handleDatabaseToggle} />
+                                </div>
+                            </CardHeader>
+                            {connectDatabase && (
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="server_database_id">Database</Label>
+                                        <Select
+                                            value={form.data.server_database_id ? String(form.data.server_database_id) : ''}
+                                            onValueChange={(value) => {
+                                                if (value === '__create__') {
+                                                    setCreateDbOpen(true);
+                                                    return;
+                                                }
+                                                form.setData('server_database_id', Number(value));
+                                            }}
+                                        >
+                                            <SelectTrigger id="server_database_id" className={form.errors.server_database_id ? 'border-destructive' : ''}>
+                                                <SelectValue placeholder="Select a database" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {readyDatabases.map((db) => (
+                                                    <SelectItem key={db.id} value={String(db.id)}>
+                                                        {db.name}
+                                                    </SelectItem>
+                                                ))}
+                                                {pendingDatabases.map((db) => (
+                                                    <SelectItem key={db.id} value={String(db.id)} disabled>
+                                                        <span className="flex items-center gap-2">
+                                                            <Loader2Icon className="h-3 w-3 animate-spin" />
+                                                            {db.name}
+                                                            <span className="text-muted-foreground text-xs">(creating…)</span>
+                                                        </span>
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value="__create__">
+                                                    <span className="flex items-center gap-1 text-primary">
+                                                        <PlusIcon className="h-3.5 w-3.5" />
+                                                        Create database
+                                                    </span>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {form.errors.server_database_id && (
+                                            <p className="text-destructive text-sm">{form.errors.server_database_id}</p>
+                                        )}
+                                    </div>
+                                    {pendingDatabases.length > 0 && (
+                                        <div className="flex items-center gap-2 rounded-lg border border-dashed p-3">
+                                            <Loader2Icon className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                                            <p className="text-muted-foreground text-sm">
+                                                {pendingDatabases.length === 1
+                                                    ? `Database "${pendingDatabases[0].name}" is being created…`
+                                                    : `${pendingDatabases.length} databases are being created…`}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {readyDatabases.length === 0 && pendingDatabases.length === 0 && (
+                                        <div className="rounded-lg border border-dashed p-4 text-center">
+                                            <p className="text-muted-foreground text-sm">No databases available on this server.</p>
+                                            <Button type="button" variant="link" className="mt-1 h-auto p-0" onClick={() => setCreateDbOpen(true)}>
+                                                Create one now
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            )}
+                        </Card>
+
                         {/* Submit */}
                         <div className="flex justify-end gap-3">
                             <Button type="button" variant="outline" asChild>
@@ -617,7 +782,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={form.processing || (!form.data.domain && !form.data.site_name)}
+                                disabled={form.processing || (!form.data.domain && !form.data.site_name) || (connectDatabase && !form.data.server_database_id)}
                             >
                                 {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
                                 Create Site
@@ -625,6 +790,102 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                         </div>
                     </div>
                 </form>
+
+                {/* Create Database Sheet */}
+                <Sheet open={createDbOpen} onOpenChange={setCreateDbOpen}>
+                    <SheetContent side="right">
+                        <SheetHeader>
+                            <SheetTitle>Create database</SheetTitle>
+                        </SheetHeader>
+                        <form onSubmit={handleCreateDatabase} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="new-db-name">Name</Label>
+                                <Input
+                                    id="new-db-name"
+                                    value={dbForm.name}
+                                    onChange={(e) => setDbForm((p) => ({ ...p, name: e.target.value }))}
+                                    placeholder="mydb"
+                                    className="font-mono"
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="new-db-charset">Charset (optional)</Label>
+                                <Input
+                                    id="new-db-charset"
+                                    value={dbForm.charset}
+                                    onChange={(e) => setDbForm((p) => ({ ...p, charset: e.target.value }))}
+                                    placeholder="utf8mb4"
+                                    className="font-mono"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="new-db-collation">Collation (optional)</Label>
+                                <Input
+                                    id="new-db-collation"
+                                    value={dbForm.collation}
+                                    onChange={(e) => setDbForm((p) => ({ ...p, collation: e.target.value }))}
+                                    placeholder="utf8mb4_unicode_ci"
+                                    className="font-mono"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="new-db-user">Database user (optional)</Label>
+                                <Input
+                                    id="new-db-user"
+                                    value={dbForm.db_user}
+                                    onChange={(e) => setDbForm((p) => ({ ...p, db_user: e.target.value }))}
+                                    placeholder="Leave blank for default user"
+                                    className="font-mono"
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="new-db-password">Password</Label>
+                                    <button
+                                        type="button"
+                                        className="text-primary text-sm font-medium hover:underline"
+                                        onClick={() => {
+                                            const pw = generatePassword();
+                                            setDbForm((p) => ({ ...p, db_password: pw }));
+                                            setShowDbPassword(true);
+                                        }}
+                                    >
+                                        Generate password
+                                    </button>
+                                </div>
+                                <div className="relative">
+                                    <Input
+                                        id="new-db-password"
+                                        type={showDbPassword ? 'text' : 'password'}
+                                        value={dbForm.db_password}
+                                        onChange={(e) => setDbForm((p) => ({ ...p, db_password: e.target.value }))}
+                                        placeholder="••••••••"
+                                        autoComplete="new-password"
+                                        className="pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                                        onClick={() => setShowDbPassword((v) => !v)}
+                                        tabIndex={-1}
+                                    >
+                                        {showDbPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <SheetFooter>
+                                <Button type="button" variant="outline" onClick={() => setCreateDbOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isCreatingDb || !dbForm.name}>
+                                    {isCreatingDb ? 'Creating…' : 'Create database'}
+                                </Button>
+                            </SheetFooter>
+                        </form>
+                    </SheetContent>
+                </Sheet>
             </div>
         </AppLayout>
     );

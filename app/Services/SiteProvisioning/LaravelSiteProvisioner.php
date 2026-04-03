@@ -3,6 +3,7 @@
 namespace App\Services\SiteProvisioning;
 
 use App\Enums\SiteProvisioningStep;
+use App\Models\DatabaseUser;
 
 class LaravelSiteProvisioner extends BaseSiteProvisioner
 {
@@ -15,7 +16,66 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     {
         $this->connection->exec("if [ -f {$this->siteRoot}/.env.example ]; then cp {$this->siteRoot}/.env.example {$this->siteRoot}/.env; fi");
 
+        $this->configureEnvValues();
+
         $this->connection->exec("if [ -f {$this->siteRoot}/.env ]; then sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env && sudo chmod 640 {$this->siteRoot}/.env; fi");
+    }
+
+    protected function configureEnvValues(): void
+    {
+        $envPath = "{$this->siteRoot}/.env";
+        $domain = $this->site->domain;
+
+        $this->sedEnv($envPath, 'APP_ENV', 'production');
+        $this->sedEnv($envPath, 'APP_DEBUG', 'false');
+        $this->sedEnv($envPath, 'APP_URL', "https://{$domain}");
+
+        $serverDatabase = $this->site->serverDatabase;
+        if (! $serverDatabase) {
+            return;
+        }
+
+        $server = $this->site->server;
+        $dbUser = DatabaseUser::query()
+            ->where('server_id', $server->id)
+            ->whereJsonContains('databases', $serverDatabase->name)
+            ->first();
+
+        if (! $dbUser) {
+            return;
+        }
+
+        $dbType = $server->database_type;
+        $connection = match ($dbType) {
+            'postgresql' => 'pgsql',
+            default => 'mysql',
+        };
+        $port = match ($dbType) {
+            'postgresql' => '5432',
+            default => '3306',
+        };
+
+        $this->sedEnv($envPath, 'DB_CONNECTION', $connection);
+        $this->sedEnv($envPath, 'DB_HOST', '127.0.0.1');
+        $this->sedEnv($envPath, 'DB_PORT', $port);
+        $this->sedEnv($envPath, 'DB_DATABASE', $serverDatabase->name);
+        $this->sedEnv($envPath, 'DB_USERNAME', $dbUser->username);
+        $this->sedEnv($envPath, 'DB_PASSWORD', $dbUser->password);
+    }
+
+    /**
+     * Replace or append an environment variable in a .env file via sed.
+     */
+    private function sedEnv(string $envPath, string $key, string $value): void
+    {
+        $escapedValue = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $value);
+
+        $this->connection->exec(
+            "if [ -f {$envPath} ] && grep -q '^{$key}=' {$envPath}; then "
+            ."sed -i 's/^{$key}=.*/{$key}={$escapedValue}/' {$envPath}; "
+            ."elif [ -f {$envPath} ]; then "
+            ."echo '{$key}={$value}' >> {$envPath}; fi"
+        );
     }
 
     protected function installDependencies(): void

@@ -22,6 +22,7 @@ readonly class SiteData
         public string $branch = 'main',
         public ProjectType $projectType = ProjectType::Laravel,
         public string $phpVersion = '8.3',
+        public ?int $serverDatabaseId = null,
         public ?string $packageManager = null,
         public ?string $buildCommand = null,
         public bool $autoDeploy = false,
@@ -48,6 +49,7 @@ readonly class SiteData
                 ? ProjectType::from($data['project_type'])
                 : ProjectType::Laravel,
             phpVersion: $data['php_version'] ?? '8.3',
+            serverDatabaseId: $data['server_database_id'] ?? null,
             packageManager: $data['package_manager'] ?? null,
             buildCommand: $data['build_command'] ?? null,
             autoDeploy: $data['auto_deploy'] ?? false,
@@ -71,6 +73,7 @@ readonly class SiteData
             'branch' => $this->branch,
             'project_type' => $this->projectType->value,
             'php_version' => $this->phpVersion,
+            'server_database_id' => $this->serverDatabaseId,
             'package_manager' => $this->packageManager,
             'build_command' => $this->buildCommand,
             'auto_deploy' => $this->autoDeploy,

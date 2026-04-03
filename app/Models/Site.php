@@ -29,6 +29,7 @@ class Site extends Model
         'repository_provider',
         'branch',
         'project_type',
+        'server_database_id',
         'php_version',
         'package_manager',
         'build_command',
@@ -117,6 +118,11 @@ class Site extends Model
     public function sourceControlAccount(): BelongsTo
     {
         return $this->belongsTo(SourceControlAccount::class);
+    }
+
+    public function serverDatabase(): BelongsTo
+    {
+        return $this->belongsTo(ServerDatabase::class);
     }
 
     public function deployments(): HasMany

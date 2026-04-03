@@ -9,6 +9,7 @@ use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
+use App\Http\Resources\ServerDatabaseResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Http\Resources\SourceControlAccountResource;
@@ -75,6 +76,7 @@ class SiteController extends Controller
                 'label' => $provider->label(),
             ]),
             'phpVersions' => $phpVersions,
+            'databases' => ServerDatabaseResource::collection($server->databases),
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],
