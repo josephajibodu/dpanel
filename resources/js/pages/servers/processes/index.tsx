@@ -50,6 +50,7 @@ import type {
 import { Head, router, usePage } from '@inertiajs/react';
 import {
     ClockIcon,
+    Loader2Icon,
     PencilIcon,
     PlayIcon,
     PlusIcon,
@@ -112,6 +113,8 @@ export default function ServerProcessesIndex({
     const [logsContent, setLogsContent] = useState('');
     const [logsLoading, setLogsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeletingWorker, setIsDeletingWorker] = useState(false);
+    const [isDeletingCron, setIsDeletingCron] = useState(false);
 
     const [workerForm, setWorkerForm] = useState({
         name: '',
@@ -229,11 +232,18 @@ export default function ServerProcessesIndex({
 
     const confirmDeleteWorker = () => {
         if (!server?.id || !workerToDelete) return;
+        setIsDeletingWorker(true);
         router.delete(
             `/servers/${server.id}/workers/${workerToDelete.id}`,
-            { preserveScroll: true, onSuccess: () => setDeleteWorkerOpen(false) },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsDeletingWorker(false);
+                    setDeleteWorkerOpen(false);
+                    setWorkerToDelete(null);
+                },
+            },
         );
-        setWorkerToDelete(null);
     };
 
     const handleCreateCron = (e: React.FormEvent) => {
@@ -300,11 +310,18 @@ export default function ServerProcessesIndex({
 
     const confirmDeleteCron = () => {
         if (!server?.id || !cronToDelete) return;
+        setIsDeletingCron(true);
         router.delete(
             `/servers/${server.id}/cron-jobs/${cronToDelete.id}`,
-            { preserveScroll: true, onSuccess: () => setDeleteCronOpen(false) },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsDeletingCron(false);
+                    setDeleteCronOpen(false);
+                    setCronToDelete(null);
+                },
+            },
         );
-        setCronToDelete(null);
     };
 
     const frequencyLabel = (value: string) =>
@@ -394,12 +411,13 @@ export default function ServerProcessesIndex({
                                                 </TableCell>
                                                 <TableCell>
                                                     <span
-                                                        className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
+                                                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${
                                                             w.status === 'active'
                                                                 ? 'bg-green-500/15 text-green-700 dark:text-green-400'
                                                                 : 'bg-muted text-muted-foreground'
                                                         }`}
                                                     >
+                                                        {w.status !== 'active' && <Loader2Icon className="h-3 w-3 animate-spin" />}
                                                         {w.status}
                                                     </span>
                                                 </TableCell>
@@ -1287,6 +1305,7 @@ export default function ServerProcessesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteWorker}
+                loading={isDeletingWorker}
             />
 
             <ConfirmDialog
@@ -1297,6 +1316,7 @@ export default function ServerProcessesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteCron}
+                loading={isDeletingCron}
             />
         </AppLayout>
     );

@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Dialog,
     DialogClose,
@@ -46,7 +47,8 @@ export function ConfirmDialog({
                         </Button>
                     </DialogClose>
                     <Button variant={variant === 'destructive' ? 'destructive' : 'default'} onClick={onConfirm} disabled={loading}>
-                        {loading ? 'Loading...' : confirmLabel}
+                        {loading && <Spinner className="mr-2" />}
+                        {confirmLabel}
                     </Button>
                 </DialogFooter>
             </DialogContent>

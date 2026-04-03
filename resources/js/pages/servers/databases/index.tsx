@@ -39,6 +39,7 @@ import {
     DatabaseIcon,
     EyeIcon,
     EyeOffIcon,
+    Loader2Icon,
     PencilIcon,
     PlusIcon,
     Trash2Icon,
@@ -60,11 +61,13 @@ function StatusBadge({ status }: { status: string }) {
         failed: 'bg-destructive/15 text-destructive',
     };
     const label = status.charAt(0).toUpperCase() + status.slice(1);
+    const isPending = status === 'pending';
 
     return (
         <span
-            className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${styles[status] ?? 'bg-muted text-muted-foreground'}`}
+            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${styles[status] ?? 'bg-muted text-muted-foreground'}`}
         >
+            {isPending && <Loader2Icon className="h-3 w-3 animate-spin" />}
             {label}
         </span>
     );
@@ -93,6 +96,8 @@ export default function ServerDatabasesIndex({
     const [dbToDelete, setDbToDelete] = useState<ServerDatabase | null>(null);
     const [userToDelete, setUserToDelete] = useState<DatabaseUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeletingDb, setIsDeletingDb] = useState(false);
+    const [isDeletingUser, setIsDeletingUser] = useState(false);
 
     const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
     const [showDbPassword, setShowDbPassword] = useState(false);
@@ -212,20 +217,34 @@ export default function ServerDatabasesIndex({
 
     const confirmDeleteDb = () => {
         if (!server?.id || !dbToDelete) return;
+        setIsDeletingDb(true);
         router.delete(
             `/servers/${server.id}/databases/${dbToDelete.id}`,
-            { preserveScroll: true, onSuccess: () => setDeleteDbOpen(false) },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsDeletingDb(false);
+                    setDeleteDbOpen(false);
+                    setDbToDelete(null);
+                },
+            },
         );
-        setDbToDelete(null);
     };
 
     const confirmDeleteUser = () => {
         if (!server?.id || !userToDelete) return;
+        setIsDeletingUser(true);
         router.delete(
             `/servers/${server.id}/database-users/${userToDelete.id}`,
-            { preserveScroll: true, onSuccess: () => setDeleteUserOpen(false) },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsDeletingUser(false);
+                    setDeleteUserOpen(false);
+                    setUserToDelete(null);
+                },
+            },
         );
-        setUserToDelete(null);
     };
 
     return (
@@ -786,6 +805,7 @@ export default function ServerDatabasesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteDb}
+                loading={isDeletingDb}
             />
 
             <ConfirmDialog
@@ -796,6 +816,7 @@ export default function ServerDatabasesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteUser}
+                loading={isDeletingUser}
             />
         </AppLayout>
     );
