@@ -36,6 +36,8 @@ class StoreServerDatabaseRequest extends FormRequest
             ],
             'collation' => ['nullable', 'string', 'max:64'],
             'charset' => ['nullable', 'string', 'max:32'],
+            'db_user' => ['nullable', 'string', 'max:32', 'regex:/^[a-zA-Z0-9_]+$/'],
+            'db_password' => ['nullable', 'string', 'min:8', 'max:255', 'required_with:db_user'],
         ];
     }
 
@@ -48,6 +50,9 @@ class StoreServerDatabaseRequest extends FormRequest
             'name.required' => 'Please enter a database name.',
             'name.regex' => 'Database name can only contain letters, numbers, and underscores.',
             'name.unique' => 'A database with this name already exists on this server.',
+            'db_user.regex' => 'Username can only contain letters, numbers, and underscores.',
+            'db_password.required_with' => 'A password is required when specifying a database user.',
+            'db_password.min' => 'Password must be at least 8 characters.',
         ];
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Database\CreateServerDatabase;
+use App\Events\ServerDatabasesUpdated;
 use App\Jobs\CreateServerDatabaseJob;
 use App\Models\Server;
 use App\Models\ServerCredential;
@@ -8,10 +9,13 @@ use App\Models\ServerDatabase;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
 it('creates database on server and sets status to ready', function () {
+    Event::fake([ServerDatabasesUpdated::class]);
+
     $server = Server::factory()->create([
         'database_type' => 'mysql',
         'status' => \App\Enums\ServerStatus::Active,
@@ -45,9 +49,13 @@ it('creates database on server and sets status to ready', function () {
 
     $serverDatabase->refresh();
     expect($serverDatabase->status)->toBe('ready');
+
+    Event::assertDispatched(ServerDatabasesUpdated::class, fn ($e) => $e->server->id === $server->id);
 });
 
 it('sets status to failed when server has no database password credential', function () {
+    Event::fake([ServerDatabasesUpdated::class]);
+
     $server = Server::factory()->create([
         'database_type' => 'mysql',
         'status' => \App\Enums\ServerStatus::Active,
@@ -69,4 +77,6 @@ it('sets status to failed when server has no database password credential', func
 
     $serverDatabase->refresh();
     expect($serverDatabase->status)->toBe('failed');
+
+    Event::assertDispatched(ServerDatabasesUpdated::class);
 });

@@ -26,6 +26,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import type {
@@ -36,6 +37,8 @@ import type {
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     DatabaseIcon,
+    EyeIcon,
+    EyeOffIcon,
     PencilIcon,
     PlusIcon,
     Trash2Icon,
@@ -79,6 +82,8 @@ export default function ServerDatabasesIndex({
     const userList = databaseUsers?.data ?? [];
     const { errors } = usePage().props as { errors?: Record<string, string> };
 
+    useServerDatabasesUpdates(server.id);
+
     const [createDbOpen, setCreateDbOpen] = useState(false);
     const [createUserOpen, setCreateUserOpen] = useState(false);
     const [editUserOpen, setEditUserOpen] = useState(false);
@@ -89,7 +94,8 @@ export default function ServerDatabasesIndex({
     const [userToDelete, setUserToDelete] = useState<DatabaseUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '' });
+    const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+    const [showDbPassword, setShowDbPassword] = useState(false);
     const [userForm, setUserForm] = useState({
         username: '',
         password: '',
@@ -110,6 +116,17 @@ export default function ServerDatabasesIndex({
 
     const isServerReady = serverIsReady;
 
+    const generatePassword = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let password = '';
+        const array = new Uint32Array(24);
+        crypto.getRandomValues(array);
+        for (let i = 0; i < 24; i++) {
+            password += chars[array[i] % chars.length];
+        }
+        return password;
+    };
+
     const handleCreateDatabase = (e: React.FormEvent) => {
         e.preventDefault();
         if (!server?.id) return;
@@ -118,11 +135,14 @@ export default function ServerDatabasesIndex({
             name: dbForm.name,
             charset: dbForm.charset || undefined,
             collation: dbForm.collation || undefined,
+            db_user: dbForm.db_user || undefined,
+            db_password: dbForm.db_password || undefined,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setCreateDbOpen(false);
-                setDbForm({ name: '', charset: '', collation: '' });
+                setDbForm({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+                setShowDbPassword(false);
             },
             onFinish: () => setIsSubmitting(false),
         });
@@ -460,6 +480,76 @@ export default function ServerDatabasesIndex({
                                 placeholder="utf8mb4_unicode_ci"
                                 className="font-mono"
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="db-user">Database user (optional)</Label>
+                            <Input
+                                id="db-user"
+                                value={dbForm.db_user}
+                                onChange={(e) =>
+                                    setDbForm((p) => ({
+                                        ...p,
+                                        db_user: e.target.value,
+                                    }))
+                                }
+                                placeholder="Leave blank for default user"
+                                className="font-mono"
+                                autoComplete="off"
+                            />
+                            {errors?.db_user && (
+                                <p className="text-destructive text-sm">
+                                    {errors.db_user}
+                                </p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="db-password">Password</Label>
+                                <button
+                                    type="button"
+                                    className="text-primary text-sm font-medium hover:underline"
+                                    onClick={() => {
+                                        const pw = generatePassword();
+                                        setDbForm((p) => ({ ...p, db_password: pw }));
+                                        setShowDbPassword(true);
+                                    }}
+                                >
+                                    Generate password
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    id="db-password"
+                                    type={showDbPassword ? 'text' : 'password'}
+                                    value={dbForm.db_password}
+                                    onChange={(e) =>
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            db_password: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="••••••••"
+                                    autoComplete="new-password"
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                                    onClick={() => setShowDbPassword((v) => !v)}
+                                    tabIndex={-1}
+                                >
+                                    {showDbPassword ? (
+                                        <EyeOffIcon className="h-4 w-4" />
+                                    ) : (
+                                        <EyeIcon className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
+                            {errors?.db_password && (
+                                <p className="text-destructive text-sm">
+                                    {errors.db_password}
+                                </p>
+                            )}
                         </div>
                         <SheetFooter>
                             <Button

@@ -7,6 +7,7 @@ use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class CreateServerDatabase
@@ -14,7 +15,9 @@ class CreateServerDatabase
     use EscapesShell;
 
     public function __construct(
-        private SshService $sshService
+        private SshService $sshService,
+        private CreateDatabaseUser $createDatabaseUser,
+        private UpdateDatabaseUser $updateDatabaseUser,
     ) {}
 
     /**
@@ -35,7 +38,40 @@ class CreateServerDatabase
 
         CreateServerDatabaseJob::dispatch($serverDatabase);
 
+        $this->ensureDatabaseUser($server, $serverDatabase, $input);
+
         return $serverDatabase;
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function ensureDatabaseUser(Server $server, ServerDatabase $serverDatabase, array $input): void
+    {
+        $username = ! empty($input['db_user']) ? $input['db_user'] : config('server.user');
+        $password = ! empty($input['db_password']) ? $input['db_password'] : Str::random(32);
+
+        $existingUser = $server->databaseUsers()
+            ->where('username', $username)
+            ->first();
+
+        if ($existingUser) {
+            $databases = array_unique(array_merge($existingUser->databases ?? [], [$serverDatabase->name]));
+
+            $this->updateDatabaseUser->update($existingUser, [
+                'databases' => array_values($databases),
+            ]);
+
+            return;
+        }
+
+        $this->createDatabaseUser->create($server, [
+            'username' => $username,
+            'password' => $password,
+            'databases' => [$serverDatabase->name],
+            'permission' => 'readwrite',
+            'host' => 'localhost',
+        ]);
     }
 
     public function execute(ServerDatabase $serverDatabase): void

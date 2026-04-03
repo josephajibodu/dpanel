@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Database\UpdateDatabaseUser;
+use App\Events\ServerDatabasesUpdated;
 use App\Models\DatabaseUser;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -35,6 +36,8 @@ class UpdateDatabaseUserJob implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
             throw $e;
+        } finally {
+            event(new ServerDatabasesUpdated($this->databaseUser->server));
         }
     }
 }

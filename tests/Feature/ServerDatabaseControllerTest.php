@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\ServerStatus;
+use App\Jobs\CreateDatabaseUserJob;
 use App\Jobs\CreateServerDatabaseJob;
 use App\Jobs\DestroyServerDatabaseJob;
+use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
@@ -51,8 +54,8 @@ it('denies access to databases index for another users server', function () {
     $response->assertForbidden();
 });
 
-it('stores a new database and dispatches job', function () {
-    \Illuminate\Support\Facades\Queue::fake();
+it('stores a new database and creates a default database user', function () {
+    Queue::fake();
 
     $response = $this->actingAs($this->user)
         ->post("/servers/{$this->server->id}/databases", [
@@ -71,7 +74,81 @@ it('stores a new database and dispatches job', function () {
         'status' => 'pending',
     ]);
 
-    \Illuminate\Support\Facades\Queue::assertPushed(CreateServerDatabaseJob::class);
+    $this->assertDatabaseHas('database_users', [
+        'server_id' => $this->server->id,
+        'username' => config('server.user'),
+    ]);
+
+    Queue::assertPushed(CreateServerDatabaseJob::class);
+    Queue::assertPushed(CreateDatabaseUserJob::class);
+});
+
+it('stores a new database with an explicit database user', function () {
+    Queue::fake();
+
+    $response = $this->actingAs($this->user)
+        ->post("/servers/{$this->server->id}/databases", [
+            'name' => 'custom_db',
+            'db_user' => 'custom_user',
+            'db_password' => 'secret_password_123',
+        ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('server_databases', [
+        'server_id' => $this->server->id,
+        'name' => 'custom_db',
+        'status' => 'pending',
+    ]);
+
+    $this->assertDatabaseHas('database_users', [
+        'server_id' => $this->server->id,
+        'username' => 'custom_user',
+    ]);
+
+    $dbUser = DatabaseUser::where('server_id', $this->server->id)
+        ->where('username', 'custom_user')
+        ->first();
+
+    expect($dbUser->databases)->toContain('custom_db');
+
+    Queue::assertPushed(CreateServerDatabaseJob::class);
+    Queue::assertPushed(CreateDatabaseUserJob::class);
+});
+
+it('reuses existing database user when creating a second database', function () {
+    Queue::fake();
+
+    $existingUser = DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'username' => config('server.user'),
+        'databases' => ['first_db'],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/servers/{$this->server->id}/databases", [
+            'name' => 'second_db',
+        ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseCount('database_users', 1);
+
+    $existingUser->refresh();
+    expect($existingUser->databases)->toContain('first_db')
+        ->toContain('second_db');
+});
+
+it('requires db_password when db_user is provided', function () {
+    Queue::fake();
+
+    $response = $this->actingAs($this->user)
+        ->post("/servers/{$this->server->id}/databases", [
+            'name' => 'test_db',
+            'db_user' => 'some_user',
+        ]);
+
+    $response->assertSessionHasErrors('db_password');
 });
 
 it('validates database name is unique per server', function () {

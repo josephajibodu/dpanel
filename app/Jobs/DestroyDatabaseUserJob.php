@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Database\DestroyDatabaseUser;
+use App\Events\ServerDatabasesUpdated;
 use App\Models\DatabaseUser;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,6 +27,8 @@ class DestroyDatabaseUserJob implements ShouldQueue
 
     public function handle(DestroyDatabaseUser $action): void
     {
+        $server = $this->databaseUser->server;
+
         try {
             $action->execute($this->databaseUser);
             $this->databaseUser->delete();
@@ -35,6 +38,8 @@ class DestroyDatabaseUserJob implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
             throw $e;
+        } finally {
+            event(new ServerDatabasesUpdated($server));
         }
     }
 }

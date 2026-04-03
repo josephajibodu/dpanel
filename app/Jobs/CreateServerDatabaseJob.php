@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Database\CreateServerDatabase;
+use App\Events\ServerDatabasesUpdated;
 use App\Models\ServerDatabase;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -36,6 +37,8 @@ class CreateServerDatabaseJob implements ShouldQueue
             ]);
             $this->serverDatabase->update(['status' => 'failed']);
             throw $e;
+        } finally {
+            event(new ServerDatabasesUpdated($this->serverDatabase->server));
         }
     }
 }
