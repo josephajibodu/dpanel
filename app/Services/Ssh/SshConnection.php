@@ -25,7 +25,21 @@ class SshConnection
     {
         $this->ssh->setTimeout($timeout);
 
-        $output = $this->ssh->exec($command);
+        try {
+            $output = $this->ssh->exec($command);
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'close the channel')) {
+                $this->ssh->reset();
+
+                throw new \RuntimeException(
+                    "SSH channel was left open by a previous command (likely a timeout). Connection has been reset. Original error: {$e->getMessage()}",
+                    0,
+                    $e,
+                );
+            }
+
+            throw $e;
+        }
 
         if ($this->ssh->getExitStatus() !== 0) {
             throw new SshCommandException(

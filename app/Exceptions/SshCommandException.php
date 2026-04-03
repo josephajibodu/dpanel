@@ -12,6 +12,16 @@ class SshCommandException extends Exception
         public readonly string $output,
         public readonly ?string $stderr = null,
     ) {
-        parent::__construct("SSH command failed with exit code {$exitCode}: {$command}");
+        $message = "SSH command failed with exit code {$exitCode}: {$command}";
+
+        if ($stderr) {
+            $message .= "\nSTDERR: {$stderr}";
+        }
+
+        if ($output) {
+            $message .= "\nOutput: {$output}";
+        }
+
+        parent::__construct($message);
     }
 }

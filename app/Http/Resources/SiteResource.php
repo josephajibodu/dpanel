@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\SiteProvisioningStep;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,6 +39,12 @@ class SiteResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),
+            'provisioning_step' => $this->provisioning_step ? [
+                'value' => $this->provisioning_step->value,
+                'label' => $this->provisioning_step->label(),
+                'description' => $this->provisioning_step->description(),
+            ] : null,
+            'provisioning_steps' => SiteProvisioningStep::stepsForProjectType($this->project_type ?? \App\Enums\ProjectType::Laravel),
             'auto_deploy' => $this->auto_deploy,
             'server' => new ServerResource($this->whenLoaded('server')),
             'latest_deployment' => new DeploymentResource($this->whenLoaded('latestDeployment')),

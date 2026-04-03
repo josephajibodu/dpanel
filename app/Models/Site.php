@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,7 @@ class Site extends Model
         'package_manager',
         'build_command',
         'status',
+        'provisioning_step',
         'deploy_key_id',
         'webhook_secret',
         'auto_deploy',
@@ -46,6 +48,7 @@ class Site extends Model
     {
         return [
             'status' => SiteStatus::class,
+            'provisioning_step' => SiteProvisioningStep::class,
             'project_type' => ProjectType::class,
             'repository_provider' => RepositoryProvider::class,
             'aliases' => 'array',

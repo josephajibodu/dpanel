@@ -46,6 +46,23 @@ class SiteController extends Controller
             ->sourceControlAccounts()
             ->get();
 
+        $phpVersions = $server->installedServices()
+            ->where('type', 'php')
+            ->get()
+            ->map(fn ($s) => [
+                'value' => $s->installed_version ?? $s->version,
+                'label' => 'PHP '.($s->installed_version ?? $s->version),
+            ])
+            ->filter(fn ($v) => ! empty($v['value']))
+            ->unique('value')
+            ->values()
+            ->all();
+
+        if (empty($phpVersions)) {
+            $defaultVersion = $server->php_version ?? '8.3';
+            $phpVersions = [['value' => $defaultVersion, 'label' => 'PHP '.$defaultVersion]];
+        }
+
         return Inertia::render('sites/create', [
             'server' => new ServerResource($server),
             'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
@@ -57,12 +74,7 @@ class SiteController extends Controller
                 'value' => $provider->value,
                 'label' => $provider->label(),
             ]),
-            'phpVersions' => [
-                ['value' => '8.4', 'label' => 'PHP 8.4'],
-                ['value' => '8.3', 'label' => 'PHP 8.3'],
-                ['value' => '8.2', 'label' => 'PHP 8.2'],
-                ['value' => '8.1', 'label' => 'PHP 8.1'],
-            ],
+            'phpVersions' => $phpVersions,
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],

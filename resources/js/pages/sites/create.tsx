@@ -1,7 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, GlobeIcon, Loader2Icon, PackageIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { RepositorySelector } from '@/components/sites/repository-selector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -68,20 +69,22 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
     const [loadingRepositories, setLoadingRepositories] = useState(false);
     const [useCustomDomain, setUseCustomDomain] = useState(false);
 
+    const firstAccountId = sourceControl?.accounts.data[0]?.id;
+
     const form = useForm({
         server_id: serverData.id,
         domain: '',
         site_name: '',
         directory: '/public',
         repository: '',
-        repository_provider: 'github',
+        repository_provider: sourceControl?.accounts.data[0]?.provider ?? 'github',
         branch: 'main',
         project_type: 'laravel',
-        php_version: serverData.php_version || '8.3',
+        php_version: serverData.php_version || phpVersions[0]?.value || '8.3',
         package_manager: 'npm',
         build_command: 'npm run build',
         auto_deploy: false,
-        source_control_account_id: undefined as number | undefined,
+        source_control_account_id: firstAccountId ?? undefined,
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -90,8 +93,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
         { title: 'New Site', href: `/servers/${serverData.id}/sites/create` },
     ];
 
-    // Fetch repositories when source control account is selected
-    useEffect(() => {
+    const fetchRepositories = useCallback(() => {
         if (!form.data.source_control_account_id) {
             setRepositories([]);
             setLoadingRepositories(false);
@@ -131,6 +133,10 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                 setLoadingRepositories(false);
             });
     }, [form.data.source_control_account_id]);
+
+    useEffect(() => {
+        fetchRepositories();
+    }, [fetchRepositories]);
 
     // Fetch branches when repository is selected
     useEffect(() => {
@@ -422,51 +428,21 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                             {form.data.source_control_account_id && (
                                                 <div className="space-y-2">
                                                     <Label htmlFor="repository">Repository</Label>
-                                                    <Select
+                                                    <RepositorySelector
+                                                        repositories={repositories}
+                                                        loadingRepositories={loadingRepositories}
+                                                        onReload={fetchRepositories}
                                                         value={form.data.repository}
-                                                        onValueChange={(fullName) => {
-                                                            const selectedRepo = repositories.find((r) => r.full_name === fullName);
-
+                                                        onChange={(fullName, repo) => {
                                                             form.setData({
                                                                 ...form.data,
                                                                 repository: fullName,
-                                                                branch: selectedRepo?.default_branch || form.data.branch,
+                                                                branch: repo?.default_branch || form.data.branch,
                                                             });
                                                         }}
                                                         disabled={loadingRepositories}
-                                                    >
-                                                        <SelectTrigger id="repository">
-                                                            <SelectValue
-                                                                placeholder={
-                                                                    loadingRepositories ? 'Loading repositories...' : 'Select a repository'
-                                                                }
-                                                            />
-                                                            {loadingRepositories && (
-                                                                <Loader2Icon className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                                            )}
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {loadingRepositories ? (
-                                                                <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
-                                                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                                    Loading repositories...
-                                                                </div>
-                                                            ) : repositories.length > 0 ? (
-                                                                repositories.map((repo) => (
-                                                                    <SelectItem key={repo.id} value={repo.full_name}>
-                                                                        {repo.full_name}
-                                                                        {repo.private && (
-                                                                            <span className="text-muted-foreground ml-1 text-xs">(private)</span>
-                                                                        )}
-                                                                    </SelectItem>
-                                                                ))
-                                                            ) : (
-                                                                <div className="py-4 text-center text-muted-foreground text-sm">
-                                                                    No repositories available
-                                                                </div>
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
+                                                        placeholder="Select a repository"
+                                                    />
                                                 </div>
                                             )}
                                         </div>

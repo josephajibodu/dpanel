@@ -53,7 +53,7 @@ git pull origin $BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-npm ci
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
 npm run build
 
 $PHP artisan migrate --force

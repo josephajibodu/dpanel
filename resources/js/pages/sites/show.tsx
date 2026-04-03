@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { SiteProvisioningStepTimeline } from '@/components/sites/site-provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
+import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -58,7 +60,13 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const server = serverProp?.data ?? serverProp;
     const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
     const serverId = server?.id ?? siteData?.server?.id;
+    const isProvisioning = ['pending', 'installing'].includes(siteData?.status ?? '');
     useServerDeploymentUpdates(Number(serverId ?? 0), siteData?.id, ['site']);
+    useSiteProvisioningUpdates(
+        Number(serverId ?? 0),
+        siteData?.id,
+        isProvisioning,
+    );
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -102,15 +110,17 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(
-                String(serverId ?? ''),
-                siteData.id,
-            )}
+            subNavItems={
+                isProvisioning ? undefined : getSiteSubNavItems(
+                    String(serverId ?? ''),
+                    siteData.id,
+                )
+            }
         >
             <Head title={siteData.domain} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                {/* Header: no back arrow */}
+                {/* Header */}
                 <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
@@ -133,16 +143,19 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                        <Button variant="outline" asChild>
-                            <a
-                                href={`https://${siteData.domain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                                Visit Site
-                            </a>
-                        </Button>
+                        {!isProvisioning && (
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={`https://${siteData.domain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                                    Visit Site
+                                </a>
+                            </Button>
+                        )}
+                        {!isProvisioning && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="icon">
@@ -166,9 +179,54 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                     </div>
                 </div>
 
+                {isProvisioning ? (
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+                        <SiteProvisioningStepTimeline
+                            currentStep={siteData.provisioning_step ?? null}
+                            steps={siteData.provisioning_steps ?? []}
+                        />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ServerIcon className="h-5 w-5" />
+                                    Details
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-5 text-sm">
+                                <DetailRow
+                                    label="Server ID"
+                                    value={String(siteData.server?.id ?? '—')}
+                                    valueClassName="font-mono"
+                                />
+                                <DetailRow
+                                    label="Site ID"
+                                    value={String(siteData.id)}
+                                    valueClassName="font-mono"
+                                />
+                                <DetailRow
+                                    label="Framework"
+                                    value={siteData.project_type_label ?? '—'}
+                                />
+                                <DetailRow
+                                    label="PHP"
+                                    value={`PHP ${siteData.php_version}`}
+                                />
+                                <DetailRow
+                                    label="Public IP"
+                                    value={siteData.server?.ip_address ?? '—'}
+                                    valueClassName="font-mono"
+                                />
+                                <p className="text-muted-foreground border-t pt-4 text-xs">
+                                    Created {format(new Date(siteData.created_at), 'MMM d, yyyy')}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                ) : (
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
                     {/* Left column: Deployments, Background processes, Scheduled jobs */}
                     <div className="space-y-6">
@@ -428,6 +486,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         </Card>
                     </div>
                 </div>
+                )}
             </div>
 
             <ConfirmDialog

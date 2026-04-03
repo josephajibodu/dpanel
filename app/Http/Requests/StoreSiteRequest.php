@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Models\Server;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -65,7 +66,7 @@ class StoreSiteRequest extends FormRequest
             'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
-            'php_version' => ['sometimes', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
+            'php_version' => ['sometimes', 'string', Rule::in($this->getServerInstalledPhpVersions())],
             'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
             'build_command' => ['nullable', 'string', 'max:500'],
             'auto_deploy' => ['sometimes', 'boolean'],
@@ -90,5 +91,32 @@ class StoreSiteRequest extends FormRequest
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getServerInstalledPhpVersions(): array
+    {
+        $server = Server::find($this->input('server_id'));
+
+        if (! $server) {
+            return ['8.1', '8.2', '8.3', '8.4'];
+        }
+
+        $versions = $server->installedServices()
+            ->where('type', 'php')
+            ->get()
+            ->map(fn ($s) => $s->installed_version ?? $s->version)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($versions)) {
+            return ['8.1', '8.2', '8.3', '8.4'];
+        }
+
+        return $versions;
     }
 }
