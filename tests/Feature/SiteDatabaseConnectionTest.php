@@ -322,7 +322,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             'source_control_account_id' => null,
             'project_type' => ProjectType::Laravel,
             'server_database_id' => null,
-            'domain' => 'app.68-183-76-255.nip.io',
+            'domain' => 'app.flitops.xyz',
         ]);
         $site->deployScript()->create(['script' => 'echo "test"']);
 
@@ -346,7 +346,7 @@ describe('LaravelSiteProvisioner env injection', function () {
 
         $appUrlCall = $sedCalls->first(fn ($c) => str_contains($c, 'APP_URL'));
         expect($appUrlCall)->not->toBeNull();
-        expect($appUrlCall)->toContain('APP_URL=https://app.68-183-76-255.nip.io');
+        expect($appUrlCall)->toContain('APP_URL=https://app.flitops.xyz');
         expect($appUrlCall)->not->toContain('\\/');
     });
 });

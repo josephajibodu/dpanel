@@ -41,6 +41,7 @@ interface Props {
     server: {
         data: Server;
     };
+    freeDomain: string;
     projectTypes: ProjectType[];
     repositoryProviders: RepositoryProvider[];
     phpVersions: PhpVersion[];
@@ -64,7 +65,7 @@ const DEFAULT_BUILD_COMMANDS: Record<string, string> = {
     bun: 'bun run build',
 };
 
-export default function SitesCreate({ server, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
+export default function SitesCreate({ server, freeDomain, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
     const { data: serverData } = server;
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loadingBranches, setLoadingBranches] = useState(false);
@@ -329,8 +330,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
         form.post(`/servers/${serverData.id}/sites`);
     }
 
-    const serverIpFormatted = serverData.ip_address?.replace(/\./g, '-') || '';
-    const nipIoDomain = form.data.site_name ? `${form.data.site_name}.${serverIpFormatted}.nip.io` : '';
+    const freeDomainPreview = form.data.site_name ? `${form.data.site_name}.${freeDomain}` : '';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -373,7 +373,7 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                 <CardDescription>
                                     {useCustomDomain
                                         ? 'Configure a custom domain for your site.'
-                                        : 'Each site includes a nip.io domain that can be disabled later.'}
+                                        : `Each site includes a free ${freeDomain} subdomain.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -406,13 +406,13 @@ export default function SitesCreate({ server, projectTypes, repositoryProviders,
                                                 onChange={(e) => form.setData('site_name', e.target.value)}
                                                 className={form.errors.site_name ? 'border-destructive' : ''}
                                             />
-                                            <span className="text-muted-foreground whitespace-nowrap text-sm">.nip.io</span>
+                                            <span className="text-muted-foreground whitespace-nowrap text-sm">.{freeDomain}</span>
                                         </div>
                                         {form.errors.site_name && <p className="text-destructive text-sm">{form.errors.site_name}</p>}
                                         <p className="text-muted-foreground text-xs">
                                             Your site will be accessible at{' '}
-                                            {nipIoDomain ? (
-                                                <code className="bg-muted rounded px-1">{nipIoDomain}</code>
+                                            {freeDomainPreview ? (
+                                                <code className="bg-muted rounded px-1">{freeDomainPreview}</code>
                                             ) : (
                                                 <span className="italic">Enter a site name above</span>
                                             )}

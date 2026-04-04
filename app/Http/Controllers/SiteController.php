@@ -66,6 +66,7 @@ class SiteController extends Controller
 
         return Inertia::render('sites/create', [
             'server' => new ServerResource($server),
+            'freeDomain' => config('server.free_domain'),
             'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
                 'value' => $type->value,
                 'label' => $type->label(),

@@ -25,43 +25,15 @@ abstract class BaseNginxConfigGenerator
     }
 
     /**
-     * Build the server_name list including nip.io domain for testing.
+     * Build the server_name list from the site domain and any aliases.
      */
     protected function buildServerNames(Site $site): string
     {
-        $server = $site->server;
         $aliases = $site->aliases ?: [];
-        $names = collect([$site->domain, ...$aliases]);
 
-        // Add nip.io domain if server has an IP address
-        if ($server && $server->ip_address) {
-            $nipIoDomain = $this->generateNipIoDomain($site->domain, $server->ip_address);
-            $names->push($nipIoDomain);
-        }
-
-        return $names->unique()->implode(' ');
-    }
-
-    /**
-     * Generate a nip.io domain for testing purposes.
-     */
-    protected function generateNipIoDomain(string $domain, string $ipAddress): string
-    {
-        // Extract a clean subdomain from the domain (remove TLD and dots)
-        // Example: "myapp.com" -> "myapp", "app.example.com" -> "app"
-        $parts = explode('.', $domain);
-        $subdomain = $parts[0];
-
-        // Sanitize subdomain (remove invalid characters, keep alphanumeric and hyphens)
-        $subdomain = preg_replace('/[^a-z0-9-]/i', '', $subdomain);
-
-        // If subdomain is empty or too short, use a default
-        if (empty($subdomain) || strlen($subdomain) < 2) {
-            $subdomain = 'site';
-        }
-
-        // Use dot notation: subdomain.IP.nip.io
-        return "{$subdomain}.{$ipAddress}.nip.io";
+        return collect([$site->domain, ...$aliases])
+            ->unique()
+            ->implode(' ');
     }
 
     /**

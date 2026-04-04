@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Site;
+use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshService;
@@ -33,25 +34,36 @@ class DeleteSiteJob implements ShouldQueue
 
     protected ?int $sourceControlAccountId;
 
+    protected ?string $cloudflareDnsRecordId;
+
     public function __construct(Site $site)
     {
-        // Store the values we need before the site is deleted
         $this->domain = $site->domain;
         $this->siteRoot = $site->rootPath();
         $this->serverId = $site->server_id;
         $this->siteId = $site->id;
         $this->repository = $site->repository;
         $this->sourceControlAccountId = $site->source_control_account_id;
+        $this->cloudflareDnsRecordId = $site->cloudflare_dns_record_id;
     }
 
     public function handle(
         SshService $sshService,
         NginxConfigService $nginxService,
         SourceControlService $sourceControlService,
+        CloudflareDnsService $cloudflareDns,
     ): void {
         Log::info("Deleting site {$this->domain}");
 
-        // Get the site and server before deletion
+        if ($this->cloudflareDnsRecordId) {
+            try {
+                $cloudflareDns->deleteRecord($this->cloudflareDnsRecordId);
+                Log::info("Deleted Cloudflare DNS record for {$this->domain}");
+            } catch (\Throwable $e) {
+                Log::warning("Failed to delete Cloudflare DNS record for {$this->domain}: {$e->getMessage()}");
+            }
+        }
+
         $site = Site::find($this->siteId);
         $server = \App\Models\Server::find($this->serverId);
 

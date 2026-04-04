@@ -39,4 +39,32 @@ return [
 
     'home_directory' => '/home/artisan',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Free Domain
+    |--------------------------------------------------------------------------
+    |
+    | The base domain used for auto-generated site subdomains. When a user
+    | creates a site with a site_name instead of a custom domain, the site
+    | will be accessible at {site_name}.{free_domain}.
+    |
+    */
+
+    'free_domain' => env('FREE_DOMAIN', 'flitops.xyz'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare DNS
+    |--------------------------------------------------------------------------
+    |
+    | Credentials for the Cloudflare API used to manage DNS records for
+    | the free domain. An A record is created when a site uses the free
+    | domain and removed when the site is deleted.
+    |
+    */
+
+    'cloudflare_api_token' => env('CLOUDFLARE_API_TOKEN'),
+
+    'cloudflare_zone_id' => env('CLOUDFLARE_ZONE_ID'),
+
 ];

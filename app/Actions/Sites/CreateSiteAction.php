@@ -7,23 +7,33 @@ use App\Enums\SiteStatus;
 use App\Jobs\CreateSiteJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Services\Cloudflare\CloudflareDnsService;
 use Illuminate\Support\Str;
 
 class CreateSiteAction
 {
+    public function __construct(
+        private CloudflareDnsService $cloudflare,
+    ) {}
+
     public function execute(Server $server, SiteData $data): Site
     {
-        // Generate domain from site_name if domain is not provided
         $domain = $data->domain;
-        if (! $domain && $data->siteName && $server->ip_address) {
-            // Use nip.io format: site-name.{server-ip}.nip.io
-            // Convert IP from 146.190.253.93 to 146-190-253-93
-            $serverIp = str_replace('.', '-', $server->ip_address);
-            $domain = "{$data->siteName}.{$serverIp}.nip.io";
+        $isFreeDomain = ! $domain && $data->siteName;
+        $cloudflareRecordId = null;
+
+        if ($isFreeDomain) {
+            $freeDomain = config('server.free_domain');
+            $domain = "{$data->siteName}.{$freeDomain}";
+        }
+
+        if ($isFreeDomain && $server->ip_address) {
+            $cloudflareRecordId = $this->cloudflare->createARecord($domain, $server->ip_address);
         }
 
         $site = $server->sites()->create([
             'domain' => $domain,
+            'cloudflare_dns_record_id' => $cloudflareRecordId,
             'site_name' => $data->siteName,
             'aliases' => $data->aliases,
             'directory' => $data->directory,
@@ -41,12 +51,10 @@ class CreateSiteAction
             'auto_deploy' => $data->autoDeploy,
         ]);
 
-        // Create default deploy script based on project type
         $site->deployScript()->create([
             'script' => $data->projectType->defaultDeployScript(),
         ]);
 
-        // Dispatch job to set up the site on the server
         CreateSiteJob::dispatch($site);
 
         return $site;

@@ -9,6 +9,7 @@ use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Cloudflare\CloudflareDnsService;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
@@ -158,6 +159,13 @@ describe('site creation', function () {
     it('can create a site with site_name instead of domain', function () {
         Queue::fake();
 
+        $mock = \Mockery::mock(CloudflareDnsService::class);
+        $mock->shouldReceive('createARecord')
+            ->once()
+            ->with('react-blog.flitops.xyz', '146.190.253.93')
+            ->andReturn('cf-record-123');
+        $this->app->instance(CloudflareDnsService::class, $mock);
+
         $this->server->update(['ip_address' => '146.190.253.93']);
 
         $response = $this->actingAs($this->user)
@@ -176,7 +184,8 @@ describe('site creation', function () {
         $this->assertDatabaseHas('sites', [
             'server_id' => $this->server->id,
             'site_name' => 'react-blog',
-            'domain' => 'react-blog.146-190-253-93.nip.io',
+            'domain' => 'react-blog.flitops.xyz',
+            'cloudflare_dns_record_id' => 'cf-record-123',
             'directory' => '/public',
             'project_type' => 'laravel',
             'php_version' => '8.3',

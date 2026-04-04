@@ -6,7 +6,7 @@ use App\Models\Site;
 use App\Services\Nginx\NginxConfigService;
 
 describe('NginxConfigService', function () {
-    it('includes nip.io domain in server_name when server has IP address', function () {
+    it('uses only domain in server_name', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.42',
         ]);
@@ -20,12 +20,11 @@ describe('NginxConfigService', function () {
         $config = $service->generate($site);
 
         expect($config)
-            ->toContain('server_name myapp.com myapp.203.0.113.42.nip.io')
-            ->toContain('myapp.com')
-            ->toContain('myapp.203.0.113.42.nip.io');
+            ->toContain('server_name myapp.com')
+            ->not->toContain('nip.io');
     });
 
-    it('does not include nip.io domain when server has no IP address', function () {
+    it('works when server has no IP address', function () {
         $server = Server::factory()->create([
             'ip_address' => null,
         ]);
@@ -43,7 +42,7 @@ describe('NginxConfigService', function () {
             ->not->toContain('nip.io');
     });
 
-    it('includes nip.io domain in SSL configuration', function () {
+    it('uses only domain in SSL configuration', function () {
         $server = Server::factory()->create([
             'ip_address' => '192.168.1.100',
         ]);
@@ -57,11 +56,11 @@ describe('NginxConfigService', function () {
         $config = $service->generateWithSsl($site);
 
         expect($config)
-            ->toContain('server_name example.com example.192.168.1.100.nip.io')
-            ->toContain('example.192.168.1.100.nip.io');
+            ->toContain('server_name example.com')
+            ->not->toContain('nip.io');
     });
 
-    it('includes aliases along with nip.io domain', function () {
+    it('includes aliases in server_name', function () {
         $server = Server::factory()->create([
             'ip_address' => '10.0.0.1',
         ]);
@@ -76,13 +75,11 @@ describe('NginxConfigService', function () {
         $config = $service->generate($site);
 
         expect($config)
-            ->toContain('mysite.com')
-            ->toContain('www.mysite.com')
-            ->toContain('app.mysite.com')
-            ->toContain('mysite.10.0.0.1.nip.io');
+            ->toContain('server_name mysite.com www.mysite.com app.mysite.com')
+            ->not->toContain('nip.io');
     });
 
-    it('generates correct nip.io domain format for subdomain domains', function () {
+    it('handles subdomain domains correctly', function () {
         $server = Server::factory()->create([
             'ip_address' => '172.16.0.1',
         ]);
@@ -95,32 +92,29 @@ describe('NginxConfigService', function () {
         $service = new NginxConfigService;
         $config = $service->generate($site);
 
-        // Should extract "app" from "app.example.com"
         expect($config)
-            ->toContain('app.172.16.0.1.nip.io')
-            ->toContain('app.example.com');
+            ->toContain('server_name app.example.com')
+            ->not->toContain('nip.io');
     });
 
-    it('handles domains with special characters in nip.io generation', function () {
+    it('handles free domain subdomains', function () {
         $server = Server::factory()->create([
             'ip_address' => '192.168.1.50',
         ]);
 
         $site = Site::factory()->create([
             'server_id' => $server->id,
-            'domain' => 'my-site.com',
+            'domain' => 'my-site.flitops.xyz',
         ]);
 
         $service = new NginxConfigService;
         $config = $service->generate($site);
 
-        // Should sanitize and use "my-site" or "mysite"
         expect($config)
-            ->toContain('my-site.192.168.1.50.nip.io')
-            ->toContain('my-site.com');
+            ->toContain('server_name my-site.flitops.xyz');
     });
 
-    it('includes nip.io domain in both HTTP and HTTPS server blocks for SSL config', function () {
+    it('uses domain in both HTTP and HTTPS server blocks for SSL config', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.10',
         ]);
@@ -133,15 +127,14 @@ describe('NginxConfigService', function () {
         $service = new NginxConfigService;
         $config = $service->generateWithSsl($site);
 
-        // Should appear in both the redirect block and the HTTPS block
         $httpBlock = substr($config, 0, strpos($config, '# HTTPS server'));
         $httpsBlock = substr($config, strpos($config, '# HTTPS server'));
 
         expect($httpBlock)
-            ->toContain('test.203.0.113.10.nip.io');
+            ->toContain('server_name test.com');
 
         expect($httpsBlock)
-            ->toContain('test.203.0.113.10.nip.io');
+            ->toContain('server_name test.com');
     });
 
     describe('project type configurations', function () {

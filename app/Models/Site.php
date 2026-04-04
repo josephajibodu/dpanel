@@ -22,6 +22,7 @@ class Site extends Model
         'server_id',
         'source_control_account_id',
         'domain',
+        'cloudflare_dns_record_id',
         'site_name',
         'aliases',
         'directory',
