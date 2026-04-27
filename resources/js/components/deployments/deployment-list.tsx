@@ -1,7 +1,9 @@
-import { DeploymentCard } from './deployment-card';
-import { Deployment } from '@/types/deployment';
-import { EmptyState } from '@/components/empty-state';
 import { RocketIcon } from 'lucide-react';
+
+import { EmptyState } from '@/components/empty-state';
+import { Deployment } from '@/types/deployment';
+
+import { DeploymentCard } from './deployment-card';
 
 interface DeploymentListProps {
     deployments: Deployment[];
@@ -21,7 +23,7 @@ export function DeploymentList({ deployments, serverId, siteId }: DeploymentList
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
             {deployments.map((deployment) => (
                 <DeploymentCard
                     key={deployment.id}
