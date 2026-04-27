@@ -1,0 +1,21 @@
+export interface SiteDomainDnsRecord {
+    type: string;
+    name: string;
+    value: string;
+}
+
+export interface SiteDomain {
+    id: number;
+    ulid: string;
+    hostname: string;
+    type: string;
+    type_label: string;
+    is_primary: boolean;
+    wildcard_enabled: boolean;
+    www_redirect: string;
+    www_redirect_label: string;
+    is_enabled: boolean;
+    dns_records: SiteDomainDnsRecord[];
+    created_at: string;
+    updated_at: string;
+}

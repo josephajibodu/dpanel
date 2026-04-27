@@ -30,6 +30,7 @@ export function getSiteSubNavItems(
         { title: 'Commands', href: `${base}/command-runs` },
         { title: 'Environment', href: `${base}/environment` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },
+        { title: 'Domains', href: `${base}/domains` },
     ];
 }
 

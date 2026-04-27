@@ -29,6 +29,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
         $this->sedEnv($envPath, 'APP_ENV', 'production');
         $this->sedEnv($envPath, 'APP_DEBUG', 'false');
         $this->sedEnv($envPath, 'APP_URL', "https://{$domain}");
+        $this->sedEnv($envPath, 'APP_KEY', $this->generateAppKey());
 
         $serverDatabase = $this->site->serverDatabase;
         if (! $serverDatabase) {
@@ -64,6 +65,18 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     }
 
     /**
+     * Generate a Laravel-compatible APP_KEY without needing artisan/vendor.
+     * Mirrors Illuminate\Foundation\Console\KeyGenerateCommand::generateRandomKey()
+     * for AES-256-CBC (32 random bytes, base64-encoded, prefixed with "base64:").
+     * We do this in PHP because at provisioning time vendor/ does not yet exist,
+     * so `php artisan key:generate` cannot bootstrap.
+     */
+    private function generateAppKey(): string
+    {
+        return 'base64:'.base64_encode(random_bytes(32));
+    }
+
+    /**
      * Replace or append an environment variable in a .env file via sed.
      */
     private function sedEnv(string $envPath, string $key, string $value): void
@@ -75,46 +88,6 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
             ."sed -i 's#^{$key}=.*#{$key}={$escapedValue}#' {$envPath}; "
             ."elif [ -f {$envPath} ]; then "
             ."echo '{$key}={$value}' >> {$envPath}; fi"
-        );
-    }
-
-    protected function installDependencies(): void
-    {
-        $this->connection->exec(
-            "if [ -f {$this->siteRoot}/composer.json ]; then cd {$this->siteRoot} && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi",
-            timeout: 300,
-        );
-
-        $this->connection->exec("if [ -f {$this->siteRoot}/artisan ] && [ -f {$this->siteRoot}/.env ]; then cd {$this->siteRoot} && {$this->phpBinary()} artisan key:generate --force; fi");
-    }
-
-    protected function buildAssets(): void
-    {
-        $packageManager = $this->site->package_manager ?? 'npm';
-        $buildCommand = $this->site->build_command ?? 'npm run build';
-
-        if ($packageManager === 'none') {
-            return;
-        }
-
-        $installCommand = match ($packageManager) {
-            'pnpm' => 'if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi',
-            'yarn' => 'if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else yarn install; fi',
-            'bun' => 'if [ -f bun.lockb ]; then bun install --frozen-lockfile; else bun install; fi',
-            default => 'if [ -f package-lock.json ]; then npm ci; else npm install; fi',
-        };
-
-        $this->connection->exec(
-            "if [ -f {$this->siteRoot}/package.json ]; then cd {$this->siteRoot} && {$installCommand} && {$buildCommand}; fi",
-            timeout: 600,
-        );
-    }
-
-    protected function runMigrations(): void
-    {
-        $this->connection->exec(
-            "if [ -f {$this->siteRoot}/artisan ]; then cd {$this->siteRoot} && {$this->phpBinary()} artisan migrate --force; fi",
-            timeout: 120,
         );
     }
 

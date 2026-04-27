@@ -22,7 +22,7 @@ class Site extends Model
         'server_id',
         'source_control_account_id',
         'domain',
-        'cloudflare_dns_record_id',
+        'root_path',
         'site_name',
         'aliases',
         'directory',
@@ -66,8 +66,9 @@ class Site extends Model
     public function rootPath(): string
     {
         $serverUser = config('server.user');
+        $segment = $this->root_path ?? $this->domain;
 
-        return "/home/{$serverUser}/{$this->domain}";
+        return "/home/{$serverUser}/{$segment}";
     }
 
     /**
@@ -149,5 +150,21 @@ class Site extends Model
     public function commandRuns(): HasMany
     {
         return $this->hasMany(SiteCommandRun::class);
+    }
+
+    /**
+     * @return HasMany<SiteDomain, $this>
+     */
+    public function domains(): HasMany
+    {
+        return $this->hasMany(SiteDomain::class);
+    }
+
+    /**
+     * @return HasOne<SiteDomain, $this>
+     */
+    public function primaryDomain(): HasOne
+    {
+        return $this->hasOne(SiteDomain::class)->where('is_primary', true);
     }
 }

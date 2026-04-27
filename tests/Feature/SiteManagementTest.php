@@ -185,11 +185,18 @@ describe('site creation', function () {
             'server_id' => $this->server->id,
             'site_name' => 'react-blog',
             'domain' => 'react-blog.flitops.xyz',
-            'cloudflare_dns_record_id' => 'cf-record-123',
+            'root_path' => 'react-blog.flitops.xyz',
             'directory' => '/public',
             'project_type' => 'laravel',
             'php_version' => '8.3',
             'status' => 'pending',
+        ]);
+
+        $site = \App\Models\Site::query()->where('domain', 'react-blog.flitops.xyz')->firstOrFail();
+        $this->assertDatabaseHas('site_domains', [
+            'site_id' => $site->id,
+            'hostname' => 'react-blog.flitops.xyz',
+            'cloudflare_dns_record_id' => 'cf-record-123',
         ]);
 
         Queue::assertPushed(CreateSiteJob::class);

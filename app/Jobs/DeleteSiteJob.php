@@ -34,33 +34,50 @@ class DeleteSiteJob implements ShouldQueue
 
     protected ?int $sourceControlAccountId;
 
-    protected ?string $cloudflareDnsRecordId;
+    /**
+     * @var array<int, string>
+     */
+    protected array $cloudflareDnsRecordIds;
+
+    /**
+     * @var array<int, string>
+     */
+    protected array $nginxConfigBasenames;
 
     public function __construct(Site $site)
     {
+        $site->loadMissing('domains');
         $this->domain = $site->domain;
         $this->siteRoot = $site->rootPath();
         $this->serverId = $site->server_id;
         $this->siteId = $site->id;
         $this->repository = $site->repository;
         $this->sourceControlAccountId = $site->source_control_account_id;
-        $this->cloudflareDnsRecordId = $site->cloudflare_dns_record_id;
+        $this->cloudflareDnsRecordIds = $site->domains
+            ->pluck('cloudflare_dns_record_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $this->nginxConfigBasenames = $site->domains
+            ->map(fn ($d) => NginxConfigService::configFileName($site, $d))
+            ->values()
+            ->all();
     }
 
     public function handle(
         SshService $sshService,
-        NginxConfigService $nginxService,
         SourceControlService $sourceControlService,
         CloudflareDnsService $cloudflareDns,
     ): void {
         Log::info("Deleting site {$this->domain}");
 
-        if ($this->cloudflareDnsRecordId) {
+        foreach ($this->cloudflareDnsRecordIds as $recordId) {
             try {
-                $cloudflareDns->deleteRecord($this->cloudflareDnsRecordId);
-                Log::info("Deleted Cloudflare DNS record for {$this->domain}");
+                $cloudflareDns->deleteRecord($recordId);
+                Log::info("Deleted Cloudflare DNS record {$recordId} for {$this->domain}");
             } catch (\Throwable $e) {
-                Log::warning("Failed to delete Cloudflare DNS record for {$this->domain}: {$e->getMessage()}");
+                Log::warning("Failed to delete Cloudflare DNS record {$recordId} for {$this->domain}: {$e->getMessage()}");
             }
         }
 
@@ -70,7 +87,6 @@ class DeleteSiteJob implements ShouldQueue
         if (! $server) {
             Log::warning("Server {$this->serverId} not found, skipping site deletion");
 
-            // Still try to delete the site from DB if it exists
             if ($site) {
                 $site->delete();
             }
@@ -78,41 +94,34 @@ class DeleteSiteJob implements ShouldQueue
             return;
         }
 
-        // Delete account-level SSH key from source control provider if no other sites use it
         if ($site && $site->sourceControlAccount && $server) {
             try {
                 $sourceControlService->deleteAccountSshKeyIfUnused($server, $site->sourceControlAccount);
                 Log::info("SSH key cleanup attempted for site {$this->domain}");
             } catch (\Throwable $e) {
                 Log::warning("Failed to delete SSH key for site {$this->domain}: {$e->getMessage()}");
-                // Continue with other cleanup even if SSH key deletion fails
             }
         }
 
-        // Delete from database
         if ($site) {
             $site->delete();
         }
 
-        // Perform server-side cleanup
         try {
             $connection = $sshService->connect($server);
 
-            // Remove Nginx config
-            $configPath = "/etc/nginx/sites-available/{$this->domain}";
-            $enabledPath = "/etc/nginx/sites-enabled/{$this->domain}";
+            foreach ($this->nginxConfigBasenames as $basename) {
+                $configPath = "/etc/nginx/sites-available/{$basename}";
+                $enabledPath = "/etc/nginx/sites-enabled/{$basename}";
+                $connection->exec("sudo rm -f {$enabledPath}");
+                $connection->exec("sudo rm -f {$configPath}");
+            }
 
-            $connection->exec("sudo rm -f {$enabledPath}");
-            $connection->exec("sudo rm -f {$configPath}");
-
-            // Remove SSL certificates if they exist
             $sslPath = "/etc/nginx/ssl/{$this->domain}";
             $connection->exec("sudo rm -rf {$sslPath}");
 
-            // Reload Nginx
             $connection->exec('sudo systemctl reload nginx');
 
-            // Remove site directory (with caution - only if it's in the expected location)
             $serverUser = config('server.user');
             if ($this->siteRoot && str_starts_with($this->siteRoot, "/home/{$serverUser}/")) {
                 $connection->exec("rm -rf {$this->siteRoot}");
@@ -127,8 +136,6 @@ class DeleteSiteJob implements ShouldQueue
             Log::error("Failed to delete site {$this->domain} from server: {$e->getMessage()}", [
                 'exception' => $e,
             ]);
-            // Don't rethrow - the site is already deleted from DB
-            // The cleanup can be retried manually if needed
         }
     }
 }

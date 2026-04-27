@@ -13,6 +13,7 @@ use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SshKeyController;
 use App\Http\Controllers\WorkerController;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +70,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('servers.sites.update');
         Route::delete('servers/{server}/sites/{site}', [SiteController::class, 'destroy'])
             ->name('servers.sites.destroy');
+
+        Route::get('servers/{server}/sites/{site}/domains', [SiteDomainController::class, 'index'])
+            ->name('servers.sites.domains.index');
+        Route::post('servers/{server}/sites/{site}/domains/validate', [SiteDomainController::class, 'validateHostname'])
+            ->name('servers.sites.domains.validate');
+        Route::post('servers/{server}/sites/{site}/domains', [SiteDomainController::class, 'store'])
+            ->name('servers.sites.domains.store');
+        Route::patch('servers/{server}/sites/{site}/domains/{site_domain}', [SiteDomainController::class, 'update'])
+            ->name('servers.sites.domains.update');
+        Route::delete('servers/{server}/sites/{site}/domains/{site_domain}', [SiteDomainController::class, 'destroy'])
+            ->name('servers.sites.domains.destroy');
+        Route::post('servers/{server}/sites/{site}/domains/{site_domain}/primary', [SiteDomainController::class, 'setPrimary'])
+            ->name('servers.sites.domains.primary');
 
         // Site environment & deploy script
         Route::get('servers/{server}/sites/{site}/environment', [EnvironmentController::class, 'show'])

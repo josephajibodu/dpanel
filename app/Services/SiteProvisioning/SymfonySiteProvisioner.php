@@ -20,14 +20,6 @@ class SymfonySiteProvisioner extends BaseSiteProvisioner
         $this->connection->exec("if [ -f {$this->siteRoot}/.env ]; then sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env && sudo chmod 640 {$this->siteRoot}/.env; fi");
     }
 
-    protected function installDependencies(): void
-    {
-        $this->connection->exec(
-            "if [ -f {$this->siteRoot}/composer.json ]; then cd {$this->siteRoot} && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi",
-            timeout: 300,
-        );
-    }
-
     protected function setPermissions(): void
     {
         parent::setPermissions();

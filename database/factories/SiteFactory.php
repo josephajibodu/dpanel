@@ -4,8 +4,12 @@ namespace Database\Factories;
 
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Enums\SiteDomainType;
 use App\Enums\SiteStatus;
+use App\Enums\WwwRedirect;
 use App\Models\Server;
+use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -44,6 +48,52 @@ class SiteFactory extends Factory
             'auto_deploy' => false,
             'deployment_finished_at' => now(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Site $site): void {
+            if ($site->root_path === null || $site->root_path === '') {
+                $site->root_path = $site->domain;
+            }
+        })->afterCreating(function (Site $site): void {
+            $freeDomain = config('server.free_domain');
+            $suffix = '.'.$freeDomain;
+            $isSystem = str_ends_with(strtolower($site->domain), strtolower($suffix));
+
+            SiteDomain::query()->create([
+                'site_id' => $site->id,
+                'hostname' => $site->domain,
+                'type' => $isSystem ? SiteDomainType::System : SiteDomainType::Custom,
+                'is_primary' => true,
+                'wildcard_enabled' => false,
+                'www_redirect' => WwwRedirect::None,
+                'is_enabled' => true,
+                'cloudflare_dns_record_id' => null,
+            ]);
+
+            $aliases = $site->aliases ?? [];
+            if (! is_array($aliases)) {
+                return;
+            }
+            foreach ($aliases as $alias) {
+                if (! is_string($alias) || $alias === '' || $alias === $site->domain) {
+                    continue;
+                }
+                SiteDomain::query()->create([
+                    'site_id' => $site->id,
+                    'hostname' => $alias,
+                    'type' => str_ends_with(strtolower($alias), strtolower($suffix))
+                        ? SiteDomainType::System
+                        : SiteDomainType::Custom,
+                    'is_primary' => false,
+                    'wildcard_enabled' => false,
+                    'www_redirect' => WwwRedirect::None,
+                    'is_enabled' => true,
+                    'cloudflare_dns_record_id' => null,
+                ]);
+            }
+        });
     }
 
     public function forServer(Server $server): static

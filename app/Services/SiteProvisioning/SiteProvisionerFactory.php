@@ -4,7 +4,7 @@ namespace App\Services\SiteProvisioning;
 
 use App\Enums\ProjectType;
 use App\Models\Site;
-use App\Services\Nginx\NginxConfigService;
+use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshConnection;
 
@@ -14,7 +14,7 @@ class SiteProvisionerFactory
         ProjectType $projectType,
         SshConnection $connection,
         Site $site,
-        NginxConfigService $nginxService,
+        SiteNginxSyncService $siteNginxSyncService,
         SourceControlService $sourceControlService,
     ): BaseSiteProvisioner {
         $class = match ($projectType) {
@@ -25,6 +25,6 @@ class SiteProvisionerFactory
             ProjectType::WordPress => WordPressSiteProvisioner::class,
         };
 
-        return new $class($connection, $site, $nginxService, $sourceControlService);
+        return new $class($connection, $site, $siteNginxSyncService, $sourceControlService);
     }
 }

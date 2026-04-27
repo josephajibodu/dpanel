@@ -2,7 +2,9 @@
 
 namespace App\Services\Nginx\ConfigGenerators;
 
+use App\Enums\WwwRedirect;
 use App\Models\Site;
+use App\Models\SiteDomain;
 
 abstract class BaseNginxConfigGenerator
 {
@@ -12,28 +14,89 @@ abstract class BaseNginxConfigGenerator
     abstract protected function generateServerBlock(Site $site): string;
 
     /**
-     * Generate the complete Nginx configuration.
+     * Generate the complete Nginx configuration for a single site domain (one file per domain).
      */
-    public function generate(Site $site, bool $ssl = false): string
+    public function generateForSiteDomain(Site $site, SiteDomain $domain, bool $ssl = false): string
     {
-        $domain = $site->domain;
-        $serverNames = $this->buildServerNames($site);
+        $domainLabel = $domain->hostname;
+        $serverNames = $this->buildServerNamesForDomain($domain);
         $serverBlock = $this->generateServerBlock($site);
         $appName = config('app.name');
+        $preamble = $this->buildWwwRedirectPreamble($domain, $ssl);
 
-        return $this->wrapServerBlock($domain, $serverNames, $serverBlock, $ssl, $appName);
+        return $preamble.$this->wrapServerBlock($domainLabel, $serverNames, $serverBlock, $ssl, $appName);
     }
 
     /**
-     * Build the server_name list from the site domain and any aliases.
+     * Optional HTTP redirect blocks for www handling (apex hostnames only).
      */
-    protected function buildServerNames(Site $site): string
+    protected function buildWwwRedirectPreamble(SiteDomain $domain, bool $ssl): string
     {
-        $aliases = $site->aliases ?: [];
+        if ($ssl || ! $this->isApexHostname($domain->hostname)) {
+            return '';
+        }
 
-        return collect([$site->domain, ...$aliases])
-            ->unique()
-            ->implode(' ');
+        $host = $domain->hostname;
+        $www = $domain->www_redirect;
+
+        if ($www === WwwRedirect::FromWww) {
+            $wwwHost = 'www.'.$host;
+
+            return <<<NGINX
+# Redirect www to apex
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$wwwHost};
+    return 301 http://{$host}\$request_uri;
+}
+
+
+NGINX;
+        }
+
+        if ($www === WwwRedirect::ToWww) {
+            $wwwHost = 'www.'.$host;
+
+            return <<<NGINX
+# Redirect apex to www
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$host};
+    return 301 http://{$wwwHost}\$request_uri;
+}
+
+
+NGINX;
+        }
+
+        return '';
+    }
+
+    /**
+     * Build server_name for a single domain row (one config file).
+     */
+    protected function buildServerNamesForDomain(SiteDomain $domain): string
+    {
+        $host = $domain->hostname;
+
+        if ($domain->www_redirect === WwwRedirect::ToWww && $this->isApexHostname($host)) {
+            return 'www.'.$host;
+        }
+
+        $names = [$host];
+
+        if ($domain->wildcard_enabled && $this->isApexHostname($host)) {
+            $names[] = '*.'.$host;
+        }
+
+        return collect($names)->unique()->implode(' ');
+    }
+
+    protected function isApexHostname(string $hostname): bool
+    {
+        return ! str_starts_with(strtolower($hostname), 'www.');
     }
 
     /**

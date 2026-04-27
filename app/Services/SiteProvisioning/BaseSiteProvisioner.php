@@ -4,7 +4,7 @@ namespace App\Services\SiteProvisioning;
 
 use App\Enums\SiteProvisioningStep;
 use App\Models\Site;
-use App\Services\Nginx\NginxConfigService;
+use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshConnection;
 use Closure;
@@ -20,7 +20,7 @@ abstract class BaseSiteProvisioner
     public function __construct(
         protected SshConnection $connection,
         protected Site $site,
-        protected NginxConfigService $nginxService,
+        protected SiteNginxSyncService $siteNginxSyncService,
         protected SourceControlService $sourceControlService,
     ) {
         $this->serverUser = config('server.user');
@@ -76,20 +76,8 @@ abstract class BaseSiteProvisioner
 
     protected function configureNginx(): void
     {
-        $nginxConfig = $this->nginxService->generate($this->site);
-        $configPath = $this->nginxService->configPath($this->site);
-        $enabledPath = $this->nginxService->enabledPath($this->site);
-
-        $escapedConfig = str_replace("'", "'\\''", $nginxConfig);
-        $this->connection->exec("echo '{$escapedConfig}' | sudo tee {$configPath}");
-        $this->connection->exec("sudo ln -sf {$configPath} {$enabledPath}");
-
-        $testResult = $this->connection->exec('sudo nginx -t 2>&1');
-        if (! str_contains($testResult, 'syntax is ok')) {
-            throw new \RuntimeException("Nginx configuration test failed: {$testResult}");
-        }
-
-        $this->connection->exec('sudo systemctl reload nginx');
+        $this->site->loadMissing('domains');
+        $this->siteNginxSyncService->sync($this->site, $this->connection);
     }
 
     protected function cloneOrPlaceholder(): void

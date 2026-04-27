@@ -22,6 +22,7 @@ class SiteResource extends JsonResource
             'id' => $this->id,
             'ulid' => $this->ulid,
             'domain' => $this->domain,
+            'root_path' => $this->root_path,
             'aliases' => $this->aliases,
             'directory' => $this->directory,
             'root_path' => $this->rootPath(),

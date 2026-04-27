@@ -3,10 +3,13 @@
 namespace App\Actions\Sites;
 
 use App\Data\SiteData;
+use App\Enums\SiteDomainType;
 use App\Enums\SiteStatus;
+use App\Enums\WwwRedirect;
 use App\Jobs\CreateSiteJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Services\Cloudflare\CloudflareDnsService;
 use Illuminate\Support\Str;
 
@@ -33,7 +36,7 @@ class CreateSiteAction
 
         $site = $server->sites()->create([
             'domain' => $domain,
-            'cloudflare_dns_record_id' => $cloudflareRecordId,
+            'root_path' => $domain,
             'site_name' => $data->siteName,
             'aliases' => $data->aliases,
             'directory' => $data->directory,
@@ -50,6 +53,38 @@ class CreateSiteAction
             'webhook_secret' => Str::random(32),
             'auto_deploy' => $data->autoDeploy,
         ]);
+
+        $freeDomain = config('server.free_domain');
+        $isSystemDomain = str_ends_with(strtolower($domain), strtolower('.'.$freeDomain));
+
+        SiteDomain::query()->create([
+            'site_id' => $site->id,
+            'hostname' => $domain,
+            'type' => $isSystemDomain ? SiteDomainType::System : SiteDomainType::Custom,
+            'is_primary' => true,
+            'wildcard_enabled' => false,
+            'www_redirect' => WwwRedirect::None,
+            'is_enabled' => true,
+            'cloudflare_dns_record_id' => $cloudflareRecordId,
+        ]);
+
+        foreach ($data->aliases ?? [] as $alias) {
+            if (! is_string($alias) || $alias === '' || $alias === $domain) {
+                continue;
+            }
+            SiteDomain::query()->create([
+                'site_id' => $site->id,
+                'hostname' => $alias,
+                'type' => str_ends_with(strtolower($alias), strtolower('.'.$freeDomain))
+                    ? SiteDomainType::System
+                    : SiteDomainType::Custom,
+                'is_primary' => false,
+                'wildcard_enabled' => false,
+                'www_redirect' => WwwRedirect::None,
+                'is_enabled' => true,
+                'cloudflare_dns_record_id' => null,
+            ]);
+        }
 
         $site->deployScript()->create([
             'script' => $data->projectType->defaultDeployScript(),

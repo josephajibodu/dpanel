@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Deployment\SimpleDeploymentStrategy;
 use App\Services\Providers\ProviderManager;
@@ -12,6 +14,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -33,6 +36,20 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureHttpClientLogging();
+
+        Route::bind('site_domain', function (string $value, \Illuminate\Routing\Route $route) {
+            $site = $route->parameter('site');
+            $siteId = match (true) {
+                $site instanceof Site => $site->id,
+                is_numeric($site) => (int) $site,
+                default => abort(404),
+            };
+
+            return SiteDomain::query()
+                ->where('site_id', $siteId)
+                ->where('ulid', $value)
+                ->firstOrFail();
+        });
     }
 
     protected function configureDefaults(): void

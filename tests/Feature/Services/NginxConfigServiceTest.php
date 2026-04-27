@@ -3,10 +3,11 @@
 use App\Enums\ProjectType;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Services\Nginx\NginxConfigService;
 
 describe('NginxConfigService', function () {
-    it('uses only domain in server_name', function () {
+    it('uses single hostname in server_name per domain file', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.42',
         ]);
@@ -16,8 +17,10 @@ describe('NginxConfigService', function () {
             'domain' => 'myapp.com',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generate($site);
+        $config = $service->generateForSiteDomain($site, $domain);
 
         expect($config)
             ->toContain('server_name myapp.com')
@@ -34,15 +37,17 @@ describe('NginxConfigService', function () {
             'domain' => 'myapp.com',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generate($site);
+        $config = $service->generateForSiteDomain($site, $domain);
 
         expect($config)
             ->toContain('server_name myapp.com')
             ->not->toContain('nip.io');
     });
 
-    it('uses only domain in SSL configuration', function () {
+    it('uses hostname in SSL configuration', function () {
         $server = Server::factory()->create([
             'ip_address' => '192.168.1.100',
         ]);
@@ -52,15 +57,17 @@ describe('NginxConfigService', function () {
             'domain' => 'example.com',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generateWithSsl($site);
+        $config = $service->generateWithSslForSiteDomain($site, $domain);
 
         expect($config)
             ->toContain('server_name example.com')
             ->not->toContain('nip.io');
     });
 
-    it('includes aliases in server_name', function () {
+    it('does not merge aliases into one file', function () {
         $server = Server::factory()->create([
             'ip_address' => '10.0.0.1',
         ]);
@@ -71,12 +78,16 @@ describe('NginxConfigService', function () {
             'aliases' => ['www.mysite.com', 'app.mysite.com'],
         ]);
 
-        $service = new NginxConfigService;
-        $config = $service->generate($site);
+        $primary = $site->domains()->where('hostname', 'mysite.com')->firstOrFail();
+        $www = $site->domains()->where('hostname', 'www.mysite.com')->firstOrFail();
 
-        expect($config)
-            ->toContain('server_name mysite.com www.mysite.com app.mysite.com')
-            ->not->toContain('nip.io');
+        $service = new NginxConfigService;
+        $configPrimary = $service->generateForSiteDomain($site, $primary);
+        $configWww = $service->generateForSiteDomain($site, $www);
+
+        expect($configPrimary)->toContain('server_name mysite.com');
+        expect($configWww)->toContain('server_name www.mysite.com');
+        expect($configPrimary)->not->toContain('www.mysite.com');
     });
 
     it('handles subdomain domains correctly', function () {
@@ -89,8 +100,10 @@ describe('NginxConfigService', function () {
             'domain' => 'app.example.com',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generate($site);
+        $config = $service->generateForSiteDomain($site, $domain);
 
         expect($config)
             ->toContain('server_name app.example.com')
@@ -107,14 +120,16 @@ describe('NginxConfigService', function () {
             'domain' => 'my-site.flitops.xyz',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generate($site);
+        $config = $service->generateForSiteDomain($site, $domain);
 
         expect($config)
             ->toContain('server_name my-site.flitops.xyz');
     });
 
-    it('uses domain in both HTTP and HTTPS server blocks for SSL config', function () {
+    it('uses hostname in both HTTP and HTTPS server blocks for SSL config', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.10',
         ]);
@@ -124,8 +139,10 @@ describe('NginxConfigService', function () {
             'domain' => 'test.com',
         ]);
 
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
         $service = new NginxConfigService;
-        $config = $service->generateWithSsl($site);
+        $config = $service->generateWithSslForSiteDomain($site, $domain);
 
         $httpBlock = substr($config, 0, strpos($config, '# HTTPS server'));
         $httpsBlock = substr($config, strpos($config, '# HTTPS server'));
@@ -148,8 +165,10 @@ describe('NginxConfigService', function () {
                 'directory' => '/public',
             ]);
 
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
             $service = new NginxConfigService;
-            $config = $service->generate($site);
+            $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$query_string')
@@ -168,8 +187,10 @@ describe('NginxConfigService', function () {
                 'directory' => '/public',
             ]);
 
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
             $service = new NginxConfigService;
-            $config = $service->generate($site);
+            $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$query_string')
@@ -187,8 +208,10 @@ describe('NginxConfigService', function () {
                 'directory' => '/',
             ]);
 
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
             $service = new NginxConfigService;
-            $config = $service->generate($site);
+            $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php /index.html =404')
@@ -208,8 +231,10 @@ describe('NginxConfigService', function () {
                 'directory' => '/',
             ]);
 
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
             $service = new NginxConfigService;
-            $config = $service->generate($site);
+            $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
                 ->toContain('index index.html index.htm')
@@ -229,8 +254,10 @@ describe('NginxConfigService', function () {
                 'directory' => '/',
             ]);
 
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
             $service = new NginxConfigService;
-            $config = $service->generate($site);
+            $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$args')
@@ -239,5 +266,21 @@ describe('NginxConfigService', function () {
                 ->toContain('deny all')
                 ->toContain('fastcgi_pass unix:/var/run/php/php');
         });
+    });
+
+    it('includes www redirect preamble when from_www', function () {
+        $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
+        $site = Site::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'apex.com',
+        ]);
+        $d = SiteDomain::query()->where('site_id', $site->id)->where('hostname', 'apex.com')->firstOrFail();
+        $d->update(['www_redirect' => \App\Enums\WwwRedirect::FromWww]);
+
+        $service = new NginxConfigService;
+        $config = $service->generateForSiteDomain($site, $d->fresh());
+
+        expect($config)->toContain('server_name www.apex.com');
+        expect($config)->toContain('return 301 http://apex.com');
     });
 });

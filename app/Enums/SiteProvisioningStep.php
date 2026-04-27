@@ -49,33 +49,11 @@ enum SiteProvisioningStep: int
     public static function enumCasesForProjectType(\App\Enums\ProjectType $projectType): array
     {
         return match ($projectType) {
-            ProjectType::Laravel => [
-                self::Initializing,
-                self::ConfiguringNginx,
-                self::CloningRepository,
-                self::CreatingEnvironmentFile,
-                self::InstallingDependencies,
-                self::BuildingFrontendAssets,
-                self::RunningDatabaseMigrations,
-                self::MakingFinalTouches,
-            ],
-            ProjectType::Symfony => [
-                self::Initializing,
-                self::ConfiguringNginx,
-                self::CloningRepository,
-                self::CreatingEnvironmentFile,
-                self::InstallingDependencies,
-                self::MakingFinalTouches,
-            ],
-            ProjectType::PhpGeneric => [
-                self::Initializing,
-                self::ConfiguringNginx,
-                self::CloningRepository,
-                self::CreatingEnvironmentFile,
-                self::InstallingDependencies,
-                self::MakingFinalTouches,
-            ],
-            ProjectType::StaticHtml, ProjectType::WordPress => [
+            ProjectType::Laravel,
+            ProjectType::Symfony,
+            ProjectType::PhpGeneric,
+            ProjectType::StaticHtml,
+            ProjectType::WordPress => [
                 self::Initializing,
                 self::ConfiguringNginx,
                 self::CloningRepository,
