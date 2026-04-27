@@ -4,10 +4,10 @@ import {
     CalendarIcon,
     ExternalLinkIcon,
     GitBranchIcon,
+    Loader2Icon,
     MoreVerticalIcon,
     PlayIcon,
     RocketIcon,
-    ServerIcon,
     Trash2Icon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -69,6 +69,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     );
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeploying, setIsDeploying] = useState(false);
 
     if (!siteData?.id) {
         return (
@@ -105,6 +106,20 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                 setDeleteDialogOpen(false);
             },
         });
+    };
+
+    const handleDeploy = () => {
+        setIsDeploying(true);
+        router.post(
+            `/servers/${serverId}/sites/${siteData.id}/deployments`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsDeploying(false);
+                },
+            },
+        );
     };
 
     return (
@@ -191,10 +206,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         />
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <ServerIcon className="h-5 w-5" />
-                                    Details
-                                </CardTitle>
+                                <CardTitle>Details</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-5 text-sm">
                                 <DetailRow
@@ -234,14 +246,23 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         <Card id="deployments">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2">
-                                        <RocketIcon className="h-5 w-5" />
-                                        Deployments
-                                    </CardTitle>
-                                    <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/servers/${serverId}/sites/${siteData.id}/deployments`}>
-                                            View all
-                                        </Link>
+                                    <CardTitle>Deployments</CardTitle>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleDeploy}
+                                        disabled={
+                                            isDeploying ||
+                                            siteData.status === 'installing'
+                                        }
+                                    >
+                                        {isDeploying ? (
+                                            <>
+                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                Deploying...
+                                            </>
+                                        ) : (
+                                            'Deploy'
+                                        )}
                                     </Button>
                                 </div>
                                 <CardDescription>
@@ -336,10 +357,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         {/* Background processes */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PlayIcon className="h-5 w-5" />
-                                    Background processes
-                                </CardTitle>
+                                <CardTitle>Background processes</CardTitle>
                                 <CardDescription>
                                     Process managers and workers for this site.
                                 </CardDescription>
@@ -363,10 +381,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         {/* Scheduled jobs */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <CalendarIcon className="h-5 w-5" />
-                                    Scheduled jobs
-                                </CardTitle>
+                                <CardTitle>Scheduled jobs</CardTitle>
                                 <CardDescription>
                                     Cron jobs and scheduled tasks for this site.
                                 </CardDescription>
@@ -392,10 +407,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                     <div>
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <ServerIcon className="h-5 w-5" />
-                                    Details
-                                </CardTitle>
+                                <CardTitle>Details</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-5 text-sm">
                                 <div className="space-y-2">

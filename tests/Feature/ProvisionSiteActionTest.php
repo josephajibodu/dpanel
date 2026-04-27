@@ -180,7 +180,7 @@ it('laravel provisioner does not run composer install during provisioning', func
     expect($composerCalls)->toBeEmpty();
 });
 
-it('laravel provisioner runs artisan key:generate during environment setup', function () {
+it('laravel provisioner injects an APP_KEY into the env file without invoking artisan', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
     $site = Site::factory()->forServer($server)->pending()->create([
         'repository' => null,
@@ -194,8 +194,15 @@ it('laravel provisioner runs artisan key:generate during environment setup', fun
 
     app(ProvisionSiteAction::class)->execute($site);
 
+    $appKeyCalls = collect($execCalls)->filter(
+        fn ($c) => str_contains($c, '^APP_KEY=') && str_contains($c, 'APP_KEY=base64:')
+    );
+    expect($appKeyCalls)->not->toBeEmpty();
+
+    // artisan key:generate cannot run before composer install, so it must NOT
+    // be called during provisioning anymore.
     $keyGenCalls = collect($execCalls)->filter(fn ($c) => str_contains($c, 'key:generate'));
-    expect($keyGenCalls)->not->toBeEmpty();
+    expect($keyGenCalls)->toBeEmpty();
 });
 
 it('laravel provisioner sets correct permissions with sudo', function () {
@@ -279,4 +286,82 @@ it('symfony provisioner creates var/cache and var/log directories', function () 
 
     $varCalls = collect($execCalls)->filter(fn ($c) => str_contains($c, 'var/cache') && str_contains($c, 'var/log'));
     expect($varCalls)->not->toBeEmpty();
+});
+
+// --------------------------------------------------------------------------
+// First-deploy auto-trigger
+// --------------------------------------------------------------------------
+
+it('auto-creates a deployment after provisioning a site that has a repository', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => 'username/repo',
+        'source_control_account_id' => null,
+        'project_type' => ProjectType::Laravel,
+    ]);
+    $site->deployScript()->create(['script' => 'echo "deploy"']);
+
+    $mockConnection = mockSshConnection();
+    $this->app->instance(SshService::class, mockSshService($mockConnection, $server->id));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    $site->refresh();
+    expect($site->status)->toBe(SiteStatus::Provisioned);
+
+    $deployment = $site->deployments()->first();
+    expect($deployment)->not->toBeNull()
+        ->and($deployment->triggered_by)->toBe('auto');
+
+    Queue::assertPushed(DeploySiteJob::class);
+});
+
+it('does not auto-trigger a deployment for a placeholder site without a repository', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => null,
+        'source_control_account_id' => null,
+        'project_type' => ProjectType::StaticHtml,
+        'directory' => '/',
+    ]);
+    $site->deployScript()->create(['script' => 'echo "placeholder"']);
+
+    $mockConnection = mockSshConnection();
+    $this->app->instance(SshService::class, mockSshService($mockConnection, $server->id));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    $site->refresh();
+    expect($site->status)->toBe(SiteStatus::Provisioned);
+    expect($site->deployments()->count())->toBe(0);
+
+    Queue::assertNotPushed(DeploySiteJob::class);
+});
+
+it('marks the site as failed and skips auto-deploy when an infra step throws', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => 'username/repo',
+        'source_control_account_id' => null,
+        'project_type' => ProjectType::Laravel,
+    ]);
+    $site->deployScript()->create(['script' => 'echo "deploy"']);
+
+    $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+    $mockConnection->shouldReceive('exec')
+        ->andThrow(new \RuntimeException('git clone failed'));
+    $mockConnection->shouldReceive('disconnect')->andReturn(null);
+
+    $sshService = \Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
+    $this->app->instance(SshService::class, $sshService);
+
+    expect(fn () => app(ProvisionSiteAction::class)->execute($site))
+        ->toThrow(\RuntimeException::class, 'git clone failed');
+
+    $site->refresh();
+    expect($site->status)->toBe(SiteStatus::Failed);
+    expect($site->deployments()->count())->toBe(0);
+
+    Queue::assertNotPushed(DeploySiteJob::class);
 });

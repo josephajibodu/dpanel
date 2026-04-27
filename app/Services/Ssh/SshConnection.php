@@ -56,6 +56,12 @@ class SshConnection
     /**
      * Execute command with streaming output callback.
      * Used for deployment logs and provisioning progress.
+     *
+     * phpseclib delivers output in chunks aligned to TCP/SSH packet boundaries,
+     * not line boundaries, so a single logical line of remote output can arrive
+     * split across multiple callback invocations. We buffer partial output and
+     * only emit once a newline is seen, so the consumer receives exactly one
+     * call per complete line.
      */
     public function execWithOutput(
         string $command,
@@ -64,16 +70,29 @@ class SshConnection
     ): int {
         $this->ssh->setTimeout($timeout);
 
-        // Use exec with callback for streaming
-        $this->ssh->exec($command, function ($output) use ($onOutput) {
-            // Split into lines and call callback for each
-            $lines = explode("\n", $output);
-            foreach ($lines as $line) {
-                if ($line !== '') {
-                    $onOutput($line);
+        $buffer = '';
+
+        $this->ssh->exec($command, function ($chunk) use ($onOutput, &$buffer) {
+            $buffer .= $chunk;
+
+            while (($newlinePos = strpos($buffer, "\n")) !== false) {
+                $line = substr($buffer, 0, $newlinePos);
+                $buffer = substr($buffer, $newlinePos + 1);
+
+                if (str_ends_with($line, "\r")) {
+                    $line = substr($line, 0, -1);
                 }
+
+                $onOutput($line);
             }
         });
+
+        if ($buffer !== '') {
+            if (str_ends_with($buffer, "\r")) {
+                $buffer = substr($buffer, 0, -1);
+            }
+            $onOutput($buffer);
+        }
 
         return $this->ssh->getExitStatus() ?? 0;
     }
