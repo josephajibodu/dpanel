@@ -3,6 +3,7 @@
 namespace App\Actions\Sites;
 
 use App\Enums\SiteCommandRunStatus;
+use App\Events\SiteCommandRunStatusChanged;
 use App\Exceptions\SshCommandException;
 use App\Jobs\RunSiteCommandJob;
 use App\Models\Site;
@@ -25,6 +26,7 @@ class RunSiteCommand
             'command' => $command,
             'status' => SiteCommandRunStatus::Pending,
         ]);
+        SiteCommandRunStatusChanged::dispatch($run->fresh('site'));
 
         RunSiteCommandJob::dispatch($run)->onQueue('provisioning');
 
@@ -44,6 +46,7 @@ class RunSiteCommand
             'status' => SiteCommandRunStatus::Running,
             'started_at' => now(),
         ]);
+        SiteCommandRunStatusChanged::dispatch($run->fresh('site'));
 
         $connection = $this->sshService->connect($server);
 
@@ -66,6 +69,7 @@ class RunSiteCommand
                 'exit_code' => $exitCode,
                 'finished_at' => now(),
             ]);
+            SiteCommandRunStatusChanged::dispatch($run->fresh('site'));
         } finally {
             $connection->disconnect();
         }

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\Sites\RunSiteCommand;
 use App\Enums\SiteCommandRunStatus;
+use App\Events\SiteCommandRunStatusChanged;
 use App\Models\SiteCommandRun;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -40,6 +41,7 @@ class RunSiteCommandJob implements ShouldQueue
                 'exit_code' => $e instanceof \App\Exceptions\SshCommandException ? $e->exitCode : 1,
                 'finished_at' => now(),
             ]);
+            SiteCommandRunStatusChanged::dispatch($this->run->fresh('site'));
             throw $e;
         }
     }

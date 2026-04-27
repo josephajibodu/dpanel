@@ -43,6 +43,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useServerCommandRunUpdates } from '@/hooks/use-server-command-run-updates';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Site } from '@/types/site';
@@ -89,6 +90,7 @@ export default function SiteCommandsIndex({
     const site = siteProp?.data ?? siteProp;
     const serverId = server?.id ?? site?.server?.id;
     const siteId = site?.id;
+    useServerCommandRunUpdates(Number(serverId ?? 0), siteId ? Number(siteId) : undefined);
 
     const [runSheetOpen, setRunSheetOpen] = useState(false);
     const [commandInput, setCommandInput] = useState('');
@@ -228,17 +230,20 @@ export default function SiteCommandsIndex({
                                                         className={
                                                             {
                                                                 pending:
-                                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
                                                                 running:
-                                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
                                                                 completed:
-                                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
                                                                 failed:
-                                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
                                                             }[run.status] ??
-                                                            'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                            'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                                                         }
                                                     >
+                                                        {run.status === 'running' && (
+                                                            <Loader2Icon className="h-3 w-3 animate-spin" />
+                                                        )}
                                                         {run.status_label}
                                                     </span>
                                                 </TableCell>
