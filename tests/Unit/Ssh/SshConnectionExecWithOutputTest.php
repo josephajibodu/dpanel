@@ -4,31 +4,63 @@ use App\Models\Server;
 use App\Services\Ssh\SshConnection;
 use phpseclib3\Net\SSH2;
 
-afterEach(function () {
-    \Mockery::close();
-});
+/**
+ * A minimal SSH2 stand-in. We override __construct so no real socket is
+ * opened, and override only the methods SshConnection actually invokes.
+ *
+ * Using a hand-rolled subclass instead of Mockery here avoids a destruction
+ * order issue where SshConnection's destructor would call disconnect() on
+ * the SSH2 mock after Mockery::close() had already torn the container down.
+ */
+class FakeStreamingSSH2 extends SSH2
+{
+    /** @param array<int, string> $chunks */
+    public function __construct(
+        private array $chunks = [],
+        private int $exitStatus = 0,
+    ) {
+        // Intentionally skip parent::__construct() — no network setup needed.
+    }
+
+    public function setTimeout($timeout): void
+    {
+        // no-op
+    }
+
+    public function exec($command, $callback = null)
+    {
+        if ($callback === null) {
+            return implode('', $this->chunks);
+        }
+
+        foreach ($this->chunks as $chunk) {
+            $callback($chunk);
+        }
+
+        return false;
+    }
+
+    public function getExitStatus()
+    {
+        return $this->exitStatus;
+    }
+
+    public function disconnect($reason = 11): void
+    {
+        // no-op
+    }
+}
 
 /**
- * Build a SshConnection backed by a mocked SSH2 that, when exec() is called,
- * fires $chunks at the supplied callback in order. Mirrors phpseclib's real
- * behavior of delivering output in TCP/SSH-packet-aligned chunks rather than
- * line-aligned ones.
+ * Build a SshConnection that, when exec() is called, fires $chunks at the
+ * supplied callback in order. Mirrors phpseclib's real behavior of delivering
+ * output in TCP/SSH-packet-aligned chunks rather than line-aligned ones.
  *
  * @param  array<int, string>  $chunks
  */
 function fakeSshConnection(array $chunks, int $exitStatus = 0): SshConnection
 {
-    $ssh = \Mockery::mock(SSH2::class);
-    $ssh->shouldReceive('setTimeout')->andReturnNull();
-    $ssh->shouldReceive('exec')->andReturnUsing(function ($command, $callback) use ($chunks) {
-        foreach ($chunks as $chunk) {
-            $callback($chunk);
-        }
-
-        return '';
-    });
-    $ssh->shouldReceive('getExitStatus')->andReturn($exitStatus);
-
+    $ssh = new FakeStreamingSSH2($chunks, $exitStatus);
     $server = new Server;
 
     return new SshConnection($ssh, $server, 'artisan');

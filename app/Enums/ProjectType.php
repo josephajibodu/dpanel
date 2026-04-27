@@ -49,7 +49,8 @@ enum ProjectType: string
     private function laravelDeployScript(): string
     {
         return <<<'SCRIPT'
-git pull origin $BRANCH
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
@@ -67,7 +68,8 @@ SCRIPT;
     private function symfonyDeployScript(): string
     {
         return <<<'SCRIPT'
-git pull origin $BRANCH
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
@@ -79,7 +81,8 @@ SCRIPT;
     private function phpDeployScript(): string
     {
         return <<<'SCRIPT'
-git pull origin $BRANCH
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 SCRIPT;
@@ -88,14 +91,16 @@ SCRIPT;
     private function htmlDeployScript(): string
     {
         return <<<'SCRIPT'
-git pull origin $BRANCH
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 SCRIPT;
     }
 
     private function wordpressDeployScript(): string
     {
         return <<<'SCRIPT'
-git pull origin $BRANCH
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 SCRIPT;
     }
 }
