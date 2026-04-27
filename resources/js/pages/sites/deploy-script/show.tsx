@@ -1,12 +1,14 @@
+import { Head, useForm } from '@inertiajs/react';
+import Editor, { type Monaco } from '@monaco-editor/react';
+import { Loader2Icon } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useAppearance } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type Site } from '@/types/site';
-import { Head, useForm } from '@inertiajs/react';
-import { Loader2Icon } from 'lucide-react';
 
 interface Props {
     server: { data: { id: number; name: string } };
@@ -22,6 +24,7 @@ export default function SiteDeployScriptShow({ server: serverProp, site: sitePro
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
+    const { resolvedAppearance } = useAppearance();
 
     const form = useForm({
         script: site.deploy_script ?? '',
@@ -38,6 +41,24 @@ export default function SiteDeployScriptShow({ server: serverProp, site: sitePro
         { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
         { title: 'Deploy Script', href: `/servers/${serverId}/sites/${site.id}/deploy-script` },
     ];
+
+    const editorTheme = resolvedAppearance === 'dark' ? 'shell-dark' : 'shell-light';
+
+    const handleEditorBeforeMount = (monaco: Monaco) => {
+        monaco.editor.defineTheme('shell-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('shell-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [],
+            colors: {},
+        });
+    };
 
     return (
         <AppLayout
@@ -59,13 +80,28 @@ export default function SiteDeployScriptShow({ server: serverProp, site: sitePro
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="script">Deployment Script</Label>
-                        <Textarea
-                            id="script"
-                            value={form.data.script}
-                            onChange={(e) => form.setData('script', e.target.value)}
-                            className="min-h-[400px] font-mono text-sm"
-                            placeholder="cd $SITE_ROOT&#10;git pull origin $BRANCH&#10;$COMPOSER install --no-dev"
-                        />
+                        <div className="overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
+                            <Editor
+                                height="420px"
+                                language="shell"
+                                value={form.data.script}
+                                beforeMount={handleEditorBeforeMount}
+                                theme={editorTheme}
+                                onChange={(value) => form.setData('script', value ?? '')}
+                                options={{
+                                    minimap: { enabled: false },
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    wordWrap: 'off',
+                                    automaticLayout: true,
+                                    fontSize: 13,
+                                    lineHeight: 20,
+                                    tabSize: 2,
+                                    padding: { top: 8, bottom: 8 },
+                                    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                }}
+                            />
+                        </div>
                         {form.errors.script && <p className="text-destructive text-sm">{form.errors.script}</p>}
                     </div>
 

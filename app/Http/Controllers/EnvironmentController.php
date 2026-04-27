@@ -7,25 +7,36 @@ use App\Http\Resources\SiteResource;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Services\Ssh\SshService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class EnvironmentController extends Controller
 {
-    public function show(Server $server, Site $site): Response
+    public function show(Server $server, Site $site, SshService $sshService): Response
     {
         $this->authorize('view', $site);
 
-        $site->load(['server', 'environmentVariables']);
+        $site->load(['server']);
 
         $hasWorkers = $site->server->workers()->where('site_id', $site->id)->exists();
+        $envContent = '';
+
+        try {
+            $connection = $sshService->connect($site->server);
+            $envContent = $connection->download($site->rootPath().'/.env');
+        } catch (\Throwable) {
+            $envContent = '';
+        }
 
         return Inertia::render('sites/environment/show', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'has_workers' => $hasWorkers,
+            'env_content' => $envContent,
         ]);
     }
 
@@ -34,21 +45,18 @@ class EnvironmentController extends Controller
         $this->authorize('update', $site);
 
         $validated = $request->validate([
-            'variables' => ['required', 'array'],
-            'variables.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Z_][A-Z0-9_]*$/i'],
-            'variables.*.value' => ['nullable', 'string', 'max:65535'],
+            'env_content' => ['required', 'string'],
             'clear_config_cache' => ['sometimes', 'boolean'],
             'restart_queue' => ['sometimes', 'boolean'],
-        ], [
-            'variables.*.key.regex' => 'Variable names should start with a letter or underscore and contain only letters, numbers, and underscores.',
         ]);
 
         $clearConfigCache = (bool) ($validated['clear_config_cache'] ?? false);
         $restartQueue = (bool) ($validated['restart_queue'] ?? false);
+        $variables = $this->parseEnvContent($validated['env_content']);
 
         // Get existing variables to detect deletions
         $existingKeys = $site->environmentVariables()->pluck('key')->all();
-        $newKeys = collect($validated['variables'])->pluck('key')->all();
+        $newKeys = array_keys($variables);
 
         // Delete removed variables
         $keysToDelete = array_diff($existingKeys, $newKeys);
@@ -57,10 +65,10 @@ class EnvironmentController extends Controller
         }
 
         // Update or create variables
-        foreach ($validated['variables'] as $variable) {
+        foreach ($variables as $key => $value) {
             $site->environmentVariables()->updateOrCreate(
-                ['key' => $variable['key']],
-                ['value' => $variable['value'] ?? '']
+                ['key' => $key],
+                ['value' => $value]
             );
         }
 
@@ -70,5 +78,50 @@ class EnvironmentController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Environment variables updated. Syncing to server...');
+    }
+
+    /**
+     * @return array<string, string>
+     *
+     * @throws ValidationException
+     */
+    protected function parseEnvContent(string $envContent): array
+    {
+        $variables = [];
+        $lines = preg_split('/\r\n|\r|\n/', $envContent) ?: [];
+
+        foreach ($lines as $index => $line) {
+            $trimmedLine = trim($line);
+
+            if ($trimmedLine === '' || str_starts_with($trimmedLine, '#')) {
+                continue;
+            }
+
+            $delimiterIndex = strpos($line, '=');
+            if ($delimiterIndex === false) {
+                throw ValidationException::withMessages([
+                    'env_content' => 'Line '.($index + 1).' is invalid. Use KEY=value format.',
+                ]);
+            }
+
+            $key = trim(substr($line, 0, $delimiterIndex));
+            $value = ltrim(substr($line, $delimiterIndex + 1));
+
+            if ($key === '' || ! preg_match('/^[A-Z_][A-Z0-9_]*$/i', $key)) {
+                throw ValidationException::withMessages([
+                    'env_content' => 'Line '.($index + 1).' has an invalid key. Keys must start with a letter or underscore and contain only letters, numbers, and underscores.',
+                ]);
+            }
+
+            if (strlen($value) > 65535) {
+                throw ValidationException::withMessages([
+                    'env_content' => 'Line '.($index + 1).' value is too long.',
+                ]);
+            }
+
+            $variables[$key] = $value;
+        }
+
+        return $variables;
     }
 }

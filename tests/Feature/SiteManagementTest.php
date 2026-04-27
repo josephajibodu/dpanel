@@ -10,6 +10,8 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Cloudflare\CloudflareDnsService;
+use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\SshService;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
@@ -388,6 +390,18 @@ describe('site sub-pages', function () {
             'server_id' => $this->server->id,
         ]);
 
+        $sshConnectionMock = \Mockery::mock(SshConnection::class);
+        $sshConnectionMock->shouldReceive('download')
+            ->once()
+            ->andReturn("APP_NAME=FlitOps\nAPP_ENV=production");
+
+        $sshServiceMock = \Mockery::mock(SshService::class);
+        $sshServiceMock->shouldReceive('connect')
+            ->once()
+            ->withArgs(fn ($server) => $server->is($this->server))
+            ->andReturn($sshConnectionMock);
+        $this->app->instance(SshService::class, $sshServiceMock);
+
         $response = $this->actingAs($this->user)
             ->get("/servers/{$this->server->id}/sites/{$site->id}/environment");
 
@@ -396,6 +410,7 @@ describe('site sub-pages', function () {
                 ->component('sites/environment/show')
                 ->has('server.data')
                 ->has('site.data')
+                ->where('env_content', "APP_NAME=FlitOps\nAPP_ENV=production")
             );
     });
 
@@ -441,7 +456,7 @@ describe('deployment triggering', function () {
 });
 
 describe('environment variables', function () {
-    it('can update environment variables', function () {
+    it('can update environment variables from env content', function () {
         Queue::fake();
 
         $site = Site::factory()->create([
@@ -450,10 +465,7 @@ describe('environment variables', function () {
 
         $response = $this->actingAs($this->user)
             ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
-                'variables' => [
-                    ['key' => 'APP_KEY', 'value' => 'base64:test'],
-                    ['key' => 'DB_HOST', 'value' => 'localhost'],
-                ],
+                'env_content' => "APP_KEY=base64:test\nDB_HOST=localhost",
             ]);
 
         $response->assertRedirect();
@@ -470,19 +482,55 @@ describe('environment variables', function () {
         Queue::assertPushed(SyncEnvironmentJob::class);
     });
 
-    it('validates environment variable keys', function () {
+    it('ignores comments and blank lines in env content', function () {
+        Queue::fake();
+
         $site = Site::factory()->create([
             'server_id' => $this->server->id,
         ]);
 
         $response = $this->actingAs($this->user)
             ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
-                'variables' => [
-                    ['key' => '123INVALID', 'value' => 'test'],
-                ],
+                'env_content' => "# App settings\n\nAPP_ENV=production\n\n# Database\nDB_HOST=127.0.0.1\n",
             ]);
 
-        $response->assertSessionHasErrors('variables.0.key');
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('environment_variables', [
+            'site_id' => $site->id,
+            'key' => 'APP_ENV',
+        ]);
+        $this->assertDatabaseHas('environment_variables', [
+            'site_id' => $site->id,
+            'key' => 'DB_HOST',
+        ]);
+        $this->assertDatabaseCount('environment_variables', 2);
+    });
+
+    it('validates malformed env content lines', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+                'env_content' => "APP_NAME=FlitOps\nINVALID_LINE",
+            ]);
+
+        $response->assertSessionHasErrors('env_content');
+    });
+
+    it('validates environment variable key format in env content', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+                'env_content' => '123INVALID=test',
+            ]);
+
+        $response->assertSessionHasErrors('env_content');
     });
 });
 

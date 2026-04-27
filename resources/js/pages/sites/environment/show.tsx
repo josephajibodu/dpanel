@@ -1,15 +1,16 @@
+import { Head, useForm } from '@inertiajs/react';
+import Editor, { type Monaco } from '@monaco-editor/react';
+import { Loader2Icon } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useAppearance } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type EnvironmentVariable, type Site } from '@/types/site';
-import { Head, useForm } from '@inertiajs/react';
-import { Loader2Icon, PlusIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface Props {
     server: { data: { id: number; name: string } };
@@ -20,48 +21,29 @@ interface Props {
         };
     };
     has_workers: boolean;
+    env_content?: string;
 }
 
-export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false }: Props) {
+export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false, env_content = '' }: Props) {
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
-
-    const initialVars = site.environment_variables?.length
-        ? site.environment_variables
-        : [{ key: '', value: '' }];
-    const [variables, setVariables] = useState<EnvironmentVariable[]>(initialVars);
+    const { resolvedAppearance } = useAppearance();
+    const fallbackVariables: EnvironmentVariable[] = site.environment_variables ?? [];
+    const initialContent = env_content !== ''
+        ? env_content
+        : fallbackVariables.length
+        ? fallbackVariables.map((variable) => `${variable.key}=${variable.value ?? ''}`).join('\n')
+        : '';
 
     const form = useForm({
-        variables,
+        env_content: initialContent,
         clear_config_cache: false,
         restart_queue: false,
     });
 
-    function addVariable() {
-        const newVariables = [...variables, { key: '', value: '' }];
-        setVariables(newVariables);
-        form.setData('variables', newVariables);
-    }
-
-    function removeVariable(index: number) {
-        const newVariables = variables.filter((_, i) => i !== index);
-        const finalVariables = newVariables.length > 0 ? newVariables : [{ key: '', value: '' }];
-        setVariables(finalVariables);
-        form.setData('variables', finalVariables);
-    }
-
-    function updateVariable(index: number, field: 'key' | 'value', value: string) {
-        const newVariables = [...variables];
-        newVariables[index] = { ...newVariables[index], [field]: value };
-        setVariables(newVariables);
-        form.setData('variables', newVariables);
-    }
-
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        const filteredVariables = variables.filter((v) => v.key.trim() !== '');
-        form.setData('variables', filteredVariables);
         form.put(`/servers/${serverId}/sites/${site.id}/environment`);
     }
 
@@ -71,6 +53,45 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
         { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
         { title: 'Environment', href: `/servers/${serverId}/sites/${site.id}/environment` },
     ];
+
+    const editorTheme = resolvedAppearance === 'dark' ? 'env-dark' : 'env-light';
+
+    const handleEditorBeforeMount = (monaco: Monaco) => {
+        if (! monaco.languages.getLanguages().some((language: { id: string }) => language.id === 'dotenv')) {
+            monaco.languages.register({ id: 'dotenv' });
+            monaco.languages.setMonarchTokensProvider('dotenv', {
+                tokenizer: {
+                    root: [
+                        [/^\s*#.*/, 'comment'],
+                        [/^\s*[A-Za-z_][A-Za-z0-9_]*(?=\s*=)/, 'key'],
+                        [/=.+$/, 'value'],
+                    ],
+                },
+            });
+        }
+
+        monaco.editor.defineTheme('env-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'key', foreground: '9CDCFE' },
+                { token: 'value', foreground: 'CE9178' },
+                { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+            ],
+            colors: {},
+        });
+
+        monaco.editor.defineTheme('env-light', {
+            base: 'vs',
+            inherit: true,
+            rules: [
+                { token: 'key', foreground: '0451A5' },
+                { token: 'value', foreground: 'A31515' },
+                { token: 'comment', foreground: '008000', fontStyle: 'italic' },
+            ],
+            colors: {},
+        });
+    };
 
     return (
         <AppLayout
@@ -92,35 +113,33 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                 <Card>
                     <CardContent className="pt-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-3">
-                                {variables.map((variable, index) => (
-                                    <div key={index} className="flex gap-3">
-                                        <div className="flex-1">
-                                            <Input
-                                                placeholder="VARIABLE_NAME"
-                                                value={variable.key}
-                                                onChange={(e) => updateVariable(index, 'key', e.target.value.toUpperCase())}
-                                                className="font-mono"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <Input
-                                                placeholder="value"
-                                                value={variable.value}
-                                                onChange={(e) => updateVariable(index, 'value', e.target.value)}
-                                            />
-                                        </div>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeVariable(index)}>
-                                            <XIcon className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
+                            <div className="space-y-2">
+                                <div className="overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
+                                    <Editor
+                                        height="420px"
+                                        language="dotenv"
+                                        value={form.data.env_content}
+                                        beforeMount={handleEditorBeforeMount}
+                                        theme={editorTheme}
+                                        onChange={(value) => form.setData('env_content', value ?? '')}
+                                        options={{
+                                            minimap: { enabled: false },
+                                            lineNumbers: 'on',
+                                            scrollBeyondLastLine: false,
+                                            wordWrap: 'off',
+                                            automaticLayout: true,
+                                            fontSize: 13,
+                                            lineHeight: 20,
+                                            tabSize: 2,
+                                            padding: { top: 8, bottom: 8 },
+                                            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                        }}
+                                    />
+                                </div>
+                                {form.errors.env_content && (
+                                    <p className="text-destructive text-sm">{form.errors.env_content}</p>
+                                )}
                             </div>
-
-                            <Button type="button" variant="outline" size="sm" onClick={addVariable}>
-                                <PlusIcon className="mr-2 h-4 w-4" />
-                                Add Variable
-                            </Button>
 
                             <div className="flex flex-col gap-2">
                                 <label className="flex items-center gap-2 text-sm">
