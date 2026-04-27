@@ -28,6 +28,7 @@ it('runs command on server and updates run with output and completed status', fu
         ->once()
         ->with(\Mockery::on(function (string $cmd) use ($site) {
             return str_contains($cmd, $site->rootPath())
+                && str_contains($cmd, 'bash -lc')
                 && str_contains($cmd, 'php artisan --version');
         }), 300)
         ->andReturn('Laravel Framework 12.x');

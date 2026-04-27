@@ -50,7 +50,7 @@ class RunSiteCommand
         try {
             $rootPath = $site->rootPath();
             $escapedCommand = $this->escapeForShell($run->command);
-            $fullCommand = "cd {$rootPath} && {$escapedCommand} 2>&1";
+            $fullCommand = "cd {$rootPath} && bash -lc {$escapedCommand} 2>&1";
 
             try {
                 $output = $connection->exec($fullCommand, 300);

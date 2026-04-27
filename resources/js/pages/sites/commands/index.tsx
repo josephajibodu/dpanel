@@ -1,3 +1,13 @@
+import { Head, router } from '@inertiajs/react';
+import {
+    FileTextIcon,
+    Loader2Icon,
+    MoreVerticalIcon,
+    PlayIcon,
+    TerminalIcon,
+} from 'lucide-react';
+import { useCallback, useState } from 'react';
+
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,15 +46,6 @@ import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Site } from '@/types/site';
-import { Head, router } from '@inertiajs/react';
-import {
-    TerminalIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    PlayIcon,
-    FileTextIcon,
-} from 'lucide-react';
-import { useCallback, useState } from 'react';
 
 interface CommandRun {
     id: number;
@@ -362,8 +363,8 @@ export default function SiteCommandsIndex({
 
             {/* View logs dialog */}
             <Dialog open={logsDialogOpen} onOpenChange={setLogsDialogOpen}>
-                <DialogContent className="max-h-[80vh] max-w-2xl">
-                    <DialogHeader>
+                <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden p-0">
+                    <DialogHeader className="px-6 pt-6">
                         <DialogTitle>
                             Command output
                             {logsRun && (
@@ -373,17 +374,19 @@ export default function SiteCommandsIndex({
                             )}
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="min-h-[200px] overflow-auto rounded-md border bg-muted/30 p-3">
+                    <div className="px-6 pb-6">
+                        <div className="max-h-[60vh] min-h-[200px] overflow-y-auto rounded-md border bg-muted/30 p-3">
                         {logsLoading ? (
                             <p className="text-muted-foreground flex items-center gap-2 text-sm">
                                 <Loader2Icon className="h-4 w-4 animate-spin" />
                                 Loading…
                             </p>
                         ) : (
-                            <pre className="whitespace-pre-wrap break-words font-mono text-xs">
+                            <pre className="font-mono text-xs whitespace-pre-wrap break-words">
                                 {logsContent || 'No output.'}
                             </pre>
                         )}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
