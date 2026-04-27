@@ -6,16 +6,19 @@ use App\Enums\ServerStatus;
 use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
 use App\Events\ServerSitesUpdated;
+use App\Jobs\DeploySiteJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Event::fake([ServerSitesUpdated::class]);
+    Queue::fake([DeploySiteJob::class]);
 });
 
 function mockSshConnection(array &$execCalls = []): SshConnection
@@ -75,7 +78,7 @@ it('provisions a placeholder StaticHtml site and sets status to provisioned', fu
     expect($site->provisioning_step)->toBeNull();
 });
 
-it('provisions a Laravel site through all 8 steps', function () {
+it('provisions a Laravel site through the infra-only steps', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
 
     $site = Site::factory()
@@ -88,7 +91,6 @@ it('provisions a Laravel site through all 8 steps', function () {
         ]);
     $site->deployScript()->create(['script' => 'echo "laravel"']);
 
-    $recordedSteps = [];
     $execCalls = [];
     $mockConnection = mockSshConnection($execCalls);
     $this->app->instance(SshService::class, mockSshService($mockConnection));
@@ -136,44 +138,31 @@ it('sets site status to failed when a step throws', function () {
 // Enum step counts
 // --------------------------------------------------------------------------
 
-it('uses correct step count for StaticHtml project type', function () {
-    $steps = SiteProvisioningStep::enumCasesForProjectType(ProjectType::StaticHtml);
+it('uses infra-only steps for every project type', function () {
+    $expected = [
+        SiteProvisioningStep::Initializing,
+        SiteProvisioningStep::ConfiguringNginx,
+        SiteProvisioningStep::CloningRepository,
+        SiteProvisioningStep::CreatingEnvironmentFile,
+        SiteProvisioningStep::MakingFinalTouches,
+    ];
 
-    expect($steps)->toHaveCount(5);
-    expect($steps[0])->toBe(SiteProvisioningStep::Initializing);
-    expect($steps[4])->toBe(SiteProvisioningStep::MakingFinalTouches);
-});
+    foreach (ProjectType::cases() as $projectType) {
+        $steps = SiteProvisioningStep::enumCasesForProjectType($projectType);
 
-it('uses correct step count for Laravel project type including all steps', function () {
-    $steps = SiteProvisioningStep::enumCasesForProjectType(ProjectType::Laravel);
-
-    expect($steps)->toHaveCount(8);
-    expect($steps)->toContain(SiteProvisioningStep::InstallingDependencies);
-    expect($steps)->toContain(SiteProvisioningStep::BuildingFrontendAssets);
-    expect($steps)->toContain(SiteProvisioningStep::RunningDatabaseMigrations);
-});
-
-it('uses correct step count for Symfony project type', function () {
-    $steps = SiteProvisioningStep::enumCasesForProjectType(ProjectType::Symfony);
-
-    expect($steps)->toHaveCount(6);
-    expect($steps)->toContain(SiteProvisioningStep::InstallingDependencies);
-    expect($steps)->not->toContain(SiteProvisioningStep::BuildingFrontendAssets);
-    expect($steps)->not->toContain(SiteProvisioningStep::RunningDatabaseMigrations);
-});
-
-it('uses correct step count for PhpGeneric project type', function () {
-    $steps = SiteProvisioningStep::enumCasesForProjectType(ProjectType::PhpGeneric);
-
-    expect($steps)->toHaveCount(6);
-    expect($steps)->toContain(SiteProvisioningStep::InstallingDependencies);
+        expect($steps)->toHaveCount(5)
+            ->and($steps)->toBe($expected)
+            ->and($steps)->not->toContain(SiteProvisioningStep::InstallingDependencies)
+            ->and($steps)->not->toContain(SiteProvisioningStep::BuildingFrontendAssets)
+            ->and($steps)->not->toContain(SiteProvisioningStep::RunningDatabaseMigrations);
+    }
 });
 
 // --------------------------------------------------------------------------
 // Per-project-type provisioner tests
 // --------------------------------------------------------------------------
 
-it('laravel provisioner runs composer install in the dependencies step', function () {
+it('laravel provisioner does not run composer install during provisioning', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
     $site = Site::factory()->forServer($server)->pending()->create([
         'repository' => null,
@@ -188,10 +177,10 @@ it('laravel provisioner runs composer install in the dependencies step', functio
     app(ProvisionSiteAction::class)->execute($site);
 
     $composerCalls = collect($execCalls)->filter(fn ($c) => str_contains($c, 'composer install'));
-    expect($composerCalls)->not->toBeEmpty();
+    expect($composerCalls)->toBeEmpty();
 });
 
-it('laravel provisioner runs artisan key:generate after installing dependencies', function () {
+it('laravel provisioner runs artisan key:generate during environment setup', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
     $site = Site::factory()->forServer($server)->pending()->create([
         'repository' => null,

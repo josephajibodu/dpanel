@@ -1,16 +1,26 @@
+import { Head, router, usePage } from '@inertiajs/react';
+import { KeyIcon } from 'lucide-react';
+import { useState } from 'react';
+
 import { destroy } from '@/actions/App/Http/Controllers/SshKeyController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { AddKeyDialog } from '@/components/ssh-keys/add-key-dialog';
-import { SshKeyCard } from '@/components/ssh-keys/ssh-key-card';
+import { SshKeyDetailsDialog } from '@/components/ssh-keys/ssh-key-details-dialog';
+import { SshKeyTableRow } from '@/components/ssh-keys/ssh-key-table-row';
 import { SyncServersDialog } from '@/components/ssh-keys/sync-servers-dialog';
+import { Card } from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type Server } from '@/types/server';
 import { type SshKey } from '@/types/ssh-key';
-import { Head, router, usePage } from '@inertiajs/react';
-import { KeyIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface Props {
     sshKeys: {
@@ -30,6 +40,7 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [syncDialogOpen, setSyncDialogOpen] = useState(false);
     const [selectedKey, setSelectedKey] = useState<SshKey | null>(null);
+    const [detailsKey, setDetailsKey] = useState<SshKey | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Get servers from page props if available (loaded via deferred props)
@@ -43,6 +54,10 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
     const handleSync = (sshKey: SshKey) => {
         setSelectedKey(sshKey);
         setSyncDialogOpen(true);
+    };
+
+    const handleOpenDetails = (sshKey: SshKey) => {
+        setDetailsKey(sshKey);
     };
 
     const confirmDelete = () => {
@@ -79,16 +94,29 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
                         action={<AddKeyDialog />}
                     />
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {sshKeysData.data.map((sshKey) => (
-                            <SshKeyCard
-                                key={sshKey.id}
-                                sshKey={sshKey}
-                                onSync={() => handleSync(sshKey)}
-                                onDelete={() => handleDelete(sshKey)}
-                            />
-                        ))}
-                    </div>
+                    <Card>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Servers</TableHead>
+                                    <TableHead>Added</TableHead>
+                                    <TableHead className="w-[70px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sshKeysData.data.map((sshKey) => (
+                                    <SshKeyTableRow
+                                        key={sshKey.id}
+                                        sshKey={sshKey}
+                                        onOpenDetails={() => handleOpenDetails(sshKey)}
+                                        onSync={() => handleSync(sshKey)}
+                                        onDelete={() => handleDelete(sshKey)}
+                                    />
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Card>
                 )}
             </div>
 
@@ -102,6 +130,18 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
                 onConfirm={confirmDelete}
                 loading={isDeleting}
             />
+
+            {detailsKey && (
+                <SshKeyDetailsDialog
+                    key={detailsKey.id}
+                    sshKey={detailsKey}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setDetailsKey(null);
+                        }
+                    }}
+                />
+            )}
 
             {selectedKey && (
                 <SyncServersDialog
