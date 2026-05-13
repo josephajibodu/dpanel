@@ -33,19 +33,19 @@ class SshRemoteFilesystem implements RemoteFilesystem
 
     public function ensureDirectory(string $path): void
     {
-        $this->connection->exec("mkdir -p {$path}");
+        $this->connection->exec('mkdir -p '.escapeshellarg($path));
     }
 
     public function delete(string $path): void
     {
         if ($this->exists($path)) {
-            $this->connection->exec("rm -f {$path}");
+            $this->connection->exec('rm -f '.escapeshellarg($path));
         }
     }
 
     public function symlink(string $target, string $link): void
     {
-        $this->connection->exec("ln -snf {$target} {$link}");
+        $this->connection->exec('ln -snf '.escapeshellarg($target).' '.escapeshellarg($link));
     }
 
     public function backup(string $path): void
@@ -57,6 +57,6 @@ class SshRemoteFilesystem implements RemoteFilesystem
         $timestamp = date('YmdHis');
         $backupPath = "{$path}.bak.{$timestamp}";
 
-        $this->connection->exec("cp {$path} {$backupPath}");
+        $this->connection->exec('cp '.escapeshellarg($path).' '.escapeshellarg($backupPath));
     }
 }

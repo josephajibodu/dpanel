@@ -77,8 +77,7 @@ class AppServiceProvider extends ServiceProvider
             Log::channel('outbound-api')->info('Outgoing API Request', [
                 'method' => $event->request->method(),
                 'url' => $event->request->url(),
-                'headers' => $event->request->headers(),
-                'body' => $event->request->data(),
+                'headers' => $this->redactSensitiveHeaders($event->request->headers()),
             ]);
         });
 
@@ -87,9 +86,20 @@ class AppServiceProvider extends ServiceProvider
                 'method' => $event->request->method(),
                 'url' => $event->request->url(),
                 'status' => $event->response->status(),
-                'headers' => $event->response->headers(),
-                'body' => $event->response->body(),
             ]);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $headers
+     * @return array<string, mixed>
+     */
+    private function redactSensitiveHeaders(array $headers): array
+    {
+        $sensitive = ['authorization', 'x-api-key', 'x-auth-token', 'cookie', 'set-cookie'];
+
+        return collect($headers)
+            ->map(fn ($value, $key) => in_array(strtolower($key), $sensitive) ? ['[REDACTED]'] : $value)
+            ->all();
     }
 }

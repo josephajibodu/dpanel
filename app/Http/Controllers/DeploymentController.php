@@ -42,7 +42,7 @@ class DeploymentController extends Controller
     {
         $this->authorize('view', $site);
 
-        $deployment = $triggerDeployment->execute($site, 'manual');
+        $deployment = $triggerDeployment->execute($site, 'manual', $request->user());
 
         return redirect()
             ->route('servers.sites.deployments.show', [$server, $site, $deployment])

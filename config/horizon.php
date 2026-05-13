@@ -19,6 +19,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Horizon Admins
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated list of email addresses that may access the Horizon
+    | dashboard. Only these users will pass the viewHorizon gate.
+    |
+    */
+
+    'admins' => env('HORIZON_ADMINS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Horizon Domain
     |--------------------------------------------------------------------------
     |

@@ -6,27 +6,33 @@ use App\Enums\DeploymentStatus;
 use App\Jobs\DeploySiteJob;
 use App\Models\Deployment;
 use App\Models\Site;
+use App\Models\User;
 
 class TriggerDeploymentAction
 {
     /**
      * Trigger a new deployment for the given site.
+     *
+     * @throws \RuntimeException when a deployment is already in progress.
      */
-    public function execute(Site $site, string $triggeredBy = 'manual'): Deployment
+    public function execute(Site $site, string $triggeredBy = 'manual', ?User $user = null): Deployment
     {
-        // Create deployment record
+        $inProgress = $site->deployments()
+            ->whereIn('status', [DeploymentStatus::Pending, DeploymentStatus::Running])
+            ->exists();
+
+        if ($inProgress) {
+            throw new \RuntimeException('A deployment is already in progress for this site.');
+        }
+
         $deployment = $site->deployments()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $user?->id,
             'status' => DeploymentStatus::Pending,
             'triggered_by' => $triggeredBy,
         ]);
 
-        // Update site deployment timestamps
-        $site->update([
-            'deployment_started_at' => now(),
-        ]);
+        $site->update(['deployment_started_at' => now()]);
 
-        // Dispatch deployment job
         DeploySiteJob::dispatch($deployment)->onQueue('deploy');
 
         return $deployment;
