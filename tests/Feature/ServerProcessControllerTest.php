@@ -3,6 +3,7 @@
 use App\Enums\ServerStatus;
 use App\Models\CronJob;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,8 +13,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,
     ]);
 });

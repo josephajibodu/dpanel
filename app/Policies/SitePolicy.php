@@ -21,7 +21,7 @@ class SitePolicy
      */
     public function view(User $user, Site $site): bool
     {
-        return $user->id === $site->server->user_id;
+        return $user->belongsToTeam($site->server->team);
     }
 
     /**
@@ -29,7 +29,7 @@ class SitePolicy
      */
     public function create(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id && $server->supportsSites();
+        return $user->belongsToTeam($server->team) && $server->supportsSites();
     }
 
     /**
@@ -37,7 +37,7 @@ class SitePolicy
      */
     public function update(User $user, Site $site): bool
     {
-        return $user->id === $site->server->user_id;
+        return $user->belongsToTeam($site->server->team);
     }
 
     /**
@@ -45,7 +45,7 @@ class SitePolicy
      */
     public function delete(User $user, Site $site): bool
     {
-        return $user->id === $site->server->user_id;
+        return $user->belongsToTeam($site->server->team);
     }
 
     /**
@@ -53,7 +53,7 @@ class SitePolicy
      */
     public function restore(User $user, Site $site): bool
     {
-        return $user->id === $site->server->user_id;
+        return $user->belongsToTeam($site->server->team);
     }
 
     /**
@@ -61,6 +61,6 @@ class SitePolicy
      */
     public function forceDelete(User $user, Site $site): bool
     {
-        return $user->id === $site->server->user_id;
+        return $user->belongsToTeam($site->server->team);
     }
 }

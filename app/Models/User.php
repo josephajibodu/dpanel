@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,6 +27,7 @@ class User extends Authenticatable
         'password',
         'git_name',
         'git_email',
+        'current_team_id',
     ];
 
     /**
@@ -53,15 +56,44 @@ class User extends Authenticatable
         ];
     }
 
-    public function providerAccounts(): HasMany
+    // Team relationships
+
+    public function currentTeam(): BelongsTo
     {
-        return $this->hasMany(ProviderAccount::class);
+        return $this->belongsTo(Team::class, 'current_team_id');
     }
 
-    public function servers(): HasMany
+    /** @return BelongsToMany<Team, $this> */
+    public function teams(): BelongsToMany
     {
-        return $this->hasMany(Server::class);
+        return $this->belongsToMany(Team::class)
+            ->withPivot('role')
+            ->withTimestamps();
     }
+
+    public function ownedTeams(): HasMany
+    {
+        return $this->hasMany(Team::class);
+    }
+
+    public function belongsToTeam(Team $team): bool
+    {
+        return $this->teams()->where('team_id', $team->id)->exists()
+            || $this->ownsTeam($team);
+    }
+
+    public function ownsTeam(Team $team): bool
+    {
+        return $this->id === $team->user_id;
+    }
+
+    public function switchTeam(Team $team): void
+    {
+        $this->forceFill(['current_team_id' => $team->id])->save();
+        $this->setRelation('currentTeam', $team);
+    }
+
+    // Personal resource relationships (user-scoped, not team-scoped)
 
     public function sshKeys(): HasMany
     {

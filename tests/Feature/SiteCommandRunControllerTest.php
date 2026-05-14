@@ -5,6 +5,7 @@ use App\Jobs\RunSiteCommandJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteCommandRun;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -13,8 +14,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,
     ]);
     $this->site = Site::factory()->create([

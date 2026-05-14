@@ -6,37 +6,27 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useActiveUrl } from '@/hooks/use-active-url';
 import { cn, toUrl } from '@/lib/utils';
+import { usePage } from '@inertiajs/react';
+
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
-
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-        icon: null,
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-];
+import { type NavItem, type SharedData } from '@/types';
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { urlIsActive } = useActiveUrl();
+    const { currentTeam } = usePage<SharedData>().props;
+
+    const sidebarNavItems: NavItem[] = [
+        { title: 'Profile', href: edit(), icon: null },
+        { title: 'Password', href: editPassword(), icon: null },
+        { title: 'Two-Factor Auth', href: show(), icon: null },
+        { title: 'Appearance', href: editAppearance(), icon: null },
+        ...(currentTeam
+            ? [{ title: 'Team', href: `/teams/${currentTeam.id}/settings`, icon: null } as NavItem]
+            : []),
+    ];
 
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {

@@ -20,7 +20,7 @@ class ProviderAccountPolicy
      */
     public function view(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->id === $providerAccount->user_id;
+        return $user->belongsToTeam($providerAccount->team);
     }
 
     /**
@@ -36,7 +36,7 @@ class ProviderAccountPolicy
      */
     public function update(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->id === $providerAccount->user_id;
+        return $user->belongsToTeam($providerAccount->team);
     }
 
     /**
@@ -44,7 +44,7 @@ class ProviderAccountPolicy
      */
     public function delete(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->id === $providerAccount->user_id;
+        return $user->belongsToTeam($providerAccount->team);
     }
 
     /**
@@ -52,7 +52,7 @@ class ProviderAccountPolicy
      */
     public function restore(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->id === $providerAccount->user_id;
+        return $user->belongsToTeam($providerAccount->team);
     }
 
     /**
@@ -60,6 +60,6 @@ class ProviderAccountPolicy
      */
     public function forceDelete(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->id === $providerAccount->user_id;
+        return $user->belongsToTeam($providerAccount->team);
     }
 }

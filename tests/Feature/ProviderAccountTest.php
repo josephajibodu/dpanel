@@ -3,6 +3,7 @@
 use App\Jobs\ValidateProviderJob;
 use App\Models\ProviderAccount;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\Providers\DigitalOceanProvider;
 use App\Services\Providers\ProviderManager;
@@ -13,6 +14,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->user->switchTeam($this->team);
 });
 
 describe('index', function () {
@@ -61,7 +64,7 @@ describe('store', function () {
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('provider_accounts', [
-            'user_id' => $this->user->id,
+            'team_id' => $this->team->id,
             'provider' => 'digitalocean',
             'name' => 'My DO Account',
             'is_valid' => true,
@@ -89,7 +92,7 @@ describe('store', function () {
         $response->assertSessionHas('error');
 
         $this->assertDatabaseHas('provider_accounts', [
-            'user_id' => $this->user->id,
+            'team_id' => $this->team->id,
             'is_valid' => false,
         ]);
     });
@@ -115,9 +118,7 @@ describe('store', function () {
 
 describe('show', function () {
     it('displays own provider account', function () {
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $this->user->id,
-        ]);
+        $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
             ->get("/provider-accounts/{$account->id}");
@@ -127,9 +128,8 @@ describe('show', function () {
 
     it('does not allow viewing other users accounts', function () {
         $otherUser = User::factory()->create();
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
             ->get("/provider-accounts/{$account->id}");
@@ -140,9 +140,7 @@ describe('show', function () {
 
 describe('destroy', function () {
     it('deletes own provider account', function () {
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $this->user->id,
-        ]);
+        $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
             ->delete("/provider-accounts/{$account->id}");
@@ -152,12 +150,9 @@ describe('destroy', function () {
     });
 
     it('cannot delete account with active servers', function () {
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $this->user->id,
-        ]);
+        $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
-        Server::factory()->create([
-            'user_id' => $this->user->id,
+        Server::factory()->forTeam($this->team)->create([
             'provider_account_id' => $account->id,
         ]);
 
@@ -171,9 +166,8 @@ describe('destroy', function () {
 
     it('does not allow deleting other users accounts', function () {
         $otherUser = User::factory()->create();
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
             ->delete("/provider-accounts/{$account->id}");
@@ -186,9 +180,7 @@ describe('validate', function () {
     it('dispatches a validation job', function () {
         Queue::fake();
 
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $this->user->id,
-        ]);
+        $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
             ->post("/provider-accounts/{$account->id}/validate");
@@ -201,9 +193,8 @@ describe('validate', function () {
 
     it('does not allow validating other users accounts', function () {
         $otherUser = User::factory()->create();
-        $account = ProviderAccount::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
             ->post("/provider-accounts/{$account->id}/validate");

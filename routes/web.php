@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CronJobController;
+use App\Http\Controllers\CurrentTeamController;
 use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeployScriptController;
@@ -15,6 +16,9 @@ use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SshKeyController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TeamInvitationController;
+use App\Http\Controllers\TeamMemberController;
 use App\Http\Controllers\WorkerController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -189,6 +193,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
         ->where('repository', '.*')
         ->name('source-control.branches');
+
+    // Teams
+    Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
+    Route::get('teams/{team}/settings', [TeamController::class, 'show'])->name('teams.show');
+    Route::put('teams/{team}', [TeamController::class, 'update'])->name('teams.update');
+    Route::delete('teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
+
+    Route::post('teams/{team}/members', [TeamMemberController::class, 'store'])->name('team-members.store');
+    Route::delete('teams/{team}/members/{user}', [TeamMemberController::class, 'destroy'])->name('team-members.destroy');
+
+    Route::post('teams/{team}/invitations', [TeamInvitationController::class, 'store'])->name('team-invitations.store');
+    Route::delete('teams/{team}/invitations/{invitation}', [TeamInvitationController::class, 'destroy'])->name('team-invitations.destroy');
+
+    Route::put('user/current-team', [CurrentTeamController::class, 'update'])->name('current-team.update');
 });
+
+// Team invitation acceptance (accessible without auth to show the page; auth required to confirm)
+Route::get('invitations/{token}/accept', [TeamInvitationController::class, 'accept'])->name('team-invitations.accept');
+Route::post('invitations/{token}/confirm', [TeamInvitationController::class, 'confirm'])
+    ->middleware(['auth', 'verified'])
+    ->name('team-invitations.confirm');
 
 require __DIR__.'/settings.php';

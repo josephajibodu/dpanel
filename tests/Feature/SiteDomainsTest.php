@@ -6,6 +6,7 @@ use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -15,8 +16,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'ip_address' => '203.0.113.10',
     ]);
     $this->site = Site::factory()->create([

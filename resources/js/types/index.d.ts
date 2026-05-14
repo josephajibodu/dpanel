@@ -1,5 +1,8 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
+import { Team } from './team';
+
+export type { Team, TeamMember, TeamInvitation } from './team';
 
 export interface Auth {
     user: User;
@@ -32,6 +35,8 @@ export interface SubNavItem {
 export interface SharedData {
     name: string;
     auth: Auth;
+    currentTeam: Team | null;
+    teams: Pick<Team, 'id' | 'name' | 'personal_team'>[];
     sidebarOpen: boolean;
     flash?: {
         success?: string;

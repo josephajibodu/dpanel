@@ -25,6 +25,7 @@ class ServerController extends Controller
     public function index(): Response
     {
         $servers = auth()->user()
+            ->currentTeam
             ->servers()
             ->with('providerAccount')
             ->withCount('sites')
@@ -39,6 +40,7 @@ class ServerController extends Controller
     public function create(ProviderManager $providerManager): Response
     {
         $providerAccounts = auth()->user()
+            ->currentTeam
             ->providerAccounts()
             ->where('is_valid', true)
             ->get();
@@ -110,6 +112,7 @@ class ServerController extends Controller
     ): RedirectResponse {
         $server = $action->execute(
             user: auth()->user(),
+            team: auth()->user()->currentTeam,
             data: ServerData::from($request->validated()),
         );
 

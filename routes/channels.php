@@ -10,23 +10,24 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// Server channels - user can subscribe to all their servers
-Broadcast::channel('servers.{userId}', function ($user, $userId) {
-    return (int) $user->id === (int) $userId;
+// Server channels - team members can subscribe to their team's server events
+Broadcast::channel('servers.{teamId}', function ($user, $teamId) {
+    return $user->teams()->where('team_id', $teamId)->exists()
+        || $user->ownedTeams()->where('id', $teamId)->exists();
 });
 
-// Individual server channel - user can subscribe to a specific server
+// Individual server channel - team members can subscribe to a specific server
 Broadcast::channel('server.{serverId}', function ($user, $serverId) {
-    return Server::where('id', $serverId)
-        ->where('user_id', $user->id)
-        ->exists();
+    $server = Server::find($serverId);
+
+    return $server && $user->belongsToTeam($server->team);
 });
 
-// Deployment channel - user can subscribe to deployment logs
+// Deployment channel - team members can subscribe to deployment logs
 Broadcast::channel('deployments.{deploymentId}', function ($user, $deploymentId) {
     $deployment = Deployment::find($deploymentId);
 
-    $authorized = $deployment && $deployment->site->server->user_id === $user->id;
+    $authorized = $deployment && $user->belongsToTeam($deployment->site->server->team);
 
     Log::debug('Broadcast channel authorization', [
         'channel' => 'deployments',

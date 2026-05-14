@@ -7,6 +7,7 @@ use App\Models\ProviderAccount;
 use App\Models\ProviderRegion;
 use App\Models\ProviderSize;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\Providers\ProviderManager;
 use App\Services\Ssh\KeyGenerator;
@@ -106,10 +107,10 @@ it('provider size returns a human-readable description', function () {
 it('CreateServerAction associates provider region and size when they exist', function () {
     Queue::fake();
 
-    // Create a user with a provider account
+    // Create a user with a team and a provider account
     $user = User::factory()->create();
-    $providerAccount = ProviderAccount::factory()->create([
-        'user_id' => $user->id,
+    $team = Team::factory()->forUser($user)->create();
+    $providerAccount = ProviderAccount::factory()->forTeam($team)->create([
         'provider' => Provider::DigitalOcean,
         'is_valid' => true,
     ]);
@@ -158,7 +159,7 @@ it('CreateServerAction associates provider region and size when they exist', fun
         size: 's-1vcpu-1gb',
     );
 
-    $server = $action->execute($user, $serverData);
+    $server = $action->execute($user, $team, $serverData);
 
     // Verify relationships are properly associated
     expect($server)
@@ -179,10 +180,10 @@ it('CreateServerAction associates provider region and size when they exist', fun
 it('CreateServerAction handles missing provider region and size gracefully', function () {
     Queue::fake();
 
-    // Create a user with a provider account
+    // Create a user with a team and a provider account
     $user = User::factory()->create();
-    $providerAccount = ProviderAccount::factory()->create([
-        'user_id' => $user->id,
+    $team = Team::factory()->forUser($user)->create();
+    $providerAccount = ProviderAccount::factory()->forTeam($team)->create([
         'provider' => Provider::DigitalOcean,
         'is_valid' => true,
     ]);
@@ -217,7 +218,7 @@ it('CreateServerAction handles missing provider region and size gracefully', fun
         size: 'unknown-size',
     );
 
-    $server = $action->execute($user, $serverData);
+    $server = $action->execute($user, $team, $serverData);
 
     // Verify the server is created but without relationships
     expect($server)

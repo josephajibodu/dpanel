@@ -20,7 +20,7 @@ class ServerPolicy
      */
     public function view(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id;
+        return $user->belongsToTeam($server->team);
     }
 
     /**
@@ -36,7 +36,7 @@ class ServerPolicy
      */
     public function update(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id;
+        return $user->belongsToTeam($server->team);
     }
 
     /**
@@ -44,7 +44,7 @@ class ServerPolicy
      */
     public function delete(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id;
+        return $user->belongsToTeam($server->team);
     }
 
     /**
@@ -52,7 +52,7 @@ class ServerPolicy
      */
     public function restore(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id;
+        return $user->belongsToTeam($server->team);
     }
 
     /**
@@ -60,6 +60,6 @@ class ServerPolicy
      */
     public function forceDelete(User $user, Server $server): bool
     {
-        return $user->id === $server->user_id;
+        return $user->belongsToTeam($server->team);
     }
 }

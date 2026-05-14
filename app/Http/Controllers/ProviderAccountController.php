@@ -17,6 +17,7 @@ class ProviderAccountController extends Controller
     public function index(): Response
     {
         $accounts = auth()->user()
+            ->currentTeam
             ->providerAccounts()
             ->withCount('servers')
             ->latest()
@@ -47,7 +48,7 @@ class ProviderAccountController extends Controller
 
         $isValid = $provider->validateCredentials();
 
-        $account = auth()->user()->providerAccounts()->create([
+        $account = auth()->user()->currentTeam->providerAccounts()->create([
             'provider' => $validated['provider'],
             'name' => $validated['name'],
             'credentials' => ['api_token' => $validated['api_token']],

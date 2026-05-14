@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\ServerStatus;
+use App\Jobs\ControlWorkerJob;
 use App\Jobs\CreateWorkerJob;
 use App\Jobs\DestroyWorkerJob;
 use App\Jobs\UpdateWorkerJob;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,8 +16,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,
     ]);
 });
@@ -64,7 +66,7 @@ it('validates worker name and command are required', function () {
 });
 
 it('validates worker site_id belongs to server', function () {
-    $otherServer = Server::factory()->create(['user_id' => $this->user->id]);
+    $otherServer = Server::factory()->forTeam($this->team)->create();
     $site = \App\Models\Site::factory()->create([
         'server_id' => $otherServer->id,
     ]);
@@ -132,6 +134,8 @@ it('dispatches job to destroy a worker', function () {
 });
 
 it('starts a worker', function () {
+    Queue::fake();
+
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'status' => 'stopped',
@@ -141,11 +145,12 @@ it('starts a worker', function () {
         ->post("/servers/{$this->server->id}/workers/{$worker->id}/start");
 
     $response->assertRedirect();
-    $worker->refresh();
-    expect($worker->status)->toBe('active');
+    Queue::assertPushed(ControlWorkerJob::class);
 });
 
 it('stops a worker', function () {
+    Queue::fake();
+
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'status' => 'active',
@@ -155,11 +160,12 @@ it('stops a worker', function () {
         ->post("/servers/{$this->server->id}/workers/{$worker->id}/stop");
 
     $response->assertRedirect();
-    $worker->refresh();
-    expect($worker->status)->toBe('stopped');
+    Queue::assertPushed(ControlWorkerJob::class);
 });
 
 it('restarts a worker', function () {
+    Queue::fake();
+
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'status' => 'stopped',
@@ -169,11 +175,10 @@ it('restarts a worker', function () {
         ->post("/servers/{$this->server->id}/workers/{$worker->id}/restart");
 
     $response->assertRedirect();
-    $worker->refresh();
-    expect($worker->status)->toBe('active');
+    Queue::assertPushed(ControlWorkerJob::class);
 });
 
-it('returns worker logs', function () {
+it('returns worker logs when log file is not configured', function () {
     $worker = Worker::factory()->create([
         'server_id' => $this->server->id,
         'stdout_logfile' => null,
@@ -184,11 +189,11 @@ it('returns worker logs', function () {
 
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
-    expect(str_contains($response->getContent(), 'Log file not available') || str_contains($response->getContent(), 'not set'))->toBeTrue();
+    expect($response->getContent())->toContain('not configured');
 });
 
 it('denies access to worker from another server', function () {
-    $otherServer = Server::factory()->create(['user_id' => $this->user->id]);
+    $otherServer = Server::factory()->forTeam($this->team)->create();
     $worker = Worker::factory()->create(['server_id' => $otherServer->id]);
 
     $response = $this->actingAs($this->user)

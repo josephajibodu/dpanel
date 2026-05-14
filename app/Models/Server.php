@@ -22,6 +22,7 @@ class Server extends Model
     use HasFactory, HasUlids;
 
     protected $fillable = [
+        'team_id',
         'user_id',
         'provider_account_id',
         'provider',
@@ -121,6 +122,11 @@ class Server extends Model
     public function uniqueIds(): array
     {
         return ['ulid'];
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
     }
 
     public function user(): BelongsTo

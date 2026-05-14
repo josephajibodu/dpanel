@@ -8,6 +8,7 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Models\ProviderAccount;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,6 +27,7 @@ class ServerFactory extends Factory
         $provider = fake()->randomElement(Provider::cases());
 
         return [
+            'team_id' => Team::factory(),
             'user_id' => User::factory(),
             'provider_account_id' => ProviderAccount::factory(),
             'provider' => $provider,
@@ -54,6 +56,14 @@ class ServerFactory extends Factory
         ];
     }
 
+    public function forTeam(Team $team): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'team_id' => $team->id,
+            'user_id' => $team->user_id,
+        ]);
+    }
+
     public function forUser(User $user): static
     {
         return $this->state(fn (array $attributes) => [
@@ -65,6 +75,7 @@ class ServerFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'provider_account_id' => $account->id,
+            'team_id' => $account->team_id,
             'user_id' => $account->user_id,
             'provider' => $account->provider,
         ]);

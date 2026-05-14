@@ -29,7 +29,7 @@ class StoreSiteRequest extends FormRequest
             'server_id' => [
                 'required',
                 'integer',
-                Rule::exists('servers', 'id')->where('user_id', $this->user()->id),
+                Rule::exists('servers', 'id')->where('team_id', $this->user()->current_team_id),
             ],
             'domain' => [
                 'nullable',

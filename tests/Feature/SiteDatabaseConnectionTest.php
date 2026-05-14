@@ -9,6 +9,7 @@ use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Site;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -21,8 +22,9 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->user->switchTeam($this->team);
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,
         'database_type' => 'mysql',
     ]);
@@ -66,8 +68,7 @@ describe('StoreSiteRequest validation', function () {
     });
 
     it('rejects a server_database_id belonging to a different server', function () {
-        $otherServer = Server::factory()->create([
-            'user_id' => $this->user->id,
+        $otherServer = Server::factory()->forTeam($this->team)->create([
             'status' => ServerStatus::Active,
         ]);
 

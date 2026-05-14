@@ -32,7 +32,7 @@ class StoreServerRequest extends FormRequest
             'provider_account_id' => [
                 'required',
                 'integer',
-                Rule::exists('provider_accounts', 'id')->where('user_id', $this->user()->id),
+                Rule::exists('provider_accounts', 'id')->where('team_id', $this->user()->current_team_id),
             ],
             'region' => ['required', 'string', 'max:50'],
             'size' => ['required', 'string', 'max:50'],

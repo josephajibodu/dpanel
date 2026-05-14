@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Provider;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,6 +20,7 @@ class ProviderAccountFactory extends Factory
     public function definition(): array
     {
         return [
+            'team_id' => Team::factory(),
             'user_id' => User::factory(),
             'provider' => fake()->randomElement(Provider::cases()),
             'name' => fake()->company().' Account',
@@ -26,6 +28,14 @@ class ProviderAccountFactory extends Factory
             'is_valid' => true,
             'validated_at' => now(),
         ];
+    }
+
+    public function forTeam(Team $team): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'team_id' => $team->id,
+            'user_id' => $team->user_id,
+        ]);
     }
 
     public function forUser(User $user): static

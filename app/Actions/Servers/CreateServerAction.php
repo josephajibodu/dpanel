@@ -8,6 +8,7 @@ use App\Jobs\ProvisionServerJob;
 use App\Models\ProviderRegion;
 use App\Models\ProviderSize;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\Providers\ProviderManager;
 use App\Services\Ssh\KeyGenerator;
@@ -22,10 +23,10 @@ class CreateServerAction
         private ProviderManager $providers,
     ) {}
 
-    public function execute(User $user, ServerData $data): Server
+    public function execute(User $user, Team $team, ServerData $data): Server
     {
-        // Validate provider account belongs to user
-        $providerAccount = $user->providerAccounts()
+        // Validate provider account belongs to the team
+        $providerAccount = $team->providerAccounts()
             ->findOrFail($data->providerAccountId);
 
         // Validate provider credentials
@@ -61,6 +62,7 @@ class CreateServerAction
         try {
             $server = DB::transaction(function () use (
                 $user,
+                $team,
                 $data,
                 $providerAccount,
                 $keyPair,
@@ -68,7 +70,8 @@ class CreateServerAction
                 $providerRegion,
                 $providerSize,
             ) {
-                $server = $user->servers()->create([
+                $server = $team->servers()->create([
+                    'user_id' => $user->id,
                     'provider_account_id' => $providerAccount->id,
                     'provider' => $providerAccount->provider,
                     'name' => $data->name,

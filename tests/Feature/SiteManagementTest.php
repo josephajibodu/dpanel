@@ -8,17 +8,22 @@ use App\Jobs\DeploySiteJob;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
+uses(RefreshDatabase::class);
+
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->server = Server::factory()->create([
-        'user_id' => $this->user->id,
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->user->switchTeam($this->team);
+    $this->server = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,
     ]);
 });
@@ -251,9 +256,8 @@ describe('site creation', function () {
 
     it('prevents creating sites on other users servers', function () {
         $otherUser = User::factory()->create();
-        $otherServer = Server::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $otherServer = Server::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
             ->post("/servers/{$otherServer->id}/sites", [
@@ -290,9 +294,8 @@ describe('sites index (under server)', function () {
 
     it('cannot view sites index for other users server', function () {
         $otherUser = User::factory()->create();
-        $otherServer = Server::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $otherServer = Server::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
             ->get("/servers/{$otherServer->id}/sites");
@@ -321,9 +324,8 @@ describe('site viewing', function () {
 
     it('cannot view other users sites', function () {
         $otherUser = User::factory()->create();
-        $otherServer = Server::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $otherServer = Server::factory()->forTeam($otherTeam)->create();
         $site = Site::factory()->create([
             'server_id' => $otherServer->id,
         ]);
@@ -353,9 +355,8 @@ describe('site deletion', function () {
 
     it('cannot delete other users sites', function () {
         $otherUser = User::factory()->create();
-        $otherServer = Server::factory()->create([
-            'user_id' => $otherUser->id,
-        ]);
+        $otherTeam = Team::factory()->forUser($otherUser)->create();
+        $otherServer = Server::factory()->forTeam($otherTeam)->create();
         $site = Site::factory()->create([
             'server_id' => $otherServer->id,
         ]);
