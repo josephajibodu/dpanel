@@ -42,29 +42,35 @@ class ProvisionServerJob implements ShouldQueue
         try {
             $provider = $providerManager->forAccount($this->server->providerAccount);
 
-            // Get the SSH key ID from meta
             $sshKeyId = $this->server->meta['provider_ssh_key_id'] ?? null;
             if (! $sshKeyId) {
                 throw new \Exception('No provider SSH key ID found for server');
             }
 
-            // Create server at provider
-            $result = $provider->createServer(
-                name: $this->server->name,
-                size: $this->server->size,
-                region: $this->server->region,
-                sshKeyId: $sshKeyId,
-            );
+            // Idempotency: a previous attempt may have already created the server
+            // at the provider but failed before storing the ID. Skip creation if
+            // we already have a provider server ID to avoid duplicates on retry.
+            $providerServerId = $this->server->provider_server_id;
 
-            // Store provider server ID
-            $this->server->update([
-                'provider_server_id' => $result->id,
-            ]);
+            if (! $providerServerId) {
+                $result = $provider->createServer(
+                    name: $this->server->name,
+                    size: $this->server->size,
+                    region: $this->server->region,
+                    sshKeyId: $sshKeyId,
+                );
 
-            Log::info("Server created at provider with ID {$result->id}");
+                $providerServerId = $result->id;
+
+                $this->server->update(['provider_server_id' => $providerServerId]);
+
+                Log::info("Server created at provider with ID {$providerServerId}");
+            } else {
+                Log::info("Server {$this->server->id} already has provider ID {$providerServerId}, skipping creation");
+            }
 
             // Poll until server is active and has IP
-            $this->waitForServerActive($provider, $result->id);
+            $this->waitForServerActive($provider, $providerServerId);
 
         } catch (\Exception $e) {
             Log::error("Failed to provision server {$this->server->id}: {$e->getMessage()}");

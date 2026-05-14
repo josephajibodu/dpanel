@@ -56,54 +56,59 @@ class CreateServerAction
             ->where('code', $data->size)
             ->first();
 
-        // Create server record
-        $server = DB::transaction(function () use (
-            $user,
-            $data,
-            $providerAccount,
-            $keyPair,
-            $providerKeyId,
-            $providerRegion,
-            $providerSize,
-        ) {
-            $server = $user->servers()->create([
-                'provider_account_id' => $providerAccount->id,
-                'provider' => $providerAccount->provider,
-                'name' => $data->name,
-                'size' => $data->size,
-                'region' => $data->region,
-                'provider_region_id' => $providerRegion?->id,
-                'provider_size_id' => $providerSize?->id,
-                'php_version' => $data->phpVersion,
-                'database_type' => $data->databaseType,
-                'status' => ServerStatus::Pending,
-                'meta' => [
-                    'provider_ssh_key_id' => $providerKeyId,
-                ],
-            ]);
+        // Create server record — if this fails, clean up the provider SSH key
+        // so it doesn't sit orphaned on the provider account.
+        try {
+            $server = DB::transaction(function () use (
+                $user,
+                $data,
+                $providerAccount,
+                $keyPair,
+                $providerKeyId,
+                $providerRegion,
+                $providerSize,
+            ) {
+                $server = $user->servers()->create([
+                    'provider_account_id' => $providerAccount->id,
+                    'provider' => $providerAccount->provider,
+                    'name' => $data->name,
+                    'size' => $data->size,
+                    'region' => $data->region,
+                    'provider_region_id' => $providerRegion?->id,
+                    'provider_size_id' => $providerSize?->id,
+                    'php_version' => $data->phpVersion,
+                    'database_type' => $data->databaseType,
+                    'status' => ServerStatus::Pending,
+                    'meta' => [
+                        'provider_ssh_key_id' => $providerKeyId,
+                    ],
+                ]);
 
-            // Store credentials
-            $server->credentials()->createMany([
-                [
-                    'type' => 'private_key',
-                    'value' => $keyPair->privateKey,
-                ],
-                [
-                    'type' => 'public_key',
-                    'value' => $keyPair->publicKey,
-                ],
-                [
-                    'type' => 'sudo_password',
-                    'value' => Str::random(32),
-                ],
-                [
-                    'type' => 'database_password',
-                    'value' => Str::random(32),
-                ],
-            ]);
+                $server->credentials()->createMany([
+                    [
+                        'type' => 'private_key',
+                        'value' => $keyPair->privateKey,
+                    ],
+                    [
+                        'type' => 'public_key',
+                        'value' => $keyPair->publicKey,
+                    ],
+                    [
+                        'type' => 'sudo_password',
+                        'value' => Str::random(32),
+                    ],
+                    [
+                        'type' => 'database_password',
+                        'value' => Str::random(32),
+                    ],
+                ]);
 
-            return $server;
-        });
+                return $server;
+            });
+        } catch (\Throwable $e) {
+            rescue(fn () => $provider->deleteSshKey($providerKeyId));
+            throw $e;
+        }
 
         // Dispatch provisioning job
         ProvisionServerJob::dispatch($server);
