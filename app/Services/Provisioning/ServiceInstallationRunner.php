@@ -2,6 +2,8 @@
 
 namespace App\Services\Provisioning;
 
+use App\Enums\ServiceType;
+
 /**
  * Runs the actual installer for a given service type and returns the systemd unit and version.
  */
@@ -19,16 +21,14 @@ class ServiceInstallationRunner
      *
      * @return array{unit: string, installed_version: string|null}
      */
-    public function run(string $type, ProvisioningContext $context): array
+    public function run(ServiceType $type, ProvisioningContext $context): array
     {
-        $server = $context->server;
-
         return match ($type) {
-            'php' => $this->installPhp($context),
-            'nginx' => $this->installNginx($context),
-            'database' => $this->installDatabase($context),
-            'redis' => $this->installRedis($context),
-            default => throw new \InvalidArgumentException("Unknown service type for installation: {$type}"),
+            ServiceType::Php => $this->installPhp($context),
+            ServiceType::Nginx => $this->installNginx($context),
+            ServiceType::Mysql, ServiceType::Postgresql => $this->installDatabase($context),
+            ServiceType::Redis => $this->installRedis($context),
+            default => throw new \InvalidArgumentException("Unknown service type for installation: {$type->value}"),
         };
     }
 

@@ -7,6 +7,7 @@ use App\Enums\ConnectionStatus;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceStatus;
+use App\Enums\ServiceType;
 use App\Models\Server;
 use App\Services\Remote\SshRemoteCommandRunner;
 use App\Services\Remote\SshRemoteFilesystem;
@@ -78,26 +79,26 @@ class StackInstaller
         $defaults = $server->type?->defaultServices() ?? [];
 
         if ($defaults['php'] ?? false) {
-            $phpService = $server->createService('php', $server->php_version, true);
+            $phpService = $server->createService(ServiceType::Php, $server->php_version, true);
             $context->service = $phpService;
             $phpService->install($context);
             $server->update(['php_version' => $phpService->installed_version ?? $phpService->version]);
         }
 
         if ($defaults['nginx'] ?? false) {
-            $service = $server->createService('nginx', null, true);
+            $service = $server->createService(ServiceType::Nginx, null, true);
             $context->service = $service;
             $service->install($context);
         }
 
         if ($defaults['database'] ?? false) {
-            $service = $server->createService('database', null, true);
+            $service = $server->createService($server->databaseServiceType(), null, true);
             $context->service = $service;
             $service->install($context);
         }
 
         if ($defaults['redis'] ?? false) {
-            $service = $server->createService('redis', null, true);
+            $service = $server->createService(ServiceType::Redis, null, true);
             $context->service = $service;
             $service->install($context);
         }
@@ -106,7 +107,7 @@ class StackInstaller
         $this->finalTouchesService->run($context);
 
         if ($defaults['supervisor'] ?? false) {
-            $supervisor = $server->createService('supervisor', null, true);
+            $supervisor = $server->createService(ServiceType::Supervisor, null, true);
             $supervisor->update([
                 'unit' => 'supervisor',
                 'status' => ServiceStatus::Active,

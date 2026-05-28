@@ -2,6 +2,7 @@
 
 namespace App\Actions\ServerPhp;
 
+use App\Enums\ServiceType;
 use App\Models\Server;
 use App\Services\Ssh\SshService;
 use RuntimeException;
@@ -18,13 +19,13 @@ class SetDefaultPhpVersion
             throw new RuntimeException("Server {$server->id} is not ready.");
         }
 
-        $phpService = $server->service('php', $version);
+        $phpService = $server->service(ServiceType::Php, $version);
         if ($phpService === null) {
             throw new RuntimeException("PHP {$version} service not found on this server.");
         }
 
         $server->installedServices()
-            ->where('type', 'php')
+            ->where('type', ServiceType::Php)
             ->update(['is_default' => false]);
         $phpService->update(['is_default' => true]);
 

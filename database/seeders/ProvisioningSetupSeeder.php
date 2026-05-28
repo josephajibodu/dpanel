@@ -6,6 +6,7 @@ use App\Actions\Teams\CreateTeam;
 use App\Enums\Provider;
 use App\Enums\RepositoryProvider;
 use App\Enums\ServiceStatus;
+use App\Enums\ServiceType;
 use App\Models\Deployment;
 use App\Models\ProviderAccount;
 use App\Models\ProviderRegion;
@@ -266,7 +267,14 @@ class ProvisioningSetupSeeder extends Seeder
                 continue;
             }
 
-            $types = ['php', 'nginx', 'database', 'redis', 'supervisor'];
+            $types = [
+                ServiceType::Php,
+                ServiceType::Nginx,
+                ServiceType::Mysql,
+                ServiceType::Redis,
+                ServiceType::Supervisor,
+            ];
+
             foreach ($types as $type) {
                 Service::firstOrCreate(
                     [
@@ -274,15 +282,15 @@ class ProvisioningSetupSeeder extends Seeder
                         'type' => $type,
                     ],
                     [
-                        'version' => $type === 'php' ? '8.3' : null,
-                        'installed_version' => $type === 'php' ? '8.3' : null,
+                        'version' => $type === ServiceType::Php ? '8.3' : null,
+                        'installed_version' => $type === ServiceType::Php ? '8.3' : null,
                         'unit' => match ($type) {
-                            'php' => 'php8.3-fpm',
-                            'nginx' => 'nginx',
-                            'database' => 'mysql',
-                            'redis' => 'redis-server',
-                            'supervisor' => 'supervisor',
-                            default => $type,
+                            ServiceType::Php => 'php8.3-fpm',
+                            ServiceType::Nginx => 'nginx',
+                            ServiceType::Mysql => 'mysql',
+                            ServiceType::Redis => 'redis-server',
+                            ServiceType::Supervisor => 'supervisor',
+                            default => $type->value,
                         },
                         'status' => ServiceStatus::Active,
                         'is_default' => true,

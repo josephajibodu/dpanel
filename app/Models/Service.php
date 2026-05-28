@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\Provisioning\ServiceManager;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServiceStatus;
+use App\Enums\ServiceType;
 use App\Services\Provisioning\ProvisioningContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,7 @@ class Service extends Model
     protected function casts(): array
     {
         return [
+            'type' => ServiceType::class,
             'type_data' => 'array',
             'is_default' => 'boolean',
             'status' => ServiceStatus::class,

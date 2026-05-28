@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\ServerPhp\GetPhpInfo;
 use App\Actions\ServerPhp\SetDefaultPhpVersion;
 use App\Actions\ServerPhp\UpdatePhpSettings;
+use App\Enums\ServiceType;
 use App\Http\Requests\InstallPhpVersionRequest;
 use App\Http\Requests\SetDefaultPhpVersionRequest;
 use App\Http\Requests\UpdatePhpSettingsRequest;
@@ -92,14 +93,14 @@ class ServerPhpController extends Controller
 
         $version = $request->validated('version');
 
-        if ($server->service('php', $version) !== null) {
+        if ($server->service(ServiceType::Php, $version) !== null) {
             return redirect()
                 ->back()
                 ->with('error', "PHP {$version} is already installed.");
         }
 
         try {
-            $phpService = $server->createService('php', $version, false);
+            $phpService = $server->createService(ServiceType::Php, $version, false);
         } catch (\InvalidArgumentException $e) {
             return redirect()
                 ->back()
@@ -125,7 +126,7 @@ class ServerPhpController extends Controller
 
         $version = $request->validated('version');
 
-        if ($server->service('php', $version) === null) {
+        if ($server->service(ServiceType::Php, $version) === null) {
             return redirect()
                 ->back()
                 ->with('error', "PHP {$version} is not installed on this server.");

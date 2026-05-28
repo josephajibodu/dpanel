@@ -99,13 +99,13 @@ enum ProvisioningStep: int
      *
      * @return self|null null if the type is not a known installable service (e.g. supervisor)
      */
-    public static function forServiceType(string $type): ?self
+    public static function forServiceType(ServiceType $type): ?self
     {
         return match ($type) {
-            'php' => self::InstallingPhp,
-            'nginx' => self::InstallingNginx,
-            'database' => self::InstallingDatabase,
-            'redis' => self::InstallingRedis,
+            ServiceType::Php => self::InstallingPhp,
+            ServiceType::Nginx => self::InstallingNginx,
+            ServiceType::Mysql, ServiceType::Postgresql => self::InstallingDatabase,
+            ServiceType::Redis => self::InstallingRedis,
             default => null,
         };
     }
