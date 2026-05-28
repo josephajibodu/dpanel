@@ -1,5 +1,5 @@
 import { router, useForm, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, Loader2, Plus, Users } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import InputError from '@/components/input-error';
@@ -29,6 +29,14 @@ import {
 } from '@/components/ui/sidebar';
 import { type SharedData, type Team } from '@/types';
 
+function teamInitials(name: string): string {
+    return name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() ?? '')
+        .join('');
+}
+
 export function TeamSwitcher() {
     const { currentTeam, teams } = usePage<SharedData>().props;
     const [createOpen, setCreateOpen] = useState(false);
@@ -46,28 +54,22 @@ export function TeamSwitcher() {
 
     return (
         <>
-            <SidebarMenu>
+            <SidebarMenu className="flex-1">
                 <SidebarMenuItem>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <SidebarMenuButton
                                 size="lg"
-                                className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
+                                className="text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                             >
-                                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                    <Users className="size-4" />
+                                {/* Initials badge — grows when collapsed */}
+                                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-neutral-700 text-[10px] font-semibold text-white transition-all duration-200 ease-linear dark:bg-neutral-600 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:text-xs">
+                                    {teamInitials(currentTeam.name)}
                                 </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">
-                                        {currentTeam.name}
-                                    </span>
-                                    <span className="text-muted-foreground truncate text-xs">
-                                        {currentTeam.personal_team
-                                            ? 'Personal'
-                                            : 'Team'}
-                                    </span>
-                                </div>
-                                <ChevronsUpDown className="ml-auto size-4" />
+                                <span className="truncate text-sm font-semibold leading-tight transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
+                                    {currentTeam.name}
+                                </span>
+                                <ChevronsUpDown className="ml-auto size-4 shrink-0 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
@@ -85,8 +87,8 @@ export function TeamSwitcher() {
                                     onClick={() => switchTeam(team)}
                                     className="cursor-pointer gap-2 p-2"
                                 >
-                                    <div className="flex size-6 items-center justify-center rounded-sm border">
-                                        <Users className="size-4 shrink-0" />
+                                    <div className="flex size-6 items-center justify-center rounded-sm border bg-neutral-700 text-[10px] font-semibold text-white dark:bg-neutral-600">
+                                        {teamInitials(team.name)}
                                     </div>
                                     {team.name}
                                     {team.id === currentTeam.id && (
