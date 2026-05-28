@@ -8,7 +8,10 @@ use App\Actions\Teams\UpdateTeamName;
 use App\Http\Requests\StoreTeamRequest;
 use App\Http\Requests\UpdateTeamNameRequest;
 use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,9 +53,33 @@ class TeamController extends Controller
         ]);
     }
 
+    public function slugSuggestion(Request $request): JsonResponse
+    {
+        $name = $request->string('name')->toString();
+        $base = Str::slug($name);
+
+        if ($base === '') {
+            return response()->json(['slug' => '']);
+        }
+
+        $slug = $base;
+        $i = 2;
+
+        while (Team::where('slug', $slug)->exists()) {
+            $slug = "{$base}-{$i}";
+            $i++;
+        }
+
+        return response()->json(['slug' => $slug]);
+    }
+
     public function store(StoreTeamRequest $request, CreateTeam $action): RedirectResponse
     {
-        $team = $action->execute($request->user(), $request->validated('name'));
+        $team = $action->execute(
+            user: $request->user(),
+            name: $request->validated('name'),
+            slug: $request->validated('slug') ?: null,
+        );
 
         $request->user()->switchTeam($team);
 

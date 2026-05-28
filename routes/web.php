@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('source-control.branches');
 
     // Teams management (no team-slug prefix — these manage the team entity itself)
+    Route::get('teams/slug-suggestion', [TeamController::class, 'slugSuggestion'])->name('teams.slug-suggestion');
     Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
     Route::get('teams/{team}/settings', [TeamController::class, 'show'])->name('teams.show');
     Route::put('teams/{team}', [TeamController::class, 'update'])->name('teams.update');

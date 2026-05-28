@@ -8,12 +8,12 @@ use Illuminate\Support\Str;
 
 class CreateTeam
 {
-    public function execute(User $user, string $name, bool $personalTeam = false): Team
+    public function execute(User $user, string $name, bool $personalTeam = false, ?string $slug = null): Team
     {
         $team = Team::create([
             'user_id' => $user->id,
             'name' => $name,
-            'slug' => $this->generateSlug($name),
+            'slug' => $slug ?? $this->generateSlug($name),
             'personal_team' => $personalTeam,
         ]);
 

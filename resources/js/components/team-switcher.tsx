@@ -1,6 +1,6 @@
-import { Form, router, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, Plus, Users } from 'lucide-react';
-import { useState } from 'react';
+import { router, useForm, usePage } from '@inertiajs/react';
+import { Check, ChevronsUpDown, Loader2, Plus, Users } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,9 @@ export function TeamSwitcher() {
                                         {currentTeam.name}
                                     </span>
                                     <span className="text-muted-foreground truncate text-xs">
-                                        {currentTeam.personal_team ? 'Personal' : 'Team'}
+                                        {currentTeam.personal_team
+                                            ? 'Personal'
+                                            : 'Team'}
                                     </span>
                                 </div>
                                 <ChevronsUpDown className="ml-auto size-4" />
@@ -109,53 +111,196 @@ export function TeamSwitcher() {
                 </SidebarMenuItem>
             </SidebarMenu>
 
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create a new team</DialogTitle>
-                        <DialogDescription>
-                            Give your team a name. You can invite members after creating it.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <Form
-                        action="/teams"
-                        method="post"
-                        options={{ onSuccess: () => setCreateOpen(false) }}
-                        className="space-y-4"
-                    >
-                        {({ processing, errors }) => (
-                            <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="team-name">Team name</Label>
-                                    <Input
-                                        id="team-name"
-                                        name="name"
-                                        placeholder="Acme Corp"
-                                        autoFocus
-                                        required
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
-
-                                <DialogFooter>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setCreateOpen(false)}
-                                        disabled={processing}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Creating…' : 'Create team'}
-                                    </Button>
-                                </DialogFooter>
-                            </>
-                        )}
-                    </Form>
-                </DialogContent>
-            </Dialog>
+            <CreateTeamDialog
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+            />
         </>
+    );
+}
+
+function CreateTeamDialog({
+    open,
+    onOpenChange,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        slug: '',
+    });
+
+    const [slugPreview, setSlugPreview] = useState('');
+    const [slugLoading, setSlugLoading] = useState(false);
+    const [showSlugInput, setShowSlugInput] = useState(false);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Reset state when dialog closes
+    useEffect(() => {
+        if (!open) {
+            reset();
+            setSlugPreview('');
+            setSlugLoading(false);
+            setShowSlugInput(false);
+        }
+    }, [open]);
+
+    // Debounce slug suggestion fetch as name changes
+    useEffect(() => {
+        if (showSlugInput) {
+            return;
+        }
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        if (!data.name.trim()) {
+            setSlugPreview('');
+            setSlugLoading(false);
+            return;
+        }
+
+        setSlugLoading(true);
+
+        debounceRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(
+                    `/teams/slug-suggestion?name=${encodeURIComponent(data.name)}`,
+                    {
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    },
+                );
+                const json = (await res.json()) as { slug: string };
+                setSlugPreview(json.slug ?? '');
+                // Keep the form's slug in sync with the preview so it's
+                // submitted when the user doesn't customise it.
+                setData('slug', json.slug ?? '');
+            } catch {
+                setSlugPreview('');
+            } finally {
+                setSlugLoading(false);
+            }
+        }, 400);
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [data.name, showSlugInput]);
+
+    const handleShowSlugInput = () => {
+        setShowSlugInput(true);
+        // Pre-fill the custom slug input with the current preview
+        setData('slug', slugPreview);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/teams', {
+            onSuccess: () => onOpenChange(false),
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>New team</DialogTitle>
+                    <DialogDescription>
+                        Create a new team to collaborate with others and share
+                        resources.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Team name */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="team-name">Team name</Label>
+                        <Input
+                            id="team-name"
+                            name="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            placeholder="Acme Corp"
+                            autoFocus
+                            required
+                        />
+                        <InputError message={errors.name} />
+
+                        {/* Slug preview — hidden once user opens the slug input */}
+                        {!showSlugInput && data.name.trim() && (
+                            <p className="text-muted-foreground text-sm">
+                                {slugLoading ? (
+                                    <span className="inline-flex items-center gap-1">
+                                        <Loader2 className="size-3 animate-spin" />
+                                        Generating handle…
+                                    </span>
+                                ) : slugPreview ? (
+                                    <>
+                                        Your handle will be{' '}
+                                        <span className="text-foreground font-medium">
+                                            {slugPreview}
+                                        </span>
+                                        .{' '}
+                                        <button
+                                            type="button"
+                                            className="text-foreground font-semibold underline-offset-2 hover:underline"
+                                            onClick={handleShowSlugInput}
+                                        >
+                                            Change
+                                        </button>
+                                    </>
+                                ) : null}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Custom slug input — shown after clicking "Change" */}
+                    {showSlugInput && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="team-slug">Team handle</Label>
+                            <p className="text-muted-foreground text-sm">
+                                Must only contain lowercase letters, numbers,
+                                dots, and dashes.
+                            </p>
+                            <Input
+                                id="team-slug"
+                                name="slug"
+                                value={data.slug}
+                                onChange={(e) =>
+                                    setData('slug', e.target.value)
+                                }
+                                placeholder="acme-corp"
+                                autoFocus
+                            />
+                            <InputError message={errors.slug} />
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            disabled={processing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={processing || (!data.name.trim())}
+                        >
+                            {processing ? 'Creating…' : 'Create team'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
