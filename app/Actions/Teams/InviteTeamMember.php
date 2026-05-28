@@ -5,6 +5,7 @@ namespace App\Actions\Teams;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Notifications\TeamInvitationNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class InviteTeamMember
@@ -17,7 +18,8 @@ class InviteTeamMember
             'token' => Str::uuid()->toString(),
         ]);
 
-        $invitation->notify(new TeamInvitationNotification($invitation));
+        Notification::route('mail', $invitation->email)
+            ->notify(new TeamInvitationNotification($invitation));
 
         return $invitation;
     }

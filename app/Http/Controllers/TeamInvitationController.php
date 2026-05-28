@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Teams\InviteTeamMember;
+use App\Http\Requests\InviteTeamMemberRequest;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +13,15 @@ use Inertia\Response;
 
 class TeamInvitationController extends Controller
 {
+    public function store(InviteTeamMemberRequest $request, Team $team, InviteTeamMember $action): RedirectResponse
+    {
+        $action->execute($team, $request->validated('email'), $request->validated('role'));
+
+        return redirect()
+            ->back()
+            ->with('success', 'Invitation sent.');
+    }
+
     public function accept(Request $request, string $token): Response|RedirectResponse
     {
         $invitation = TeamInvitation::where('token', $token)->firstOrFail();
