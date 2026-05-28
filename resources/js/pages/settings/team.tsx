@@ -41,7 +41,7 @@ export default function TeamSettings({ team, members, invitations }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems(true)}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems()}>
             <Head title="Team settings" />
 
             <h1 className="sr-only">Team Settings</h1>
