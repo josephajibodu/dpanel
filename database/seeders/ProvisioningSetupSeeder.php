@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Teams\CreateTeam;
 use App\Enums\Provider;
 use App\Enums\RepositoryProvider;
 use App\Enums\ServiceStatus;
@@ -13,6 +14,7 @@ use App\Models\Server;
 use App\Models\Service;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -34,6 +36,8 @@ class ProvisioningSetupSeeder extends Seeder
             ]
         );
 
+        $this->seedTeam($user);
+
         $accounts = $this->seedProviderAccounts($user);
         $regions = $this->seedProviderRegionsAndSizes();
         $servers = $this->seedServers($user, $accounts, $regions);
@@ -41,6 +45,23 @@ class ProvisioningSetupSeeder extends Seeder
         $sites = $this->seedSites($servers, $sourceControl);
         $this->seedDeployments($sites, $user);
         $this->seedServerServices($servers);
+    }
+
+    private function seedTeam(User $user): void
+    {
+        // Find an existing personal team for this user, or create one.
+        $team = Team::where('user_id', $user->id)->where('personal_team', true)->first();
+
+        if (! $team) {
+            $team = app(CreateTeam::class)->execute($user, "Test User's Team", personalTeam: true, slug: 'test-user');
+        } elseif (! $team->hasUser($user)) {
+            $team->users()->attach($user, ['role' => 'owner']);
+        }
+
+        // Ensure current_team_id is set so all team-scoped queries work.
+        if ($user->current_team_id !== $team->id) {
+            $user->switchTeam($team);
+        }
     }
 
     /**
@@ -121,47 +142,51 @@ class ProvisioningSetupSeeder extends Seeder
     private function seedServers(User $user, array $accounts, array $regions): array
     {
         $servers = [];
+        $team = $user->currentTeam;
 
         $hetzner = $accounts[Provider::Hetzner->value] ?? null;
         $digitalOcean = $accounts[Provider::DigitalOcean->value] ?? null;
 
         if ($hetzner) {
-            $servers[] = Server::factory()
-                ->forUser($user)
-                ->forProviderAccount($hetzner)
-                ->app()
-                ->active()
-                ->create([
-                    'name' => 'iha-backend-server',
-                    'ip_address' => '45.79.137.246',
-                    'region' => 'fsn1',
-                    'size' => 'cx21',
-                ]);
+            $servers[] = $team->servers()->where('name', 'iha-backend-server')->first()
+                ?? Server::factory()
+                    ->forUser($user)
+                    ->forProviderAccount($hetzner)
+                    ->app()
+                    ->active()
+                    ->create([
+                        'name' => 'iha-backend-server',
+                        'ip_address' => '45.79.137.246',
+                        'region' => 'fsn1',
+                        'size' => 'cx21',
+                    ]);
         }
 
         if ($digitalOcean) {
-            $servers[] = Server::factory()
+            $servers[] = $team->servers()->where('name', 'mirthful-morning')->first()
+                ?? Server::factory()
+                    ->forUser($user)
+                    ->forProviderAccount($digitalOcean)
+                    ->app()
+                    ->active()
+                    ->create([
+                        'name' => 'mirthful-morning',
+                        'ip_address' => '88.198.184.29',
+                        'region' => 'nyc1',
+                        'size' => 's-1vcpu-1gb',
+                    ]);
+        }
+
+        $servers[] = $team->servers()->where('name', 'pending-server')->first()
+            ?? Server::factory()
                 ->forUser($user)
-                ->forProviderAccount($digitalOcean)
+                ->forProviderAccount($hetzner ?? $digitalOcean)
                 ->app()
                 ->active()
                 ->create([
-                    'name' => 'mirthful-morning',
-                    'ip_address' => '88.198.184.29',
-                    'region' => 'nyc1',
-                    'size' => 's-1vcpu-1gb',
+                    'name' => 'pending-server',
+                    'ip_address' => '65.21.100.42',
                 ]);
-        }
-
-        $servers[] = Server::factory()
-            ->forUser($user)
-            ->forProviderAccount($hetzner ?? $digitalOcean)
-            ->app()
-            ->active()
-            ->create([
-                'name' => 'pending-server',
-                'ip_address' => '65.21.100.42',
-            ]);
 
         return $servers;
     }
@@ -197,15 +222,19 @@ class ProvisioningSetupSeeder extends Seeder
         foreach ($activeServers as $server) {
             $count = $server->name === 'iha-backend-server' ? 2 : 1;
             for ($i = 0; $i < $count; $i++) {
-                $site = Site::factory()
-                    ->forServer($server)
-                    ->deployed()
-                    ->create([
-                        'domain' => $i === 0 ? $server->name.'.flitops.test' : 'api.'.$server->name.'.flitops.test',
-                        'site_name' => $i === 0 ? $server->name : 'API ('.$server->name.')',
-                        'repository' => 'cremir/flitops',
-                        'source_control_account_id' => $sourceControl?->id,
-                    ]);
+                $domain = $i === 0 ? $server->name.'.flitops.test' : 'api.'.$server->name.'.flitops.test';
+
+                $site = $server->sites()->where('domain', $domain)->first()
+                    ?? Site::factory()
+                        ->forServer($server)
+                        ->deployed()
+                        ->create([
+                            'domain' => $domain,
+                            'site_name' => $i === 0 ? $server->name : 'API ('.$server->name.')',
+                            'repository' => 'cremir/flitops',
+                            'source_control_account_id' => $sourceControl?->id,
+                        ]);
+
                 $sites[] = $site;
             }
         }
