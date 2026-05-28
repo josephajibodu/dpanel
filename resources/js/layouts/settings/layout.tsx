@@ -23,9 +23,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         { title: 'Password', href: editPassword(), icon: null },
         { title: 'Two-Factor Auth', href: show(), icon: null },
         { title: 'Appearance', href: editAppearance(), icon: null },
-        ...(currentTeam
-            ? [{ title: 'Team', href: `/teams/${currentTeam.id}/settings`, icon: null } as NavItem]
-            : []),
+        ...(currentTeam ? [{ title: 'Team', href: '/settings/team', icon: null } as NavItem] : []),
     ];
 
     // When server-side rendering, we only render the layout on the client...

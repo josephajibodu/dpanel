@@ -34,12 +34,12 @@ export function getSiteSubNavItems(
     ];
 }
 
-export function getSettingsSubNavItems(teamId?: number): SubNavItem[] {
+export function getSettingsSubNavItems(showTeam = false): SubNavItem[] {
     return [
         { title: 'Profile', href: edit().url },
         { title: 'Password', href: editPassword().url },
         { title: 'Two-Factor Auth', href: show.url() },
         { title: 'Appearance', href: editAppearance().url },
-        ...(teamId ? [{ title: 'Team', href: `/teams/${teamId}/settings` }] : []),
+        ...(showTeam ? [{ title: 'Team', href: '/settings/team' }] : []),
     ];
 }

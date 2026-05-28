@@ -18,6 +18,24 @@ class TeamController extends Controller
     {
         $this->authorize('view', $team);
 
+        return $this->renderTeamSettings($team);
+    }
+
+    public function showCurrent(): Response|RedirectResponse
+    {
+        $team = auth()->user()->currentTeam;
+
+        if (! $team) {
+            return redirect()->route('dashboard');
+        }
+
+        $this->authorize('view', $team);
+
+        return $this->renderTeamSettings($team);
+    }
+
+    private function renderTeamSettings(Team $team): Response
+    {
         $team->load(['owner', 'users', 'invitations']);
 
         return Inertia::render('settings/team', [
@@ -36,8 +54,10 @@ class TeamController extends Controller
     {
         $team = $action->execute($request->user(), $request->validated('name'));
 
+        $request->user()->switchTeam($team);
+
         return redirect()
-            ->route('teams.show', $team)
+            ->route('team.settings')
             ->with('success', 'Team created.');
     }
 

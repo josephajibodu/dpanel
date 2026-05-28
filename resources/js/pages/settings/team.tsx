@@ -25,7 +25,7 @@ export default function TeamSettings({ team, members, invitations }: Props) {
     const isOwner = auth.user.id === team.user_id;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Team settings', href: `/teams/${team.id}/settings` },
+        { title: 'Team settings', href: '/settings/team' },
     ];
 
     const removeMember = (userId: number) => {
@@ -41,7 +41,7 @@ export default function TeamSettings({ team, members, invitations }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems(team.id)}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems(true)}>
             <Head title="Team settings" />
 
             <h1 className="sr-only">Team Settings</h1>
