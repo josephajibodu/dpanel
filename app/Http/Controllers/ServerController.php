@@ -13,6 +13,7 @@ use App\Jobs\RestartServiceJob;
 use App\Models\ProviderRegion;
 use App\Models\ProviderSize;
 use App\Models\Server;
+use App\Models\Team;
 use App\Services\Providers\ProviderManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,9 @@ use Inertia\Response;
 
 class ServerController extends Controller
 {
-    public function index(): Response
+    public function index(Team $team): Response
     {
-        $servers = auth()->user()
-            ->currentTeam
-            ->servers()
+        $servers = $team->servers()
             ->with('providerAccount')
             ->withCount('sites')
             ->latest()
@@ -37,15 +36,12 @@ class ServerController extends Controller
         ]);
     }
 
-    public function create(ProviderManager $providerManager): Response
+    public function create(Team $team, ProviderManager $providerManager): Response
     {
-        $providerAccounts = auth()->user()
-            ->currentTeam
-            ->providerAccounts()
+        $providerAccounts = $team->providerAccounts()
             ->where('is_valid', true)
             ->get();
 
-        // Fetch regions and sizes for each provider account and sync to database
         $regions = [];
         $sizes = [];
 
@@ -53,28 +49,18 @@ class ServerController extends Controller
             try {
                 $provider = $providerManager->forAccount($account);
 
-                // Fetch and sync regions
                 $providerRegions = $provider->getRegions();
                 foreach ($providerRegions as $regionDto) {
                     ProviderRegion::updateOrCreate(
-                        [
-                            'provider' => $account->provider,
-                            'code' => $regionDto->slug,
-                        ],
-                        [
-                            'name' => $regionDto->name,
-                        ]
+                        ['provider' => $account->provider, 'code' => $regionDto->slug],
+                        ['name' => $regionDto->name]
                     );
                 }
 
-                // Fetch and sync sizes
                 $providerSizes = $provider->getSizes();
                 foreach ($providerSizes as $sizeDto) {
                     ProviderSize::updateOrCreate(
-                        [
-                            'provider' => $account->provider,
-                            'code' => $sizeDto->slug,
-                        ],
+                        ['provider' => $account->provider, 'code' => $sizeDto->slug],
                         [
                             'name' => $sizeDto->description(),
                             'memory' => $this->formatMemory($sizeDto->memory),
@@ -87,8 +73,7 @@ class ServerController extends Controller
 
                 $regions[$account->id] = $providerRegions->map->toArray()->all();
                 $sizes[$account->id] = $providerSizes->map->toArray()->all();
-            } catch (\Exception $e) {
-                // If we can't fetch, provide empty arrays
+            } catch (\Exception) {
                 $regions[$account->id] = [];
                 $sizes[$account->id] = [];
             }
@@ -106,22 +91,20 @@ class ServerController extends Controller
         return $mb >= 1024 ? ($mb / 1024).' GB' : $mb.' MB';
     }
 
-    public function store(
-        StoreServerRequest $request,
-        CreateServerAction $action,
-    ): RedirectResponse {
+    public function store(Team $team, StoreServerRequest $request, CreateServerAction $action): RedirectResponse
+    {
         $server = $action->execute(
             user: auth()->user(),
-            team: auth()->user()->currentTeam,
+            team: $team,
             data: ServerData::from($request->validated()),
         );
 
         return redirect()
-            ->route('servers.show', $server)
+            ->route('servers.show', [$team, $server])
             ->with('success', 'Server is being provisioned...');
     }
 
-    public function show(Server $server): Response
+    public function show(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
 
@@ -136,7 +119,7 @@ class ServerController extends Controller
         ]);
     }
 
-    public function settings(Server $server): Response
+    public function settings(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
 
@@ -158,20 +141,18 @@ class ServerController extends Controller
         ]);
     }
 
-    public function destroy(
-        Server $server,
-        DeleteServerAction $action,
-    ): RedirectResponse {
+    public function destroy(Team $team, Server $server, DeleteServerAction $action): RedirectResponse
+    {
         $this->authorize('delete', $server);
 
         $action->execute($server);
 
         return redirect()
-            ->route('servers.index')
+            ->route('servers.index', $team)
             ->with('success', 'Server deletion initiated.');
     }
 
-    public function restart(Server $server, Request $request): RedirectResponse
+    public function restart(Team $team, Server $server, Request $request): RedirectResponse
     {
         $this->authorize('update', $server);
 
@@ -181,14 +162,12 @@ class ServerController extends Controller
 
         $service = ServiceType::from($validated['service']);
 
-        // Create a server action record
         $action = $server->actions()->create([
             'user_id' => auth()->id(),
             'action' => "restart_{$service->value}",
             'status' => 'pending',
         ]);
 
-        // Dispatch the job
         RestartServiceJob::dispatch($server, $service, $action);
 
         return redirect()

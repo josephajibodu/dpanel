@@ -26,7 +26,7 @@ it('shows site create page with source control accounts but without prefetched r
         ->create();
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/sites/create");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/create");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page

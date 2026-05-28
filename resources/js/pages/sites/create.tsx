@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeftIcon, DatabaseIcon, EyeIcon, EyeOffIcon, GlobeIcon, Loader2Icon, PackageIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
 import { PhpVersion, ProjectType, RepositoryProvider } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
@@ -66,6 +67,7 @@ const DEFAULT_BUILD_COMMANDS: Record<string, string> = {
 };
 
 export default function SitesCreate({ server, freeDomain, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
+    const teamPath = useTeamPath();
     const { data: serverData } = server;
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loadingBranches, setLoadingBranches] = useState(false);
@@ -145,7 +147,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
         setIsCreatingDb(true);
         pendingDbNameRef.current = dbForm.name;
         router.post(
-            `/servers/${serverData.id}/databases`,
+            teamPath(`/servers/${serverData.id}/databases`),
             {
                 name: dbForm.name,
                 charset: dbForm.charset || undefined,
@@ -174,9 +176,9 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
     }
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: serverData.name, href: `/servers/${serverData.id}` },
-        { title: 'New Site', href: `/servers/${serverData.id}/sites/create` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: serverData.name, href: teamPath(`/servers/${serverData.id}`) },
+        { title: 'New Site', href: teamPath(`/servers/${serverData.id}/sites/create`) },
     ];
 
     const fetchRepositories = useCallback(() => {
@@ -327,7 +329,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        form.post(`/servers/${serverData.id}/sites`);
+        form.post(teamPath(`/servers/${serverData.id}/sites`));
     }
 
     const freeDomainPreview = form.data.site_name ? `${form.data.site_name}.${freeDomain}` : '';
@@ -339,7 +341,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/servers/${serverData.id}`}>
+                        <Link href={teamPath(`/servers/${serverData.id}`)}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -778,7 +780,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                         {/* Submit */}
                         <div className="flex justify-end gap-3">
                             <Button type="button" variant="outline" asChild>
-                                <Link href={`/servers/${serverData.id}`}>Cancel</Link>
+                                <Link href={teamPath(`/servers/${serverData.id}`)}>Cancel</Link>
                             </Button>
                             <Button
                                 type="submit"

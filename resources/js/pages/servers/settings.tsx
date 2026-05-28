@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Server } from '@/types/server';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { KeyIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,19 +20,21 @@ interface Props {
 }
 
 export default function ServerSettings({ server: serverProp, ssh_command, has_ssh_key }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const [destroyDialogOpen, setDestroyDialogOpen] = useState(false);
     const [isDestroying, setIsDestroying] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server.name, href: `/servers/${server.id}` },
-        { title: 'Settings', href: `/servers/${server.id}/settings` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server.name, href: teamPath(`/servers/${server.id}`) },
+        { title: 'Settings', href: teamPath(`/servers/${server.id}/settings`) },
     ];
 
     const handleDestroy = () => {
         setIsDestroying(true);
-        router.delete(`/servers/${server.id}`, {
+        router.delete(teamPath(`/servers/${server.id}`), {
             onFinish: () => {
                 setIsDestroying(false);
                 setDestroyDialogOpen(false);
@@ -42,7 +45,7 @@ export default function ServerSettings({ server: serverProp, ssh_command, has_ss
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(server.id)}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server.id)}
         >
             <Head title={`Settings - ${server.name}`} />
 

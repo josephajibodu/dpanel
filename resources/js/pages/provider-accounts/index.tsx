@@ -2,6 +2,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ProviderCard } from '@/components/provider-accounts/provider-card';
 import { Button } from '@/components/ui/button';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
@@ -15,15 +16,13 @@ interface Props {
     };
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Provider Accounts',
-        href: '/provider-accounts',
-    },
-];
-
 export default function ProviderAccountsIndex({ accounts }: Props) {
+    const teamPath = useTeamPath();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Provider Accounts', href: teamPath('/provider-accounts') },
+    ];
     const [accountToDelete, setAccountToDelete] = useState<ProviderAccount | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -36,7 +35,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
         if (!accountToDelete) return;
 
         setIsDeleting(true);
-        router.delete(`/provider-accounts/${accountToDelete.id}`, {
+        router.delete(teamPath(`/provider-accounts/${accountToDelete.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -56,7 +55,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         <p className="text-muted-foreground text-sm">Connect your cloud provider accounts to provision servers.</p>
                     </div>
                     <Button asChild>
-                        <Link href="/provider-accounts/create">
+                        <Link href={teamPath('/provider-accounts/create')}>
                             <PlusIcon className="mr-2 h-4 w-4" />
                             Connect Provider
                         </Link>
@@ -70,7 +69,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         description="Connect a cloud provider account to start provisioning servers."
                         action={
                             <Button asChild>
-                                <Link href="/provider-accounts/create">
+                                <Link href={teamPath('/provider-accounts/create')}>
                                     <PlusIcon className="mr-2 h-4 w-4" />
                                     Connect Provider
                                 </Link>

@@ -2,6 +2,7 @@ import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
@@ -31,20 +32,15 @@ interface Props {
 
 export default function ProviderAccountShow({ account }: Props) {
     const { data } = account;
+    const teamPath = useTeamPath();
 
     const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: 'Provider Accounts',
-            href: '/provider-accounts',
-        },
-        {
-            title: data.name,
-            href: `/provider-accounts/${data.id}`,
-        },
+        { title: 'Provider Accounts', href: teamPath('/provider-accounts') },
+        { title: data.name, href: teamPath(`/provider-accounts/${data.id}`) },
     ];
 
     const handleValidate = () => {
-        router.post(`/provider-accounts/${data.id}/validate`);
+        router.post(teamPath(`/provider-accounts/${data.id}/validate`));
     };
 
     return (
@@ -54,7 +50,7 @@ export default function ProviderAccountShow({ account }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/provider-accounts">
+                        <Link href={teamPath('/provider-accounts')}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>

@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import { Loader2Icon } from 'lucide-react';
 
@@ -8,8 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type EnvironmentVariable, type Site } from '@/types/site';
 
 interface Props {
@@ -25,6 +26,8 @@ interface Props {
 }
 
 export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false, env_content = '' }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -44,14 +47,14 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        form.put(`/servers/${serverId}/sites/${site.id}/environment`);
+        form.put(teamPath(`/servers/${serverId}/sites/${site.id}/environment`));
     }
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
-        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
-        { title: 'Environment', href: `/servers/${serverId}/sites/${site.id}/environment` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
+        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
+        { title: 'Environment', href: teamPath(`/servers/${serverId}/sites/${site.id}/environment`) },
     ];
 
     const editorTheme = resolvedAppearance === 'dark' ? 'env-dark' : 'env-light';
@@ -96,7 +99,7 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}
+            subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}
         >
             <Head title={`Environment - ${site.domain}`} />
 

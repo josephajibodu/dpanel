@@ -4,8 +4,8 @@ import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 import type { SubNavItem } from '@/types';
 
-export function getServerSubNavItems(serverId: number | string): SubNavItem[] {
-    const base = `/servers/${serverId}`;
+export function getServerSubNavItems(teamSlug: string, serverId: number | string): SubNavItem[] {
+    const base = `/${teamSlug}/servers/${serverId}`;
     return [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Sites', href: `${base}/sites` },
@@ -20,10 +20,11 @@ export function getServerSubNavItems(serverId: number | string): SubNavItem[] {
 }
 
 export function getSiteSubNavItems(
+    teamSlug: string,
     serverId: number | string,
     siteId: number | string,
 ): SubNavItem[] {
-    const base = `/servers/${serverId}/sites/${siteId}`;
+    const base = `/${teamSlug}/servers/${serverId}/sites/${siteId}`;
     return [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Deployments', href: `${base}/deployments` },

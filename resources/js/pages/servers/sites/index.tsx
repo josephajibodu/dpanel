@@ -25,11 +25,12 @@ import {
 } from '@/components/ui/table';
 import { useServerSitesListUpdates } from '@/hooks/use-server-sites-list-updates';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Server } from '@/types/server';
 import { type Site } from '@/types/site';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     EyeIcon,
@@ -51,6 +52,8 @@ interface Props {
 }
 
 export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -77,7 +80,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
         if (!siteToDelete) return;
 
         setIsDeleting(true);
-        router.delete(`/servers/${server.id}/sites/${siteToDelete.id}`, {
+        router.delete(teamPath(`/servers/${server.id}/sites/${siteToDelete.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -87,9 +90,9 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server.name, href: `/servers/${server.id}` },
-        { title: 'Sites', href: `/servers/${server.id}/sites` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server.name, href: teamPath(`/servers/${server.id}`) },
+        { title: 'Sites', href: teamPath(`/servers/${server.id}/sites`) },
     ];
 
     const { prevUrl, nextUrl } = getPaginationUrls(sites.links);
@@ -97,7 +100,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(server.id)}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server.id)}
         >
             <Head title={`Sites - ${server.name}`} />
 
@@ -113,7 +116,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                         <Button asChild>
-                            <Link href={`/servers/${server.id}/sites/create`}>
+                            <Link href={teamPath(`/servers/${server.id}/sites/create`)}>
                                 <PlusIcon className="mr-2 h-4 w-4" />
                                 Add site
                             </Link>
@@ -128,7 +131,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                         description="Create your first site on this server."
                         action={
                             <Button asChild>
-                                <Link href={`/servers/${server.id}/sites/create`}>
+                                <Link href={teamPath(`/servers/${server.id}/sites/create`)}>
                                     <PlusIcon className="mr-2 h-4 w-4" />
                                     Add Site
                                 </Link>
@@ -185,7 +188,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Link
-                                                        href={`/servers/${server.id}/sites/${site.id}`}
+                                                        href={teamPath(`/servers/${server.id}/sites/${site.id}`)}
                                                         className="font-medium hover:underline"
                                                     >
                                                         {site.domain}
@@ -223,7 +226,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                             asChild
                                                         >
                                                             <Link
-                                                                href={`/servers/${server.id}/sites/${site.id}`}
+                                                                href={teamPath(`/servers/${server.id}/sites/${site.id}`)}
                                                                 aria-label="View site"
                                                             >
                                                                 <EyeIcon className="h-4 w-4" />
@@ -245,14 +248,14 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem asChild>
                                                                     <Link
-                                                                        href={`/servers/${server.id}/sites/${site.id}`}
+                                                                        href={teamPath(`/servers/${server.id}/sites/${site.id}`)}
                                                                     >
                                                                         View
                                                                     </Link>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem asChild>
                                                                     <Link
-                                                                        href={`/servers/${server.id}/sites/${site.id}/edit`}
+                                                                        href={teamPath(`/servers/${server.id}/sites/${site.id}/edit`)}
                                                                     >
                                                                         Edit
                                                                     </Link>

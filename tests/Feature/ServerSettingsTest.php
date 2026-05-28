@@ -21,7 +21,7 @@ beforeEach(function () {
 
 it('shows server settings page', function () {
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/settings");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -38,7 +38,7 @@ it('includes port in ssh command when not 22', function () {
     $this->server->update(['ssh_port' => 2222]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/settings");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -50,7 +50,7 @@ it('returns null ssh command when server has no ip', function () {
     $this->server->update(['ip_address' => null]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/settings");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -68,7 +68,7 @@ it('shows has_ssh_key true when user has key synced to server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/settings");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -77,7 +77,7 @@ it('shows has_ssh_key true when user has key synced to server', function () {
 });
 
 it('denies guest access to server settings', function () {
-    $response = $this->get("/servers/{$this->server->id}/settings");
+    $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertRedirect();
 });
@@ -86,7 +86,7 @@ it('denies access to server settings for another users server', function () {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
-        ->get("/servers/{$this->server->id}/settings");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings");
 
     $response->assertForbidden();
 });

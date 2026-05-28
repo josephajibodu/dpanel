@@ -7,6 +7,7 @@ use App\Http\Resources\SiteResource;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Team;
 use App\Services\Ssh\SshService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class EnvironmentController extends Controller
 {
-    public function show(Server $server, Site $site, SshService $sshService): Response
+    public function show(Team $team, Server $server, Site $site, SshService $sshService): Response
     {
         $this->authorize('view', $site);
 
@@ -40,7 +41,7 @@ class EnvironmentController extends Controller
         ]);
     }
 
-    public function update(Request $request, Server $server, Site $site): RedirectResponse
+    public function update(Request $request, Team $team, Server $server, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 

@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     FileTextIcon,
     Loader2Icon,
@@ -44,8 +44,9 @@ import {
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useServerCommandRunUpdates } from '@/hooks/use-server-command-run-updates';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Site } from '@/types/site';
 
 interface CommandRun {
@@ -86,6 +87,8 @@ export default function SiteCommandsIndex({
     site: siteProp,
     commandRuns,
 }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp?.data ?? siteProp;
     const serverId = server?.id ?? site?.server?.id;
@@ -101,18 +104,18 @@ export default function SiteCommandsIndex({
     const [logsLoading, setLogsLoading] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
+        { title: 'Servers', href: teamPath('/servers') },
         {
             title: server?.name || site?.server?.name || 'Server',
-            href: `/servers/${serverId}`,
+            href: teamPath(`/servers/${serverId}`),
         },
         {
             title: site?.domain ?? 'Site',
-            href: `/servers/${serverId}/sites/${siteId}`,
+            href: teamPath(`/servers/${serverId}/sites/${siteId}`),
         },
         {
             title: 'Commands',
-            href: `/servers/${serverId}/sites/${siteId}/command-runs`,
+            href: teamPath(`/servers/${serverId}/sites/${siteId}/command-runs`),
         },
     ];
 
@@ -121,7 +124,7 @@ export default function SiteCommandsIndex({
         if (!serverId || !siteId || !commandInput.trim()) return;
         setIsSubmitting(true);
         router.post(
-            `/servers/${serverId}/sites/${siteId}/command-runs`,
+            teamPath(`/servers/${serverId}/sites/${siteId}/command-runs`),
             { command: commandInput.trim() },
             {
                 preserveScroll: true,
@@ -141,7 +144,7 @@ export default function SiteCommandsIndex({
             setLogsContent('');
             setLogsLoading(true);
             fetch(
-                `/servers/${serverId}/sites/${siteId}/command-runs/${run.id}`,
+                teamPath(`/servers/${serverId}/sites/${siteId}/command-runs/${run.id}`),
                 {
                     headers: {
                         Accept: 'application/json',
@@ -160,7 +163,7 @@ export default function SiteCommandsIndex({
     const handleRunAgain = (run: CommandRun) => {
         if (!serverId || !siteId) return;
         router.post(
-            `/servers/${serverId}/sites/${siteId}/command-runs`,
+            teamPath(`/servers/${serverId}/sites/${siteId}/command-runs`),
             { command: run.command },
             { preserveScroll: true },
         );
@@ -173,6 +176,7 @@ export default function SiteCommandsIndex({
         <AppLayout
             breadcrumbs={breadcrumbs}
             subNavItems={getSiteSubNavItems(
+                currentTeam?.slug ?? '',
                 String(serverId ?? ''),
                 String(siteId ?? ''),
             )}

@@ -20,14 +20,14 @@ beforeEach(function () {
 
 describe('index', function () {
     it('requires authentication', function () {
-        $response = $this->get('/provider-accounts');
+        $response = $this->get("/{$this->team->slug}/provider-accounts");
 
         $response->assertRedirect('/login');
     });
 
     it('shows the provider accounts page', function () {
         $response = $this->actingAs($this->user)
-            ->get('/provider-accounts');
+            ->get("/{$this->team->slug}/provider-accounts");
 
         $response->assertOk();
     });
@@ -36,7 +36,7 @@ describe('index', function () {
 describe('create', function () {
     it('shows the create provider account page', function () {
         $response = $this->actingAs($this->user)
-            ->get('/provider-accounts/create');
+            ->get("/{$this->team->slug}/provider-accounts/create");
 
         $response->assertOk();
     });
@@ -54,13 +54,13 @@ describe('store', function () {
         $this->app->instance(ProviderManager::class, $managerMock);
 
         $response = $this->actingAs($this->user)
-            ->post('/provider-accounts', [
+            ->post("/{$this->team->slug}/provider-accounts", [
                 'provider' => 'digitalocean',
                 'name' => 'My DO Account',
                 'api_token' => 'valid-token-12345',
             ]);
 
-        $response->assertRedirect('/provider-accounts');
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('provider_accounts', [
@@ -82,13 +82,13 @@ describe('store', function () {
         $this->app->instance(ProviderManager::class, $managerMock);
 
         $response = $this->actingAs($this->user)
-            ->post('/provider-accounts', [
+            ->post("/{$this->team->slug}/provider-accounts", [
                 'provider' => 'digitalocean',
                 'name' => 'My DO Account',
                 'api_token' => 'invalid-token-12345',
             ]);
 
-        $response->assertRedirect('/provider-accounts');
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
         $response->assertSessionHas('error');
 
         $this->assertDatabaseHas('provider_accounts', [
@@ -99,14 +99,14 @@ describe('store', function () {
 
     it('requires all fields', function () {
         $response = $this->actingAs($this->user)
-            ->post('/provider-accounts', []);
+            ->post("/{$this->team->slug}/provider-accounts", []);
 
         $response->assertSessionHasErrors(['provider', 'name', 'api_token']);
     });
 
     it('validates provider is a valid enum', function () {
         $response = $this->actingAs($this->user)
-            ->post('/provider-accounts', [
+            ->post("/{$this->team->slug}/provider-accounts", [
                 'provider' => 'invalid-provider',
                 'name' => 'Test',
                 'api_token' => 'token12345',
@@ -121,7 +121,7 @@ describe('show', function () {
         $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
-            ->get("/provider-accounts/{$account->id}");
+            ->get("/{$this->team->slug}/provider-accounts/{$account->id}");
 
         $response->assertOk();
     });
@@ -132,7 +132,7 @@ describe('show', function () {
         $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
-            ->get("/provider-accounts/{$account->id}");
+            ->get("/{$otherTeam->slug}/provider-accounts/{$account->id}");
 
         $response->assertForbidden();
     });
@@ -143,9 +143,9 @@ describe('destroy', function () {
         $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
-            ->delete("/provider-accounts/{$account->id}");
+            ->delete("/{$this->team->slug}/provider-accounts/{$account->id}");
 
-        $response->assertRedirect('/provider-accounts');
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
         $this->assertDatabaseMissing('provider_accounts', ['id' => $account->id]);
     });
 
@@ -157,9 +157,9 @@ describe('destroy', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->delete("/provider-accounts/{$account->id}");
+            ->delete("/{$this->team->slug}/provider-accounts/{$account->id}");
 
-        $response->assertRedirect('/provider-accounts');
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
         $response->assertSessionHas('error');
         $this->assertDatabaseHas('provider_accounts', ['id' => $account->id]);
     });
@@ -170,7 +170,7 @@ describe('destroy', function () {
         $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
-            ->delete("/provider-accounts/{$account->id}");
+            ->delete("/{$otherTeam->slug}/provider-accounts/{$account->id}");
 
         $response->assertForbidden();
     });
@@ -183,9 +183,9 @@ describe('validate', function () {
         $account = ProviderAccount::factory()->forTeam($this->team)->create();
 
         $response = $this->actingAs($this->user)
-            ->post("/provider-accounts/{$account->id}/validate");
+            ->post("/{$this->team->slug}/provider-accounts/{$account->id}/validate");
 
-        $response->assertRedirect('/provider-accounts');
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
         $response->assertSessionHas('success');
 
         Queue::assertPushed(ValidateProviderJob::class, fn ($job) => $job->providerAccount->id === $account->id);
@@ -197,7 +197,7 @@ describe('validate', function () {
         $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
-            ->post("/provider-accounts/{$account->id}/validate");
+            ->post("/{$otherTeam->slug}/provider-accounts/{$account->id}/validate");
 
         $response->assertForbidden();
     });

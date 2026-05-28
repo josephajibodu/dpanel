@@ -11,11 +11,12 @@ use App\Http\Requests\StoreCronJobRequest;
 use App\Http\Requests\UpdateCronJobRequest;
 use App\Models\CronJob;
 use App\Models\Server;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 
 class CronJobController extends Controller
 {
-    public function store(StoreCronJobRequest $request, Server $server): RedirectResponse
+    public function store(StoreCronJobRequest $request, Team $team, Server $server): RedirectResponse
     {
         if (! $server->isReady()) {
             return redirect()
@@ -32,6 +33,7 @@ class CronJobController extends Controller
 
     public function update(
         UpdateCronJobRequest $request,
+        Team $team,
         Server $server,
         CronJob $cron_job,
     ): RedirectResponse {
@@ -44,7 +46,7 @@ class CronJobController extends Controller
             ->with('success', 'Cron job updated.');
     }
 
-    public function destroy(Server $server, CronJob $cron_job): RedirectResponse
+    public function destroy(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -55,7 +57,7 @@ class CronJobController extends Controller
             ->with('success', 'Cron job removed.');
     }
 
-    public function disable(Server $server, CronJob $cron_job): RedirectResponse
+    public function disable(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -66,7 +68,7 @@ class CronJobController extends Controller
             ->with('success', 'Cron job disabled.');
     }
 
-    public function enable(Server $server, CronJob $cron_job): RedirectResponse
+    public function enable(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
         $this->authorize('view', $server);
 

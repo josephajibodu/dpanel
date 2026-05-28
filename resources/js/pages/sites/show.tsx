@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     CalendarIcon,
@@ -41,8 +41,9 @@ import {
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
 
@@ -57,6 +58,8 @@ interface Props {
 }
 
 export default function SitesShow({ server: serverProp, site }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
     const serverId = server?.id ?? siteData?.server?.id;
@@ -85,9 +88,9 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     }
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server?.name || siteData.server?.name || 'Server', href: `/servers/${serverId}` },
-        { title: siteData.domain, href: `/servers/${serverId}/sites/${siteData.id}` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server?.name || siteData.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
+        { title: siteData.domain, href: teamPath(`/servers/${serverId}/sites/${siteData.id}`) },
     ];
 
     const deployments = (siteData.deployments ?? []) as (Deployment & {
@@ -100,7 +103,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
 
     const confirmDelete = () => {
         setIsDeleting(true);
-        router.delete(`/servers/${serverId}/sites/${siteData.id}`, {
+        router.delete(teamPath(`/servers/${serverId}/sites/${siteData.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -111,7 +114,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const handleDeploy = () => {
         setIsDeploying(true);
         router.post(
-            `/servers/${serverId}/sites/${siteData.id}/deployments`,
+            teamPath(`/servers/${serverId}/sites/${siteData.id}/deployments`),
             {},
             {
                 preserveScroll: true,
@@ -127,6 +130,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
             breadcrumbs={breadcrumbs}
             subNavItems={
                 isProvisioning ? undefined : getSiteSubNavItems(
+                    currentTeam?.slug ?? '',
                     String(serverId ?? ''),
                     siteData.id,
                 )
@@ -179,7 +183,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href={`/servers/${serverId}/sites/${siteData.id}/edit`}>
+                                    <Link href={teamPath(`/servers/${serverId}/sites/${siteData.id}/edit`)}>
                                         Edit Site
                                     </Link>
                                 </DropdownMenuItem>
@@ -283,7 +287,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                             </p>
                                         </div>
                                         <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/servers/${serverId}/sites/${siteData.id}/deployments`}>
+                                            <Link href={teamPath(`/servers/${serverId}/sites/${siteData.id}/deployments`)}>
                                                 Go to Deployments
                                             </Link>
                                         </Button>
@@ -339,7 +343,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                                                 asChild
                                                             >
                                                                 <Link
-                                                                    href={`/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`}
+                                                                    href={teamPath(`/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`)}
                                                                 >
                                                                     View
                                                                 </Link>
@@ -488,7 +492,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         )}
                                     </p>
                                     <Link
-                                        href={`/servers/${serverId}`}
+                                        href={teamPath(`/servers/${serverId}`)}
                                         className="text-muted-foreground hover:text-foreground mt-2 block text-xs font-medium"
                                     >
                                         View server →

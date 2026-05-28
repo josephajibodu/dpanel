@@ -6,6 +6,7 @@ use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,7 @@ use Inertia\Response;
 
 class DeployScriptController extends Controller
 {
-    public function show(Server $server, Site $site): Response
+    public function show(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
 
@@ -25,7 +26,7 @@ class DeployScriptController extends Controller
         ]);
     }
 
-    public function update(Request $request, Server $server, Site $site): RedirectResponse
+    public function update(Request $request, Team $team, Server $server, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 

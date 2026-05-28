@@ -1,6 +1,7 @@
 export interface Team {
     id: number;
     name: string;
+    slug: string;
     personal_team: boolean;
     user_id: number;
     created_at: string;

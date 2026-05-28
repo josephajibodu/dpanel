@@ -10,13 +10,14 @@ use App\Http\Resources\ServerDatabaseResource;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerDatabase;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ServerDatabaseController extends Controller
 {
-    public function index(Server $server): Response
+    public function index(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
 
@@ -30,7 +31,7 @@ class ServerDatabaseController extends Controller
         ]);
     }
 
-    public function store(StoreServerDatabaseRequest $request, Server $server): RedirectResponse
+    public function store(StoreServerDatabaseRequest $request, Team $team, Server $server): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -47,7 +48,7 @@ class ServerDatabaseController extends Controller
             ->with('success', 'Database is being created.');
     }
 
-    public function destroy(Server $server, ServerDatabase $server_database): RedirectResponse
+    public function destroy(Team $team, Server $server, ServerDatabase $server_database): RedirectResponse
     {
         $this->authorize('view', $server);
 

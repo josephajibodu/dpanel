@@ -16,8 +16,14 @@ class Team extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'slug',
         'personal_team',
     ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
 
     protected function casts(): array
     {

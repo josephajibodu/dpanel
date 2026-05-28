@@ -24,8 +24,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import type { Server } from '@/types/server';
 import { Head, router, usePage } from '@inertiajs/react';
 import { CodeIcon, DownloadIcon, SettingsIcon } from 'lucide-react';
@@ -67,7 +68,9 @@ export default function ServerPhpIndex({
 }: Props) {
     const server =
         serverProp && 'data' in serverProp ? serverProp.data : serverProp;
-    const { errors } = usePage().props as { errors?: Record<string, string> };
+    const phpPageProps = usePage<SharedData>().props;
+    const { errors } = phpPageProps as { errors?: Record<string, string> };
+    const teamPath = useTeamPath();
 
     const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
     const [isSubmittingInstall, setIsSubmittingInstall] = useState(false);
@@ -87,16 +90,16 @@ export default function ServerPhpIndex({
     );
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server.name, href: `/servers/${server.id}` },
-        { title: 'PHP', href: `/servers/${server.id}/php` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server.name, href: teamPath(`/servers/${server.id}`) },
+        { title: 'PHP', href: teamPath(`/servers/${server.id}/php`) },
     ];
 
     const handleUpdateSettings = (e: React.FormEvent) => {
         e.preventDefault();
         if (!server?.id) return;
         setIsSubmittingSettings(true);
-        router.put(`/servers/${server.id}/php/settings`, {
+        router.put(teamPath(`/servers/${server.id}/php/settings`), {
             upload_max_filesize: settingsForm.upload_max_filesize || undefined,
             post_max_size: settingsForm.post_max_size || undefined,
             max_execution_time: settingsForm.max_execution_time
@@ -113,7 +116,7 @@ export default function ServerPhpIndex({
         e.preventDefault();
         if (!server?.id || !installVersion) return;
         setIsSubmittingInstall(true);
-        router.post(`/servers/${server.id}/php/versions`, { version: installVersion }, {
+        router.post(teamPath(`/servers/${server.id}/php/versions`), { version: installVersion }, {
             preserveScroll: true,
             onSuccess: () => setInstallVersion(''),
             onFinish: () => setIsSubmittingInstall(false),
@@ -123,7 +126,7 @@ export default function ServerPhpIndex({
     const handleSetDefault = (version: string) => {
         if (!server?.id) return;
         setIsSubmittingDefault(version);
-        router.patch(`/servers/${server.id}/php/default-version`, { version }, {
+        router.patch(teamPath(`/servers/${server.id}/php/default-version`), { version }, {
             preserveScroll: true,
             onFinish: () => setIsSubmittingDefault(null),
         });
@@ -132,7 +135,7 @@ export default function ServerPhpIndex({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(server.id)}
+            subNavItems={getServerSubNavItems(phpPageProps.currentTeam?.slug ?? '', server.id)}
         >
             <Head title={`PHP - ${server.name}`} />
 

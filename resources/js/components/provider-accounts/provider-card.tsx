@@ -13,8 +13,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { type SharedData } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     CloudIcon,
@@ -36,8 +37,11 @@ const providerIcons: Record<string, string> = {
 };
 
 export function ProviderCard({ account, onDelete }: ProviderCardProps) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const slug = currentTeam?.slug ?? '';
+
     const handleValidate = () => {
-        router.post(`/provider-accounts/${account.id}/validate`);
+        router.post(`/${slug}/provider-accounts/${account.id}/validate`);
     };
 
     return (
@@ -127,7 +131,7 @@ export function ProviderCard({ account, onDelete }: ProviderCardProps) {
                         className="w-full"
                         asChild
                     >
-                        <Link href={`/provider-accounts/${account.id}`}>
+                        <Link href={`/${slug}/provider-accounts/${account.id}`}>
                             View Details
                         </Link>
                     </Button>

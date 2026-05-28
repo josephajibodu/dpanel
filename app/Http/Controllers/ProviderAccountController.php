@@ -7,6 +7,7 @@ use App\Http\Requests\StoreProviderAccountRequest;
 use App\Http\Resources\ProviderAccountResource;
 use App\Jobs\ValidateProviderJob;
 use App\Models\ProviderAccount;
+use App\Models\Team;
 use App\Services\Providers\ProviderManager;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -14,11 +15,9 @@ use Inertia\Response;
 
 class ProviderAccountController extends Controller
 {
-    public function index(): Response
+    public function index(Team $team): Response
     {
-        $accounts = auth()->user()
-            ->currentTeam
-            ->providerAccounts()
+        $accounts = $team->providerAccounts()
             ->withCount('servers')
             ->latest()
             ->get();
@@ -28,7 +27,7 @@ class ProviderAccountController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Team $team): Response
     {
         return Inertia::render('provider-accounts/create', [
             'providers' => collect(Provider::cases())->map(fn ($p) => [
@@ -38,17 +37,17 @@ class ProviderAccountController extends Controller
         ]);
     }
 
-    public function store(StoreProviderAccountRequest $request, ProviderManager $providerManager): RedirectResponse
+    public function store(Team $team, StoreProviderAccountRequest $request, ProviderManager $providerManager): RedirectResponse
     {
         $validated = $request->validated();
 
-        // Validate credentials before storing
         $provider = $providerManager->driver($validated['provider']);
         $provider->setCredentials(['api_token' => $validated['api_token']]);
 
         $isValid = $provider->validateCredentials();
 
-        $account = auth()->user()->currentTeam->providerAccounts()->create([
+        $team->providerAccounts()->create([
+            'user_id' => auth()->id(),
             'provider' => $validated['provider'],
             'name' => $validated['name'],
             'credentials' => ['api_token' => $validated['api_token']],
@@ -58,16 +57,16 @@ class ProviderAccountController extends Controller
 
         if (! $isValid) {
             return redirect()
-                ->route('provider-accounts.index')
+                ->route('provider-accounts.index', $team)
                 ->with('error', 'Provider account created but credentials could not be validated. Please check your API token.');
         }
 
         return redirect()
-            ->route('provider-accounts.index')
+            ->route('provider-accounts.index', $team)
             ->with('success', 'Provider account connected successfully.');
     }
 
-    public function show(ProviderAccount $providerAccount): Response
+    public function show(Team $team, ProviderAccount $providerAccount): Response
     {
         $this->authorize('view', $providerAccount);
 
@@ -79,32 +78,31 @@ class ProviderAccountController extends Controller
         ]);
     }
 
-    public function destroy(ProviderAccount $providerAccount): RedirectResponse
+    public function destroy(Team $team, ProviderAccount $providerAccount): RedirectResponse
     {
         $this->authorize('delete', $providerAccount);
 
-        // Check if there are any servers using this account
         if ($providerAccount->servers()->exists()) {
             return redirect()
-                ->route('provider-accounts.index')
+                ->route('provider-accounts.index', $team)
                 ->with('error', 'Cannot delete provider account with active servers.');
         }
 
         $providerAccount->delete();
 
         return redirect()
-            ->route('provider-accounts.index')
+            ->route('provider-accounts.index', $team)
             ->with('success', 'Provider account disconnected.');
     }
 
-    public function validate(ProviderAccount $providerAccount): RedirectResponse
+    public function validate(Team $team, ProviderAccount $providerAccount): RedirectResponse
     {
         $this->authorize('update', $providerAccount);
 
         ValidateProviderJob::dispatch($providerAccount);
 
         return redirect()
-            ->route('provider-accounts.index')
+            ->route('provider-accounts.index', $team)
             ->with('success', 'Credentials validation started.');
     }
 }

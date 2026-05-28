@@ -28,7 +28,7 @@ beforeEach(function () {
 
 it('shows domains page', function () {
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/sites/{$this->site->id}/domains");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -39,7 +39,7 @@ it('shows domains page', function () {
 
 it('validates a new hostname', function () {
     $response = $this->actingAs($this->user)
-        ->postJson("/servers/{$this->server->id}/sites/{$this->site->id}/domains/validate", [
+        ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/validate", [
             'hostname' => 'brand-new-domain.com',
         ]);
 
@@ -60,7 +60,7 @@ it('rejects duplicate hostname on another site', function () {
         ]);
 
     $response = $this->actingAs($this->user)
-        ->postJson("/servers/{$this->server->id}/sites/{$this->site->id}/domains/validate", [
+        ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/validate", [
             'hostname' => 'taken.com',
         ]);
 
@@ -71,7 +71,7 @@ it('stores a custom domain and dispatches nginx sync', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/sites/{$this->site->id}/domains", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains", [
             'hostname' => 'my-custom.com',
             'wildcard_enabled' => false,
             'www_redirect' => WwwRedirect::FromWww->value,
@@ -100,7 +100,7 @@ it('sets primary domain', function () {
         ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$custom->ulid}/primary");
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$custom->ulid}/primary");
 
     $response->assertRedirect();
 

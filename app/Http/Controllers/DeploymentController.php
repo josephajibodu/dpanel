@@ -9,6 +9,7 @@ use App\Http\Resources\SiteResource;
 use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +20,7 @@ class DeploymentController extends Controller
     /**
      * Display a listing of deployments for a site.
      */
-    public function index(Server $server, Site $site): Response
+    public function index(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
 
@@ -38,14 +39,14 @@ class DeploymentController extends Controller
     /**
      * Store a newly created deployment (trigger deployment).
      */
-    public function store(Request $request, Server $server, Site $site, TriggerDeploymentAction $triggerDeployment): RedirectResponse
+    public function store(Request $request, Team $team, Server $server, Site $site, TriggerDeploymentAction $triggerDeployment): RedirectResponse
     {
         $this->authorize('view', $site);
 
         $deployment = $triggerDeployment->execute($site, 'manual', $request->user());
 
         return redirect()
-            ->route('servers.sites.deployments.show', [$server, $site, $deployment])
+            ->route('servers.sites.deployments.show', [$team, $server, $site, $deployment])
             ->with('success', 'Deployment started successfully.')
             ->with('deployment_started', [
                 'commit' => $deployment->commit_hash ? substr($deployment->commit_hash, 0, 7) : (string) $deployment->id,
@@ -56,7 +57,7 @@ class DeploymentController extends Controller
     /**
      * Display the specified deployment.
      */
-    public function show(Server $server, Site $site, Deployment $deployment): Response
+    public function show(Team $team, Server $server, Site $site, Deployment $deployment): Response
     {
         $deployment->load(['site.server', 'user', 'logs']);
 

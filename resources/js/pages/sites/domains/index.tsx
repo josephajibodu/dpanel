@@ -51,10 +51,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import { type SharedData } from '@/types';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Site } from '@/types/site';
 import { type SiteDomain } from '@/types/site-domain';
 
@@ -76,7 +76,8 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
     const domainList = domains?.data ?? [];
-    const { flash } = usePage<SharedData>().props;
+    const { flash, currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
 
     const [newHostname, setNewHostname] = useState('');
     const [hostnameError, setHostnameError] = useState<string | null>(null);
@@ -91,10 +92,10 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
-        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
-        { title: 'Domains', href: `/servers/${serverId}/sites/${site.id}/domains` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
+        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
+        { title: 'Domains', href: teamPath(`/servers/${serverId}/sites/${site.id}/domains`) },
     ];
 
     const systemDomains = domainList.filter((d) => d.type === 'system');
@@ -112,7 +113,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
         setValidating(true);
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         try {
-            const res = await fetch(`/servers/${serverId}/sites/${site.id}/domains/validate`, {
+            const res = await fetch(teamPath(`/servers/${serverId}/sites/${site.id}/domains/validate`), {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
@@ -140,7 +141,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     }
 
     function submitAddDomain() {
-        addForm.post(`/servers/${serverId}/sites/${site.id}/domains`, {
+        addForm.post(teamPath(`/servers/${serverId}/sites/${site.id}/domains`), {
             preserveScroll: true,
             onSuccess: () => {
                 setSheetOpen(false);
@@ -158,7 +159,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     }
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}>
             <Head title={`Domains — ${site.domain}`} />
 
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-4 md:p-8">
@@ -424,7 +425,7 @@ function DomainRow({
                         {domain.type === 'custom' && !domain.is_primary && domain.is_enabled && (
                             <DropdownMenuItem
                                 onClick={() =>
-                                    router.post(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/primary`)
+                                    router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/primary`))
                                 }
                             >
                                 Set as primary
@@ -432,7 +433,7 @@ function DomainRow({
                         )}
                         <DropdownMenuItem
                             onClick={() =>
-                                router.patch(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`, {
+                                router.patch(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`), {
                                     is_enabled: !domain.is_enabled,
                                 })
                             }
@@ -446,7 +447,7 @@ function DomainRow({
                                     className="text-destructive"
                                     onClick={() => {
                                         if (confirm(`Remove ${domain.hostname} from this site?`)) {
-                                            router.delete(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`);
+                                            router.delete(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`));
                                         }
                                     }}
                                 >

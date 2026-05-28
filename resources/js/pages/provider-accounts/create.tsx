@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Provider } from '@/types/provider-account';
@@ -14,16 +15,6 @@ interface Props {
     providers: Provider[];
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Provider Accounts',
-        href: '/provider-accounts',
-    },
-    {
-        title: 'Connect Provider',
-        href: '/provider-accounts/create',
-    },
-];
 
 const providerInfo: Record<string, { description: string; tokenUrl: string; tokenLabel: string }> = {
     digitalocean: {
@@ -44,6 +35,13 @@ const providerInfo: Record<string, { description: string; tokenUrl: string; toke
 };
 
 export default function ProviderAccountsCreate({ providers }: Props) {
+    const teamPath = useTeamPath();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Provider Accounts', href: teamPath('/provider-accounts') },
+        { title: 'Connect Provider', href: teamPath('/provider-accounts/create') },
+    ];
+
     const { data, setData, post, processing, errors } = useForm({
         provider: '',
         name: '',
@@ -52,7 +50,7 @@ export default function ProviderAccountsCreate({ providers }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/provider-accounts');
+        post(teamPath('/provider-accounts'));
     };
 
     const selectedProviderInfo = data.provider ? providerInfo[data.provider] : null;
@@ -64,7 +62,7 @@ export default function ProviderAccountsCreate({ providers }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/provider-accounts">
+                        <Link href={teamPath('/provider-accounts')}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -149,7 +147,7 @@ export default function ProviderAccountsCreate({ providers }: Props) {
 
                                 <div className="flex justify-end gap-3">
                                     <Button variant="outline" asChild>
-                                        <Link href="/provider-accounts">Cancel</Link>
+                                        <Link href={teamPath('/provider-accounts')}>Cancel</Link>
                                     </Button>
                                     <Button type="submit" disabled={processing}>
                                         {processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}

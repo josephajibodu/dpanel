@@ -27,7 +27,7 @@ it('stores a new cron job and dispatches job', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/cron-jobs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => 'php artisan schedule:run',
             'site_id' => null,
             'user' => 'deploy',
@@ -50,7 +50,7 @@ it('stores a new cron job and dispatches job', function () {
 
 it('validates cron job command and frequency are required', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/cron-jobs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => '',
             'user' => 'deploy',
             'frequency' => '',
@@ -67,7 +67,7 @@ it('validates cron job site_id belongs to server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/cron-jobs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => 'php artisan schedule:run',
             'site_id' => $site->id,
             'user' => 'deploy',
@@ -88,7 +88,7 @@ it('updates a cron job and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->put("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}", [
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}", [
             'command' => 'php artisan custom:task',
             'site_id' => null,
             'user' => 'www-data',
@@ -114,7 +114,7 @@ it('dispatches job to destroy a cron job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}");
 
     $response->assertRedirect();
     Queue::assertPushed(DestroyCronJobJob::class);
@@ -130,7 +130,7 @@ it('disables a cron job and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->patch("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}/disable");
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}/disable");
 
     $response->assertRedirect();
     $cronJob->refresh();
@@ -147,7 +147,7 @@ it('enables a cron job and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->patch("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}/enable");
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}/enable");
 
     $response->assertRedirect();
     $cronJob->refresh();
@@ -160,7 +160,7 @@ it('denies access to cron job from another server', function () {
     $cronJob = CronJob::factory()->create(['server_id' => $otherServer->id]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/cron-jobs/{$cronJob->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}");
 
     $response->assertNotFound();
     $this->assertDatabaseHas('cron_jobs', ['id' => $cronJob->id]);

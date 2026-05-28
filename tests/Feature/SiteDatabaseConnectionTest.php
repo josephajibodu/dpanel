@@ -44,7 +44,7 @@ describe('StoreSiteRequest validation', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'example.com',
                 'directory' => '/public',
@@ -78,7 +78,7 @@ describe('StoreSiteRequest validation', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'example.com',
                 'directory' => '/public',
@@ -96,7 +96,7 @@ describe('StoreSiteRequest validation', function () {
         Queue::fake();
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'no-db.com',
                 'directory' => '/public',
@@ -130,7 +130,7 @@ describe('CreateSiteAction', function () {
         ]);
 
         $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'with-db.com',
                 'directory' => '/public',
@@ -158,7 +158,7 @@ describe('SiteController::create', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/create");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/create");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page

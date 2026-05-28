@@ -1,10 +1,11 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { ClockIcon, GitCommitIcon, RocketIcon, UserIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { type SharedData } from '@/types';
 import { Deployment } from '@/types/deployment';
 
 interface DeploymentCardProps {
@@ -14,6 +15,9 @@ interface DeploymentCardProps {
 }
 
 export function DeploymentCard({ deployment, serverId, siteId }: DeploymentCardProps) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const slug = currentTeam?.slug ?? '';
+
     const statusColors = {
         pending: 'border-gray-300 bg-gray-100/80 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200',
         running: 'border-blue-300 bg-blue-100/80 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
@@ -72,7 +76,7 @@ export function DeploymentCard({ deployment, serverId, siteId }: DeploymentCardP
                 </div>
 
                 <Button variant="ghost" size="sm" className="h-8 px-3 text-sm" asChild>
-                    <Link href={`/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}`}>
+                    <Link href={`/${slug}/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}`}>
                         View
                     </Link>
                 </Button>

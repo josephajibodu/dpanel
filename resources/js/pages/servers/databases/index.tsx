@@ -27,8 +27,9 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import type {
     DatabaseUser,
     Server,
@@ -83,7 +84,9 @@ export default function ServerDatabasesIndex({
         serverProp && 'data' in serverProp ? serverProp.data : serverProp;
     const dbList = databases?.data ?? [];
     const userList = databaseUsers?.data ?? [];
-    const { errors } = usePage().props as { errors?: Record<string, string> };
+    const pageProps = usePage<SharedData>().props;
+    const { errors } = pageProps as { errors?: Record<string, string> };
+    const teamPath = useTeamPath();
 
     useServerDatabasesUpdates(server.id);
 
@@ -114,9 +117,9 @@ export default function ServerDatabasesIndex({
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server.name, href: `/servers/${server.id}` },
-        { title: 'Databases', href: `/servers/${server.id}/databases` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server.name, href: teamPath(`/servers/${server.id}`) },
+        { title: 'Databases', href: teamPath(`/servers/${server.id}/databases`) },
     ];
 
     const isServerReady = serverIsReady;
@@ -136,7 +139,7 @@ export default function ServerDatabasesIndex({
         e.preventDefault();
         if (!server?.id) return;
         setIsSubmitting(true);
-        router.post(`/servers/${server.id}/databases`, {
+        router.post(teamPath(`/servers/${server.id}/databases`), {
             name: dbForm.name,
             charset: dbForm.charset || undefined,
             collation: dbForm.collation || undefined,
@@ -157,7 +160,7 @@ export default function ServerDatabasesIndex({
         e.preventDefault();
         if (!server?.id || userForm.databases.length === 0) return;
         setIsSubmitting(true);
-        router.post(`/servers/${server.id}/database-users`, {
+        router.post(teamPath(`/servers/${server.id}/database-users`), {
             username: userForm.username,
             password: userForm.password,
             databases: userForm.databases,
@@ -182,7 +185,7 @@ export default function ServerDatabasesIndex({
         if (!server?.id || !userToEdit || editUserForm.databases.length === 0) return;
         setIsSubmitting(true);
         router.put(
-            `/servers/${server.id}/database-users/${userToEdit.id}`,
+            teamPath(`/servers/${server.id}/database-users/${userToEdit.id}`),
             {
                 password: editUserForm.password || undefined,
                 databases: editUserForm.databases,
@@ -219,7 +222,7 @@ export default function ServerDatabasesIndex({
         if (!server?.id || !dbToDelete) return;
         setIsDeletingDb(true);
         router.delete(
-            `/servers/${server.id}/databases/${dbToDelete.id}`,
+            teamPath(`/servers/${server.id}/databases/${dbToDelete.id}`),
             {
                 preserveScroll: true,
                 onFinish: () => {
@@ -235,7 +238,7 @@ export default function ServerDatabasesIndex({
         if (!server?.id || !userToDelete) return;
         setIsDeletingUser(true);
         router.delete(
-            `/servers/${server.id}/database-users/${userToDelete.id}`,
+            teamPath(`/servers/${server.id}/database-users/${userToDelete.id}`),
             {
                 preserveScroll: true,
                 onFinish: () => {
@@ -250,7 +253,7 @@ export default function ServerDatabasesIndex({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(server.id)}
+            subNavItems={getServerSubNavItems(pageProps.currentTeam?.slug ?? '', server.id)}
         >
             <Head title={`Databases - ${server.name}`} />
 

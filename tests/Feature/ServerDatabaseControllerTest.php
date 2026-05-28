@@ -27,7 +27,7 @@ it('shows databases index for the server', function () {
     ServerDatabase::factory()->count(2)->create(['server_id' => $this->server->id]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/databases");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/databases");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -41,7 +41,7 @@ it('shows databases index for the server', function () {
 });
 
 it('denies guest access to databases index', function () {
-    $response = $this->get("/servers/{$this->server->id}/databases");
+    $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/databases");
 
     $response->assertRedirect();
 });
@@ -50,7 +50,7 @@ it('denies access to databases index for another users server', function () {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
-        ->get("/servers/{$this->server->id}/databases");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/databases");
 
     $response->assertForbidden();
 });
@@ -59,7 +59,7 @@ it('stores a new database and creates a default database user', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/databases", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
             'name' => 'myapp_db',
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
@@ -88,7 +88,7 @@ it('stores a new database with an explicit database user', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/databases", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
             'name' => 'custom_db',
             'db_user' => 'custom_user',
             'db_password' => 'secret_password_123',
@@ -127,7 +127,7 @@ it('reuses existing database user when creating a second database', function () 
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/databases", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
             'name' => 'second_db',
         ]);
 
@@ -144,7 +144,7 @@ it('requires db_password when db_user is provided', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/databases", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
             'name' => 'test_db',
             'db_user' => 'some_user',
         ]);
@@ -159,7 +159,7 @@ it('validates database name is unique per server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/databases", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
             'name' => 'existing_db',
         ]);
 
@@ -176,7 +176,7 @@ it('dispatches job to destroy a database', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/databases/{$database->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/databases/{$database->id}");
 
     $response->assertRedirect();
     \Illuminate\Support\Facades\Queue::assertPushed(DestroyServerDatabaseJob::class);
@@ -191,7 +191,7 @@ it('denies destroy when database belongs to another server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/databases/{$database->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/databases/{$database->id}");
 
     $response->assertNotFound();
     $this->assertDatabaseHas('server_databases', ['id' => $database->id]);

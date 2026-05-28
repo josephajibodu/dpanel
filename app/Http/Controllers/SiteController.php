@@ -16,13 +16,14 @@ use App\Http\Resources\SourceControlAccountResource;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SiteController extends Controller
 {
-    public function index(Server $server): Response
+    public function index(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
 
@@ -36,7 +37,7 @@ class SiteController extends Controller
         ]);
     }
 
-    public function create(Server $server): Response
+    public function create(Team $team, Server $server): Response
     {
         $this->authorize('create', [Site::class, $server]);
 
@@ -86,6 +87,7 @@ class SiteController extends Controller
 
     public function store(
         StoreSiteRequest $request,
+        Team $team,
         Server $server,
         CreateSiteAction $action,
     ): RedirectResponse {
@@ -97,11 +99,11 @@ class SiteController extends Controller
         );
 
         return redirect()
-            ->route('servers.sites.show', [$server, $site])
+            ->route('servers.sites.show', [$team, $server, $site])
             ->with('success', 'Site is being created...');
     }
 
-    public function show(Server $server, Site $site): Response
+    public function show(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
 
@@ -118,7 +120,7 @@ class SiteController extends Controller
         ]);
     }
 
-    public function edit(Server $server, Site $site): Response
+    public function edit(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('update', $site);
 
@@ -145,25 +147,25 @@ class SiteController extends Controller
         ]);
     }
 
-    public function update(UpdateSiteRequest $request, Server $server, Site $site): RedirectResponse
+    public function update(UpdateSiteRequest $request, Team $team, Server $server, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 
         $site->update($request->validated());
 
         return redirect()
-            ->route('servers.sites.show', [$server, $site])
+            ->route('servers.sites.show', [$team, $server, $site])
             ->with('success', 'Site updated successfully.');
     }
 
-    public function destroy(Server $server, Site $site, DeleteSiteAction $action): RedirectResponse
+    public function destroy(Team $team, Server $server, Site $site, DeleteSiteAction $action): RedirectResponse
     {
         $this->authorize('delete', $site);
 
         $action->execute($site);
 
         return redirect()
-            ->route('servers.sites.index', $server)
+            ->route('servers.sites.index', [$team, $server])
             ->with('success', 'Site deletion initiated.');
     }
 }

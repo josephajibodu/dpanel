@@ -9,11 +9,12 @@ use App\Http\Requests\StoreDatabaseUserRequest;
 use App\Http\Requests\UpdateDatabaseUserRequest;
 use App\Models\DatabaseUser;
 use App\Models\Server;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 
 class DatabaseUserController extends Controller
 {
-    public function store(StoreDatabaseUserRequest $request, Server $server): RedirectResponse
+    public function store(StoreDatabaseUserRequest $request, Team $team, Server $server): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -32,6 +33,7 @@ class DatabaseUserController extends Controller
 
     public function update(
         UpdateDatabaseUserRequest $request,
+        Team $team,
         Server $server,
         DatabaseUser $database_user,
     ): RedirectResponse {
@@ -44,7 +46,7 @@ class DatabaseUserController extends Controller
             ->with('success', 'Database user is being updated on the server.');
     }
 
-    public function destroy(Server $server, DatabaseUser $database_user): RedirectResponse
+    public function destroy(Team $team, Server $server, DatabaseUser $database_user): RedirectResponse
     {
         $this->authorize('view', $server);
 

@@ -24,6 +24,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useServersListUpdates } from '@/hooks/use-servers-list-updates';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server } from '@/types/server';
@@ -50,16 +51,18 @@ interface Props {
 
 const DOCS_URL = 'https://laravel.com/docs/starter-kits#react';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Servers',
-        href: '/servers',
-    },
-];
-
 export default function ServersIndex({ servers }: Props) {
-    const userId = usePage<SharedData>().props.auth.user?.id ?? 0;
+    const { auth } = usePage<SharedData>().props;
+    const userId = auth.user?.id ?? 0;
+    const teamPath = useTeamPath();
     useServersListUpdates(userId);
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Servers',
+            href: teamPath('/servers'),
+        },
+    ];
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [serverToDelete, setServerToDelete] = useState<Server | null>(null);
@@ -86,7 +89,7 @@ export default function ServersIndex({ servers }: Props) {
         if (!serverToDelete) return;
 
         setIsDeleting(true);
-        router.delete(`/servers/${serverToDelete.id}`, {
+        router.delete(teamPath(`/servers/${serverToDelete.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -117,7 +120,7 @@ export default function ServersIndex({ servers }: Props) {
                             </a>
                         </Button>
                         <Button asChild>
-                            <Link href="/servers/create">
+                            <Link href={teamPath('/servers/create')}>
                                 <PlusIcon className="mr-2 h-4 w-4" />
                                 Create server
                             </Link>
@@ -132,7 +135,7 @@ export default function ServersIndex({ servers }: Props) {
                         description="Create your first server to get started with deploying applications."
                         action={
                             <Button asChild>
-                                <Link href="/servers/create">
+                                <Link href={teamPath('/servers/create')}>
                                     <PlusIcon className="mr-2 h-4 w-4" />
                                     Create Server
                                 </Link>
@@ -184,7 +187,7 @@ export default function ServersIndex({ servers }: Props) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Link
-                                                        href={`/servers/${server.id}`}
+                                                        href={teamPath(`/servers/${server.id}`)}
                                                         className="font-medium hover:underline"
                                                     >
                                                         {server.name}
@@ -206,7 +209,7 @@ export default function ServersIndex({ servers }: Props) {
                                                 <TableCell>
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                                                            <Link href={`/servers/${server.id}`} aria-label="View server">
+                                                            <Link href={teamPath(`/servers/${server.id}`)} aria-label="View server">
                                                                 <EyeIcon className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
@@ -219,7 +222,7 @@ export default function ServersIndex({ servers }: Props) {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem asChild>
-                                                                    <Link href={`/servers/${server.id}`}>
+                                                                    <Link href={teamPath(`/servers/${server.id}`)}>
                                                                         View Details
                                                                     </Link>
                                                                 </DropdownMenuItem>

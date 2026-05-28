@@ -24,7 +24,7 @@ it('shows processes index with workers and cron jobs', function () {
     CronJob::factory()->count(1)->create(['server_id' => $this->server->id]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/processes");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/processes");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -40,7 +40,7 @@ it('shows processes index with workers and cron jobs', function () {
 });
 
 it('denies guest access to processes index', function () {
-    $response = $this->get("/servers/{$this->server->id}/processes");
+    $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/processes");
 
     $response->assertRedirect();
 });
@@ -49,7 +49,7 @@ it('denies access to processes index for another users server', function () {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
-        ->get("/servers/{$this->server->id}/processes");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/processes");
 
     $response->assertForbidden();
 });

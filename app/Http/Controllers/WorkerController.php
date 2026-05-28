@@ -10,6 +10,7 @@ use App\Http\Requests\StoreWorkerRequest;
 use App\Http\Requests\UpdateWorkerRequest;
 use App\Jobs\ControlWorkerJob;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\Worker;
 use App\Services\Ssh\SshService;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ class WorkerController extends Controller
         private SshService $sshService,
     ) {}
 
-    public function store(StoreWorkerRequest $request, Server $server): RedirectResponse
+    public function store(StoreWorkerRequest $request, Team $team, Server $server): RedirectResponse
     {
         if (! $server->isReady()) {
             return redirect()
@@ -39,6 +40,7 @@ class WorkerController extends Controller
 
     public function update(
         UpdateWorkerRequest $request,
+        Team $team,
         Server $server,
         Worker $worker,
     ): RedirectResponse {
@@ -51,7 +53,7 @@ class WorkerController extends Controller
             ->with('success', 'Worker updated.');
     }
 
-    public function destroy(Server $server, Worker $worker): RedirectResponse
+    public function destroy(Team $team, Server $server, Worker $worker): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -62,7 +64,7 @@ class WorkerController extends Controller
             ->with('success', 'Worker removed.');
     }
 
-    public function start(Server $server, Worker $worker): RedirectResponse
+    public function start(Team $team, Server $server, Worker $worker): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -73,7 +75,7 @@ class WorkerController extends Controller
             ->with('success', 'Worker is starting.');
     }
 
-    public function stop(Server $server, Worker $worker): RedirectResponse
+    public function stop(Team $team, Server $server, Worker $worker): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -84,7 +86,7 @@ class WorkerController extends Controller
             ->with('success', 'Worker is stopping.');
     }
 
-    public function restart(Server $server, Worker $worker): RedirectResponse
+    public function restart(Team $team, Server $server, Worker $worker): RedirectResponse
     {
         $this->authorize('view', $server);
 
@@ -95,7 +97,7 @@ class WorkerController extends Controller
             ->with('success', 'Worker is restarting.');
     }
 
-    public function logs(Request $request, Server $server, Worker $worker): Response
+    public function logs(Request $request, Team $team, Server $server, Worker $worker): Response
     {
         $this->authorize('view', $server);
 

@@ -15,6 +15,7 @@ use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -22,7 +23,7 @@ use Inertia\Response;
 
 class SiteDomainController extends Controller
 {
-    public function index(Server $server, Site $site): Response
+    public function index(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
 
@@ -36,7 +37,7 @@ class SiteDomainController extends Controller
         ]);
     }
 
-    public function validateHostname(ValidateSiteDomainRequest $request, Server $server, Site $site): JsonResponse
+    public function validateHostname(ValidateSiteDomainRequest $request, Team $team, Server $server, Site $site): JsonResponse
     {
         $this->authorize('view', $site);
 
@@ -56,7 +57,7 @@ class SiteDomainController extends Controller
         return response()->json(['valid' => true]);
     }
 
-    public function store(StoreSiteDomainRequest $request, Server $server, Site $site): RedirectResponse
+    public function store(StoreSiteDomainRequest $request, Team $team, Server $server, Site $site): RedirectResponse
     {
         $this->authorize('update', $site);
 
@@ -83,11 +84,11 @@ class SiteDomainController extends Controller
         SyncSiteNginxJob::dispatch($site);
 
         return redirect()
-            ->route('servers.sites.domains.index', [$server, $site])
+            ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Domain added.');
     }
 
-    public function update(UpdateSiteDomainRequest $request, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
+    public function update(UpdateSiteDomainRequest $request, Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
     {
         $this->authorize('update', $site);
 
@@ -99,14 +100,14 @@ class SiteDomainController extends Controller
         if (array_key_exists('is_enabled', $data) && $data['is_enabled'] === false) {
             if ($siteDomain->is_primary) {
                 return redirect()
-                    ->route('servers.sites.domains.index', [$server, $site])
+                    ->route('servers.sites.domains.index', [$team, $server, $site])
                     ->with('error', 'Set another domain as primary before disabling this domain.');
             }
 
             $enabledCount = $site->domains()->where('is_enabled', true)->count();
             if ($enabledCount <= 1) {
                 return redirect()
-                    ->route('servers.sites.domains.index', [$server, $site])
+                    ->route('servers.sites.domains.index', [$team, $server, $site])
                     ->with('error', 'At least one domain must remain enabled.');
             }
         }
@@ -116,30 +117,30 @@ class SiteDomainController extends Controller
         SyncSiteNginxJob::dispatch($site);
 
         return redirect()
-            ->route('servers.sites.domains.index', [$server, $site])
+            ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Domain updated.');
     }
 
-    public function destroy(Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
+    public function destroy(Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
     {
         $this->authorize('update', $site);
 
         if ($siteDomain->type === SiteDomainType::System) {
             return redirect()
-                ->route('servers.sites.domains.index', [$server, $site])
+                ->route('servers.sites.domains.index', [$team, $server, $site])
                 ->with('error', 'The system domain cannot be deleted.');
         }
 
         $count = $site->domains()->count();
         if ($count <= 1) {
             return redirect()
-                ->route('servers.sites.domains.index', [$server, $site])
+                ->route('servers.sites.domains.index', [$team, $server, $site])
                 ->with('error', 'You must keep at least one domain.');
         }
 
         if ($siteDomain->is_primary) {
             return redirect()
-                ->route('servers.sites.domains.index', [$server, $site])
+                ->route('servers.sites.domains.index', [$team, $server, $site])
                 ->with('error', 'Set another domain as primary before deleting this one.');
         }
 
@@ -148,24 +149,24 @@ class SiteDomainController extends Controller
         SyncSiteNginxJob::dispatch($site);
 
         return redirect()
-            ->route('servers.sites.domains.index', [$server, $site])
+            ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Domain removed.');
     }
 
-    public function setPrimary(Server $server, Site $site, SiteDomain $siteDomain, SetPrimarySiteDomainAction $action): RedirectResponse
+    public function setPrimary(Team $team, Server $server, Site $site, SiteDomain $siteDomain, SetPrimarySiteDomainAction $action): RedirectResponse
     {
         $this->authorize('update', $site);
 
         if (! $siteDomain->is_enabled) {
             return redirect()
-                ->route('servers.sites.domains.index', [$server, $site])
+                ->route('servers.sites.domains.index', [$team, $server, $site])
                 ->with('error', 'Enable the domain before setting it as primary.');
         }
 
         $action->execute($site, $siteDomain);
 
         return redirect()
-            ->route('servers.sites.domains.index', [$server, $site])
+            ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Primary domain updated.');
     }
 }

@@ -34,7 +34,7 @@ it('stores a new database user and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/database-users", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/database-users", [
             'username' => 'myuser',
             'password' => 'secretpassword123',
             'databases' => ['app_db', 'other_db'],
@@ -60,7 +60,7 @@ it('stores a new database user and dispatches job', function () {
 
 it('validates database user requires at least one database', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/database-users", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/database-users", [
             'username' => 'myuser',
             'password' => 'secretpassword123',
             'databases' => [],
@@ -80,7 +80,7 @@ it('validates database names must exist on server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/database-users", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/database-users", [
             'username' => 'myuser',
             'password' => 'secretpassword123',
             'databases' => ['valid_db', 'nonexistent_db'],
@@ -104,7 +104,7 @@ it('validates username is unique per server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/database-users", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/database-users", [
             'username' => 'existinguser',
             'password' => 'secretpassword123',
             'databases' => ['app_db'],
@@ -133,7 +133,7 @@ it('updates a database user and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->put("/servers/{$this->server->id}/database-users/{$databaseUser->id}", [
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/database-users/{$databaseUser->id}", [
             'databases' => ['db1', 'db2'],
             'host' => '127.0.0.1',
         ]);
@@ -156,7 +156,7 @@ it('dispatches job to destroy a database user', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/database-users/{$databaseUser->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/database-users/{$databaseUser->id}");
 
     $response->assertRedirect();
     \Illuminate\Support\Facades\Queue::assertPushed(DestroyDatabaseUserJob::class);
@@ -171,7 +171,7 @@ it('denies destroy when database user belongs to another server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/database-users/{$databaseUser->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/database-users/{$databaseUser->id}");
 
     $response->assertNotFound();
     $this->assertDatabaseHas('database_users', ['id' => $databaseUser->id]);

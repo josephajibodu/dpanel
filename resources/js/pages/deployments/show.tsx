@@ -7,6 +7,7 @@ import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deploymen
 import { useDeploymentUpdates } from '@/hooks/use-deployment-updates';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -34,7 +35,8 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     const server = serverProp?.data ?? serverProp;
     const site = (siteProp as { data?: SiteData })?.data ?? (siteProp as SiteData);
     const serverId = server?.id ?? site?.server?.id;
-    const { flash } = usePage<SharedData>().props;
+    const { flash, currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
 
     const isDeploying = deployment.status === 'pending' || deployment.status === 'running';
     const commitShort = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : `#${deployment.id}`;
@@ -71,11 +73,11 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     useDeploymentUpdates(deployment.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
-        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
-        { title: 'Deployments', href: `/servers/${serverId}/sites/${site.id}/deployments` },
-        { title: `#${deployment.id}`, href: `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
+        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
+        { title: 'Deployments', href: teamPath(`/servers/${serverId}/sites/${site.id}/deployments`) },
+        { title: `#${deployment.id}`, href: teamPath(`/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}`) },
     ];
 
     const siteUrl = site.server?.ip_address
@@ -83,7 +85,7 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
         : `https://${site.domain}`;
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}>
+        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}>
             <Head title={`Deployment ${commitShort} - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">

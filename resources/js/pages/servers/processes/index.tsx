@@ -39,8 +39,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import type {
     CronJob,
     ProcessSite,
@@ -96,7 +97,9 @@ export default function ServerProcessesIndex({
         serverProp && 'data' in serverProp ? serverProp.data : serverProp;
     const workerList = workers?.data ?? [];
     const cronList = cronJobs?.data ?? [];
-    const { errors } = usePage().props as { errors?: Record<string, string> };
+    const procPageProps = usePage<SharedData>().props;
+    const { errors } = procPageProps as { errors?: Record<string, string> };
+    const teamPath = useTeamPath();
 
     const [createWorkerOpen, setCreateWorkerOpen] = useState(false);
     const [editWorkerOpen, setEditWorkerOpen] = useState(false);
@@ -133,9 +136,9 @@ export default function ServerProcessesIndex({
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server.name, href: `/servers/${server.id}` },
-        { title: 'Processes', href: `/servers/${server.id}/processes` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server.name, href: teamPath(`/servers/${server.id}`) },
+        { title: 'Processes', href: teamPath(`/servers/${server.id}/processes`) },
     ];
 
     const fetchLogs = useCallback(
@@ -145,7 +148,7 @@ export default function ServerProcessesIndex({
             setLogsOpen(true);
             setLogsContent('');
             setLogsLoading(true);
-            fetch(`/servers/${server.id}/workers/${w.id}/logs`, {
+            fetch(teamPath(`/servers/${server.id}/workers/${w.id}/logs`), {
                 headers: { Accept: 'text/plain', 'X-Requested-With': 'XMLHttpRequest' },
             })
                 .then((r) => r.text())
@@ -164,7 +167,7 @@ export default function ServerProcessesIndex({
             workerForm.site_id === '' || workerForm.site_id === 'server'
                 ? null
                 : Number(workerForm.site_id);
-        router.post(`/servers/${server.id}/workers`, {
+        router.post(teamPath(`/servers/${server.id}/workers`), {
             name: workerForm.name,
             command: workerForm.command,
             site_id: siteId,
@@ -198,7 +201,7 @@ export default function ServerProcessesIndex({
             workerForm.site_id === '' || workerForm.site_id === 'server'
                 ? null
                 : Number(workerForm.site_id);
-        router.put(`/servers/${server.id}/workers/${workerToEdit.id}`, {
+        router.put(teamPath(`/servers/${server.id}/workers/${workerToEdit.id}`), {
             name: workerForm.name,
             command: workerForm.command,
             site_id: siteId,
@@ -234,7 +237,7 @@ export default function ServerProcessesIndex({
         if (!server?.id || !workerToDelete) return;
         setIsDeletingWorker(true);
         router.delete(
-            `/servers/${server.id}/workers/${workerToDelete.id}`,
+            teamPath(`/servers/${server.id}/workers/${workerToDelete.id}`),
             {
                 preserveScroll: true,
                 onFinish: () => {
@@ -254,7 +257,7 @@ export default function ServerProcessesIndex({
             cronForm.site_id === '' || cronForm.site_id === 'server'
                 ? null
                 : Number(cronForm.site_id);
-        router.post(`/servers/${server.id}/cron-jobs`, {
+        router.post(teamPath(`/servers/${server.id}/cron-jobs`), {
             command: cronForm.command,
             site_id: siteId,
             user: cronForm.user,
@@ -282,7 +285,7 @@ export default function ServerProcessesIndex({
             cronForm.site_id === '' || cronForm.site_id === 'server'
                 ? null
                 : Number(cronForm.site_id);
-        router.put(`/servers/${server.id}/cron-jobs/${cronToEdit.id}`, {
+        router.put(teamPath(`/servers/${server.id}/cron-jobs/${cronToEdit.id}`), {
             command: cronForm.command,
             site_id: siteId,
             user: cronForm.user,
@@ -312,7 +315,7 @@ export default function ServerProcessesIndex({
         if (!server?.id || !cronToDelete) return;
         setIsDeletingCron(true);
         router.delete(
-            `/servers/${server.id}/cron-jobs/${cronToDelete.id}`,
+            teamPath(`/servers/${server.id}/cron-jobs/${cronToDelete.id}`),
             {
                 preserveScroll: true,
                 onFinish: () => {
@@ -330,7 +333,7 @@ export default function ServerProcessesIndex({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(server.id)}
+            subNavItems={getServerSubNavItems(procPageProps.currentTeam?.slug ?? '', server.id)}
         >
             <Head title={`Processes - ${server.name}`} />
 
@@ -454,7 +457,7 @@ export default function ServerProcessesIndex({
                                                             className="h-8 w-8"
                                                             onClick={() =>
                                                                 router.post(
-                                                                    `/servers/${server.id}/workers/${w.id}/start`,
+                                                                    teamPath(`/servers/${server.id}/workers/${w.id}/start`),
                                                                     {},
                                                                     {
                                                                         preserveScroll: true,
@@ -471,7 +474,7 @@ export default function ServerProcessesIndex({
                                                             className="h-8 w-8"
                                                             onClick={() =>
                                                                 router.post(
-                                                                    `/servers/${server.id}/workers/${w.id}/stop`,
+                                                                    teamPath(`/servers/${server.id}/workers/${w.id}/stop`),
                                                                     {},
                                                                     {
                                                                         preserveScroll: true,
@@ -488,7 +491,7 @@ export default function ServerProcessesIndex({
                                                             className="h-8 w-8"
                                                             onClick={() =>
                                                                 router.post(
-                                                                    `/servers/${server.id}/workers/${w.id}/restart`,
+                                                                    teamPath(`/servers/${server.id}/workers/${w.id}/restart`),
                                                                     {},
                                                                     {
                                                                         preserveScroll: true,
@@ -613,7 +616,7 @@ export default function ServerProcessesIndex({
                                                                 className="h-8"
                                                                 onClick={() =>
                                                                     router.visit(
-                                                                        `/servers/${server.id}/cron-jobs/${c.id}/enable`,
+                                                                        teamPath(`/servers/${server.id}/cron-jobs/${c.id}/enable`),
                                                                         {
                                                                             method: 'patch',
                                                                             preserveScroll: true,
@@ -630,7 +633,7 @@ export default function ServerProcessesIndex({
                                                                 className="h-8"
                                                                 onClick={() =>
                                                                     router.visit(
-                                                                        `/servers/${server.id}/cron-jobs/${c.id}/disable`,
+                                                                        teamPath(`/servers/${server.id}/cron-jobs/${c.id}/disable`),
                                                                         {
                                                                             method: 'patch',
                                                                             preserveScroll: true,

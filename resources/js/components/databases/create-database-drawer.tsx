@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
-import { Link } from '@inertiajs/react';
+import { type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
 
 interface CreateDatabaseDrawerProps {
@@ -7,9 +8,12 @@ interface CreateDatabaseDrawerProps {
 }
 
 export function CreateDatabaseDrawer({ serverId }: CreateDatabaseDrawerProps) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const slug = currentTeam?.slug ?? '';
+
     return (
         <Button variant="outline" size="sm" asChild>
-            <Link href={`/servers/${serverId}/databases`}>
+            <Link href={`/${slug}/servers/${serverId}/databases`}>
                 <PlusIcon className="mr-2 h-4 w-4" />
                 New database
             </Link>

@@ -31,7 +31,7 @@ beforeEach(function () {
 describe('site creation', function () {
     it('can view the site creation form', function () {
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/create");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/create");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -47,7 +47,7 @@ describe('site creation', function () {
         Queue::fake();
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'example.com',
                 'directory' => '/public',
@@ -75,7 +75,7 @@ describe('site creation', function () {
         Queue::fake();
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'myapp.com',
                 'directory' => '/public',
@@ -103,7 +103,7 @@ describe('site creation', function () {
         Queue::fake();
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'manual-deploy.com',
                 'directory' => '/public',
@@ -131,7 +131,7 @@ describe('site creation', function () {
         Queue::fake();
 
         $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'laravel.com',
                 'directory' => '/public',
@@ -150,7 +150,7 @@ describe('site creation', function () {
 
     it('validates domain format', function () {
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'invalid domain!',
                 'directory' => '/public',
@@ -176,7 +176,7 @@ describe('site creation', function () {
         $this->server->update(['ip_address' => '146.190.253.93']);
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'site_name' => 'react-blog',
                 'directory' => '/public',
@@ -211,7 +211,7 @@ describe('site creation', function () {
 
     it('validates site_name format', function () {
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'site_name' => 'invalid site name!',
                 'directory' => '/public',
@@ -226,7 +226,7 @@ describe('site creation', function () {
 
     it('requires either domain or site_name', function () {
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'directory' => '/public',
                 'project_type' => 'laravel',
@@ -240,7 +240,7 @@ describe('site creation', function () {
 
     it('validates repository format', function () {
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites", [
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
                 'server_id' => $this->server->id,
                 'domain' => 'example.com',
                 'directory' => '/public',
@@ -260,7 +260,7 @@ describe('site creation', function () {
         $otherServer = Server::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$otherServer->id}/sites", [
+            ->post("/{$otherTeam->slug}/servers/{$otherServer->id}/sites", [
                 'server_id' => $otherServer->id,
                 'domain' => 'example.com',
                 'directory' => '/public',
@@ -281,7 +281,7 @@ describe('sites index (under server)', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -298,7 +298,7 @@ describe('sites index (under server)', function () {
         $otherServer = Server::factory()->forTeam($otherTeam)->create();
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$otherServer->id}/sites");
+            ->get("/{$otherTeam->slug}/servers/{$otherServer->id}/sites");
 
         $response->assertForbidden();
     });
@@ -311,7 +311,7 @@ describe('site viewing', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/{$site->id}");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -331,7 +331,7 @@ describe('site viewing', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$otherServer->id}/sites/{$site->id}");
+            ->get("/{$otherTeam->slug}/servers/{$otherServer->id}/sites/{$site->id}");
 
         $response->assertForbidden();
     });
@@ -346,9 +346,9 @@ describe('site deletion', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->delete("/servers/{$this->server->id}/sites/{$site->id}");
+            ->delete("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
 
-        $response->assertRedirect("/servers/{$this->server->id}/sites");
+        $response->assertRedirect("/{$this->team->slug}/servers/{$this->server->id}/sites");
 
         Queue::assertPushed(DeleteSiteJob::class);
     });
@@ -362,7 +362,7 @@ describe('site deletion', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->delete("/servers/{$otherServer->id}/sites/{$site->id}");
+            ->delete("/{$otherTeam->slug}/servers/{$otherServer->id}/sites/{$site->id}");
 
         $response->assertForbidden();
     });
@@ -375,7 +375,7 @@ describe('site sub-pages', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/{$site->id}/deployments");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/deployments");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -404,7 +404,7 @@ describe('site sub-pages', function () {
         $this->app->instance(SshService::class, $sshServiceMock);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/{$site->id}/environment");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/environment");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -421,7 +421,7 @@ describe('site sub-pages', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get("/servers/{$this->server->id}/sites/{$site->id}/deploy-script");
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/deploy-script");
 
         $response->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -441,7 +441,7 @@ describe('deployment triggering', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->post("/servers/{$this->server->id}/sites/{$site->id}/deployments");
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/deployments");
 
         $response->assertRedirect();
 
@@ -465,7 +465,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'env_content' => "APP_KEY=base64:test\nDB_HOST=localhost",
             ]);
 
@@ -491,7 +491,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'env_content' => "# App settings\n\nAPP_ENV=production\n\n# Database\nDB_HOST=127.0.0.1\n",
             ]);
 
@@ -514,7 +514,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'env_content' => "APP_NAME=FlitOps\nINVALID_LINE",
             ]);
 
@@ -527,7 +527,7 @@ describe('environment variables', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/environment", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/environment", [
                 'env_content' => '123INVALID=test',
             ]);
 
@@ -545,7 +545,7 @@ describe('deploy script', function () {
         $newScript = 'cd $SITE_ROOT && git pull';
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
                 'script' => $newScript,
             ]);
 
@@ -561,7 +561,7 @@ describe('deploy script', function () {
         ]);
 
         $response = $this->actingAs($this->user)
-            ->put("/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
+            ->put("/{$this->team->slug}/servers/{$site->server_id}/sites/{$site->id}/deploy-script", [
                 'script' => '',
             ]);
 

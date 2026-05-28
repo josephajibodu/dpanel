@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, CloudIcon, CodeIcon, Folder, KeyIcon, LayoutGrid, ServerIcon } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
@@ -15,37 +15,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 
 import AppLogo from './app-logo';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Servers',
-        href: '/servers',
-        icon: ServerIcon,
-    },
-    {
-        title: 'SSH Keys',
-        href: '/ssh-keys',
-        icon: KeyIcon,
-    },
-    {
-        title: 'Provider Accounts',
-        href: '/provider-accounts',
-        icon: CloudIcon,
-    },
-    {
-        title: 'Source Control',
-        href: '/source-control',
-        icon: CodeIcon,
-    },
-];
 
 const footerNavItems: NavItem[] = [
     {
@@ -61,6 +33,37 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { currentTeam } = usePage<SharedData>().props;
+    const slug = currentTeam?.slug ?? '';
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Servers',
+            href: `/${slug}/servers`,
+            icon: ServerIcon,
+        },
+        {
+            title: 'SSH Keys',
+            href: '/ssh-keys',
+            icon: KeyIcon,
+        },
+        {
+            title: 'Provider Accounts',
+            href: `/${slug}/provider-accounts`,
+            icon: CloudIcon,
+        },
+        {
+            title: 'Source Control',
+            href: '/source-control',
+            icon: CodeIcon,
+        },
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

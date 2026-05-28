@@ -26,7 +26,7 @@ it('stores a new worker and dispatches job', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [
             'name' => 'queue-worker',
             'command' => 'php artisan queue:work',
             'site_id' => null,
@@ -54,7 +54,7 @@ it('stores a new worker and dispatches job', function () {
 
 it('validates worker name and command are required', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [
             'name' => '',
             'command' => '',
             'user' => 'deploy',
@@ -72,7 +72,7 @@ it('validates worker site_id belongs to server', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [
             'name' => 'worker',
             'command' => 'php artisan queue:work',
             'site_id' => $site->id,
@@ -95,7 +95,7 @@ it('updates a worker and dispatches job', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->put("/servers/{$this->server->id}/workers/{$worker->id}", [
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}", [
             'name' => 'new-name',
             'command' => 'php artisan queue:work --sleep=3',
             'site_id' => null,
@@ -126,7 +126,7 @@ it('dispatches job to destroy a worker', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/workers/{$worker->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}");
 
     $response->assertRedirect();
     Queue::assertPushed(DestroyWorkerJob::class);
@@ -142,7 +142,7 @@ it('starts a worker', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers/{$worker->id}/start");
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}/start");
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
@@ -157,7 +157,7 @@ it('stops a worker', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers/{$worker->id}/stop");
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}/stop");
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
@@ -172,7 +172,7 @@ it('restarts a worker', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/workers/{$worker->id}/restart");
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}/restart");
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
@@ -185,7 +185,7 @@ it('returns worker logs when log file is not configured', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/workers/{$worker->id}/logs");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}/logs");
 
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
@@ -197,7 +197,7 @@ it('denies access to worker from another server', function () {
     $worker = Worker::factory()->create(['server_id' => $otherServer->id]);
 
     $response = $this->actingAs($this->user)
-        ->delete("/servers/{$this->server->id}/workers/{$worker->id}");
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}");
 
     $response->assertNotFound();
     $this->assertDatabaseHas('workers', ['id' => $worker->id]);

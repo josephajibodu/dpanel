@@ -27,7 +27,7 @@ it('shows command runs index for the site', function () {
     SiteCommandRun::factory()->count(2)->forSite($this->site)->create();
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -41,7 +41,7 @@ it('shows command runs index for the site', function () {
 });
 
 it('denies guest access to command runs index', function () {
-    $response = $this->get("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
+    $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
 
     $response->assertRedirect();
 });
@@ -50,7 +50,7 @@ it('denies access to command runs for another users site', function () {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
-        ->get("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
 
     $response->assertForbidden();
 });
@@ -59,7 +59,7 @@ it('stores a new command run and dispatches job', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
             'command' => 'php artisan --version',
         ]);
 
@@ -76,7 +76,7 @@ it('stores a new command run and dispatches job', function () {
 
 it('validates command is required', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
             'command' => '',
         ]);
 
@@ -86,7 +86,7 @@ it('validates command is required', function () {
 
 it('validates command max length', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs", [
             'command' => str_repeat('x', 1025),
         ]);
 
@@ -101,7 +101,7 @@ it('show returns run with output for modal', function () {
     ]);
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs/{$run->id}", [
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs/{$run->id}", [
             'Accept' => 'application/json',
             'X-Requested-With' => 'XMLHttpRequest',
         ]);
@@ -118,7 +118,7 @@ it('show returns 404 when command run belongs to another site', function () {
     $run = SiteCommandRun::factory()->forSite($otherSite)->create();
 
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/sites/{$this->site->id}/command-runs/{$run->id}", [
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs/{$run->id}", [
             'Accept' => 'application/json',
         ]);
 

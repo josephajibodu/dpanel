@@ -19,11 +19,12 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server } from '@/types/server';
 import { Site } from '@/types/site';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     ActivityIcon,
@@ -49,25 +50,21 @@ interface Props {
 }
 
 export default function ServersShow({ server }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const { server: data, connectionState } = useServerProvisioningUpdates(server.data);
     const sites = data.sites ?? [];
     const isProvisioningLifecycle = ['pending', 'creating', 'provisioning'].includes(data.status);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: 'Servers',
-            href: '/servers',
-        },
-        {
-            title: data.name,
-            href: `/servers/${data.id}`,
-        },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: data.name, href: teamPath(`/servers/${data.id}`) },
     ];
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(data.id)}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', data.id)}
         >
             <Head title={data.name} />
 
@@ -93,7 +90,7 @@ export default function ServersShow({ server }: Props) {
                                             </CardTitle>
                                             {data.status === 'active' && (
                                                 <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/servers/${data.id}/sites/create`}>
+                                                    <Link href={teamPath(`/servers/${data.id}/sites/create`)}>
                                                         <PlusIcon className="mr-2 h-4 w-4" />
                                                         New site
                                                     </Link>
@@ -119,7 +116,7 @@ export default function ServersShow({ server }: Props) {
                                                 </div>
                                                 {data.status === 'active' && (
                                                     <Button variant="outline" size="sm" asChild>
-                                                        <Link href={`/servers/${data.id}/sites/create`}>
+                                                        <Link href={teamPath(`/servers/${data.id}/sites/create`)}>
                                                             <PlusIcon className="mr-2 h-4 w-4" />
                                                             New site
                                                         </Link>
@@ -141,7 +138,7 @@ export default function ServersShow({ server }: Props) {
                                                             <TableRow key={site.id}>
                                                                 <TableCell>
                                                                     <Link
-                                                                        href={`/servers/${data.id}/sites/${site.id}`}
+                                                                        href={teamPath(`/servers/${data.id}/sites/${site.id}`)}
                                                                         className="font-medium hover:underline"
                                                                     >
                                                                         {site.domain}
@@ -175,7 +172,7 @@ export default function ServersShow({ server }: Props) {
                                                 Databases
                                             </CardTitle>
                                             <Button variant="outline" size="sm" asChild>
-                                                <Link href={`/servers/${data.id}/databases`}>
+                                                <Link href={teamPath(`/servers/${data.id}/databases`)}>
                                                     View databases
                                                 </Link>
                                             </Button>
@@ -368,6 +365,8 @@ interface ServerMetricsOverviewProps {
 }
 
 function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
+    const teamPath = useTeamPath();
+
     return (
         <section className="space-y-3">
             <div>
@@ -381,19 +380,19 @@ function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
                     label="CPU load"
                     value="N/A"
                     description="No data yet"
-                    href={`/servers/${serverId}/observe`}
+                    href={teamPath(`/servers/${serverId}/observe`)}
                 />
                 <MetricCard
                     label="Memory usage"
                     value="N/A"
                     description="No data yet"
-                    href={`/servers/${serverId}/observe`}
+                    href={teamPath(`/servers/${serverId}/observe`)}
                 />
                 <MetricCard
                     label="Disk usage"
                     value="N/A"
                     description="No data yet"
-                    href={`/servers/${serverId}/observe`}
+                    href={teamPath(`/servers/${serverId}/observe`)}
                 />
             </div>
         </section>

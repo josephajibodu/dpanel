@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
@@ -19,16 +20,6 @@ interface Props {
     sizes: Record<number, ProviderSize[]>;
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Servers',
-        href: '/servers',
-    },
-    {
-        title: 'Create Server',
-        href: '/servers/create',
-    },
-];
 
 const phpVersions = [
     { value: '8.4', label: 'PHP 8.4' },
@@ -44,6 +35,13 @@ const databaseTypes = [
 ];
 
 export default function ServersCreate({ providerAccounts, regions, sizes }: Props) {
+    const teamPath = useTeamPath();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: 'Create Server', href: teamPath('/servers/create') },
+    ];
+
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         provider_account_id: '',
@@ -59,7 +57,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/servers');
+        post(teamPath('/servers'));
     };
 
     const handleProviderChange = (value: string) => {
@@ -78,7 +76,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/servers">
+                        <Link href={teamPath('/servers')}>
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -132,7 +130,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
                                     {providerAccounts.data.length === 0 && (
                                         <p className="text-muted-foreground text-sm">
                                             No provider accounts found.{' '}
-                                            <Link href="/provider-accounts/create" className="text-primary underline">
+                                            <Link href={teamPath('/provider-accounts/create')} className="text-primary underline">
                                                 Connect one first
                                             </Link>
                                             .
@@ -244,7 +242,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
 
                         <div className="flex justify-end gap-3">
                             <Button variant="outline" asChild>
-                                <Link href="/servers">Cancel</Link>
+                                <Link href={teamPath('/servers')}>Cancel</Link>
                             </Button>
                             <Button type="submit" disabled={processing || providerAccounts.data.length === 0}>
                                 {processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}

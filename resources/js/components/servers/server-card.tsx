@@ -2,8 +2,9 @@ import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { type SharedData } from '@/types';
 import { Server } from '@/types/server';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { GlobeIcon, MoreVerticalIcon, ServerIcon, Trash2Icon } from 'lucide-react';
 
@@ -13,6 +14,9 @@ interface ServerCardProps {
 }
 
 export function ServerCard({ server, onDelete }: ServerCardProps) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const slug = currentTeam?.slug ?? '';
+
     return (
         <Card className="relative">
             <CardHeader className="pb-3">
@@ -36,7 +40,7 @@ export function ServerCard({ server, onDelete }: ServerCardProps) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href={`/servers/${server.id}`}>View Details</Link>
+                                    <Link href={`/${slug}/servers/${server.id}`}>View Details</Link>
                                 </DropdownMenuItem>
                                 {onDelete && server.status !== 'deleting' && (
                                     <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
@@ -77,7 +81,7 @@ export function ServerCard({ server, onDelete }: ServerCardProps) {
 
                 <div className="pt-2">
                     <Button variant="outline" size="sm" className="w-full" asChild>
-                        <Link href={`/servers/${server.id}`}>View Details</Link>
+                        <Link href={`/${slug}/servers/${server.id}`}>View Details</Link>
                     </Button>
                 </div>
             </CardContent>

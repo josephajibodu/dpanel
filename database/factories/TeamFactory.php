@@ -12,9 +12,12 @@ class TeamFactory extends Factory
 {
     public function definition(): array
     {
+        $name = fake()->company().' Team';
+
         return [
             'user_id' => User::factory(),
-            'name' => fake()->company().' Team',
+            'name' => $name,
+            'slug' => \Illuminate\Support\Str::slug($name).'-'.fake()->unique()->randomNumber(4),
             'personal_team' => false,
         ];
     }
@@ -28,9 +31,12 @@ class TeamFactory extends Factory
 
     public function forUser(User $user): static
     {
+        $name = $user->name."'s Team";
+
         return $this->state(fn (array $attributes) => [
             'user_id' => $user->id,
-            'name' => $user->name."'s Team",
+            'name' => $name,
+            'slug' => \Illuminate\Support\Str::slug($name).'-'.fake()->unique()->randomNumber(4),
             'personal_team' => true,
         ]);
     }

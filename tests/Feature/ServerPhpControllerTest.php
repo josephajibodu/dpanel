@@ -22,7 +22,7 @@ beforeEach(function () {
 
 it('shows PHP index for the server', function () {
     $response = $this->actingAs($this->user)
-        ->get("/servers/{$this->server->id}/php");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -41,7 +41,7 @@ it('shows PHP index for the server', function () {
 });
 
 it('denies guest access to PHP index', function () {
-    $response = $this->get("/servers/{$this->server->id}/php");
+    $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/php");
 
     $response->assertRedirect();
 });
@@ -50,14 +50,14 @@ it('denies access to PHP index for another users server', function () {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
-        ->get("/servers/{$this->server->id}/php");
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
 
     $response->assertForbidden();
 });
 
 it('redirects with error when updating settings and server is not ready', function () {
     $response = $this->actingAs($this->user)
-        ->put("/servers/{$this->server->id}/php/settings", [
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [
             'upload_max_filesize' => '64M',
             'max_execution_time' => 30,
         ]);
@@ -70,7 +70,7 @@ it('validates update settings request', function () {
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
 
     $response = $this->actingAs($this->user)
-        ->put("/servers/{$this->server->id}/php/settings", [
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [
             'max_execution_time' => 99999,
         ]);
 
@@ -79,7 +79,7 @@ it('validates update settings request', function () {
 
 it('redirects with error when installing version and server is not ready', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/php/versions", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/php/versions", [
             'version' => '8.2',
         ]);
 
@@ -89,7 +89,7 @@ it('redirects with error when installing version and server is not ready', funct
 
 it('validates install version request', function () {
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/php/versions", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/php/versions", [
             'version' => '7.4',
         ]);
 
@@ -102,7 +102,7 @@ it('dispatches job to install PHP version when server is ready', function () {
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
 
     $response = $this->actingAs($this->user)
-        ->post("/servers/{$this->server->id}/php/versions", [
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/php/versions", [
             'version' => '8.2',
         ]);
 
@@ -116,7 +116,7 @@ it('dispatches job to install PHP version when server is ready', function () {
 
 it('redirects with error when setting default version and server is not ready', function () {
     $response = $this->actingAs($this->user)
-        ->patch("/servers/{$this->server->id}/php/default-version", [
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
             'version' => '8.3',
         ]);
 
@@ -126,7 +126,7 @@ it('redirects with error when setting default version and server is not ready', 
 
 it('validates set default version request', function () {
     $response = $this->actingAs($this->user)
-        ->patch("/servers/{$this->server->id}/php/default-version", [
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
             'version' => '7.4',
         ]);
 

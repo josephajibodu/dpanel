@@ -7,11 +7,12 @@ import {
 } from '@/components/ui/pagination';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Loader2Icon, RocketIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,6 +31,8 @@ interface Props {
 }
 
 export default function SiteDeploymentsIndex({ server: serverProp, site: siteProp, deployments }: Props) {
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -37,15 +40,15 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
     const [isDeploying, setIsDeploying] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: '/servers' },
-        { title: server?.name || site.server?.name || 'Server', href: `/servers/${serverId}` },
-        { title: site.domain, href: `/servers/${serverId}/sites/${site.id}` },
-        { title: 'Deployments', href: `/servers/${serverId}/sites/${site.id}/deployments` },
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
+        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
+        { title: 'Deployments', href: teamPath(`/servers/${serverId}/sites/${site.id}/deployments`) },
     ];
 
     const handleDeploy = () => {
         setIsDeploying(true);
-        router.post(`/servers/${serverId}/sites/${site.id}/deployments`, {}, {
+        router.post(teamPath(`/servers/${serverId}/sites/${site.id}/deployments`), {}, {
             onFinish: () => {
                 setIsDeploying(false);
             },
@@ -58,7 +61,7 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(String(serverId ?? ''), site.id)}
+            subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}
         >
             <Head title={`Deployments - ${site.domain}`} />
 
