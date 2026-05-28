@@ -84,7 +84,7 @@ class TeamController extends Controller
         $request->user()->switchTeam($team);
 
         return redirect()
-            ->route('team.settings')
+            ->route('servers.index', $team)
             ->with('success', 'Team created.');
     }
 
@@ -101,10 +101,14 @@ class TeamController extends Controller
     {
         $this->authorize('delete', $team);
 
-        $action->execute(auth()->user(), $team);
+        $user = auth()->user();
+
+        $action->execute($user, $team);
+
+        $user->refresh();
 
         return redirect()
-            ->route('servers.index')
+            ->route('servers.index', $user->currentTeam)
             ->with('success', 'Team deleted.');
     }
 }

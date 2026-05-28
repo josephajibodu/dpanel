@@ -74,7 +74,7 @@ class TeamInvitationController extends Controller
         $user->switchTeam($team);
 
         return redirect()
-            ->route('servers.index')
+            ->route('servers.index', $team)
             ->with('success', "You have joined {$team->name}.");
     }
 }

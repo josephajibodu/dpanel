@@ -22,6 +22,6 @@ class CurrentTeamController extends Controller
 
         $request->user()->switchTeam($team);
 
-        return redirect()->intended(route('servers.index'));
+        return redirect()->intended(route('servers.index', $team));
     }
 }
