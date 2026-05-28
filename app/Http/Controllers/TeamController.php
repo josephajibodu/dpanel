@@ -90,11 +90,13 @@ class TeamController extends Controller
 
     public function update(UpdateTeamNameRequest $request, Team $team, UpdateTeamName $action): RedirectResponse
     {
-        $action->execute($team, $request->validated('name'));
+        $action->execute($team, $request->validated('name'), $request->validated('slug') ?: null);
+
+        $team->refresh();
 
         return redirect()
-            ->back()
-            ->with('success', 'Team name updated.');
+            ->route('teams.show', $team)
+            ->with('success', 'Team settings updated.');
     }
 
     public function destroy(Team $team, DeleteTeam $action): RedirectResponse

@@ -6,8 +6,11 @@ use App\Models\Team;
 
 class UpdateTeamName
 {
-    public function execute(Team $team, string $name): void
+    public function execute(Team $team, string $name, ?string $slug = null): void
     {
-        $team->update(['name' => $name]);
+        $team->update(array_filter([
+            'name' => $name,
+            'slug' => $slug,
+        ], fn ($v) => $v !== null));
     }
 }
