@@ -44,6 +44,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'currentTeam' => $user?->currentTeam,
+            'servers' => $user?->currentTeam
+                ? $user->currentTeam->servers()->select(['id', 'name'])->orderBy('name')->get()
+                : [],
             'teams' => $user ? $user->teams()->get()->map(fn ($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
