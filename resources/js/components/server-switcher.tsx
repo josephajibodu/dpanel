@@ -1,7 +1,10 @@
 import { router, usePage } from '@inertiajs/react';
 import { Check, ChevronsUpDown, ServerIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import {
+    BreadcrumbItem,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,15 +13,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { type ServerSummary, type SharedData } from '@/types';
+import { type BreadcrumbItem as BreadcrumbItemType, type ServerSummary, type SharedData } from '@/types';
 
 /**
  * Normalises the `server` page prop which can arrive as either
  * `{ data: { id, name, ... } }` (resource-wrapped) or the model directly.
  */
-function resolveCurrentServer(
-    prop: unknown,
-): { id: number; name: string } | null {
+function resolveCurrentServer(prop: unknown): { id: number; name: string } | null {
     if (!prop || typeof prop !== 'object') {
         return null;
     }
@@ -39,13 +40,24 @@ function resolveCurrentServer(
     return null;
 }
 
-export function ServerSwitcher() {
-    const { servers, currentTeam } = usePage<SharedData>().props;
+/**
+ * Returns the index of the breadcrumb that represents the server,
+ * identified by an href ending in `/servers/{id}`.
+ */
+export function findServerBreadcrumbIndex(breadcrumbs: BreadcrumbItemType[]): number {
+    return breadcrumbs.findIndex((b) => /\/servers\/\d+$/.test(b.href));
+}
+
+/**
+ * Inline breadcrumb item that opens a server switcher dropdown.
+ * Renders as a `<BreadcrumbItem>` so it slots directly into a breadcrumb list.
+ */
+export function ServerBreadcrumbSwitcher({ isLast }: { isLast: boolean }) {
+    const { servers } = usePage<SharedData>().props;
     const pageProps = usePage().props as Record<string, unknown>;
     const currentServer = resolveCurrentServer(pageProps.server);
 
-    // Only render on server-scoped pages
-    if (!currentServer || !currentTeam) {
+    if (!currentServer) {
         return null;
     }
 
@@ -54,48 +66,40 @@ export function ServerSwitcher() {
             return;
         }
 
-        // Replace the server ID segment in the current URL so the user stays
-        // on the same sub-section (e.g. /sites, /databases) on the new server.
-        const newPath = window.location.pathname.replace(
-            /\/servers\/\d+/,
-            `/servers/${server.id}`,
-        );
-
-        router.visit(newPath);
+        const teamSlug = window.location.pathname.split('/')[1];
+        router.visit(`/${teamSlug}/servers/${server.id}`);
     };
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
-                >
-                    <ServerIcon className="size-3.5" />
-                    <span className="max-w-36 truncate">{currentServer.name}</span>
-                    <ChevronsUpDown className="size-3 opacity-60" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-52">
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                    Switch server
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {servers.map((server) => (
-                    <DropdownMenuItem
-                        key={server.id}
-                        onClick={() => switchServer(server)}
-                        className="cursor-pointer gap-2"
-                    >
-                        <ServerIcon className="text-muted-foreground size-3.5 shrink-0" />
-                        <span className="truncate">{server.name}</span>
-                        {server.id === currentServer.id && (
-                            <Check className="ml-auto size-3.5 shrink-0" />
-                        )}
-                    </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+                <DropdownMenu>
+                    <DropdownMenuTrigger className="text-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1 font-normal outline-none">
+                        {currentServer.name}
+                        <ChevronsUpDown className="size-3 opacity-50" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-52">
+                        <DropdownMenuLabel className="text-muted-foreground text-xs">
+                            Switch server
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {servers.map((server) => (
+                            <DropdownMenuItem
+                                key={server.id}
+                                onClick={() => switchServer(server)}
+                                className="cursor-pointer gap-2"
+                            >
+                                <ServerIcon className="text-muted-foreground size-3.5 shrink-0" />
+                                <span className="truncate">{server.name}</span>
+                                {server.id === currentServer.id && (
+                                    <Check className="ml-auto size-3.5 shrink-0" />
+                                )}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </BreadcrumbItem>
+        </>
     );
 }
