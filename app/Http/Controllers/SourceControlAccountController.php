@@ -9,6 +9,7 @@ use App\Services\SourceControlService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
@@ -40,8 +41,11 @@ class SourceControlAccountController extends Controller
             abort(404);
         }
 
-        // Store the intended redirect URL in session
+        // Store the intended redirect URL in session. The optional popup flag
+        // makes the callback close the OAuth popup instead of redirecting, so
+        // the opener page can refresh in place (used by the create-site flow).
         session()->put('source_control_redirect', $request->get('redirect', route('source-control.index')));
+        session()->put('source_control_popup', $request->boolean('popup'));
 
         $socialite = match ($provider) {
             'github' => Socialite::driver('github')->scopes(['repo', 'read:user', 'admin:public_key']),
@@ -56,13 +60,14 @@ class SourceControlAccountController extends Controller
     /**
      * Handle OAuth callback from provider.
      */
-    public function callback(Request $request, string $provider): RedirectResponse
+    public function callback(Request $request, string $provider): RedirectResponse|HttpResponse
     {
         if (! in_array($provider, ['github', 'gitlab', 'bitbucket'])) {
             abort(404);
         }
 
         $redirectUrl = session()->pull('source_control_redirect', route('source-control.index'));
+        $isPopup = (bool) session()->pull('source_control_popup', false);
 
         try {
             $socialite = match ($provider) {
@@ -115,12 +120,53 @@ class SourceControlAccountController extends Controller
                 ]);
             }
 
+            if ($isPopup) {
+                return $this->popupCloseResponse(true);
+            }
+
             return redirect($redirectUrl)
                 ->with('success', ucfirst($provider).' account connected successfully.');
         } catch (\Exception $e) {
+            if ($isPopup) {
+                return $this->popupCloseResponse(false, $e->getMessage());
+            }
+
             return redirect($redirectUrl)
                 ->with('error', 'Failed to connect '.ucfirst($provider).' account: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Return an HTML response for OAuth popup windows: close the popup and
+     * post a message to the opener so the create-site page can refresh its
+     * connected-accounts list in place.
+     */
+    private function popupCloseResponse(bool $success, ?string $error = null): HttpResponse
+    {
+        $payload = json_encode([
+            'type' => 'flitops:source-control',
+            'status' => $success ? 'connected' : 'failed',
+            'error' => $error,
+        ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+
+        $html = <<<HTML
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Connecting…</title></head>
+<body>
+<script>
+  (function () {
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({$payload}, window.location.origin);
+      }
+    } catch (e) {}
+    window.close();
+  })();
+</script>
+</body></html>
+HTML;
+
+        return response($html);
     }
 
     public function destroy(SourceControlAccount $sourceControlAccount): RedirectResponse

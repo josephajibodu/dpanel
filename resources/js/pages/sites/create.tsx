@@ -7,15 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
-import { PhpVersion, ProjectType, RepositoryProvider } from '@/types/site';
+import { PhpVersion, ProjectType } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
+import { toast } from 'sonner';
 
 interface Repository {
     id: number;
@@ -44,7 +46,6 @@ interface Props {
     };
     freeDomain: string;
     projectTypes: ProjectType[];
-    repositoryProviders: RepositoryProvider[];
     phpVersions: PhpVersion[];
     databases: { data: ServerDatabase[] };
     sourceControl?: SourceControlData;
@@ -66,6 +67,15 @@ const DEFAULT_BUILD_COMMANDS: Record<string, string> = {
     bun: 'bun run build',
 };
 
+const OAUTH_PROVIDERS = ['github', 'gitlab', 'bitbucket'] as const;
+type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+const PROVIDER_LABELS: Record<OAuthProvider, string> = {
+    github: 'GitHub',
+    gitlab: 'GitLab',
+    bitbucket: 'Bitbucket',
+};
+
 /**
  * Derive a valid subdomain label from a GitHub project name.
  * Lowercases, replaces runs of non-alphanumerics with a hyphen, and trims
@@ -79,7 +89,7 @@ function slugifyProjectName(name: string): string {
         .slice(0, 63);
 }
 
-export default function SitesCreate({ server, freeDomain, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
+export default function SitesCreate({ server, freeDomain, projectTypes, phpVersions, databases, sourceControl }: Props) {
     const teamPath = useTeamPath();
     const { data: serverData } = server;
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -92,7 +102,10 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
     const [isCreatingDb, setIsCreatingDb] = useState(false);
     const [showDbPassword, setShowDbPassword] = useState(false);
     const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+    const [providerPickerOpen, setProviderPickerOpen] = useState(false);
     const pendingDbNameRef = useRef<string | null>(null);
+
+    const sourceControlAccounts = sourceControl?.accounts.data ?? [];
 
     const firstAccountId = sourceControl?.accounts.data[0]?.id;
 
@@ -351,6 +364,56 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
         });
     };
 
+    const openProviderPopup = (provider: OAuthProvider) => {
+        const returnUrl = window.location.pathname + window.location.search;
+        const url = `/auth/${provider}/redirect?popup=1&redirect=${encodeURIComponent(returnUrl)}`;
+        const width = 600;
+        const height = 700;
+        const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
+        const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
+        const popup = window.open(url, 'source-control-oauth', `width=${width},height=${height},left=${left},top=${top}`);
+
+        if (!popup) {
+            toast.error('Please allow popups to connect a source control provider.');
+        }
+    };
+
+    useEffect(() => {
+        const previousIds = new Set(sourceControlAccounts.map((a) => a.id));
+
+        function handleMessage(event: MessageEvent) {
+            if (event.origin !== window.location.origin) return;
+            const data = event.data as { type?: string; status?: string; error?: string } | undefined;
+            if (data?.type !== 'flitops:source-control') return;
+
+            if (data.status === 'connected') {
+                router.reload({
+                    only: ['sourceControl'],
+                    onSuccess: (page) => {
+                        const newAccounts =
+                            (page.props.sourceControl as SourceControlData | undefined)?.accounts.data ?? [];
+                        const added = newAccounts.find((a) => !previousIds.has(a.id));
+                        if (added) {
+                            form.setData({
+                                ...form.data,
+                                source_control_account_id: added.id,
+                                repository_provider: added.provider,
+                                repository: '',
+                                branch: 'main',
+                                site_name: '',
+                            });
+                        }
+                    },
+                });
+            } else if (data.status === 'failed') {
+                toast.error(data.error ?? 'Failed to connect source control provider.');
+            }
+        }
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [sourceControlAccounts, form]);
+
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
@@ -385,6 +448,146 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
 
                 <form onSubmit={handleSubmit}>
                     <div className="mx-auto grid max-w-3xl gap-6">
+                        {/* Source Control Configuration */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Source Control (Optional)</CardTitle>
+                                <CardDescription>Connect a Git repository to enable deployments.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="source_control_account_id">Source control provider</Label>
+                                        <Select
+                                            value={form.data.source_control_account_id ? String(form.data.source_control_account_id) : ''}
+                                            onValueChange={(value) => {
+                                                if (value === '__add__') {
+                                                    setProviderPickerOpen(true);
+                                                    return;
+                                                }
+                                                const accountId = Number(value);
+                                                const account = sourceControlAccounts.find((a) => a.id === accountId);
+
+                                                form.setData({
+                                                    ...form.data,
+                                                    source_control_account_id: accountId,
+                                                    repository_provider: account?.provider ?? form.data.repository_provider,
+                                                    repository: '',
+                                                    branch: 'main',
+                                                    site_name: '',
+                                                });
+                                                setBranches([]);
+                                                setRepositories([]);
+                                            }}
+                                        >
+                                            <SelectTrigger id="source_control_account_id">
+                                                <SelectValue
+                                                    placeholder={
+                                                        sourceControlAccounts.length === 0
+                                                            ? 'No providers connected'
+                                                            : 'Select a connected account'
+                                                    }
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {sourceControlAccounts.map((account) => (
+                                                    <SelectItem key={account.id} value={String(account.id)}>
+                                                        {account.provider_label} · @{account.provider_username}
+                                                    </SelectItem>
+                                                ))}
+                                                {sourceControlAccounts.length > 0 && <SelectSeparator />}
+                                                <SelectItem value="__add__" className="text-primary">
+                                                    <span className="flex items-center gap-2">
+                                                        <PlusIcon className="h-4 w-4" />
+                                                        Add source control provider
+                                                    </span>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {form.data.source_control_account_id && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="repository">Repository</Label>
+                                            <RepositorySelector
+                                                repositories={repositories}
+                                                loadingRepositories={loadingRepositories}
+                                                onReload={fetchRepositories}
+                                                value={form.data.repository}
+                                                onChange={(fullName, repo) => applyRepository(fullName, repo)}
+                                                disabled={loadingRepositories}
+                                                placeholder="Select a repository"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {form.data.repository && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="branch">Branch</Label>
+                                        <Select
+                                            value={form.data.branch}
+                                            onValueChange={(value) => form.setData('branch', value)}
+                                            disabled={loadingBranches}
+                                        >
+                                            <SelectTrigger id="branch" className={form.errors.branch ? 'border-destructive' : ''}>
+                                                <SelectValue placeholder={loadingBranches ? 'Loading branches...' : 'Select a branch'} />
+                                                {loadingBranches && (
+                                                    <Loader2Icon className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                                )}
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {loadingBranches ? (
+                                                    <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
+                                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                        Loading branches...
+                                                    </div>
+                                                ) : branches.length > 0 ? (
+                                                    branches.map((branch) => (
+                                                        <SelectItem key={branch.name} value={branch.name}>
+                                                            {branch.name}
+                                                            {branch.protected && (
+                                                                <span className="text-muted-foreground ml-1 text-xs">(protected)</span>
+                                                            )}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    // If no branches loaded but we have a branch value, show it as an option
+                                                    form.data.branch ? (
+                                                        <SelectItem value={form.data.branch}>{form.data.branch}</SelectItem>
+                                                    ) : (
+                                                        <div className="py-4 text-center text-muted-foreground text-sm">
+                                                            No branches available
+                                                        </div>
+                                                    )
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        {form.errors.branch && <p className="text-destructive text-sm">{form.errors.branch}</p>}
+                                        {!loadingBranches && branches.length === 0 && form.data.branch && (
+                                            <p className="text-muted-foreground text-xs">
+                                                Using branch "{form.data.branch}". If this branch doesn't exist, you may need to enter it manually.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {form.data.source_control_account_id &&
+                                    !loadingRepositories &&
+                                    repositories.length === 0 && (
+                                        <div className="rounded-lg border border-dashed p-4 text-center">
+                                            <p className="text-muted-foreground text-sm">No repositories found for this account.</p>
+                                        </div>
+                                    )}
+
+                                {sourceControlAccounts.length === 0 && (
+                                    <p className="text-muted-foreground text-xs">
+                                        Connect a source control provider to deploy from your repositories.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
                         {/* Domain Configuration */}
                         <Card>
                             <CardHeader>
@@ -494,177 +697,6 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Source Control Configuration */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Source Control (Optional)</CardTitle>
-                                <CardDescription>Connect a Git repository to enable deployments.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {sourceControl && sourceControl.accounts.data.length > 0 ? (
-                                    <>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="source_control_account_id">Source Control Account</Label>
-                                                <Select
-                                                    value={form.data.source_control_account_id ? String(form.data.source_control_account_id) : ''}
-                                                    onValueChange={(value) => {
-                                                        const accountId = Number(value);
-                                                        const account = sourceControl.accounts.data.find((a) => a.id === accountId);
-
-                                                        form.setData({
-                                                            ...form.data,
-                                                            source_control_account_id: accountId,
-                                                            repository_provider: account?.provider ?? form.data.repository_provider,
-                                                            repository: '',
-                                                            branch: 'main',
-                                                        });
-                                                        setBranches([]);
-                                                        setRepositories([]);
-                                                    }}
-                                                >
-                                                    <SelectTrigger id="source_control_account_id">
-                                                        <SelectValue placeholder="Select a connected account" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {sourceControl.accounts.data.map((account) => (
-                                                            <SelectItem key={account.id} value={String(account.id)}>
-                                                                {account.provider_label} · @{account.provider_username}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            {form.data.source_control_account_id && (
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="repository">Repository</Label>
-                                                    <RepositorySelector
-                                                        repositories={repositories}
-                                                        loadingRepositories={loadingRepositories}
-                                                        onReload={fetchRepositories}
-                                                        value={form.data.repository}
-                                                        onChange={(fullName, repo) => applyRepository(fullName, repo)}
-                                                        disabled={loadingRepositories}
-                                                        placeholder="Select a repository"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {form.data.repository && (
-                                            <div className="space-y-2">
-                                                <Label htmlFor="branch">Branch</Label>
-                                                <Select
-                                                    value={form.data.branch}
-                                                    onValueChange={(value) => form.setData('branch', value)}
-                                                    disabled={loadingBranches}
-                                                >
-                                                    <SelectTrigger id="branch" className={form.errors.branch ? 'border-destructive' : ''}>
-                                                        <SelectValue placeholder={loadingBranches ? 'Loading branches...' : 'Select a branch'} />
-                                                        {loadingBranches && (
-                                                            <Loader2Icon className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                                        )}
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {loadingBranches ? (
-                                                            <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
-                                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                                Loading branches...
-                                                            </div>
-                                                        ) : branches.length > 0 ? (
-                                                            branches.map((branch) => (
-                                                                <SelectItem key={branch.name} value={branch.name}>
-                                                                    {branch.name}
-                                                                    {branch.protected && (
-                                                                        <span className="text-muted-foreground ml-1 text-xs">(protected)</span>
-                                                                    )}
-                                                                </SelectItem>
-                                                            ))
-                                                        ) : (
-                                                            // If no branches loaded but we have a branch value, show it as an option
-                                                            form.data.branch ? (
-                                                                <SelectItem value={form.data.branch}>{form.data.branch}</SelectItem>
-                                                            ) : (
-                                                                <div className="py-4 text-center text-muted-foreground text-sm">
-                                                                    No branches available
-                                                                </div>
-                                                            )
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                {form.errors.branch && <p className="text-destructive text-sm">{form.errors.branch}</p>}
-                                                {!loadingBranches && branches.length === 0 && form.data.branch && (
-                                                    <p className="text-muted-foreground text-xs">
-                                                        Using branch "{form.data.branch}". If this branch doesn't exist, you may need to enter it manually.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {form.data.source_control_account_id &&
-                                            !loadingRepositories &&
-                                            repositories.length === 0 && (
-                                                <div className="rounded-lg border border-dashed p-4 text-center">
-                                                    <p className="text-muted-foreground text-sm">No repositories found for this account.</p>
-                                                </div>
-                                            )}
-                                    </>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="repository_provider">Provider</Label>
-                                                <Select
-                                                    value={form.data.repository_provider}
-                                                    onValueChange={(value) => form.setData('repository_provider', value)}
-                                                >
-                                                    <SelectTrigger id="repository_provider">
-                                                        <SelectValue placeholder="Select provider" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {repositoryProviders.map((provider) => (
-                                                            <SelectItem key={provider.value} value={provider.value}>
-                                                                {provider.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="repository">Repository</Label>
-                                                <Input
-                                                    id="repository"
-                                                    placeholder="username/repository"
-                                                    value={form.data.repository}
-                                                    onChange={(e) => applyRepository(e.target.value)}
-                                                    className={form.errors.repository ? 'border-destructive' : ''}
-                                                />
-                                                {form.errors.repository && <p className="text-destructive text-sm">{form.errors.repository}</p>}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="branch">Branch</Label>
-                                            <Input
-                                                id="branch"
-                                                placeholder="main"
-                                                value={form.data.branch}
-                                                onChange={(e) => form.setData('branch', e.target.value)}
-                                                className={form.errors.branch ? 'border-destructive' : ''}
-                                            />
-                                            {form.errors.branch && <p className="text-destructive text-sm">{form.errors.branch}</p>}
-                                        </div>
-
-                                        <p className="text-muted-foreground text-xs">
-                                            Connect a source control account to select from your repositories.
-                                        </p>
-                                    </div>
-                                )}
                             </CardContent>
                         </Card>
 
@@ -813,6 +845,33 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                         </div>
                     </div>
                 </form>
+
+                {/* Add Source Control Provider Dialog */}
+                <Dialog open={providerPickerOpen} onOpenChange={setProviderPickerOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Add source control provider</DialogTitle>
+                            <DialogDescription>
+                                A new window will open to authorize the provider. Your form values stay on this page.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-2">
+                            {OAUTH_PROVIDERS.map((provider) => (
+                                <Button
+                                    key={provider}
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setProviderPickerOpen(false);
+                                        openProviderPopup(provider);
+                                    }}
+                                >
+                                    Continue with {PROVIDER_LABELS[provider]}
+                                </Button>
+                            ))}
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Create Database Sheet */}
                 <Sheet open={createDbOpen} onOpenChange={setCreateDbOpen}>
