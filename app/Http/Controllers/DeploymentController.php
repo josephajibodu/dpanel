@@ -44,7 +44,11 @@ class DeploymentController extends Controller
     {
         $this->authorize('view', $site);
 
-        $deployment = $triggerDeployment->execute($site, 'manual', $request->user());
+        try {
+            $deployment = $triggerDeployment->execute($site, 'manual', $request->user());
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['deploy' => $e->getMessage()]);
+        }
 
         return redirect()
             ->route('servers.sites.deployments.show', [$team, $server, $site, $deployment])

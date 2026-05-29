@@ -1,4 +1,5 @@
 import { DeploymentLog } from '@/components/deployments/deployment-log';
+import { Button } from '@/components/ui/button';
 import { Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
 import AppLayout from '@/layouts/app-layout';
@@ -11,7 +12,7 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon, XCircleIcon } from 'lucide-react';
+import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon, RotateCwIcon, XCircleIcon } from 'lucide-react';
 
 type SiteData = Site & { server?: { id: number; name: string } };
 
@@ -43,6 +44,16 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     const commitShort = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : `#${deployment.id}`;
 
     const cancelForm = useForm({});
+    const redeployForm = useForm({});
+
+    const handleRedeploy = () => {
+        redeployForm.post(teamPath(`/servers/${serverId}/sites/${site.id}/deployments`), {
+            onError: (errors) => {
+                const message = (errors as Record<string, string>).deploy;
+                toast.error(message ?? 'Could not start a new deployment.');
+            },
+        });
+    };
 
     useEffect(() => {
         const started = flash?.deployment_started;
@@ -144,6 +155,16 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                         Cancel deployment
                                     </button>
                                 </form>
+                            )}
+                            {!isDeploying && (
+                                <Button onClick={handleRedeploy} disabled={redeployForm.processing}>
+                                    {redeployForm.processing ? (
+                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <RotateCwIcon className="h-4 w-4" />
+                                    )}
+                                    Redeploy
+                                </Button>
                             )}
                             <Link
                                 href={siteUrl}
