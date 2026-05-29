@@ -4,6 +4,7 @@ use App\Http\Controllers\CronJobController;
 use App\Http\Controllers\CurrentTeamController;
 use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
+use App\Http\Controllers\DeploymentWebhookController;
 use App\Http\Controllers\DeployScriptController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\ProviderAccountController;
@@ -220,6 +221,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         });
 });
+
+// Deployment webhooks — no auth, no CSRF (exempt in bootstrap/app.php), secret in URL identifies the site
+Route::post('webhook/{secret}', [DeploymentWebhookController::class, 'handle'])->name('deployment-webhook.handle');
 
 // Team invitation acceptance (accessible without auth to show the page; auth required to confirm)
 Route::get('invitations/{token}/accept', [TeamInvitationController::class, 'accept'])->name('team-invitations.accept');
