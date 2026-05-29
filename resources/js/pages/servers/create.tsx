@@ -11,6 +11,7 @@ import { ProviderAccount } from '@/types/provider-account';
 import { ProviderRegion, ProviderSize } from '@/types/server';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, Loader2Icon, ServerIcon } from 'lucide-react';
+import { useState } from 'react';
 
 interface Props {
     providerAccounts: {
@@ -18,6 +19,7 @@ interface Props {
     };
     regions: Record<number, ProviderRegion[]>;
     sizes: Record<number, ProviderSize[]>;
+    generatedName: string;
 }
 
 
@@ -34,8 +36,9 @@ const databaseTypes = [
     { value: 'mariadb', label: 'MariaDB' },
 ];
 
-export default function ServersCreate({ providerAccounts, regions, sizes }: Props) {
+export default function ServersCreate({ providerAccounts, regions, sizes, generatedName }: Props) {
     const teamPath = useTeamPath();
+    const [isGeneratingName, setIsGeneratingName] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -43,7 +46,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
     ];
 
     const { data, setData, post, processing, errors } = useForm({
-        name: '',
+        name: generatedName ?? '',
         provider_account_id: '',
         region: '',
         size: '',
@@ -58,6 +61,25 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(teamPath('/servers'));
+    };
+
+    const handleGenerateName = async () => {
+        setIsGeneratingName(true);
+        try {
+            const response = await fetch(teamPath('/servers/generate-name'), {
+                headers: { Accept: 'application/json' },
+            });
+            if (response.ok) {
+                const result = (await response.json()) as { name?: string };
+                if (result.name) {
+                    setData('name', result.name);
+                }
+            }
+        } catch {
+            // Keep the current name if generation fails.
+        } finally {
+            setIsGeneratingName(false);
+        }
     };
 
     const handleProviderChange = (value: string) => {
@@ -98,7 +120,18 @@ export default function ServersCreate({ providerAccounts, regions, sizes }: Prop
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Server Name</Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="name">Server Name</Label>
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateName}
+                                            disabled={isGeneratingName}
+                                            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50"
+                                        >
+                                            {isGeneratingName && <Loader2Icon className="h-3.5 w-3.5 animate-spin" />}
+                                            Generate new name
+                                        </button>
+                                    </div>
                                     <Input
                                         id="name"
                                         type="text"

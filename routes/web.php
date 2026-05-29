@@ -101,6 +101,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('provider-accounts.validate');
 
             // Servers
+            Route::get('servers/generate-name', [ServerController::class, 'generateName'])
+                ->name('servers.generate-name');
             Route::resource('servers', ServerController::class)
                 ->except(['edit', 'update']);
             Route::post('servers/{server}/restart', [ServerController::class, 'restart'])

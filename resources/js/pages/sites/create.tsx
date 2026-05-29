@@ -66,6 +66,19 @@ const DEFAULT_BUILD_COMMANDS: Record<string, string> = {
     bun: 'bun run build',
 };
 
+/**
+ * Derive a valid subdomain label from a GitHub project name.
+ * Lowercases, replaces runs of non-alphanumerics with a hyphen, and trims
+ * leading/trailing hyphens so the result matches the site_name validation rule.
+ */
+function slugifyProjectName(name: string): string {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 63);
+}
+
 export default function SitesCreate({ server, freeDomain, projectTypes, repositoryProviders, phpVersions, databases, sourceControl }: Props) {
     const teamPath = useTeamPath();
     const { data: serverData } = server;
@@ -327,12 +340,31 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
         });
     }
 
+    const applyRepository = (fullName: string, repo?: { name: string; default_branch: string }) => {
+        const projectName = repo?.name ?? fullName.split('/')[1] ?? '';
+
+        form.setData({
+            ...form.data,
+            repository: fullName,
+            branch: repo?.default_branch || form.data.branch,
+            site_name: slugifyProjectName(projectName),
+        });
+    };
+
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
+        // Send only the field relevant to the chosen mode so the backend's
+        // required_without rule resolves cleanly (site_name is always derived
+        // from the selected repository, even when a custom domain is in use).
+        form.transform((data) => ({
+            ...data,
+            domain: useCustomDomain ? data.domain : '',
+            site_name: useCustomDomain ? '' : data.site_name,
+        }));
+
         form.post(teamPath(`/servers/${serverData.id}/sites`));
     }
-
-    const freeDomainPreview = form.data.site_name ? `${form.data.site_name}.${freeDomain}` : '';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -399,25 +431,20 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        <Label htmlFor="site_name">Site Name</Label>
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                id="site_name"
-                                                placeholder="react-blog"
-                                                value={form.data.site_name}
-                                                onChange={(e) => form.setData('site_name', e.target.value)}
-                                                className={form.errors.site_name ? 'border-destructive' : ''}
-                                            />
-                                            <span className="text-muted-foreground whitespace-nowrap text-sm">.{freeDomain}</span>
+                                        <Label>Free domain</Label>
+                                        <div className="border-input bg-muted/40 flex items-center rounded-md border px-3 py-2 text-sm">
+                                            {form.data.site_name ? (
+                                                <span>{form.data.site_name}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground italic">
+                                                    Select a repository to generate a domain
+                                                </span>
+                                            )}
+                                            <span className="text-muted-foreground ml-auto whitespace-nowrap">.{freeDomain}</span>
                                         </div>
                                         {form.errors.site_name && <p className="text-destructive text-sm">{form.errors.site_name}</p>}
                                         <p className="text-muted-foreground text-xs">
-                                            Your site will be accessible at{' '}
-                                            {freeDomainPreview ? (
-                                                <code className="bg-muted rounded px-1">{freeDomainPreview}</code>
-                                            ) : (
-                                                <span className="italic">Enter a site name above</span>
-                                            )}
+                                            Generated from your repository name. Use a custom domain to set your own.
                                         </p>
                                     </div>
                                 )}
@@ -520,13 +547,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                                                         loadingRepositories={loadingRepositories}
                                                         onReload={fetchRepositories}
                                                         value={form.data.repository}
-                                                        onChange={(fullName, repo) => {
-                                                            form.setData({
-                                                                ...form.data,
-                                                                repository: fullName,
-                                                                branch: repo?.default_branch || form.data.branch,
-                                                            });
-                                                        }}
+                                                        onChange={(fullName, repo) => applyRepository(fullName, repo)}
                                                         disabled={loadingRepositories}
                                                         placeholder="Select a repository"
                                                     />
@@ -620,7 +641,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                                                     id="repository"
                                                     placeholder="username/repository"
                                                     value={form.data.repository}
-                                                    onChange={(e) => form.setData('repository', e.target.value)}
+                                                    onChange={(e) => applyRepository(e.target.value)}
                                                     className={form.errors.repository ? 'border-destructive' : ''}
                                                 />
                                                 {form.errors.repository && <p className="text-destructive text-sm">{form.errors.repository}</p>}
@@ -784,7 +805,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, reposito
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={form.processing || (!form.data.domain && !form.data.site_name) || (connectDatabase && !form.data.server_database_id)}
+                                disabled={form.processing || (useCustomDomain ? !form.data.domain : !form.data.site_name) || (connectDatabase && !form.data.server_database_id)}
                             >
                                 {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
                                 Create Site

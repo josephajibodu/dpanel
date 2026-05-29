@@ -15,6 +15,8 @@ use App\Models\ProviderSize;
 use App\Models\Server;
 use App\Models\Team;
 use App\Services\Providers\ProviderManager;
+use App\Services\ServerNameGenerator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -36,7 +38,7 @@ class ServerController extends Controller
         ]);
     }
 
-    public function create(Team $team, ProviderManager $providerManager): Response
+    public function create(Team $team, ProviderManager $providerManager, ServerNameGenerator $nameGenerator): Response
     {
         $providerAccounts = $team->providerAccounts()
             ->where('is_valid', true)
@@ -83,7 +85,16 @@ class ServerController extends Controller
             'providerAccounts' => ProviderAccountResource::collection($providerAccounts),
             'regions' => $regions,
             'sizes' => $sizes,
+            'generatedName' => $nameGenerator->generate(),
         ]);
+    }
+
+    /**
+     * Return a freshly generated, hostname-safe server name.
+     */
+    public function generateName(ServerNameGenerator $generator): JsonResponse
+    {
+        return response()->json(['name' => $generator->generate()]);
     }
 
     private function formatMemory(int $mb): string
