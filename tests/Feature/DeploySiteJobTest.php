@@ -248,3 +248,65 @@ it('completes the deployment without commit metadata when no git directory exist
         ->and($deployment->commit_hash)->toBeNull()
         ->and($deployment->commit_message)->toBeNull();
 });
+
+it('makes the uploaded deploy script self-delete and runs it by path', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $uploaded = null;
+    $ranCommand = null;
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
+        $uploaded = $content;
+    });
+    $connection->shouldReceive('execWithOutput')->once()->andReturnUsing(function (string $command) use (&$ranCommand) {
+        $ranCommand = $command;
+
+        return 0;
+    });
+    $connection->shouldReceive('disconnect')->andReturnNull();
+
+    $job = new DeploySiteJob($deployment);
+    $job->handle(deploySshServiceMock($connection));
+
+    // The self-delete is the first command, ahead of the deploy body.
+    expect($uploaded)->toContain("rm -f '/tmp/deploy_")
+        ->and(strpos($uploaded, 'rm -f'))->toBeLessThan(strpos($uploaded, 'cd $SITE_ROOT'));
+
+    // The run command is just the script path — no fragile trailing cleanup chain.
+    expect($ranCommand)->toStartWith('/tmp/deploy_')
+        ->and($ranCommand)->toEndWith('.sh')
+        ->and($ranCommand)->not->toContain('rm -f')
+        ->and($ranCommand)->not->toContain('EXIT_CODE');
+});
+
+it('removes the remote script via the safety net even when the run throws', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $execCommands = [];
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$execCommands) {
+        $execCommands[] = $command;
+
+        return '';
+    });
+    $connection->shouldReceive('upload')->once()->andReturnNull();
+    $connection->shouldReceive('execWithOutput')->once()->andThrow(new RuntimeException('SSH timed out'));
+    $connection->shouldReceive('disconnect')->andReturnNull();
+
+    $job = new DeploySiteJob($deployment);
+
+    expect(fn () => $job->handle(deploySshServiceMock($connection)))
+        ->toThrow(RuntimeException::class, 'SSH timed out');
+
+    expect(collect($execCommands)->contains(fn (string $cmd) => str_starts_with($cmd, "rm -f '/tmp/deploy_")))
+        ->toBeTrue();
+});
