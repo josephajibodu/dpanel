@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sites\CancelDeploymentAction;
 use App\Actions\Sites\TriggerDeploymentAction;
 use App\Http\Resources\DeploymentResource;
 use App\Http\Resources\ServerResource;
@@ -52,6 +53,22 @@ class DeploymentController extends Controller
                 'commit' => $deployment->commit_hash ? substr($deployment->commit_hash, 0, 7) : (string) $deployment->id,
                 'site' => $site->domain,
             ]);
+    }
+
+    /**
+     * Cancel a pending deployment.
+     */
+    public function cancel(Team $team, Server $server, Site $site, Deployment $deployment, CancelDeploymentAction $cancelDeployment): RedirectResponse
+    {
+        $this->authorize('view', $site);
+
+        try {
+            $cancelDeployment->execute($deployment);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['cancel' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Deployment cancelled.');
     }
 
     /**

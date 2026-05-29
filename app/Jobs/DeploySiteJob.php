@@ -38,6 +38,15 @@ class DeploySiteJob implements ShouldQueue
 
     public function handle(SshService $sshService): void
     {
+        // Re-fetch from DB to catch any cancellation that arrived while the job was queued.
+        $this->deployment->refresh();
+
+        if ($this->deployment->status === DeploymentStatus::Cancelled) {
+            Log::info("Deployment {$this->deployment->id} was cancelled before it started — skipping.");
+
+            return;
+        }
+
         $site = $this->deployment->site;
         $server = $site->server;
 

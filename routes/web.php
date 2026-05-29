@@ -155,6 +155,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.deployments.store');
                 Route::get('servers/{server}/sites/{site}/deployments/{deployment}', [DeploymentController::class, 'show'])
                     ->name('servers.sites.deployments.show');
+                Route::post('servers/{server}/sites/{site}/deployments/{deployment}/cancel', [DeploymentController::class, 'cancel'])
+                    ->name('servers.sites.deployments.cancel');
 
                 // Command runs
                 Route::get('servers/{server}/sites/{site}/command-runs', [SiteCommandRunController::class, 'index'])

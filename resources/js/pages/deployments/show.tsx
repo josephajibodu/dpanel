@@ -5,13 +5,13 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deployment-logs';
 import { useDeploymentUpdates } from '@/hooks/use-deployment-updates';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useTeamPath } from '@/hooks/use-team-path';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon } from 'lucide-react';
+import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon, XCircleIcon } from 'lucide-react';
 
 type SiteData = Site & { server?: { id: number; name: string } };
 
@@ -39,7 +39,10 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     const teamPath = useTeamPath();
 
     const isDeploying = deployment.status === 'pending' || deployment.status === 'running';
+    const isPending = deployment.status === 'pending';
     const commitShort = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : `#${deployment.id}`;
+
+    const cancelForm = useForm({});
 
     useEffect(() => {
         const started = flash?.deployment_started;
@@ -122,15 +125,36 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                 </span>
                             </div>
                         </div>
-                        <Link
-                            href={siteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                        >
-                            <GlobeIcon className="h-4 w-4" />
-                            Visit
-                        </Link>
+                        <div className="flex items-center gap-2">
+                            {isPending && (
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        cancelForm.post(
+                                            teamPath(`/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}/cancel`),
+                                        );
+                                    }}
+                                >
+                                    <button
+                                        type="submit"
+                                        disabled={cancelForm.processing}
+                                        className="inline-flex items-center gap-2 rounded-md border border-destructive/40 bg-background px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 disabled:opacity-50"
+                                    >
+                                        <XCircleIcon className="h-4 w-4" />
+                                        Cancel deployment
+                                    </button>
+                                </form>
+                            )}
+                            <Link
+                                href={siteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                            >
+                                <GlobeIcon className="h-4 w-4" />
+                                Visit
+                            </Link>
+                        </div>
                     </div>
 
                     <div className="rounded-lg border bg-card">
