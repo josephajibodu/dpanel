@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type Server } from '@/types/server';
@@ -29,14 +30,15 @@ interface Props {
     servers?: Server[];
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'SSH Keys',
-        href: '/ssh-keys',
-    },
-];
-
 export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
+    const teamPath = useTeamPath();
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'SSH Keys',
+            href: teamPath('/ssh-keys'),
+        },
+    ];
+
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [syncDialogOpen, setSyncDialogOpen] = useState(false);
     const [selectedKey, setSelectedKey] = useState<SshKey | null>(null);

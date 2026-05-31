@@ -32,20 +32,12 @@ import {
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useActiveUrl } from '@/hooks/use-active-url';
 import { useInitials } from '@/hooks/use-initials';
+import { useTeamPath } from '@/hooks/use-team-path';
 import { cn, toUrl } from '@/lib/utils';
-import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
 
 const rightNavItems: NavItem[] = [
     {
@@ -70,8 +62,16 @@ interface AppHeaderProps {
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
+    const teamPath = useTeamPath();
     const getInitials = useInitials();
     const { urlIsActive } = useActiveUrl();
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: teamPath('/dashboard'),
+            icon: LayoutGrid,
+        },
+    ];
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -144,7 +144,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <Link
-                        href={dashboard()}
+                        href={teamPath('/dashboard')}
                         prefetch
                         className="flex items-center space-x-2"
                     >

@@ -32,39 +32,23 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    // Legacy redirects — send old global URLs to the user's current team context
+    Route::get('dashboard', fn () => redirect()->route('dashboard', auth()->user()->currentTeamOrFail()));
+    Route::get('ssh-keys', fn () => redirect()->route('ssh-keys.index', auth()->user()->currentTeamOrFail()));
+    Route::get('source-control', fn () => redirect()->route('source-control.index', auth()->user()->currentTeamOrFail()));
 
     Route::get('realtime/test', [RealtimeDiagnosticsController::class, 'index'])
         ->name('realtime.test');
     Route::post('realtime/test/trigger', [RealtimeDiagnosticsController::class, 'trigger'])
         ->name('realtime.test.trigger');
 
-    // SSH Keys (personal — no team prefix)
-    Route::resource('ssh-keys', SshKeyController::class)
-        ->only(['index', 'store', 'destroy']);
-    Route::post('ssh-keys/{sshKey}/sync', [SshKeyController::class, 'sync'])
-        ->name('ssh-keys.sync');
-    Route::post('ssh-keys/{sshKey}/revoke', [SshKeyController::class, 'revoke'])
-        ->name('ssh-keys.revoke');
-
-    // Source Control Accounts (personal — no team prefix)
-    Route::get('source-control', [\App\Http\Controllers\SourceControlAccountController::class, 'index'])
-        ->name('source-control.index');
+    // Source Control OAuth (global callback URLs required by providers)
     Route::get('auth/{provider}/redirect', [\App\Http\Controllers\SourceControlAccountController::class, 'redirect'])
         ->name('source-control.redirect')
         ->where('provider', 'github|gitlab|bitbucket');
     Route::get('auth/{provider}/callback', [\App\Http\Controllers\SourceControlAccountController::class, 'callback'])
         ->name('source-control.callback')
         ->where('provider', 'github|gitlab|bitbucket');
-    Route::delete('source-control/{sourceControlAccount}', [\App\Http\Controllers\SourceControlAccountController::class, 'destroy'])
-        ->name('source-control.destroy');
-    Route::get('source-control/{sourceControlAccount}/repositories', [\App\Http\Controllers\SourceControlAccountController::class, 'repositories'])
-        ->name('source-control.repositories');
-    Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
-        ->where('repository', '.*')
-        ->name('source-control.branches');
 
     // Teams management (no team-slug prefix — these manage the team entity itself)
     Route::get('teams/slug-suggestion', [TeamController::class, 'slugSuggestion'])->name('teams.slug-suggestion');
@@ -89,6 +73,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['team.slug'])
         ->prefix('{team}')
         ->group(function () {
+
+            Route::get('dashboard', function () {
+                return Inertia::render('dashboard');
+            })->name('dashboard');
+
+            // SSH Keys (team-scoped URLs; keys remain user-owned)
+            Route::resource('ssh-keys', SshKeyController::class)
+                ->only(['index', 'store', 'destroy']);
+            Route::post('ssh-keys/{sshKey}/sync', [SshKeyController::class, 'sync'])
+                ->name('ssh-keys.sync');
+            Route::post('ssh-keys/{sshKey}/revoke', [SshKeyController::class, 'revoke'])
+                ->name('ssh-keys.revoke');
+
+            // Source Control Accounts (team-scoped URLs; accounts remain user-owned)
+            Route::get('source-control', [\App\Http\Controllers\SourceControlAccountController::class, 'index'])
+                ->name('source-control.index');
+            Route::delete('source-control/{sourceControlAccount}', [\App\Http\Controllers\SourceControlAccountController::class, 'destroy'])
+                ->name('source-control.destroy');
+            Route::get('source-control/{sourceControlAccount}/repositories', [\App\Http\Controllers\SourceControlAccountController::class, 'repositories'])
+                ->name('source-control.repositories');
+            Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
+                ->where('repository', '.*')
+                ->name('source-control.branches');
 
             // Redirect /{team}/sites → /{team}/servers
             Route::get('sites', fn ($team) => redirect()->route('servers.index', $team))

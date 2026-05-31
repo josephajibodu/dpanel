@@ -86,7 +86,7 @@ export default function ServerSettings({ server: serverProp, ssh_command, has_ss
                                             You need to add and sync an SSH key to connect. Add an SSH key and sync it to this server.
                                         </p>
                                         <Button variant="outline" size="sm" asChild>
-                                            <Link href="/ssh-keys">
+                                            <Link href={teamPath('/ssh-keys')}>
                                                 <KeyIcon className="mr-2 h-4 w-4" />
                                                 Add SSH key
                                             </Link>

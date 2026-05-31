@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { BookOpen, CloudIcon, CodeIcon, Folder, KeyIcon, LayoutGrid, ServerIcon } from 'lucide-react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -12,8 +12,8 @@ import {
     SidebarFooter,
     SidebarHeader,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import { type NavItem, type SharedData } from '@/types';
+import { useTeamPath } from '@/hooks/use-team-path';
+import { type NavItem } from '@/types';
 
 const footerNavItems: NavItem[] = [
     {
@@ -29,33 +29,32 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { currentTeam } = usePage<SharedData>().props;
-    const slug = currentTeam?.slug ?? '';
+    const teamPath = useTeamPath();
 
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: dashboard(),
+            href: teamPath('/dashboard'),
             icon: LayoutGrid,
         },
         {
             title: 'Servers',
-            href: `/${slug}/servers`,
+            href: teamPath('/servers'),
             icon: ServerIcon,
         },
         {
             title: 'SSH Keys',
-            href: '/ssh-keys',
+            href: teamPath('/ssh-keys'),
             icon: KeyIcon,
         },
         {
             title: 'Provider Accounts',
-            href: `/${slug}/provider-accounts`,
+            href: teamPath('/provider-accounts'),
             icon: CloudIcon,
         },
         {
             title: 'Source Control',
-            href: '/source-control',
+            href: teamPath('/source-control'),
             icon: CodeIcon,
         },
     ];
@@ -69,7 +68,7 @@ export function AppSidebar() {
                 */}
                 <div className="flex items-center gap-2 transition-[gap] duration-200 ease-linear group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
                     <Link
-                        href={dashboard()}
+                        href={teamPath('/dashboard')}
                         prefetch
                         className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-80"
                     >

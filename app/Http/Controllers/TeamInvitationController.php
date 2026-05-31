@@ -60,8 +60,7 @@ class TeamInvitationController extends Controller
         $team = $invitation->team;
 
         if ($user->email !== $invitation->email) {
-            return redirect()
-                ->route('dashboard')
+            return redirect('/dashboard')
                 ->with('error', 'This invitation was sent to a different email address.');
         }
 

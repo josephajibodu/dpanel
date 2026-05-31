@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\RepositoryProvider;
 use App\Http\Resources\SourceControlAccountResource;
 use App\Models\SourceControlAccount;
+use App\Models\Team;
 use App\Services\SourceControlService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SourceControlAccountController extends Controller
 {
-    public function index(): Response
+    public function index(Team $team): Response
     {
         $accounts = auth()->user()
             ->sourceControlAccounts()
@@ -44,7 +45,7 @@ class SourceControlAccountController extends Controller
         // Store the intended redirect URL in session. The optional popup flag
         // makes the callback close the OAuth popup instead of redirecting, so
         // the opener page can refresh in place (used by the create-site flow).
-        session()->put('source_control_redirect', $request->get('redirect', route('source-control.index')));
+        session()->put('source_control_redirect', $request->get('redirect', route('source-control.index', auth()->user()->currentTeamOrFail())));
         session()->put('source_control_popup', $request->boolean('popup'));
 
         $socialite = match ($provider) {
@@ -66,7 +67,7 @@ class SourceControlAccountController extends Controller
             abort(404);
         }
 
-        $redirectUrl = session()->pull('source_control_redirect', route('source-control.index'));
+        $redirectUrl = session()->pull('source_control_redirect', route('source-control.index', auth()->user()->currentTeamOrFail()));
         $isPopup = (bool) session()->pull('source_control_popup', false);
 
         try {
@@ -169,7 +170,7 @@ HTML;
         return response($html);
     }
 
-    public function destroy(SourceControlAccount $sourceControlAccount): RedirectResponse
+    public function destroy(Team $team, SourceControlAccount $sourceControlAccount): RedirectResponse
     {
         $this->authorize('delete', $sourceControlAccount);
 
@@ -178,11 +179,12 @@ HTML;
         $sourceControlAccount->delete();
 
         return redirect()
-            ->route('source-control.index')
+            ->route('source-control.index', $team)
             ->with('success', "{$providerLabel} account disconnected.");
     }
 
     public function repositories(
+        Team $team,
         SourceControlAccount $sourceControlAccount,
         SourceControlService $sourceControlService,
     ): JsonResponse {
@@ -196,6 +198,7 @@ HTML;
     }
 
     public function branches(
+        Team $team,
         SourceControlAccount $sourceControlAccount,
         string $repository,
         SourceControlService $sourceControlService,

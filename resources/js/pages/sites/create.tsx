@@ -217,7 +217,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         setLoadingRepositories(true);
         const accountId = form.data.source_control_account_id;
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const url = `/source-control/${accountId}/repositories`;
+        const url = teamPath(`/source-control/${accountId}/repositories`);
 
         fetch(url, {
             method: 'GET',
@@ -272,7 +272,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
 
         // Get CSRF token from meta tag
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const url = `/source-control/${accountId}/repositories/${encodeURIComponent(form.data.repository)}/branches`;
+        const url = teamPath(`/source-control/${accountId}/repositories/${encodeURIComponent(form.data.repository)}/branches`);
 
         fetch(url, {
             method: 'GET',

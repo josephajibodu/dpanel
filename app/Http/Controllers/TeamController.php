@@ -29,7 +29,7 @@ class TeamController extends Controller
         $team = auth()->user()->currentTeam;
 
         if (! $team) {
-            return redirect()->route('dashboard');
+            return redirect('/dashboard');
         }
 
         $this->authorize('view', $team);

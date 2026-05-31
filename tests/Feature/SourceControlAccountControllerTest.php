@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\SourceControlAccount;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -12,6 +13,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
+    $this->team = Team::factory()->forUser($this->user)->create();
+    $this->user->switchTeam($this->team);
 });
 
 it('returns repositories for the authenticated users source control account', function () {
@@ -35,7 +38,10 @@ it('returns repositories for the authenticated users source control account', fu
     ]);
 
     $response = $this->actingAs($this->user)
-        ->getJson("/source-control/{$account->id}/repositories");
+        ->getJson(route('source-control.repositories', [
+            'team' => $this->team,
+            'sourceControlAccount' => $account,
+        ]));
 
     $response->assertOk()
         ->assertJsonStructure([
@@ -67,7 +73,10 @@ it('denies guest access to repositories endpoint', function () {
         ->forUser($this->user)
         ->create();
 
-    $response = $this->getJson("/source-control/{$account->id}/repositories");
+    $response = $this->getJson(route('source-control.repositories', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+    ]));
 
     $response->assertUnauthorized();
 });
@@ -78,9 +87,14 @@ it('denies access to repositories for another users source control account', fun
         ->create();
 
     $otherUser = User::factory()->create();
+    $otherTeam = Team::factory()->forUser($otherUser)->create();
+    $otherUser->switchTeam($otherTeam);
 
     $response = $this->actingAs($otherUser)
-        ->getJson("/source-control/{$account->id}/repositories");
+        ->getJson(route('source-control.repositories', [
+            'team' => $otherTeam,
+            'sourceControlAccount' => $account,
+        ]));
 
     $response->assertForbidden();
 });

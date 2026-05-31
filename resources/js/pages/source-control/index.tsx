@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { RepositoryProvider, SourceControlAccount } from '@/types/source-control';
@@ -16,13 +17,6 @@ interface Props {
     };
     providers: RepositoryProvider[];
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Source Control',
-        href: '/source-control',
-    },
-];
 
 function getProviderIcon(provider: string) {
     switch (provider) {
@@ -38,6 +32,14 @@ function getProviderIcon(provider: string) {
 }
 
 export default function SourceControlIndex({ accounts, providers }: Props) {
+    const teamPath = useTeamPath();
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Source Control',
+            href: teamPath('/source-control'),
+        },
+    ];
+
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [accountToDelete, setAccountToDelete] = useState<SourceControlAccount | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -51,7 +53,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
         if (!accountToDelete) return;
 
         setIsDeleting(true);
-        router.delete(`/source-control/${accountToDelete.id}`, {
+        router.delete(teamPath(`/source-control/${accountToDelete.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
@@ -61,7 +63,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
     };
 
     const handleConnect = (provider: string) => {
-        window.location.href = `/auth/${provider}/redirect?redirect=${encodeURIComponent('/source-control')}`;
+        window.location.href = `/auth/${provider}/redirect?redirect=${encodeURIComponent(teamPath('/source-control'))}`;
     };
 
     return (

@@ -93,6 +93,11 @@ class User extends Authenticatable
         $this->setRelation('currentTeam', $team);
     }
 
+    public function currentTeamOrFail(): Team
+    {
+        return $this->currentTeam ?? abort(403, 'No team selected.');
+    }
+
     // Personal resource relationships (user-scoped, not team-scoped)
 
     public function sshKeys(): HasMany

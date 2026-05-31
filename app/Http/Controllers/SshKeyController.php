@@ -9,13 +9,14 @@ use App\Http\Resources\ServerResource;
 use App\Http\Resources\SshKeyResource;
 use App\Jobs\RevokeSshKeyJob;
 use App\Models\SshKey;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SshKeyController extends Controller
 {
-    public function index(): Response
+    public function index(Team $team): Response
     {
         $sshKeys = auth()->user()
             ->sshKeys()
@@ -24,8 +25,7 @@ class SshKeyController extends Controller
             ->latest()
             ->get();
 
-        $servers = auth()->user()
-            ->servers()
+        $servers = $team->servers()
             ->where('status', 'active')
             ->get();
 
@@ -35,20 +35,20 @@ class SshKeyController extends Controller
         ]);
     }
 
-    public function store(StoreSshKeyRequest $request): RedirectResponse
+    public function store(StoreSshKeyRequest $request, Team $team): RedirectResponse
     {
-        $sshKey = auth()->user()->sshKeys()->create([
+        auth()->user()->sshKeys()->create([
             'name' => $request->validated('name'),
             'public_key' => trim($request->validated('public_key')),
             'fingerprint' => $request->calculateFingerprint($request->validated('public_key')),
         ]);
 
         return redirect()
-            ->route('ssh-keys.index')
+            ->route('ssh-keys.index', $team)
             ->with('success', 'SSH key added successfully.');
     }
 
-    public function destroy(SshKey $sshKey): RedirectResponse
+    public function destroy(Team $team, SshKey $sshKey): RedirectResponse
     {
         $this->authorize('delete', $sshKey);
 
@@ -60,27 +60,27 @@ class SshKeyController extends Controller
         $sshKey->delete();
 
         return redirect()
-            ->route('ssh-keys.index')
+            ->route('ssh-keys.index', $team)
             ->with('success', 'SSH key deleted successfully.');
     }
 
-    public function sync(SshKey $sshKey, SyncSshKeyRequest $request, SyncSshKeyAction $action): RedirectResponse
+    public function sync(Team $team, SshKey $sshKey, SyncSshKeyRequest $request, SyncSshKeyAction $action): RedirectResponse
     {
         $this->authorize('sync', $sshKey);
 
         $action->execute($sshKey, $request->validated('server_ids'));
 
         return redirect()
-            ->route('ssh-keys.index')
+            ->route('ssh-keys.index', $team)
             ->with('success', 'SSH key sync initiated.');
     }
 
-    public function revoke(SshKey $sshKey, SyncSshKeyRequest $request): RedirectResponse
+    public function revoke(Team $team, SshKey $sshKey, SyncSshKeyRequest $request): RedirectResponse
     {
         $this->authorize('revoke', $sshKey);
 
         $serverIds = $request->validated('server_ids');
-        $servers = auth()->user()->servers()->whereIn('id', $serverIds)->get();
+        $servers = $team->servers()->whereIn('id', $serverIds)->get();
 
         foreach ($servers as $server) {
             RevokeSshKeyJob::dispatch($sshKey, $server);
@@ -92,13 +92,14 @@ class SshKeyController extends Controller
         }
 
         return redirect()
-            ->route('ssh-keys.index')
+            ->route('ssh-keys.index', $team)
             ->with('success', 'SSH key revocation initiated.');
     }
 
     public function servers(): Response
     {
         $servers = auth()->user()
+            ->currentTeamOrFail()
             ->servers()
             ->where('status', 'active')
             ->get();
