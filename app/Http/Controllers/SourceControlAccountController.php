@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\SourceControl\SyncRepositoriesAction;
 use App\Enums\RepositoryProvider;
 use App\Http\Resources\SourceControlAccountResource;
 use App\Models\SourceControlAccount;
+use App\Models\SourceControlRepository;
 use App\Models\Team;
 use App\Services\SourceControlService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
@@ -186,15 +189,54 @@ HTML;
     public function repositories(
         Team $team,
         SourceControlAccount $sourceControlAccount,
-        SourceControlService $sourceControlService,
+        SyncRepositoriesAction $syncRepositoriesAction,
     ): JsonResponse {
         $this->authorize('view', $sourceControlAccount);
 
-        $repositories = $sourceControlService->listRepositories($sourceControlAccount);
+        $repositories = $sourceControlAccount->repositories()->orderBy('full_name')->get();
+
+        if ($repositories->isEmpty() && $sourceControlAccount->repositories_synced_at === null) {
+            $repositories = $syncRepositoriesAction->execute($sourceControlAccount);
+            $sourceControlAccount->refresh();
+        }
 
         return response()->json([
-            'repositories' => $repositories->all(),
+            'repositories' => $this->transformRepositories($repositories),
+            'synced_at' => $sourceControlAccount->repositories_synced_at?->toIso8601String(),
         ]);
+    }
+
+    public function syncRepositories(
+        Team $team,
+        SourceControlAccount $sourceControlAccount,
+        SyncRepositoriesAction $syncRepositoriesAction,
+    ): JsonResponse {
+        $this->authorize('view', $sourceControlAccount);
+
+        $repositories = $syncRepositoriesAction->execute($sourceControlAccount);
+        $sourceControlAccount->refresh();
+
+        return response()->json([
+            'repositories' => $this->transformRepositories($repositories),
+            'synced_at' => $sourceControlAccount->repositories_synced_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, SourceControlRepository>|\Illuminate\Database\Eloquent\Collection<int, SourceControlRepository>  $repositories
+     * @return array<int, array<string, mixed>>
+     */
+    private function transformRepositories(Collection|\Illuminate\Database\Eloquent\Collection $repositories): array
+    {
+        return $repositories->map(fn (SourceControlRepository $repo): array => [
+            'id' => (int) $repo->provider_repo_id,
+            'name' => $repo->name,
+            'full_name' => $repo->full_name,
+            'ssh_url' => $repo->ssh_url,
+            'html_url' => $repo->html_url,
+            'default_branch' => $repo->default_branch,
+            'private' => $repo->private,
+        ])->values()->all();
     }
 
     public function branches(

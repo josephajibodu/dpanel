@@ -248,6 +248,45 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
             });
     }, [form.data.source_control_account_id]);
 
+    const reloadRepositories = useCallback(() => {
+        if (!form.data.source_control_account_id) {
+            return;
+        }
+
+        setLoadingRepositories(true);
+        const accountId = form.data.source_control_account_id;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const url = teamPath(`/source-control/${accountId}/repositories/sync`);
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    return res.text().then((text) => {
+                        throw new Error(`HTTP ${res.status}: ${text}`);
+                    });
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setRepositories(data.repositories || []);
+            })
+            .catch(() => {
+                toast.error('Failed to refresh repositories. Please try again.');
+            })
+            .finally(() => {
+                setLoadingRepositories(false);
+            });
+    }, [form.data.source_control_account_id, teamPath]);
+
     useEffect(() => {
         fetchRepositories();
     }, [fetchRepositories]);
@@ -512,7 +551,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                             <RepositorySelector
                                                 repositories={repositories}
                                                 loadingRepositories={loadingRepositories}
-                                                onReload={fetchRepositories}
+                                                onReload={reloadRepositories}
                                                 value={form.data.repository}
                                                 onChange={(fullName, repo) => applyRepository(fullName, repo)}
                                                 disabled={loadingRepositories}

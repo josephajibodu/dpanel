@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SourceControlAccount extends Model
 {
@@ -25,6 +26,7 @@ class SourceControlAccount extends Model
         'refresh_token',
         'token_expires_at',
         'connected_at',
+        'repositories_synced_at',
     ];
 
     /**
@@ -38,6 +40,7 @@ class SourceControlAccount extends Model
             'refresh_token' => 'encrypted',
             'token_expires_at' => 'datetime',
             'connected_at' => 'datetime',
+            'repositories_synced_at' => 'datetime',
         ];
     }
 
@@ -49,6 +52,11 @@ class SourceControlAccount extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function repositories(): HasMany
+    {
+        return $this->hasMany(SourceControlRepository::class);
     }
 
     /**

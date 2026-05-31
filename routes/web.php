@@ -93,6 +93,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('source-control.destroy');
             Route::get('source-control/{sourceControlAccount}/repositories', [\App\Http\Controllers\SourceControlAccountController::class, 'repositories'])
                 ->name('source-control.repositories');
+            Route::post('source-control/{sourceControlAccount}/repositories/sync', [\App\Http\Controllers\SourceControlAccountController::class, 'syncRepositories'])
+                ->name('source-control.repositories.sync');
             Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
                 ->where('repository', '.*')
                 ->name('source-control.branches');
