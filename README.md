@@ -198,6 +198,8 @@ resources/js/
 
 ## 🔐 Free-domain SSL
 
+See **[docs/FREE_SSL.md](docs/FREE_SSL.md)** for architecture, provisioning flow, renewal lifecycle, and design notes.
+
 Sites on the free domain (`*.<FREE_DOMAIN>`) are served over HTTPS using a single Let's Encrypt **wildcard certificate** issued via the Cloudflare DNS-01 challenge and distributed to each server in the Forge-style ID-based layout `/etc/nginx/ssl/domains/{site_id}/{domain_id}/server.{crt,key}`.
 
 **One-time setup on the FlitOps host (the machine running the queue worker):**
