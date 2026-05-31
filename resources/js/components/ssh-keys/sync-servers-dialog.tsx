@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { sync } from '@/actions/App/Http/Controllers/SshKeyController';
+import { useTeamPath } from '@/hooks/use-team-path';
 import { type Server } from '@/types/server';
 import { type SshKey } from '@/types/ssh-key';
 import { router } from '@inertiajs/react';
@@ -17,6 +17,7 @@ interface SyncServersDialogProps {
 }
 
 export function SyncServersDialog({ sshKey, servers, open, onOpenChange }: SyncServersDialogProps) {
+    const teamPath = useTeamPath();
     const [selectedServerIds, setSelectedServerIds] = useState<number[]>([]);
     const [processing, setProcessing] = useState(false);
 
@@ -43,7 +44,7 @@ export function SyncServersDialog({ sshKey, servers, open, onOpenChange }: SyncS
 
         setProcessing(true);
         router.post(
-            sync.url(sshKey.id),
+            teamPath(`/ssh-keys/${sshKey.id}/sync`),
             { server_ids: selectedServerIds },
             {
                 onFinish: () => {

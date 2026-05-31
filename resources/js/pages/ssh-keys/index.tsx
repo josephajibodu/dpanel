@@ -2,7 +2,6 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { KeyIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import { destroy } from '@/actions/App/Http/Controllers/SshKeyController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { AddKeyDialog } from '@/components/ssh-keys/add-key-dialog';
@@ -66,7 +65,7 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
         if (!selectedKey) return;
 
         setIsDeleting(true);
-        router.delete(destroy.url(selectedKey.id), {
+        router.delete(teamPath(`/ssh-keys/${selectedKey.id}`), {
             onFinish: () => {
                 setIsDeleting(false);
                 setDeleteDialogOpen(false);
