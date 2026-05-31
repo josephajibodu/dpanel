@@ -313,6 +313,58 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_CONNECTION')))->toBeFalse();
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_DATABASE')))->toBeFalse();
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_USERNAME')))->toBeFalse();
+
+        $sqliteCalls = collect($execCalls)->filter(
+            fn ($c) => str_contains($c, 'database/database.sqlite') && str_contains($c, 'touch')
+        );
+        expect($sqliteCalls)->not->toBeEmpty();
+    });
+
+    it('does not create a sqlite file when a server database is linked', function () {
+        Event::fake([ServerSitesUpdated::class]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $this->server->id,
+            'name' => 'myapp_db',
+            'status' => 'ready',
+        ]);
+
+        DatabaseUser::factory()->create([
+            'server_id' => $this->server->id,
+            'username' => 'artisan',
+            'password' => 'secret_password',
+            'databases' => ['myapp_db'],
+        ]);
+
+        $site = Site::factory()->forServer($this->server)->pending()->create([
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::Laravel,
+            'server_database_id' => $database->id,
+            'domain' => 'myapp.example.com',
+        ]);
+        $site->deployScript()->create(['script' => 'echo "test"']);
+
+        $execCalls = [];
+        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection->shouldReceive('exec')
+            ->andReturnUsing(function (string $cmd) use (&$execCalls) {
+                $execCalls[] = $cmd;
+
+                return str_contains($cmd, 'nginx -t') ? 'syntax is ok' : '';
+            });
+        $mockConnection->shouldReceive('disconnect')->andReturn(null);
+
+        $sshService = \Mockery::mock(SshService::class);
+        $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
+        $this->app->instance(SshService::class, $sshService);
+
+        app(ProvisionSiteAction::class)->execute($site);
+
+        $sqliteCalls = collect($execCalls)->filter(
+            fn ($c) => str_contains($c, 'database/database.sqlite') && str_contains($c, 'touch')
+        );
+        expect($sqliteCalls)->toBeEmpty();
     });
 
     it('correctly escapes URLs with forward slashes in sed commands', function () {

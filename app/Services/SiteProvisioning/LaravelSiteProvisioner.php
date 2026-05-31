@@ -33,6 +33,8 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
 
         $serverDatabase = $this->site->serverDatabase;
         if (! $serverDatabase) {
+            $this->ensureSqliteDatabaseFile();
+
             return;
         }
 
@@ -62,6 +64,17 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
         $this->sedEnv($envPath, 'DB_DATABASE', $serverDatabase->name);
         $this->sedEnv($envPath, 'DB_USERNAME', $dbUser->username);
         $this->sedEnv($envPath, 'DB_PASSWORD', $dbUser->password);
+    }
+
+    /**
+     * Laravel's default .env.example uses SQLite; create the file so the app
+     * can boot (sessions, queues) before the first deploy runs migrations.
+     */
+    private function ensureSqliteDatabaseFile(): void
+    {
+        $sqlitePath = "{$this->siteRoot}/database/database.sqlite";
+
+        $this->connection->exec("mkdir -p {$this->siteRoot}/database && touch {$sqlitePath}");
     }
 
     /**
