@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Server;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -47,6 +48,7 @@ class HandleInertiaRequests extends Middleware
             'servers' => $user?->currentTeam
                 ? $user->currentTeam->servers()->select(['id', 'name'])->orderBy('name')->get()
                 : [],
+            'sites' => fn () => $this->resolveSitesForRequest($request),
             'teams' => $user ? $user->teams()->get()->map(fn ($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
@@ -60,5 +62,23 @@ class HandleInertiaRequests extends Middleware
                 'deployment_started' => $request->session()->get('deployment_started'),
             ],
         ];
+    }
+
+    /**
+     * @return list<array{id: int, domain: string}>
+     */
+    protected function resolveSitesForRequest(Request $request): array
+    {
+        $server = $request->route('server');
+
+        if (! $server instanceof Server) {
+            return [];
+        }
+
+        return $server->sites()
+            ->select(['id', 'domain'])
+            ->orderBy('domain')
+            ->get()
+            ->all();
     }
 }

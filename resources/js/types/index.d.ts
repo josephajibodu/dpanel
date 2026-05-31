@@ -37,11 +37,17 @@ export interface ServerSummary {
     name: string;
 }
 
+export interface SiteSummary {
+    id: number;
+    domain: string;
+}
+
 export interface SharedData {
     name: string;
     auth: Auth;
     currentTeam: Team | null;
     servers: ServerSummary[];
+    sites: SiteSummary[];
     teams: Pick<Team, 'id' | 'name' | 'personal_team' | 'slug'>[];
     sidebarOpen: boolean;
     flash?: {

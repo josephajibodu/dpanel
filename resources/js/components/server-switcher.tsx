@@ -1,25 +1,18 @@
-import { router, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, ServerIcon } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 
 import {
-    BreadcrumbItem,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { type BreadcrumbItem as BreadcrumbItemType, type ServerSummary, type SharedData } from '@/types';
+    BreadcrumbSwitcherWrapper,
+    switchToItem,
+    type BreadcrumbSwitcherItem,
+} from '@/components/breadcrumb-switcher';
+import { useTeamPath } from '@/hooks/use-team-path';
+import { type BreadcrumbItem as BreadcrumbItemType, type SharedData } from '@/types';
 
 /**
  * Normalises the `server` page prop which can arrive as either
  * `{ data: { id, name, ... } }` (resource-wrapped) or the model directly.
  */
-function resolveCurrentServer(prop: unknown): { id: number; name: string } | null {
+export function resolveCurrentServer(prop: unknown): { id: number; name: string } | null {
     if (!prop || typeof prop !== 'object') {
         return null;
     }
@@ -48,58 +41,46 @@ export function findServerBreadcrumbIndex(breadcrumbs: BreadcrumbItemType[]): nu
     return breadcrumbs.findIndex((b) => /\/servers\/\d+$/.test(b.href));
 }
 
-/**
- * Inline breadcrumb item that opens a server switcher dropdown.
- * Renders as a `<BreadcrumbItem>` so it slots directly into a breadcrumb list.
- */
-export function ServerBreadcrumbSwitcher({ isLast }: { isLast: boolean }) {
+export function ServerBreadcrumbSwitcher({
+    breadcrumb,
+    isLast,
+}: {
+    breadcrumb: BreadcrumbItemType;
+    isLast: boolean;
+}) {
     const { servers } = usePage<SharedData>().props;
     const pageProps = usePage().props as Record<string, unknown>;
-    const currentServer = resolveCurrentServer(pageProps.server);
+    const teamPath = useTeamPath();
 
-    if (!currentServer) {
-        return null;
-    }
-
-    const switchServer = (server: ServerSummary) => {
-        if (server.id === currentServer.id) {
-            return;
-        }
-
-        const teamSlug = window.location.pathname.split('/')[1];
-        router.visit(`/${teamSlug}/servers/${server.id}`);
-    };
+    const items: BreadcrumbSwitcherItem[] = servers.map((server) => ({
+        id: server.id,
+        label: server.name,
+    }));
 
     return (
-        <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="text-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1 font-normal outline-none">
-                        {currentServer.name}
-                        <ChevronsUpDown className="size-3 opacity-50" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-52">
-                        <DropdownMenuLabel className="text-muted-foreground text-xs">
-                            Switch server
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {servers.map((server) => (
-                            <DropdownMenuItem
-                                key={server.id}
-                                onClick={() => switchServer(server)}
-                                className="cursor-pointer gap-2"
-                            >
-                                <ServerIcon className="text-muted-foreground size-3.5 shrink-0" />
-                                <span className="truncate">{server.name}</span>
-                                {server.id === currentServer.id && (
-                                    <Check className="ml-auto size-3.5 shrink-0" />
-                                )}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </BreadcrumbItem>
-        </>
+        <BreadcrumbSwitcherWrapper
+            breadcrumb={breadcrumb}
+            isLast={isLast}
+            resolveCurrent={() => {
+                const currentServer = resolveCurrentServer(pageProps.server);
+
+                if (!currentServer) {
+                    return null;
+                }
+
+                return { id: currentServer.id, label: currentServer.name };
+            }}
+            menuLabel="Switch server"
+            items={items}
+            onSelect={(server) => {
+                const currentServer = resolveCurrentServer(pageProps.server);
+
+                if (!currentServer) {
+                    return;
+                }
+
+                switchToItem(teamPath(`/servers/${server.id}`), server, currentServer.id);
+            }}
+        />
     );
 }

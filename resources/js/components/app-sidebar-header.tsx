@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Fragment } from 'react';
 
 import { findServerBreadcrumbIndex, ServerBreadcrumbSwitcher } from '@/components/server-switcher';
+import { findSiteBreadcrumbIndex, SiteBreadcrumbSwitcher } from '@/components/site-switcher';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -19,6 +20,7 @@ export function AppSidebarHeader({
     breadcrumbs?: BreadcrumbItemType[];
 }) {
     const serverIndex = findServerBreadcrumbIndex(breadcrumbs);
+    const siteIndex = findSiteBreadcrumbIndex(breadcrumbs);
 
     return (
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
@@ -31,17 +33,26 @@ export function AppSidebarHeader({
                             {breadcrumbs.map((item, index) => {
                                 const isLast = index === breadcrumbs.length - 1;
                                 const isServerItem = index === serverIndex;
+                                const isSiteItem = index === siteIndex;
+                                const isSwitcherItem = isServerItem || isSiteItem;
 
                                 return (
                                     <Fragment key={index}>
                                         {/* Separator before every item except the first */}
-                                        {index > 0 && !isServerItem && (
+                                        {index > 0 && !isSwitcherItem && (
                                             <BreadcrumbSeparator />
                                         )}
 
                                         {isServerItem ? (
-                                            /* Server item — inline switcher dropdown */
-                                            <ServerBreadcrumbSwitcher isLast={isLast} />
+                                            <ServerBreadcrumbSwitcher
+                                                breadcrumb={item}
+                                                isLast={isLast}
+                                            />
+                                        ) : isSiteItem ? (
+                                            <SiteBreadcrumbSwitcher
+                                                breadcrumb={item}
+                                                isLast={isLast}
+                                            />
                                         ) : (
                                             <BreadcrumbItem>
                                                 {isLast ? (
