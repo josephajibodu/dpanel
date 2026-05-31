@@ -67,4 +67,18 @@ return [
 
     'cloudflare_zone_id' => env('CLOUDFLARE_ZONE_ID'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | acme.sh binary
+    |--------------------------------------------------------------------------
+    |
+    | Path to the acme.sh executable on the FlitOps host (the machine running
+    | the queue worker). WildcardCertificateIssuer shells out to this binary
+    | to issue and renew the free-domain wildcard certificate via the
+    | Cloudflare DNS-01 challenge. Leave unset to look up "acme.sh" on PATH.
+    |
+    */
+
+    'acme_binary' => env('ACME_BINARY', 'acme.sh'),
+
 ];

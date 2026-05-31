@@ -47,6 +47,30 @@ class CloudflareDnsService
     }
 
     /**
+     * Create a TXT record with the given content. Used for the ACME DNS-01
+     * challenge when issuing or renewing certificates.
+     *
+     * @return string The Cloudflare DNS record ID.
+     */
+    public function createTxtRecord(string $name, string $content, int $ttl = 60): string
+    {
+        $response = $this->http->post("zones/{$this->zoneId}/dns_records", [
+            'type' => 'TXT',
+            'name' => $name,
+            'content' => $content,
+            'ttl' => $ttl,
+        ]);
+
+        if (! $response->successful() || ! $response->json('success')) {
+            throw new RuntimeException(
+                'Failed to create Cloudflare TXT record: '.$response->body()
+            );
+        }
+
+        return $response->json('result.id');
+    }
+
+    /**
      * Delete a DNS record by its Cloudflare record ID.
      */
     public function deleteRecord(string $recordId): void

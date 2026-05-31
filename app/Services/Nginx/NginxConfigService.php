@@ -2,6 +2,7 @@
 
 namespace App\Services\Nginx;
 
+use App\Models\Certificate;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Nginx\ConfigGenerators\NginxConfigGeneratorFactory;
@@ -46,5 +47,32 @@ class NginxConfigService
         $generator = NginxConfigGeneratorFactory::make($site);
 
         return $generator->generateForSiteDomain($site, $domain, true);
+    }
+
+    /**
+     * Pick the right variant: SSL when the domain is a free-domain hostname
+     * and a non-expired wildcard certificate exists; HTTP-only otherwise.
+     * Callers don't need to know about cert state.
+     */
+    public function generateForSiteDomainAuto(Site $site, SiteDomain $domain): string
+    {
+        return $this->shouldUseSsl($domain)
+            ? $this->generateWithSslForSiteDomain($site, $domain)
+            : $this->generateForSiteDomain($site, $domain);
+    }
+
+    private function shouldUseSsl(SiteDomain $domain): bool
+    {
+        $freeDomain = (string) config('server.free_domain');
+
+        if ($freeDomain === '' || ! str_ends_with($domain->hostname, '.'.$freeDomain)) {
+            return false;
+        }
+
+        $cert = Certificate::firstWhere('domain', '*.'.$freeDomain);
+
+        return $cert !== null
+            && $cert->expires_at !== null
+            && $cert->expires_at->isFuture();
     }
 }

@@ -365,3 +365,57 @@ it('marks the site as failed and skips auto-deploy when an infra step throws', f
 
     Queue::assertNotPushed(DeploySiteJob::class);
 });
+
+it('syncs the wildcard certificate to the (site, domain) folder before nginx -t runs for a free-domain site', function () {
+    \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+
+    // Stage a fake wildcard cert on disk + register it in the certificates table.
+    $certDir = sys_get_temp_dir().'/provision-cert-'.bin2hex(random_bytes(4));
+    @mkdir($certDir, 0700, true);
+    file_put_contents("{$certDir}/server.crt", 'FAKE-CERT');
+    file_put_contents("{$certDir}/server.key", 'FAKE-KEY');
+
+    \App\Models\Certificate::factory()->create([
+        'domain' => '*.flitops.test',
+        'certificate_path' => "{$certDir}/server.crt",
+        'private_key_path' => "{$certDir}/server.key",
+    ]);
+
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()
+        ->forServer($server)
+        ->pending()
+        ->create([
+            'domain' => 'thing.flitops.test',
+            'site_name' => 'thing',
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::StaticHtml,
+            'directory' => '/',
+        ]);
+    $site->deployScript()->create(['script' => 'echo "placeholder"']);
+
+    $domainId = $site->domains()->where('hostname', 'thing.flitops.test')->value('id');
+
+    $execCalls = [];
+    $mockConnection = mockSshConnection($execCalls);
+    $mockConnection->shouldReceive('upload')->andReturnNull(); // SFTP is mocked out
+    $this->app->instance(SshService::class, mockSshService($mockConnection, $server->id));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    // The cert was installed at the Forge-style ID-based path…
+    $installCert = collect($execCalls)->search(
+        fn ($c) => str_contains($c, 'sudo install ') && str_contains($c, "/etc/nginx/ssl/domains/{$site->id}/{$domainId}/server.crt")
+    );
+    expect($installCert)->not->toBeFalse('expected sudo install for server.crt in execCalls');
+
+    // …and that install ran BEFORE SiteNginxSyncService's `nginx -t`.
+    $nginxTest = collect($execCalls)->search(fn ($c) => str_contains($c, 'nginx -t'));
+    expect($nginxTest)->not->toBeFalse();
+    expect($installCert)->toBeLessThan($nginxTest);
+
+    @unlink("{$certDir}/server.crt");
+    @unlink("{$certDir}/server.key");
+    @rmdir($certDir);
+});

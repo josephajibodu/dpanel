@@ -31,7 +31,7 @@ class SiteNginxSyncService
         foreach ($enabledDomains as $domain) {
             $basename = NginxConfigService::configFileName($site, $domain);
             $expectedBasenames[] = $basename;
-            $nginxConfig = $this->nginxConfig->generateForSiteDomain($site, $domain);
+            $nginxConfig = $this->nginxConfig->generateForSiteDomainAuto($site, $domain);
             $configPath = NginxConfigService::configPath($site, $domain);
             $enabledPath = NginxConfigService::enabledPath($site, $domain);
 

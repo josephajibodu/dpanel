@@ -196,6 +196,37 @@ resources/js/
 
 ---
 
+## 🔐 Free-domain SSL
+
+Sites on the free domain (`*.<FREE_DOMAIN>`) are served over HTTPS using a single Let's Encrypt **wildcard certificate** issued via the Cloudflare DNS-01 challenge and distributed to each server in the Forge-style ID-based layout `/etc/nginx/ssl/domains/{site_id}/{domain_id}/server.{crt,key}`.
+
+**One-time setup on the FlitOps host (the machine running the queue worker):**
+
+```bash
+# Install acme.sh
+curl https://get.acme.sh | sh -s email=<you@example.com>
+```
+
+Set the env vars (same `CLOUDFLARE_API_TOKEN` the DNS service already uses — needs `DNS:Edit` on the free-domain zone):
+
+```env
+CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ZONE_ID=...
+FREE_DOMAIN=flitops.xyz
+# Optional override; defaults to "acme.sh" on PATH
+ACME_BINARY=/root/.acme.sh/acme.sh
+```
+
+**Issuance happens automatically** on a daily schedule (`Schedule::job(...)` in `routes/console.php`) and is idempotent — it only fires acme.sh when the existing cert is missing or within 30 days of expiry. The issuance job then dispatches a per-server distribution job for every server hosting at least one free-domain site.
+
+**Bootstrap the first cert** manually:
+
+```bash
+php artisan flitops:wildcard:issue
+```
+
+---
+
 ## License
 
 [MIT](LICENSE)

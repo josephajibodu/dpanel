@@ -2,6 +2,7 @@
 
 namespace App\Services\SiteProvisioning;
 
+use App\Actions\Certificates\SyncWildcardCertificateForDomainAction;
 use App\Enums\SiteProvisioningStep;
 use App\Models\Site;
 use App\Services\Nginx\SiteNginxSyncService;
@@ -77,6 +78,25 @@ abstract class BaseSiteProvisioner
     protected function configureNginx(): void
     {
         $this->site->loadMissing('domains');
+
+        // Free-domain sites have nginx configs that reference the wildcard
+        // cert at /etc/nginx/ssl/domains/{site_id}/{domain_id}/server.{crt,key}.
+        // Ensure those files exist on this server BEFORE SiteNginxSyncService
+        // runs `nginx -t` — otherwise nginx refuses to reload and the whole
+        // provisioning step aborts.
+        $freeSuffix = '.'.config('server.free_domain');
+        $syncCert = app(SyncWildcardCertificateForDomainAction::class);
+
+        foreach ($this->site->domains as $domain) {
+            if (str_ends_with($domain->hostname, $freeSuffix)) {
+                $syncCert->execute(
+                    connection: $this->connection,
+                    siteId: $this->site->id,
+                    domainId: $domain->id,
+                );
+            }
+        }
+
         $this->siteNginxSyncService->sync($this->site, $this->connection);
     }
 

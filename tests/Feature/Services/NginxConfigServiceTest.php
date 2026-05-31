@@ -283,4 +283,79 @@ describe('NginxConfigService', function () {
         expect($config)->toContain('server_name www.apex.com');
         expect($config)->toContain('return 301 http://apex.com');
     });
+
+    describe('SSL cert paths', function () {
+        it('emits Forge-style ID-based cert paths in the SSL variant', function () {
+            $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
+            $site = Site::factory()->create([
+                'server_id' => $server->id,
+                'domain' => 'example.com',
+            ]);
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateWithSslForSiteDomain($site, $domain);
+
+            expect($config)
+                ->toContain("ssl_certificate /etc/nginx/ssl/domains/{$site->id}/{$domain->id}/server.crt;")
+                ->toContain("ssl_certificate_key /etc/nginx/ssl/domains/{$site->id}/{$domain->id}/server.key;")
+                ->toContain('listen 443 ssl http2');
+        });
+
+        it('auto-picks the SSL variant for a free-domain site when a healthy wildcard certificate exists', function () {
+            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+            \App\Models\Certificate::factory()->create([
+                'domain' => '*.flitops.test',
+                'expires_at' => now()->addDays(80),
+            ]);
+
+            $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
+            $site = Site::factory()->create([
+                'server_id' => $server->id,
+                'domain' => 'bold-cloud.flitops.test',
+            ]);
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomainAuto($site, $domain);
+
+            expect($config)
+                ->toContain('listen 443 ssl http2')
+                ->toContain("ssl_certificate /etc/nginx/ssl/domains/{$site->id}/{$domain->id}/server.crt;");
+        });
+
+        it('falls back to the HTTP variant for a free-domain site when the wildcard certificate is missing', function () {
+            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+
+            $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
+            $site = Site::factory()->create([
+                'server_id' => $server->id,
+                'domain' => 'bold-cloud.flitops.test',
+            ]);
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomainAuto($site, $domain);
+
+            expect($config)
+                ->not->toContain('listen 443')
+                ->not->toContain('ssl_certificate');
+        });
+
+        it('does not auto-enable SSL for custom domains even when a wildcard cert exists', function () {
+            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+            \App\Models\Certificate::factory()->create([
+                'domain' => '*.flitops.test',
+                'expires_at' => now()->addDays(80),
+            ]);
+
+            $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
+            $site = Site::factory()->create([
+                'server_id' => $server->id,
+                'domain' => 'mycompany.com',
+            ]);
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomainAuto($site, $domain);
+
+            expect($config)->not->toContain('listen 443');
+        });
+    });
 });

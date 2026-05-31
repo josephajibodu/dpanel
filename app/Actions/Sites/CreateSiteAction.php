@@ -92,6 +92,10 @@ class CreateSiteAction
 
         CreateSiteJob::dispatch($site);
 
+        // The wildcard cert is synced to disk by the site provisioner itself,
+        // synchronously, so no async distribute job is needed here — see
+        // BaseSiteProvisioner::configureNginx.
+
         return $site;
     }
 }
