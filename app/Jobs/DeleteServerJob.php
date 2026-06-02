@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Enums\ServerStatus;
 use App\Events\ServerDeleted;
 use App\Models\Server;
@@ -34,11 +35,40 @@ class DeleteServerJob implements ShouldQueue
     public function handle(
         ProviderManager $providerManager,
         SourceControlService $sourceControlService,
+        CleanupSiteExternalResourcesAction $cleanupAction,
     ): void {
         Log::info("Starting deletion of server {$this->server->id} ({$this->server->name})");
 
         try {
             $provider = $providerManager->forAccount($this->server->providerAccount);
+
+            // Tear down external resources for each site BEFORE destroying the
+            // VPS, since those resources (Cloudflare A records) are tracked by
+            // the site's domain rows that the DB cascade will wipe. We skip
+            // per-site GitHub SSH key cleanup here because the server-wide
+            // sweep below covers it in one pass.
+            $this->server->load('sites.domains');
+
+            foreach ($this->server->sites as $site) {
+                $recordIds = $site->domains
+                    ->pluck('cloudflare_dns_record_id')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                try {
+                    $cleanupAction->execute(
+                        cloudflareDnsRecordIds: $recordIds,
+                        server: $this->server,
+                        sourceControlAccount: null,
+                        domain: $site->domain,
+                        cleanupGithubSshKey: false,
+                    );
+                } catch (\Exception $e) {
+                    Log::warning("Failed to clean up external resources for site {$site->domain}: {$e->getMessage()}");
+                }
+            }
 
             // Delete server at provider if it exists
             if ($this->server->provider_server_id) {

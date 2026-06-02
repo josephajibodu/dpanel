@@ -2,10 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Models\Site;
-use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Nginx\NginxConfigService;
-use App\Services\SourceControlService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -67,22 +66,19 @@ class DeleteSiteJob implements ShouldQueue
 
     public function handle(
         SshService $sshService,
-        SourceControlService $sourceControlService,
-        CloudflareDnsService $cloudflareDns,
+        CleanupSiteExternalResourcesAction $cleanupAction,
     ): void {
         Log::info("Deleting site {$this->domain}");
 
-        foreach ($this->cloudflareDnsRecordIds as $recordId) {
-            try {
-                $cloudflareDns->deleteRecord($recordId);
-                Log::info("Deleted Cloudflare DNS record {$recordId} for {$this->domain}");
-            } catch (\Throwable $e) {
-                Log::warning("Failed to delete Cloudflare DNS record {$recordId} for {$this->domain}: {$e->getMessage()}");
-            }
-        }
-
         $site = Site::find($this->siteId);
         $server = \App\Models\Server::find($this->serverId);
+
+        $cleanupAction->execute(
+            cloudflareDnsRecordIds: $this->cloudflareDnsRecordIds,
+            server: $server,
+            sourceControlAccount: $site?->sourceControlAccount,
+            domain: $this->domain,
+        );
 
         if (! $server) {
             Log::warning("Server {$this->serverId} not found, skipping site deletion");
@@ -92,15 +88,6 @@ class DeleteSiteJob implements ShouldQueue
             }
 
             return;
-        }
-
-        if ($site && $site->sourceControlAccount && $server) {
-            try {
-                $sourceControlService->deleteAccountSshKeyIfUnused($server, $site->sourceControlAccount);
-                Log::info("SSH key cleanup attempted for site {$this->domain}");
-            } catch (\Throwable $e) {
-                Log::warning("Failed to delete SSH key for site {$this->domain}: {$e->getMessage()}");
-            }
         }
 
         if ($site) {
