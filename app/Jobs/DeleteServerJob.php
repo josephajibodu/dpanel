@@ -104,7 +104,7 @@ class DeleteServerJob implements ShouldQueue
             // Broadcast deletion before removing the record so list subscribers can update
             event(new ServerDeleted(
                 serverId: $this->server->id,
-                userId: $this->server->user_id,
+                teamId: $this->server->team_id,
             ));
 
             // Delete local server record and related data

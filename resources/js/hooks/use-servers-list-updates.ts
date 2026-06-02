@@ -3,16 +3,16 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Hook to listen for server list updates via WebSocket.
- * Subscribes to servers.{userId} and triggers partial reload on status changes or deletion.
+ * Subscribes to servers.{teamId} and triggers partial reload on status changes or deletion.
  *
  * Events: .server.status.changed, .server.deleted
  */
-export function useServersListUpdates(userId: number) {
+export function useServersListUpdates(teamId: number) {
     const channelRef = useRef<any>(null);
     const debugEnabled = import.meta.env.VITE_REALTIME_DEBUG === 'true';
 
     useEffect(() => {
-        if (!userId || !window.Echo) {
+        if (!teamId || !window.Echo) {
             if (debugEnabled && !window.Echo) {
                 console.warn('[realtime][servers] Echo not available for list updates');
             }
@@ -20,20 +20,20 @@ export function useServersListUpdates(userId: number) {
         }
 
         if (debugEnabled) {
-            console.debug('[realtime][servers] subscribing to servers list channel', { userId });
+            console.debug('[realtime][servers] subscribing to servers list channel', { teamId });
         }
 
-        const channel = window.Echo.private(`servers.${userId}`);
+        const channel = window.Echo.private(`servers.${teamId}`);
         channelRef.current = channel;
 
         channel.subscribed(() => {
             if (debugEnabled) {
-                console.debug('[realtime][servers] subscribed to servers list channel', { userId });
+                console.debug('[realtime][servers] subscribed to servers list channel', { teamId });
             }
         });
 
         channel.error((error: unknown) => {
-            console.error('[realtime][servers] list channel error', { userId, error });
+            console.error('[realtime][servers] list channel error', { teamId, error });
         });
 
         const reloadServers = () => {
@@ -52,12 +52,12 @@ export function useServersListUpdates(userId: number) {
         return () => {
             if (channelRef.current) {
                 if (debugEnabled) {
-                    console.debug('[realtime][servers] leaving servers list channel', { userId });
+                    console.debug('[realtime][servers] leaving servers list channel', { teamId });
                 }
                 channelRef.current.stopListening('.server.status.changed');
                 channelRef.current.stopListening('.server.deleted');
-                window.Echo.leave(`servers.${userId}`);
+                window.Echo.leave(`servers.${teamId}`);
             }
         };
-    }, [debugEnabled, userId]);
+    }, [debugEnabled, teamId]);
 }

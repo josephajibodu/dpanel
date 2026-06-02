@@ -33,7 +33,7 @@ class ServerStatusChanged implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->server->user_id),
+            new PrivateChannel('servers.'.$this->server->team_id),
             new PrivateChannel('server.'.$this->server->id),
         ];
     }

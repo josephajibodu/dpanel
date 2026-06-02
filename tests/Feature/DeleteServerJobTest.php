@@ -47,7 +47,7 @@ it('broadcasts ServerDeleted when job completes successfully', function () {
 
     Event::assertDispatched(ServerDeleted::class, function (ServerDeleted $event) use ($server) {
         return $event->serverId === $server->id
-            && $event->userId === $server->user_id;
+            && $event->teamId === $server->team_id;
     });
 
     $this->assertDatabaseMissing('servers', ['id' => $server->id]);

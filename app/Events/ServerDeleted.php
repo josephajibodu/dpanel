@@ -17,7 +17,7 @@ class ServerDeleted implements ShouldBroadcast
      */
     public function __construct(
         public int $serverId,
-        public int $userId,
+        public int $teamId,
     ) {}
 
     /**
@@ -28,7 +28,7 @@ class ServerDeleted implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->userId),
+            new PrivateChannel('servers.'.$this->teamId),
         ];
     }
 

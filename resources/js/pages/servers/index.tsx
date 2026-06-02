@@ -52,10 +52,10 @@ interface Props {
 const DOCS_URL = 'https://laravel.com/docs/starter-kits#react';
 
 export default function ServersIndex({ servers }: Props) {
-    const { auth } = usePage<SharedData>().props;
-    const userId = auth.user?.id ?? 0;
+    const { currentTeam } = usePage<SharedData>().props;
+    const teamId = currentTeam?.id ?? 0;
     const teamPath = useTeamPath();
-    useServersListUpdates(userId);
+    useServersListUpdates(teamId);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
