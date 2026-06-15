@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\CronJob\DisableCronJob;
+use App\Events\ServerProcessesUpdated;
 use App\Models\CronJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,6 +26,10 @@ class DisableCronJobJob implements ShouldQueue
 
     public function handle(DisableCronJob $action): void
     {
-        $action->execute($this->cronJob);
+        try {
+            $action->execute($this->cronJob);
+        } finally {
+            event(new ServerProcessesUpdated($this->cronJob->server_id));
+        }
     }
 }

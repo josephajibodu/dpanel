@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\Worker\ControlWorker;
 use App\Enums\WorkerControlAction;
+use App\Events\ServerProcessesUpdated;
 use App\Models\Worker;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -38,6 +39,8 @@ class ControlWorkerJob implements ShouldQueue
             ]);
             $this->worker->update(['status' => 'failed']);
             throw $e;
+        } finally {
+            event(new ServerProcessesUpdated($this->worker->server_id));
         }
     }
 }

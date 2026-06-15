@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Worker\DestroyWorker;
+use App\Events\ServerProcessesUpdated;
 use App\Models\Worker;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,6 +27,9 @@ class DestroyWorkerJob implements ShouldQueue
 
     public function handle(DestroyWorker $action): void
     {
+        // Capture before delete so the event still fires correctly afterwards.
+        $serverId = $this->worker->server_id;
+
         try {
             $action->execute($this->worker);
             $this->worker->delete();
@@ -35,6 +39,8 @@ class DestroyWorkerJob implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
             throw $e;
+        } finally {
+            event(new ServerProcessesUpdated($serverId));
         }
     }
 }

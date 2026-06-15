@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\CronJob\DestroyCronJob;
+use App\Events\ServerProcessesUpdated;
 use App\Models\CronJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,6 +27,9 @@ class DestroyCronJobJob implements ShouldQueue
 
     public function handle(DestroyCronJob $action): void
     {
+        // Capture before delete so the event still fires correctly afterwards.
+        $serverId = $this->cronJob->server_id;
+
         try {
             $action->execute($this->cronJob);
             $this->cronJob->delete();
@@ -35,6 +39,8 @@ class DestroyCronJobJob implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
             throw $e;
+        } finally {
+            event(new ServerProcessesUpdated($serverId));
         }
     }
 }
