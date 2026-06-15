@@ -55,23 +55,25 @@ class CreateCronJob
             $path = config('cron.cron_d_path');
             $prefix = config('cron.file_prefix');
             $filename = "{$prefix}-{$cronJob->id}";
+            $destPath = "{$path}/{$filename}";
 
-            $content = $this->buildCronFileContent($cronJob);
+            $content = $cronJob->cronLine();
             $tmpPath = '/tmp/'.$filename;
 
             $connection->upload($content, $tmpPath);
-            $connection->sudo("mv {$tmpPath} {$path}/{$filename}", 30);
+
+            // Move into /etc/cron.d AND reset ownership/mode — Debian/Ubuntu
+            // cron silently skips files in /etc/cron.d that aren't owned by
+            // root, so the rename alone is not enough (the file would still
+            // be owned by the SSH user).
+            $connection->sudo(
+                "mv {$tmpPath} {$destPath} && chown root:root {$destPath} && chmod 644 {$destPath}",
+                30
+            );
 
             $cronJob->update(['status' => 'active']);
         } finally {
             $connection->disconnect();
         }
-    }
-
-    private function buildCronFileContent(CronJob $cronJob): string
-    {
-        $line = $cronJob->frequency.' '.$cronJob->user.' '.$cronJob->command."\n";
-
-        return $line;
     }
 }

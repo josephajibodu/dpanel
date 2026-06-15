@@ -33,20 +33,18 @@ class EnableCronJob
             $path = config('cron.cron_d_path');
             $prefix = config('cron.file_prefix');
             $filename = "{$prefix}-{$cronJob->id}";
-            $content = $this->buildCronFileContent($cronJob);
+            $destPath = "{$path}/{$filename}";
+
+            $content = $cronJob->cronLine();
             $tmpPath = '/tmp/'.$filename;
 
             $connection->upload($content, $tmpPath);
-            $connection->sudo("mv {$tmpPath} {$path}/{$filename}", 30);
+            $connection->sudo(
+                "mv {$tmpPath} {$destPath} && chown root:root {$destPath} && chmod 644 {$destPath}",
+                30
+            );
         } finally {
             $connection->disconnect();
         }
-    }
-
-    private function buildCronFileContent(CronJob $cronJob): string
-    {
-        $line = $cronJob->frequency.' '.$cronJob->user.' '.$cronJob->command."\n";
-
-        return $line;
     }
 }

@@ -57,7 +57,7 @@ class CreateWorker
             $filename = "{$prefix}-{$worker->id}.conf";
             $programName = "{$prefix}-{$worker->id}";
 
-            $content = $this->buildSupervisorConfig($worker, $programName);
+            $content = $worker->supervisorConfig($programName);
             $tmpPath = '/tmp/'.$filename;
 
             $connection->upload($content, $tmpPath);
@@ -71,28 +71,5 @@ class CreateWorker
         } finally {
             $connection->disconnect();
         }
-    }
-
-    private function buildSupervisorConfig(Worker $worker, string $programName): string
-    {
-        $lines = [
-            '[program:'.$programName.']',
-            'command='.$worker->command,
-            'user='.$worker->user,
-            'numprocs='.$worker->numprocs,
-            'autostart='.($worker->auto_start ? 'true' : 'false'),
-            'autorestart='.($worker->auto_restart ? 'true' : 'false'),
-            'redirect_stderr='.($worker->redirect_stderr ? 'true' : 'false'),
-        ];
-
-        if ($worker->numprocs > 1) {
-            $lines[] = 'process_name=%(program_name)s_%(process_num)02d';
-        }
-
-        if ($worker->stdout_logfile) {
-            $lines[] = 'stdout_logfile='.$worker->stdout_logfile;
-        }
-
-        return implode("\n", $lines)."\n";
     }
 }
