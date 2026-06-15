@@ -177,6 +177,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('servers/{server}/sites/{site}/command-runs/{command_run}', [SiteCommandRunController::class, 'show'])
                     ->name('servers.sites.command-runs.show');
 
+                // Processes (site-scoped view; CUD reuses server-scoped routes below since workers/cron rows are server-unique)
+                Route::get('servers/{server}/sites/{site}/processes', [\App\Http\Controllers\SiteProcessController::class, 'index'])
+                    ->name('servers.sites.processes.index');
+
                 // Databases and database users
                 Route::get('servers/{server}/databases', [ServerDatabaseController::class, 'index'])
                     ->name('servers.databases.index');
