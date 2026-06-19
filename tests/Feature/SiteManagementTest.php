@@ -2,6 +2,8 @@
 
 use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
+use App\Enums\SiteStatus;
+use App\Events\ServerSitesUpdated;
 use App\Jobs\CreateSiteJob;
 use App\Jobs\DeleteSiteJob;
 use App\Jobs\DeploySiteJob;
@@ -14,6 +16,7 @@ use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
@@ -340,6 +343,7 @@ describe('site viewing', function () {
 describe('site deletion', function () {
     it('can delete a site', function () {
         Queue::fake();
+        Event::fake([ServerSitesUpdated::class]);
 
         $site = Site::factory()->create([
             'server_id' => $this->server->id,
@@ -350,7 +354,9 @@ describe('site deletion', function () {
 
         $response->assertRedirect("/{$this->team->slug}/servers/{$this->server->id}/sites");
 
+        expect($site->fresh()->status)->toBe(SiteStatus::Deleting);
         Queue::assertPushed(DeleteSiteJob::class);
+        Event::assertDispatched(ServerSitesUpdated::class);
     });
 
     it('cannot delete other users sites', function () {

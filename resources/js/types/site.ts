@@ -19,9 +19,9 @@ export interface Site {
     project_type_label: string | null;
     php_version: string;
     php_binary: string | null;
-    status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed';
+    status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed' | 'deleting';
     status_label: string;
-    status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red';
+    status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red' | 'orange';
     provisioning_step?: { value: number; label: string; description: string } | null;
     provisioning_steps?: Array<{ value: number; label: string; description: string }>;
     auto_deploy: boolean;

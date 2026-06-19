@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
+use App\Events\ServerSitesUpdated;
 use App\Models\Site;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\Ssh\SshService;
@@ -123,6 +124,8 @@ class DeleteSiteJob implements ShouldQueue
             Log::error("Failed to delete site {$this->domain} from server: {$e->getMessage()}", [
                 'exception' => $e,
             ]);
+        } finally {
+            event(new ServerSitesUpdated($server));
         }
     }
 }

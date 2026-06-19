@@ -58,7 +58,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [deletingIds, setDeletingIds] = useState<number[]>([]);
     const [search, setSearch] = useState('');
 
     const filteredSites = useMemo(() => {
@@ -79,13 +79,15 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     const confirmDelete = () => {
         if (!siteToDelete) return;
 
-        setIsDeleting(true);
-        router.delete(teamPath(`/servers/${server.id}/sites/${siteToDelete.id}`), {
-            onFinish: () => {
-                setIsDeleting(false);
-                setDeleteDialogOpen(false);
-                setSiteToDelete(null);
-            },
+        const id = siteToDelete.id;
+        setDeleteDialogOpen(false);
+        setSiteToDelete(null);
+        setDeletingIds((prev) => [...prev, id]);
+
+        router.delete(teamPath(`/servers/${server.id}/sites/${id}`), {
+            preserveScroll: true,
+            onSuccess: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -181,7 +183,11 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredSites.map((site) => (
+                                        filteredSites.map((site) => {
+                                            const isDeleting =
+                                                deletingIds.includes(site.id) ||
+                                                site.status === 'deleting';
+                                            return (
                                             <TableRow key={site.id}>
                                                 <TableCell className="font-mono text-muted-foreground text-xs">
                                                     {site.id}
@@ -208,13 +214,9 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <SiteStatusBadge
-                                                        status={site.status}
-                                                        statusLabel={
-                                                            site.status_label
-                                                        }
-                                                        statusColor={
-                                                            site.status_color
-                                                        }
+                                                        status={isDeleting ? 'deleting' : site.status}
+                                                        statusLabel={isDeleting ? 'Deleting...' : site.status_label}
+                                                        statusColor={isDeleting ? 'orange' : site.status_color}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -260,8 +262,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                                         Edit
                                                                     </Link>
                                                                 </DropdownMenuItem>
-                                                                {site.status !==
-                                                                    'installing' && (
+                                                                {!isDeleting && site.status !== 'installing' && (
                                                                     <DropdownMenuItem
                                                                         onClick={() =>
                                                                             handleDelete(site)
@@ -277,7 +278,8 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
@@ -301,7 +303,6 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                 confirmLabel="Delete Site"
                 variant="destructive"
                 onConfirm={confirmDelete}
-                loading={isDeleting}
             />
         </AppLayout>
     );
