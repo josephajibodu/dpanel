@@ -44,8 +44,14 @@ class ServerPhpController extends Controller
             ->all();
 
         $defaultVersion = $server->getDefaultPhpVersion() ?? '';
-        $phpInfo = $this->getPhpInfo->execute($server);
-        $installedVersions = $phpInfo['installed_versions'];
+
+        $installedVersions = collect($phpServices)
+            ->map(fn ($s) => $s['installed_version'] ?? $s['version'])
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
 
         return Inertia::render('servers/php/index', [
             'server' => new ServerResource($server),
@@ -53,8 +59,8 @@ class ServerPhpController extends Controller
             'phpServices' => $phpServices,
             'installedVersions' => $installedVersions,
             'defaultVersion' => $defaultVersion,
-            'settings' => $phpInfo['settings'],
             'availableVersions' => self::AVAILABLE_VERSIONS,
+            'settings' => Inertia::defer(fn () => $this->getPhpInfo->execute($server)),
         ]);
     }
 
@@ -74,6 +80,11 @@ class ServerPhpController extends Controller
             return redirect()
                 ->back()
                 ->with('error', $e->getMessage());
+        }
+
+        $version = $server->getDefaultPhpVersion();
+        if ($version !== null && $version !== '') {
+            GetPhpInfo::invalidateCache($server->id, $version);
         }
 
         return redirect()

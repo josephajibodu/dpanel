@@ -11,6 +11,7 @@ const STATUS_COLORS: Record<string, string> = {
     pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
     stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
     disabled: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+    default: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
     failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
     error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
     deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',

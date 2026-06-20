@@ -5,6 +5,7 @@ namespace App\Actions\ServerPhp;
 use App\Models\Server;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
+use Illuminate\Support\Facades\Cache;
 
 class GetPhpInfo
 {
@@ -15,82 +16,58 @@ class GetPhpInfo
         'memory_limit',
     ];
 
+    private const CACHE_TTL = 300; // 5 minutes
+
     public function __construct(
         private SshService $sshService
     ) {}
 
-    /**
-     * Get installed PHP versions, default version's settings from the server.
-     *
-     * @return array{installed_versions: array<int, string>, settings: array<string, string>}
-     */
-    public function execute(Server $server): array
+    public static function cacheKey(int $serverId, string $version): string
     {
-        if (! $server->isReady()) {
-            return [
-                'installed_versions' => [],
-                'settings' => [],
-            ];
-        }
+        return "php_settings:{$serverId}:{$version}";
+    }
 
-        try {
-            $connection = $this->sshService->connect($server);
-        } catch (\Throwable) {
-            return [
-                'installed_versions' => [],
-                'settings' => [],
-            ];
-        }
-
-        try {
-            $defaultPhp = $server->php();
-            $defaultVersion = $defaultPhp?->installed_version ?? $defaultPhp?->version ?? $server->php_version;
-
-            $phpServices = $server->installedServices()->where('type', 'php')->get();
-            $installedVersionsFromDb = $phpServices->map(fn ($s) => $s->installed_version ?? $s->version)->filter()->unique()->values()->all();
-            $installedVersions = $this->getInstalledVersions($connection);
-            if ($installedVersionsFromDb !== []) {
-                $installedVersions = array_values(array_unique(array_merge($installedVersionsFromDb, $installedVersions)));
-                sort($installedVersions);
-            }
-
-            $settings = [];
-            if ($defaultVersion !== null && $defaultVersion !== '' && in_array($defaultVersion, $installedVersions, true)) {
-                $settings = $this->getSettingsForVersion($connection, $defaultVersion);
-            }
-
-            return [
-                'installed_versions' => $installedVersions,
-                'settings' => $settings,
-            ];
-        } finally {
-            $connection->disconnect();
-        }
+    public static function invalidateCache(int $serverId, string $version): void
+    {
+        Cache::forget(self::cacheKey($serverId, $version));
     }
 
     /**
-     * @return array<int, string>
+     * Return cached php.ini settings for the server's default PHP version.
+     *
+     * @return array<string, string>
      */
-    private function getInstalledVersions(SshConnection $connection): array
+    public function execute(Server $server): array
+    {
+        $version = $server->getDefaultPhpVersion();
+
+        if ($version === null || $version === '' || ! $server->isReady()) {
+            return [];
+        }
+
+        return Cache::remember(
+            self::cacheKey($server->id, $version),
+            self::CACHE_TTL,
+            fn () => $this->fetchViaSsh($server, $version),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function fetchViaSsh(Server $server, string $version): array
     {
         try {
-            $output = $connection->sudo('ls -1 /etc/php 2>/dev/null || true', 10);
+            $connection = $this->sshService->connect($server);
         } catch (\Throwable) {
             return [];
         }
 
-        $lines = array_filter(array_map('trim', explode("\n", $output)));
-        $versions = [];
-
-        foreach ($lines as $line) {
-            if (preg_match('/^\d+\.\d+$/', $line)) {
-                $versions[] = $line;
-            }
+        try {
+            return $this->getSettingsForVersion($connection, $version);
+        } finally {
+            $connection->disconnect();
         }
-
-        sort($versions);
-
-        return $versions;
     }
 
     /**
@@ -99,8 +76,9 @@ class GetPhpInfo
     private function getSettingsForVersion(SshConnection $connection, string $version): array
     {
         try {
+            $keys = implode('|', array_map('preg_quote', self::PHP_INI_KEYS));
             $iniPath = "/etc/php/{$version}/fpm/php.ini";
-            $output = $connection->sudo("cat {$iniPath} 2>/dev/null || true", 10);
+            $output = $connection->sudo("grep -E '^({$keys})\\s*=' {$iniPath} 2>/dev/null || true", 10);
         } catch (\Throwable) {
             return [];
         }

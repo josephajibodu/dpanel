@@ -15,6 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -28,9 +29,9 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import type { Server } from '@/types/server';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Deferred, Head, router, usePage } from '@inertiajs/react';
 import { CodeIcon, DownloadIcon, SettingsIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface PhpSettings {
     upload_max_filesize?: string;
@@ -53,8 +54,24 @@ interface Props {
     phpServices: PhpServiceRow[];
     installedVersions: string[];
     defaultVersion: string;
-    settings: PhpSettings;
+    settings: PhpSettings | null;
     availableVersions: string[];
+}
+
+function SettingsSkeleton() {
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2">
+                        <div className="bg-muted h-4 w-32 animate-pulse rounded" />
+                        <div className="bg-muted h-9 w-full animate-pulse rounded-md" />
+                    </div>
+                ))}
+            </div>
+            <div className="bg-muted h-9 w-28 animate-pulse rounded-md" />
+        </div>
+    );
 }
 
 export default function ServerPhpIndex({
@@ -77,11 +94,22 @@ export default function ServerPhpIndex({
     const [isSubmittingDefault, setIsSubmittingDefault] = useState<string | null>(null);
 
     const [settingsForm, setSettingsForm] = useState({
-        upload_max_filesize: settings?.upload_max_filesize ?? '',
-        post_max_size: settings?.post_max_size ?? '',
-        max_execution_time: settings?.max_execution_time ?? '',
-        memory_limit: settings?.memory_limit ?? '',
+        upload_max_filesize: '',
+        post_max_size: '',
+        max_execution_time: '',
+        memory_limit: '',
     });
+
+    useEffect(() => {
+        if (settings) {
+            setSettingsForm({
+                upload_max_filesize: settings.upload_max_filesize ?? '',
+                post_max_size: settings.post_max_size ?? '',
+                max_execution_time: settings.max_execution_time ?? '',
+                memory_limit: settings.memory_limit ?? '',
+            });
+        }
+    }, [settings]);
 
     const [installVersion, setInstallVersion] = useState<string>('');
 
@@ -164,116 +192,118 @@ export default function ServerPhpIndex({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form
-                                onSubmit={handleUpdateSettings}
-                                className="flex flex-col gap-4"
-                            >
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="upload_max_filesize">
-                                            Upload max filesize
-                                        </Label>
-                                        <Input
-                                            id="upload_max_filesize"
-                                            value={settingsForm.upload_max_filesize}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    upload_max_filesize: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 64M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.upload_max_filesize && (
-                                            <p className="text-destructive text-sm">
-                                                {errors.upload_max_filesize}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="post_max_size">
-                                            Post max size
-                                        </Label>
-                                        <Input
-                                            id="post_max_size"
-                                            value={settingsForm.post_max_size}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    post_max_size: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 64M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.post_max_size && (
-                                            <p className="text-destructive text-sm">
-                                                {errors.post_max_size}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="max_execution_time">
-                                            Max execution time (seconds)
-                                        </Label>
-                                        <Input
-                                            id="max_execution_time"
-                                            type="number"
-                                            min={1}
-                                            max={86400}
-                                            value={settingsForm.max_execution_time}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    max_execution_time: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 30"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.max_execution_time && (
-                                            <p className="text-destructive text-sm">
-                                                {errors.max_execution_time}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="memory_limit">
-                                            Memory limit
-                                        </Label>
-                                        <Input
-                                            id="memory_limit"
-                                            value={settingsForm.memory_limit}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    memory_limit: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 256M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.memory_limit && (
-                                            <p className="text-destructive text-sm">
-                                                {errors.memory_limit}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                                <Button
-                                    type="submit"
-                                    disabled={!serverIsReady || isSubmittingSettings}
+                            <Deferred data="settings" fallback={<SettingsSkeleton />}>
+                                <form
+                                    onSubmit={handleUpdateSettings}
+                                    className="flex flex-col gap-4"
                                 >
-                                    {isSubmittingSettings
-                                        ? 'Saving…'
-                                        : 'Save settings'}
-                                </Button>
-                            </form>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="upload_max_filesize">
+                                                Upload max filesize
+                                            </Label>
+                                            <Input
+                                                id="upload_max_filesize"
+                                                value={settingsForm.upload_max_filesize}
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        upload_max_filesize: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 64M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.upload_max_filesize && (
+                                                <p className="text-destructive text-sm">
+                                                    {errors.upload_max_filesize}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="post_max_size">
+                                                Post max size
+                                            </Label>
+                                            <Input
+                                                id="post_max_size"
+                                                value={settingsForm.post_max_size}
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        post_max_size: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 64M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.post_max_size && (
+                                                <p className="text-destructive text-sm">
+                                                    {errors.post_max_size}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="max_execution_time">
+                                                Max execution time (seconds)
+                                            </Label>
+                                            <Input
+                                                id="max_execution_time"
+                                                type="number"
+                                                min={1}
+                                                max={86400}
+                                                value={settingsForm.max_execution_time}
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        max_execution_time: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 30"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.max_execution_time && (
+                                                <p className="text-destructive text-sm">
+                                                    {errors.max_execution_time}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="memory_limit">
+                                                Memory limit
+                                            </Label>
+                                            <Input
+                                                id="memory_limit"
+                                                value={settingsForm.memory_limit}
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        memory_limit: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 256M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.memory_limit && (
+                                                <p className="text-destructive text-sm">
+                                                    {errors.memory_limit}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={!serverIsReady || isSubmittingSettings}
+                                    >
+                                        {isSubmittingSettings
+                                            ? 'Saving…'
+                                            : 'Save settings'}
+                                    </Button>
+                                </form>
+                            </Deferred>
                         </CardContent>
                     </Card>
 
@@ -299,7 +329,7 @@ export default function ServerPhpIndex({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {(phpServices.length > 0 ? phpServices : []).length === 0 &&
+                                    {phpServices.length === 0 &&
                                     installedVersions.length === 0 ? (
                                         <TableRow>
                                             <TableCell
@@ -323,25 +353,11 @@ export default function ServerPhpIndex({
                                                         {v || '—'}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span
-                                                            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
-                                                                s.status === 'active'
-                                                                    ? 'bg-green-500/15 text-green-700 dark:text-green-400'
-                                                                    : s.status === 'installing'
-                                                                      ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400'
-                                                                      : s.status === 'failed'
-                                                                        ? 'bg-destructive/15 text-destructive'
-                                                                        : 'bg-muted text-muted-foreground'
-                                                            }`}
-                                                        >
-                                                            {s.status}
-                                                        </span>
+                                                        <StatusBadge status={s.status} />
                                                     </TableCell>
                                                     <TableCell>
                                                         {s.is_default ? (
-                                                            <span className="inline-flex rounded-md bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
-                                                                Default
-                                                            </span>
+                                                            <StatusBadge status="default" label="Default" />
                                                         ) : (
                                                             '—'
                                                         )}
@@ -383,9 +399,7 @@ export default function ServerPhpIndex({
                                                 <TableCell>—</TableCell>
                                                 <TableCell>
                                                     {v === defaultVersion ? (
-                                                        <span className="inline-flex rounded-md bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
-                                                            Default
-                                                        </span>
+                                                        <StatusBadge status="default" label="Default" />
                                                     ) : (
                                                         '—'
                                                     )}

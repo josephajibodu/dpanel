@@ -1,11 +1,15 @@
 <?php
 
+use App\Actions\ServerPhp\GetPhpInfo;
 use App\Enums\ConnectionStatus;
+use App\Enums\ServiceType;
 use App\Jobs\InstallPhpVersionJob;
 use App\Models\Server;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
@@ -20,7 +24,7 @@ beforeEach(function () {
     ]);
 });
 
-it('shows PHP index for the server', function () {
+it('shows PHP index for the server without SSH on initial load', function () {
     $response = $this->actingAs($this->user)
         ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
 
@@ -32,12 +36,91 @@ it('shows PHP index for the server', function () {
             ->has('phpServices')
             ->has('installedVersions')
             ->has('defaultVersion')
-            ->has('settings')
             ->has('availableVersions')
             ->where('serverIsReady', false)
             ->where('defaultVersion', '8.3')
             ->where('availableVersions', ['8.1', '8.2', '8.3', '8.4'])
         );
+});
+
+it('derives installed versions from database services without SSH', function () {
+    $this->server->createService(ServiceType::Php, '8.3', true);
+    $this->server->createService(ServiceType::Php, '8.1', false);
+
+    $mockSsh = Mockery::mock(SshService::class);
+    $mockSsh->shouldNotReceive('connect');
+    $this->app->instance(SshService::class, $mockSsh);
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
+
+    $response->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('installedVersions', ['8.1', '8.3'])
+        );
+});
+
+it('fetches settings via SSH when cache is cold', function () {
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+
+    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+    $connMock->shouldReceive('sudo')
+        ->once()
+        ->andReturn("upload_max_filesize = 32M\nmemory_limit = 128M\n");
+    $connMock->shouldReceive('disconnect');
+
+    $sshMock = Mockery::mock(SshService::class);
+    $sshMock->shouldReceive('connect')->once()->andReturn($connMock);
+    $this->app->instance(SshService::class, $sshMock);
+
+    $action = app(GetPhpInfo::class);
+    $result = $action->execute($this->server);
+
+    expect($result)->toMatchArray(['upload_max_filesize' => '32M', 'memory_limit' => '128M']);
+    expect(Cache::has(GetPhpInfo::cacheKey($this->server->id, '8.3')))->toBeTrue();
+});
+
+it('serves cached settings without SSH on repeated calls', function () {
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+
+    Cache::put(
+        GetPhpInfo::cacheKey($this->server->id, '8.3'),
+        ['upload_max_filesize' => '64M', 'memory_limit' => '256M'],
+        300,
+    );
+
+    $mockSsh = Mockery::mock(SshService::class);
+    $mockSsh->shouldNotReceive('connect');
+    $this->app->instance(SshService::class, $mockSsh);
+
+    $action = app(GetPhpInfo::class);
+    $result = $action->execute($this->server);
+
+    expect($result)->toBe(['upload_max_filesize' => '64M', 'memory_limit' => '256M']);
+});
+
+it('invalidates settings cache after a successful update', function () {
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+    $this->server->createService(ServiceType::Php, '8.3', true);
+
+    Cache::put(GetPhpInfo::cacheKey($this->server->id, '8.3'), ['upload_max_filesize' => '32M'], 300);
+
+    $sshMock = Mockery::mock(SshService::class);
+    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+    $sshMock->shouldReceive('connect')->andReturn($connMock);
+    $connMock->shouldReceive('sudo')->andReturn(
+        "upload_max_filesize = 32M\npost_max_size = 32M\nmemory_limit = 128M\nmax_execution_time = 30\n"
+    );
+    $connMock->shouldReceive('upload');
+    $connMock->shouldReceive('disconnect');
+    $this->app->instance(SshService::class, $sshMock);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [
+            'upload_max_filesize' => '64M',
+        ]);
+
+    expect(Cache::has(GetPhpInfo::cacheKey($this->server->id, '8.3')))->toBeFalse();
 });
 
 it('denies guest access to PHP index', function () {
