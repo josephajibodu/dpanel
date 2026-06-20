@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Models\Server;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,7 +48,7 @@ class UpdateSiteRequest extends FormRequest
             'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
-            'php_version' => ['sometimes', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
+            'php_version' => ['sometimes', 'string', Rule::in($this->getInstalledPhpVersions())],
             'auto_deploy' => ['sometimes', 'boolean'],
         ];
     }
@@ -65,6 +66,28 @@ class UpdateSiteRequest extends FormRequest
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
+            'php_version.in' => 'The selected PHP version is not installed on this server.',
         ];
+    }
+
+    /** @return array<int, string> */
+    private function getInstalledPhpVersions(): array
+    {
+        $server = $this->route('server');
+
+        if (! $server instanceof Server) {
+            return ['8.1', '8.2', '8.3', '8.4'];
+        }
+
+        $versions = $server->installedServices()
+            ->where('type', 'php')
+            ->get()
+            ->map(fn ($s) => $s->installed_version ?? $s->version)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return ! empty($versions) ? $versions : ['8.1', '8.2', '8.3', '8.4'];
     }
 }

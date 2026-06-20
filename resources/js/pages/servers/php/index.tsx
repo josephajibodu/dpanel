@@ -6,6 +6,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -92,6 +93,7 @@ export default function ServerPhpIndex({
     const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
     const [isSubmittingInstall, setIsSubmittingInstall] = useState(false);
     const [isSubmittingDefault, setIsSubmittingDefault] = useState<string | null>(null);
+    const [upgradeSites, setUpgradeSites] = useState(false);
 
     const [settingsForm, setSettingsForm] = useState({
         upload_max_filesize: '',
@@ -154,7 +156,7 @@ export default function ServerPhpIndex({
     const handleSetDefault = (version: string) => {
         if (!server?.id) return;
         setIsSubmittingDefault(version);
-        router.patch(teamPath(`/servers/${server.id}/php/default-version`), { version }, {
+        router.patch(teamPath(`/servers/${server.id}/php/default-version`), { version, upgrade_sites: upgradeSites }, {
             preserveScroll: true,
             onFinish: () => setIsSubmittingDefault(null),
         });
@@ -318,7 +320,18 @@ export default function ServerPhpIndex({
                                 one is used by default.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="upgrade-sites"
+                                    checked={upgradeSites}
+                                    onCheckedChange={(checked) => setUpgradeSites(!!checked)}
+                                    disabled={!serverIsReady}
+                                />
+                                <Label htmlFor="upgrade-sites" className="font-normal">
+                                    Also update all sites to the new default version
+                                </Label>
+                            </div>
                             <Table>
                                 <TableHeader>
                                     <TableRow>

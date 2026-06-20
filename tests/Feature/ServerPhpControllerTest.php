@@ -4,12 +4,15 @@ use App\Actions\ServerPhp\GetPhpInfo;
 use App\Enums\ConnectionStatus;
 use App\Enums\ServiceType;
 use App\Jobs\InstallPhpVersionJob;
+use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
@@ -214,4 +217,60 @@ it('validates set default version request', function () {
         ]);
 
     $response->assertSessionHasErrors('version');
+});
+
+it('dispatches SyncSiteNginxJob for all sites when upgrade_sites is true', function () {
+    Queue::fake();
+
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+    $this->server->createService(ServiceType::Php, '8.3', true);
+    $this->server->createService(ServiceType::Php, '8.2', false);
+
+    $site1 = Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
+    $site2 = Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
+
+    $sshMock = Mockery::mock(SshService::class);
+    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+    $sshMock->shouldReceive('connect')->once()->andReturn($connMock);
+    $connMock->shouldReceive('sudo')->once();
+    $connMock->shouldReceive('disconnect')->once();
+    $this->app->instance(SshService::class, $sshMock);
+
+    $response = $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
+            'version' => '8.2',
+            'upgrade_sites' => true,
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    Queue::assertPushed(SyncSiteNginxJob::class, 2);
+    expect($site1->fresh()->php_version)->toBe('8.2');
+    expect($site2->fresh()->php_version)->toBe('8.2');
+});
+
+it('does not dispatch SyncSiteNginxJob when upgrade_sites is false', function () {
+    Queue::fake();
+
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+    $this->server->createService(ServiceType::Php, '8.3', true);
+    $this->server->createService(ServiceType::Php, '8.2', false);
+
+    Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
+
+    $sshMock = Mockery::mock(SshService::class);
+    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+    $sshMock->shouldReceive('connect')->once()->andReturn($connMock);
+    $connMock->shouldReceive('sudo')->once();
+    $connMock->shouldReceive('disconnect')->once();
+    $this->app->instance(SshService::class, $sshMock);
+
+    $response = $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
+            'version' => '8.2',
+        ]);
+
+    $response->assertRedirect();
+    Queue::assertNotPushed(SyncSiteNginxJob::class);
 });

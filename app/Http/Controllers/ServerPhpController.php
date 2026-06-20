@@ -136,6 +136,7 @@ class ServerPhpController extends Controller
         }
 
         $version = $request->validated('version');
+        $upgradeSites = (bool) $request->validated('upgrade_sites', false);
 
         if ($server->service(ServiceType::Php, $version) === null) {
             return redirect()
@@ -144,15 +145,19 @@ class ServerPhpController extends Controller
         }
 
         try {
-            app(SetDefaultPhpVersion::class)->execute($server, $version);
+            app(SetDefaultPhpVersion::class)->execute($server, $version, $upgradeSites);
         } catch (\Throwable $e) {
             return redirect()
                 ->back()
                 ->with('error', $e->getMessage());
         }
 
+        $message = $upgradeSites
+            ? "Default PHP version set to {$version} and all sites are being updated."
+            : "Default PHP version set to {$version}.";
+
         return redirect()
             ->back()
-            ->with('success', "Default PHP version set to {$version}.");
+            ->with('success', $message);
     }
 }

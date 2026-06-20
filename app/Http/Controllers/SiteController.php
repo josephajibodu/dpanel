@@ -13,6 +13,7 @@ use App\Http\Resources\ServerDatabaseResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Http\Resources\SourceControlAccountResource;
+use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
@@ -126,6 +127,23 @@ class SiteController extends Controller
 
         $site->load('server.providerAccount');
 
+        $phpVersions = $server->installedServices()
+            ->where('type', 'php')
+            ->get()
+            ->map(fn ($s) => [
+                'value' => $s->installed_version ?? $s->version,
+                'label' => 'PHP '.($s->installed_version ?? $s->version),
+            ])
+            ->filter(fn ($v) => ! empty($v['value']))
+            ->unique('value')
+            ->values()
+            ->all();
+
+        if (empty($phpVersions)) {
+            $defaultVersion = $server->php_version ?? '8.3';
+            $phpVersions = [['value' => $defaultVersion, 'label' => 'PHP '.$defaultVersion]];
+        }
+
         return Inertia::render('sites/edit', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
@@ -138,12 +156,7 @@ class SiteController extends Controller
                 'value' => $provider->value,
                 'label' => $provider->label(),
             ]),
-            'phpVersions' => [
-                ['value' => '8.4', 'label' => 'PHP 8.4'],
-                ['value' => '8.3', 'label' => 'PHP 8.3'],
-                ['value' => '8.2', 'label' => 'PHP 8.2'],
-                ['value' => '8.1', 'label' => 'PHP 8.1'],
-            ],
+            'phpVersions' => $phpVersions,
         ]);
     }
 
@@ -151,7 +164,12 @@ class SiteController extends Controller
     {
         $this->authorize('update', $site);
 
+        $previousPhpVersion = $site->php_version;
         $site->update($request->validated());
+
+        if ($previousPhpVersion !== $site->php_version && $server->isReady()) {
+            SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
+        }
 
         return redirect()
             ->route('servers.sites.show', [$team, $server, $site])

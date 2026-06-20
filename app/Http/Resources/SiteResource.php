@@ -37,6 +37,8 @@ class SiteResource extends JsonResource
             'project_type_label' => $this->project_type?->label(),
             'php_version' => $this->php_version,
             'php_binary' => $this->php_version ? "php{$this->php_version}" : null,
+            'fpm_socket' => $this->php_version ? "/var/run/php/php{$this->php_version}-fpm.sock" : null,
+            'composer_binary' => $this->php_version ? "php{$this->php_version} /usr/local/bin/composer" : null,
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),

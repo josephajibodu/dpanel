@@ -10,6 +10,7 @@ use App\Exceptions\DeploymentFailedException;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Deployment\DeploymentStrategy;
+use App\Services\PhpRuntimeResolver;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -199,9 +200,11 @@ class DeploySiteJob implements ShouldQueue
     {
         $siteRoot = $site->rootPath();
         $webRoot = $site->webRoot();
+        $runtime = app(PhpRuntimeResolver::class)->forSite($site);
+        $phpBinary = $runtime['binary'];
+        $phpFpm = $runtime['fpm_service'];
+        $composerBin = $runtime['composer'];
         $phpVersion = $site->php_version ?? '8.4';
-        $phpBinary = "php{$phpVersion}";
-        $phpFpm = "php{$phpVersion}-fpm";
 
         // Preamble: set shell variables that default scripts use ($SITE_ROOT, $BRANCH, $PHP, etc.)
         $serverUser = config('server.user');
@@ -210,7 +213,7 @@ class DeploySiteJob implements ShouldQueue
         $preamble .= "WEB_ROOT='{$webRoot}'\n";
         $preamble .= "BRANCH='{$site->branch}'\n";
         $preamble .= "PHP='{$phpBinary}'\n";
-        $preamble .= "COMPOSER='composer'\n";
+        $preamble .= "COMPOSER='{$composerBin}'\n";
         $preamble .= "PHP_FPM='{$phpFpm}'\n";
         $preamble .= "SERVER_USER='{$serverUser}'\n";
         $preamble .= "WEB_USER='{$webUser}'\n\n";
