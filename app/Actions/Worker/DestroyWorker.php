@@ -36,10 +36,9 @@ class DestroyWorker
             $prefix = config('supervisor.file_prefix');
             $filename = "{$prefix}-{$worker->id}.conf";
 
-            $connection->sudo(
-                "rm -f {$confPath}/{$filename} && supervisorctl reread && supervisorctl update",
-                60
-            );
+            $connection->sudo("rm -f {$confPath}/{$filename}", 30);
+            $connection->sudo('supervisorctl reread', 30);
+            $connection->sudo('supervisorctl update', 30);
         } finally {
             $connection->disconnect();
         }

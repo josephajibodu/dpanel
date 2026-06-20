@@ -61,10 +61,9 @@ class CreateWorker
             $tmpPath = '/tmp/'.$filename;
 
             $connection->upload($content, $tmpPath);
-            $connection->sudo(
-                "mv {$tmpPath} {$confPath}/{$filename} && supervisorctl reread && supervisorctl update",
-                60
-            );
+            $connection->sudo("mv {$tmpPath} {$confPath}/{$filename}", 30);
+            $connection->sudo('supervisorctl reread', 30);
+            $connection->sudo('supervisorctl update', 30);
 
             $status = $worker->auto_start ? 'active' : 'stopped';
             $worker->update(['status' => $status]);
