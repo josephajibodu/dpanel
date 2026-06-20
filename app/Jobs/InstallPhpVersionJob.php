@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\ServerPhp\InstallPhpVersion;
 use App\Enums\ServiceStatus;
+use App\Events\ServerPhpUpdated;
 use App\Models\Service;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -33,9 +34,13 @@ class InstallPhpVersionJob implements ShouldQueue
         if ($version === null || $version === '') {
             Log::error('InstallPhpVersionJob: service has no version', ['service_id' => $this->service->id]);
             $this->service->update(['status' => ServiceStatus::Failed]);
+            broadcast(new ServerPhpUpdated($server));
 
             return;
         }
+
+        $this->service->update(['status' => ServiceStatus::Installing]);
+        broadcast(new ServerPhpUpdated($server));
 
         try {
             $action->execute($server, $version);
@@ -51,6 +56,8 @@ class InstallPhpVersionJob implements ShouldQueue
             ]);
             $this->service->update(['status' => ServiceStatus::Failed]);
             throw $e;
+        } finally {
+            broadcast(new ServerPhpUpdated($server));
         }
     }
 }

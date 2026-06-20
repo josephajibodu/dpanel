@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\ServerPhp\GetPhpInfo;
 use App\Actions\ServerPhp\SetDefaultPhpVersion;
-use App\Actions\ServerPhp\UpdatePhpSettings;
 use App\Enums\ServiceType;
 use App\Http\Requests\InstallPhpVersionRequest;
 use App\Http\Requests\SetDefaultPhpVersionRequest;
 use App\Http\Requests\UpdatePhpSettingsRequest;
 use App\Http\Resources\ServerResource;
 use App\Jobs\InstallPhpVersionJob;
+use App\Jobs\UpdatePhpSettingsJob;
 use App\Models\Server;
 use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
@@ -21,18 +20,16 @@ class ServerPhpController extends Controller
 {
     private const AVAILABLE_VERSIONS = ['8.1', '8.2', '8.3', '8.4'];
 
-    public function __construct(
-        private GetPhpInfo $getPhpInfo
-    ) {}
-
     public function index(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
 
-        $phpServices = $server->installedServices()
+        $phpServicesCollection = $server->installedServices()
             ->where('type', 'php')
             ->orderBy('version')
-            ->get()
+            ->get();
+
+        $phpServices = $phpServicesCollection
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'version' => $s->version,
@@ -45,13 +42,18 @@ class ServerPhpController extends Controller
 
         $defaultVersion = $server->getDefaultPhpVersion() ?? '';
 
-        $installedVersions = collect($phpServices)
-            ->map(fn ($s) => $s['installed_version'] ?? $s['version'])
+        $installedVersions = $phpServicesCollection
+            ->map(fn ($s) => $s->installed_version ?? $s->version)
             ->filter()
             ->unique()
             ->sort()
             ->values()
             ->all();
+
+        $defaultService = $phpServicesCollection->firstWhere('is_default', true);
+        $settings = $defaultService?->type_data['settings'] ?? null;
+        $settingsSyncStatus = $defaultService?->type_data['settings_sync_status'] ?? null;
+        $settingsSyncError = $defaultService?->type_data['settings_sync_error'] ?? null;
 
         return Inertia::render('servers/php/index', [
             'server' => new ServerResource($server),
@@ -60,7 +62,9 @@ class ServerPhpController extends Controller
             'installedVersions' => $installedVersions,
             'defaultVersion' => $defaultVersion,
             'availableVersions' => self::AVAILABLE_VERSIONS,
-            'settings' => Inertia::defer(fn () => $this->getPhpInfo->execute($server)),
+            'settings' => $settings,
+            'settingsSyncStatus' => $settingsSyncStatus,
+            'settingsSyncError' => $settingsSyncError,
         ]);
     }
 
@@ -74,22 +78,33 @@ class ServerPhpController extends Controller
                 ->with('error', 'Server must be active and connected to update PHP settings.');
         }
 
-        try {
-            app(UpdatePhpSettings::class)->execute($server, $request->validated());
-        } catch (\Throwable $e) {
+        $version = $server->getDefaultPhpVersion();
+        if ($version === null || $version === '') {
             return redirect()
                 ->back()
-                ->with('error', $e->getMessage());
+                ->with('error', 'No default PHP version configured.');
         }
 
-        $version = $server->getDefaultPhpVersion();
-        if ($version !== null && $version !== '') {
-            GetPhpInfo::invalidateCache($server->id, $version);
+        $phpService = $server->service(ServiceType::Php, $version);
+        if ($phpService === null) {
+            return redirect()
+                ->back()
+                ->with('error', "PHP {$version} service not found on this server.");
         }
+
+        $phpService->update([
+            'type_data' => array_merge($phpService->type_data ?? [], [
+                'settings' => $request->validated(),
+                'settings_sync_status' => 'pending',
+                'settings_sync_error' => null,
+            ]),
+        ]);
+
+        UpdatePhpSettingsJob::dispatch($phpService);
 
         return redirect()
             ->back()
-            ->with('success', 'PHP settings updated.');
+            ->with('success', 'PHP settings queued for update.');
     }
 
     public function installVersion(InstallPhpVersionRequest $request, Team $team, Server $server): RedirectResponse

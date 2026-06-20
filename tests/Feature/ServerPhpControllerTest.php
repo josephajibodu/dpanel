@@ -4,7 +4,9 @@ use App\Actions\ServerPhp\GetPhpInfo;
 use App\Enums\ConnectionStatus;
 use App\Enums\ServiceType;
 use App\Jobs\InstallPhpVersionJob;
+use App\Jobs\SetDefaultPhpVersionJob;
 use App\Jobs\SyncSiteNginxJob;
+use App\Jobs\UpdatePhpSettingsJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\Team;
@@ -102,28 +104,31 @@ it('serves cached settings without SSH on repeated calls', function () {
     expect($result)->toBe(['upload_max_filesize' => '64M', 'memory_limit' => '256M']);
 });
 
-it('invalidates settings cache after a successful update', function () {
+it('dispatches UpdatePhpSettingsJob and stores pending status in type_data', function () {
+    Queue::fake();
+
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
-    $this->server->createService(ServiceType::Php, '8.3', true);
+    $phpService = $this->server->createService(ServiceType::Php, '8.3', true);
 
-    Cache::put(GetPhpInfo::cacheKey($this->server->id, '8.3'), ['upload_max_filesize' => '32M'], 300);
+    $mockSsh = Mockery::mock(SshService::class);
+    $mockSsh->shouldNotReceive('connect');
+    $this->app->instance(SshService::class, $mockSsh);
 
-    $sshMock = Mockery::mock(SshService::class);
-    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
-    $sshMock->shouldReceive('connect')->andReturn($connMock);
-    $connMock->shouldReceive('sudo')->andReturn(
-        "upload_max_filesize = 32M\npost_max_size = 32M\nmemory_limit = 128M\nmax_execution_time = 30\n"
-    );
-    $connMock->shouldReceive('upload');
-    $connMock->shouldReceive('disconnect');
-    $this->app->instance(SshService::class, $sshMock);
-
-    $this->actingAs($this->user)
+    $response = $this->actingAs($this->user)
         ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [
             'upload_max_filesize' => '64M',
+            'max_execution_time' => 30,
         ]);
 
-    expect(Cache::has(GetPhpInfo::cacheKey($this->server->id, '8.3')))->toBeFalse();
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    Queue::assertPushed(UpdatePhpSettingsJob::class, fn ($job) => $job->phpService->id === $phpService->id);
+
+    $phpService->refresh();
+    expect($phpService->type_data['settings_sync_status'])->toBe('pending');
+    expect($phpService->type_data['settings']['upload_max_filesize'])->toBe('64M');
+    expect($phpService->type_data['settings']['max_execution_time'])->toBe(30);
 });
 
 it('denies guest access to PHP index', function () {
@@ -229,13 +234,6 @@ it('dispatches SyncSiteNginxJob for all sites when upgrade_sites is true', funct
     $site1 = Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
     $site2 = Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
 
-    $sshMock = Mockery::mock(SshService::class);
-    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
-    $sshMock->shouldReceive('connect')->once()->andReturn($connMock);
-    $connMock->shouldReceive('sudo')->once();
-    $connMock->shouldReceive('disconnect')->once();
-    $this->app->instance(SshService::class, $sshMock);
-
     $response = $this->actingAs($this->user)
         ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
             'version' => '8.2',
@@ -245,6 +243,7 @@ it('dispatches SyncSiteNginxJob for all sites when upgrade_sites is true', funct
     $response->assertRedirect();
     $response->assertSessionHas('success');
 
+    Queue::assertPushed(SetDefaultPhpVersionJob::class, 1);
     Queue::assertPushed(SyncSiteNginxJob::class, 2);
     expect($site1->fresh()->php_version)->toBe('8.2');
     expect($site2->fresh()->php_version)->toBe('8.2');
@@ -259,18 +258,12 @@ it('does not dispatch SyncSiteNginxJob when upgrade_sites is false', function ()
 
     Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
 
-    $sshMock = Mockery::mock(SshService::class);
-    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
-    $sshMock->shouldReceive('connect')->once()->andReturn($connMock);
-    $connMock->shouldReceive('sudo')->once();
-    $connMock->shouldReceive('disconnect')->once();
-    $this->app->instance(SshService::class, $sshMock);
-
     $response = $this->actingAs($this->user)
         ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", [
             'version' => '8.2',
         ]);
 
     $response->assertRedirect();
+    Queue::assertPushed(SetDefaultPhpVersionJob::class, 1);
     Queue::assertNotPushed(SyncSiteNginxJob::class);
 });

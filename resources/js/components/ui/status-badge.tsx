@@ -6,8 +6,10 @@ const STATUS_COLORS: Record<string, string> = {
     ready: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
     enabled: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
     installed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+    synced: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
     installing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     creating: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    syncing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
     stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
     disabled: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
@@ -17,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
     deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
 };
 
-const PULSING_STATUSES = new Set(['installing', 'creating', 'pending', 'deleting']);
+const PULSING_STATUSES = new Set(['installing', 'creating', 'pending', 'deleting', 'syncing']);
 
 interface StatusBadgeProps {
     status: string;

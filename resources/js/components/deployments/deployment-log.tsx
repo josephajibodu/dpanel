@@ -58,14 +58,14 @@ export function DeploymentLog({ logs, isDeploying = false, className }: Deployme
     }
 
     return (
-        <div className={cn('bg-muted font-mono text-sm', className)}>
+        <div className={cn('bg-muted font-log text-[13px] leading-relaxed', className)}>
             <div className="max-h-[600px] overflow-y-auto p-4">
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                     {renderedLogs.map((log, index) => (
                         <div
                             key={index}
                             className={cn(
-                                'whitespace-pre-wrap break-words [&_span]:text-inherit',
+                                'whitespace-pre-wrap break-words font-log [&_span]:text-inherit',
                                 getLineColor(log.type),
                             )}
                             dangerouslySetInnerHTML={{ __html: log.html }}

@@ -3,19 +3,16 @@
 namespace App\Actions\ServerPhp;
 
 use App\Enums\ServiceType;
+use App\Jobs\SetDefaultPhpVersionJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
+use App\Models\Service;
 use App\Models\Site;
-use App\Services\Ssh\SshService;
 use RuntimeException;
 
 class SetDefaultPhpVersion
 {
-    public function __construct(
-        private SshService $sshService
-    ) {}
-
-    public function execute(Server $server, string $version, bool $upgradeSites = false): void
+    public function execute(Server $server, string $version, bool $upgradeSites = false): Service
     {
         if (! $server->isReady()) {
             throw new RuntimeException("Server {$server->id} is not ready.");
@@ -33,13 +30,7 @@ class SetDefaultPhpVersion
 
         $server->update(['php_version' => $version]);
 
-        $connection = $this->sshService->connect($server);
-
-        try {
-            $connection->sudo("update-alternatives --set php /usr/bin/php{$version} 2>/dev/null || true", 10);
-        } finally {
-            $connection->disconnect();
-        }
+        SetDefaultPhpVersionJob::dispatch($phpService);
 
         if ($upgradeSites) {
             $server->sites()
@@ -49,5 +40,7 @@ class SetDefaultPhpVersion
                     SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
                 });
         }
+
+        return $phpService;
     }
 }
