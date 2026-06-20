@@ -1,5 +1,6 @@
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/status-badge';
 import {
     Card,
     CardContent,
@@ -59,6 +60,7 @@ import {
     RefreshCwIcon,
     Trash2Icon,
 } from 'lucide-react';
+
 import { useCallback, useState } from 'react';
 
 const CRON_FREQUENCIES: { value: string; label: string }[] = [
@@ -122,8 +124,8 @@ export function ProcessesPanel({
     const [logsContent, setLogsContent] = useState('');
     const [logsLoading, setLogsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeletingWorker, setIsDeletingWorker] = useState(false);
-    const [isDeletingCron, setIsDeletingCron] = useState(false);
+    const [deletingWorkerIds, setDeletingWorkerIds] = useState<number[]>([]);
+    const [deletingCronIds, setDeletingCronIds] = useState<number[]>([]);
 
     const defaultSiteId: number | '' = site ? site.id : '';
 
@@ -243,14 +245,14 @@ export function ProcessesPanel({
 
     const confirmDeleteWorker = () => {
         if (!server?.id || !workerToDelete) return;
-        setIsDeletingWorker(true);
-        router.delete(teamPath(`/servers/${server.id}/workers/${workerToDelete.id}`), {
+        const id = workerToDelete.id;
+        setDeleteWorkerOpen(false);
+        setWorkerToDelete(null);
+        setDeletingWorkerIds((prev) => [...prev, id]);
+        router.delete(teamPath(`/servers/${server.id}/workers/${id}`), {
             preserveScroll: true,
-            onFinish: () => {
-                setIsDeletingWorker(false);
-                setDeleteWorkerOpen(false);
-                setWorkerToDelete(null);
-            },
+            onSuccess: () => setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -318,14 +320,14 @@ export function ProcessesPanel({
 
     const confirmDeleteCron = () => {
         if (!server?.id || !cronToDelete) return;
-        setIsDeletingCron(true);
-        router.delete(teamPath(`/servers/${server.id}/cron-jobs/${cronToDelete.id}`), {
+        const id = cronToDelete.id;
+        setDeleteCronOpen(false);
+        setCronToDelete(null);
+        setDeletingCronIds((prev) => [...prev, id]);
+        router.delete(teamPath(`/servers/${server.id}/cron-jobs/${id}`), {
             preserveScroll: true,
-            onFinish: () => {
-                setIsDeletingCron(false);
-                setDeleteCronOpen(false);
-                setCronToDelete(null);
-            },
+            onSuccess: () => setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -406,7 +408,11 @@ export function ProcessesPanel({
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    workers.map((w) => (
+                                    workers.map((w) => {
+                                        const isWorkerDeleting =
+                                            deletingWorkerIds.includes(w.id) ||
+                                            w.status === 'deleting';
+                                        return (
                                         <TableRow key={w.id}>
                                             <TableCell className="font-medium">{w.name}</TableCell>
                                             <TableCell className="max-w-[200px] truncate font-mono text-sm">
@@ -421,18 +427,10 @@ export function ProcessesPanel({
                                                 </TableCell>
                                             )}
                                             <TableCell>
-                                                <span
-                                                    className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${
-                                                        w.status === 'active'
-                                                            ? 'bg-green-500/15 text-green-700 dark:text-green-400'
-                                                            : 'bg-muted text-muted-foreground'
-                                                    }`}
-                                                >
-                                                    {w.status !== 'active' && (
-                                                        <Loader2Icon className="h-3 w-3 animate-spin" />
-                                                    )}
-                                                    {w.status}
-                                                </span>
+                                                <StatusBadge
+                                                    status={isWorkerDeleting ? 'deleting' : w.status}
+                                                    label={isWorkerDeleting ? 'Deleting...' : undefined}
+                                                />
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
                                                 {w.numprocs}
@@ -443,6 +441,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() => openEditWorker(w)}
                                                         aria-label="Edit worker"
                                                     >
@@ -452,6 +451,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() => fetchLogs(w)}
                                                         aria-label="View logs"
                                                     >
@@ -461,6 +461,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() =>
                                                             router.post(
                                                                 teamPath(`/servers/${server.id}/workers/${w.id}/start`),
@@ -476,6 +477,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() =>
                                                             router.post(
                                                                 teamPath(`/servers/${server.id}/workers/${w.id}/stop`),
@@ -491,6 +493,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() =>
                                                             router.post(
                                                                 teamPath(`/servers/${server.id}/workers/${w.id}/restart`),
@@ -506,6 +509,7 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isWorkerDeleting}
                                                         onClick={() => {
                                                             setWorkerToDelete(w);
                                                             setDeleteWorkerOpen(true);
@@ -517,7 +521,8 @@ export function ProcessesPanel({
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -569,7 +574,11 @@ export function ProcessesPanel({
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    cronJobs.map((c) => (
+                                    cronJobs.map((c) => {
+                                        const isCronDeleting =
+                                            deletingCronIds.includes(c.id) ||
+                                            c.status === 'deleting';
+                                        return (
                                         <TableRow key={c.id}>
                                             <TableCell className="max-w-[200px] truncate font-mono text-sm">
                                                 {truncate(c.command, 40)}
@@ -586,15 +595,14 @@ export function ProcessesPanel({
                                                 </TableCell>
                                             )}
                                             <TableCell>
-                                                <span
-                                                    className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
-                                                        c.hidden
-                                                            ? 'bg-muted text-muted-foreground'
-                                                            : 'bg-green-500/15 text-green-700 dark:text-green-400'
-                                                    }`}
-                                                >
-                                                    {c.hidden ? 'Disabled' : 'Enabled'}
-                                                </span>
+                                                {isCronDeleting ? (
+                                                    <StatusBadge status="deleting" label="Deleting..." />
+                                                ) : (
+                                                    <StatusBadge
+                                                        status={c.hidden ? 'disabled' : 'enabled'}
+                                                        label={c.hidden ? 'Disabled' : 'Enabled'}
+                                                    />
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
@@ -602,12 +610,13 @@ export function ProcessesPanel({
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isCronDeleting}
                                                         onClick={() => openEditCron(c)}
                                                         aria-label="Edit cron job"
                                                     >
                                                         <PencilIcon className="h-4 w-4" />
                                                     </Button>
-                                                    {c.hidden ? (
+                                                    {!isCronDeleting && (c.hidden ? (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -635,11 +644,12 @@ export function ProcessesPanel({
                                                         >
                                                             Disable
                                                         </Button>
-                                                    )}
+                                                    ))}
                                                     <Button
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isCronDeleting}
                                                         onClick={() => {
                                                             setCronToDelete(c);
                                                             setDeleteCronOpen(true);
@@ -651,7 +661,8 @@ export function ProcessesPanel({
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -1157,7 +1168,6 @@ export function ProcessesPanel({
                 }
                 confirmLabel="Delete worker"
                 onConfirm={confirmDeleteWorker}
-                loading={isDeletingWorker}
                 variant="destructive"
             />
 
@@ -1172,7 +1182,6 @@ export function ProcessesPanel({
                 }
                 confirmLabel="Delete cron job"
                 onConfirm={confirmDeleteCron}
-                loading={isDeletingCron}
                 variant="destructive"
             />
         </>

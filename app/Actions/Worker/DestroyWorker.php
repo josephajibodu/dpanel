@@ -2,6 +2,7 @@
 
 namespace App\Actions\Worker;
 
+use App\Events\ServerProcessesUpdated;
 use App\Jobs\DestroyWorkerJob;
 use App\Models\Worker;
 use App\Services\Ssh\SshService;
@@ -15,6 +16,8 @@ class DestroyWorker
 
     public function delete(Worker $worker): void
     {
+        $worker->update(['status' => 'deleting']);
+        event(new ServerProcessesUpdated($worker->server_id));
         DestroyWorkerJob::dispatch($worker);
     }
 

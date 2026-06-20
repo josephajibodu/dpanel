@@ -25,6 +25,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -40,7 +41,6 @@ import {
     DatabaseIcon,
     EyeIcon,
     EyeOffIcon,
-    Loader2Icon,
     PencilIcon,
     PlusIcon,
     Trash2Icon,
@@ -55,24 +55,6 @@ interface Props {
     databaseUsers: { data: DatabaseUser[] };
 }
 
-function StatusBadge({ status }: { status: string }) {
-    const styles: Record<string, string> = {
-        pending: 'bg-muted text-muted-foreground',
-        ready: 'bg-green-500/15 text-green-700 dark:text-green-400',
-        failed: 'bg-destructive/15 text-destructive',
-    };
-    const label = status.charAt(0).toUpperCase() + status.slice(1);
-    const isPending = status === 'pending';
-
-    return (
-        <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${styles[status] ?? 'bg-muted text-muted-foreground'}`}
-        >
-            {isPending && <Loader2Icon className="h-3 w-3 animate-spin" />}
-            {label}
-        </span>
-    );
-}
 
 export default function ServerDatabasesIndex({
     server: serverProp,
@@ -99,8 +81,8 @@ export default function ServerDatabasesIndex({
     const [dbToDelete, setDbToDelete] = useState<ServerDatabase | null>(null);
     const [userToDelete, setUserToDelete] = useState<DatabaseUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeletingDb, setIsDeletingDb] = useState(false);
-    const [isDeletingUser, setIsDeletingUser] = useState(false);
+    const [deletingDbIds, setDeletingDbIds] = useState<number[]>([]);
+    const [deletingUserIds, setDeletingUserIds] = useState<number[]>([]);
 
     const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
     const [showDbPassword, setShowDbPassword] = useState(false);
@@ -220,34 +202,28 @@ export default function ServerDatabasesIndex({
 
     const confirmDeleteDb = () => {
         if (!server?.id || !dbToDelete) return;
-        setIsDeletingDb(true);
-        router.delete(
-            teamPath(`/servers/${server.id}/databases/${dbToDelete.id}`),
-            {
-                preserveScroll: true,
-                onFinish: () => {
-                    setIsDeletingDb(false);
-                    setDeleteDbOpen(false);
-                    setDbToDelete(null);
-                },
-            },
-        );
+        const id = dbToDelete.id;
+        setDeleteDbOpen(false);
+        setDbToDelete(null);
+        setDeletingDbIds((prev) => [...prev, id]);
+        router.delete(teamPath(`/servers/${server.id}/databases/${id}`), {
+            preserveScroll: true,
+            onSuccess: () => setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
+        });
     };
 
     const confirmDeleteUser = () => {
         if (!server?.id || !userToDelete) return;
-        setIsDeletingUser(true);
-        router.delete(
-            teamPath(`/servers/${server.id}/database-users/${userToDelete.id}`),
-            {
-                preserveScroll: true,
-                onFinish: () => {
-                    setIsDeletingUser(false);
-                    setDeleteUserOpen(false);
-                    setUserToDelete(null);
-                },
-            },
-        );
+        const id = userToDelete.id;
+        setDeleteUserOpen(false);
+        setUserToDelete(null);
+        setDeletingUserIds((prev) => [...prev, id]);
+        router.delete(teamPath(`/servers/${server.id}/database-users/${id}`), {
+            preserveScroll: true,
+            onSuccess: () => setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
+        });
     };
 
     return (
@@ -316,7 +292,11 @@ export default function ServerDatabasesIndex({
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        dbList.map((db) => (
+                                        dbList.map((db) => {
+                                            const isDeleting =
+                                                deletingDbIds.includes(db.id) ||
+                                                db.status === 'deleting';
+                                            return (
                                             <TableRow key={db.id}>
                                                 <TableCell className="font-medium font-mono">
                                                     {db.name}
@@ -328,16 +308,22 @@ export default function ServerDatabasesIndex({
                                                     {db.collation ?? '—'}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <StatusBadge status={db.status} />
+                                                    <StatusBadge
+                                                        status={isDeleting ? 'deleting' : db.status}
+                                                        label={isDeleting ? 'Deleting...' : undefined}
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
                                                     <Button
                                                         variant="outline"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        disabled={isDeleting}
                                                         onClick={() => {
-                                                            setDbToDelete(db);
-                                                            setDeleteDbOpen(true);
+                                                            if (!isDeleting) {
+                                                                setDbToDelete(db);
+                                                                setDeleteDbOpen(true);
+                                                            }
                                                         }}
                                                         aria-label="Delete database"
                                                     >
@@ -345,7 +331,8 @@ export default function ServerDatabasesIndex({
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
@@ -398,7 +385,11 @@ export default function ServerDatabasesIndex({
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        userList.map((user) => (
+                                        userList.map((user) => {
+                                            const isDeleting =
+                                                deletingUserIds.includes(user.id) ||
+                                                user.status === 'deleting';
+                                            return (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-mono font-medium">
                                                     {user.username}
@@ -410,7 +401,10 @@ export default function ServerDatabasesIndex({
                                                     {(user.databases ?? []).join(', ') || '—'}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <StatusBadge status={user.status} />
+                                                    <StatusBadge
+                                                        status={isDeleting ? 'deleting' : user.status}
+                                                        label={isDeleting ? 'Deleting...' : undefined}
+                                                    />
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1">
@@ -418,9 +412,8 @@ export default function ServerDatabasesIndex({
                                                             variant="outline"
                                                             size="icon"
                                                             className="h-8 w-8"
-                                                            onClick={() =>
-                                                                openEditUser(user)
-                                                            }
+                                                            disabled={isDeleting}
+                                                            onClick={() => openEditUser(user)}
                                                             aria-label="Edit user"
                                                         >
                                                             <PencilIcon className="h-4 w-4" />
@@ -429,6 +422,7 @@ export default function ServerDatabasesIndex({
                                                             variant="outline"
                                                             size="icon"
                                                             className="h-8 w-8"
+                                                            disabled={isDeleting}
                                                             onClick={() => {
                                                                 setUserToDelete(user);
                                                                 setDeleteUserOpen(true);
@@ -440,7 +434,8 @@ export default function ServerDatabasesIndex({
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
@@ -808,7 +803,6 @@ export default function ServerDatabasesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteDb}
-                loading={isDeletingDb}
             />
 
             <ConfirmDialog
@@ -819,7 +813,6 @@ export default function ServerDatabasesIndex({
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteUser}
-                loading={isDeletingUser}
             />
         </AppLayout>
     );

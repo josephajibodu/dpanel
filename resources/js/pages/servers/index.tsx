@@ -66,7 +66,7 @@ export default function ServersIndex({ servers }: Props) {
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [serverToDelete, setServerToDelete] = useState<Server | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [deletingIds, setDeletingIds] = useState<number[]>([]);
     const [search, setSearch] = useState('');
 
     const filteredServers = useMemo(() => {
@@ -88,13 +88,15 @@ export default function ServersIndex({ servers }: Props) {
     const confirmDelete = () => {
         if (!serverToDelete) return;
 
-        setIsDeleting(true);
-        router.delete(teamPath(`/servers/${serverToDelete.id}`), {
-            onFinish: () => {
-                setIsDeleting(false);
-                setDeleteDialogOpen(false);
-                setServerToDelete(null);
-            },
+        const id = serverToDelete.id;
+        setDeleteDialogOpen(false);
+        setServerToDelete(null);
+        setDeletingIds((prev) => [...prev, id]);
+
+        router.delete(teamPath(`/servers/${id}`), {
+            preserveScroll: true,
+            onSuccess: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
+            onError: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -180,7 +182,11 @@ export default function ServersIndex({ servers }: Props) {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredServers.map((server) => (
+                                        filteredServers.map((server) => {
+                                            const isDeleting =
+                                                deletingIds.includes(server.id) ||
+                                                server.status === 'deleting';
+                                            return (
                                             <TableRow key={server.id}>
                                                 <TableCell className="font-mono text-muted-foreground text-xs">
                                                     {server.id}
@@ -201,9 +207,9 @@ export default function ServersIndex({ servers }: Props) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <ServerStatusBadge
-                                                        status={server.status}
-                                                        statusLabel={server.status_label}
-                                                        statusColor={server.status_color}
+                                                        status={isDeleting ? 'deleting' : server.status}
+                                                        statusLabel={isDeleting ? 'Deleting...' : server.status_label}
+                                                        statusColor={isDeleting ? 'orange' : server.status_color}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -226,7 +232,7 @@ export default function ServersIndex({ servers }: Props) {
                                                                         View Details
                                                                     </Link>
                                                                 </DropdownMenuItem>
-                                                                {server.status !== 'deleting' && (
+                                                                {!isDeleting && (
                                                                     <DropdownMenuItem
                                                                         onClick={() => handleDelete(server)}
                                                                         className="text-destructive focus:text-destructive"
@@ -240,7 +246,8 @@ export default function ServersIndex({ servers }: Props) {
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
@@ -264,7 +271,6 @@ export default function ServersIndex({ servers }: Props) {
                 confirmLabel="Delete Server"
                 variant="destructive"
                 onConfirm={confirmDelete}
-                loading={isDeleting}
             />
         </AppLayout>
     );

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Database;
 
+use App\Events\ServerDatabasesUpdated;
 use App\Jobs\DestroyDatabaseUserJob;
 use App\Models\DatabaseUser;
 use App\Services\Ssh\SshConnection;
@@ -18,6 +19,11 @@ class DestroyDatabaseUser
 
     public function delete(DatabaseUser $databaseUser): void
     {
+        $databaseUser->update(['status' => 'deleting']);
+        $server = $databaseUser->server;
+        if ($server) {
+            event(new ServerDatabasesUpdated($server));
+        }
         DestroyDatabaseUserJob::dispatch($databaseUser);
     }
 
