@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Resources\SshKeyResource;
+use App\Models\Server;
 use App\Models\SshKey;
 use App\Models\Team;
 use App\Models\User;
@@ -57,6 +59,26 @@ it('rejects duplicate ssh keys', function () {
         ->assertSessionHasErrors('public_key');
 
     $this->assertDatabaseCount('ssh_keys', 1);
+});
+
+it('serializes synced_at on attached servers as an iso8601 string', function () {
+    $sshKey = SshKey::factory()->create(['user_id' => $this->user->id]);
+    $server = Server::factory()->create([
+        'team_id' => $this->team->id,
+        'user_id' => $this->user->id,
+    ]);
+
+    $sshKey->servers()->attach($server->id, [
+        'status' => 'synced',
+        'synced_at' => now(),
+    ]);
+
+    $sshKey->load('servers:id,ulid,name');
+
+    $resource = SshKeyResource::make($sshKey)->resolve();
+
+    expect($resource['servers'][0]['synced_at'])->toBeString()
+        ->and($resource['servers'][0]['status'])->toBe('synced');
 });
 
 it('deletes an ssh key under the team prefix', function () {

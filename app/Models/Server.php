@@ -158,6 +158,7 @@ class Server extends Model
     public function sshKeys(): BelongsToMany
     {
         return $this->belongsToMany(SshKey::class, 'server_ssh_key')
+            ->using(ServerSshKey::class)
             ->withPivot(['status', 'synced_at'])
             ->withTimestamps();
     }
