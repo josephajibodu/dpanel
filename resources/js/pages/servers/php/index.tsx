@@ -467,18 +467,18 @@ export default function ServerPhpIndex({
                         <CardContent>
                             <form
                                 onSubmit={handleInstallVersion}
-                                className="flex flex-col gap-4 sm:flex-row sm:items-end"
+                                className="space-y-2"
                             >
-                                <div className="space-y-2 sm:min-w-[120px]">
-                                    <Label htmlFor="install-version">
-                                        Version
-                                    </Label>
+                                <Label htmlFor="install-version">
+                                    Version
+                                </Label>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <Select
                                         value={installVersion}
                                         onValueChange={setInstallVersion}
                                         disabled={!serverIsReady}
                                     >
-                                        <SelectTrigger id="install-version">
+                                        <SelectTrigger id="install-version" className="w-full sm:w-[200px]">
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -500,25 +500,26 @@ export default function ServerPhpIndex({
                                             )}
                                         </SelectContent>
                                     </Select>
-                                    {errors?.version && (
-                                        <p className="text-destructive text-sm">
-                                            {errors.version}
-                                        </p>
-                                    )}
+                                    <Button
+                                        type="submit"
+                                        className="shrink-0"
+                                        disabled={
+                                            !serverIsReady ||
+                                            !installVersion ||
+                                            versionsToInstall.length === 0 ||
+                                            isSubmittingInstall
+                                        }
+                                    >
+                                        {isSubmittingInstall
+                                            ? 'Installing…'
+                                            : 'Install'}
+                                    </Button>
                                 </div>
-                                <Button
-                                    type="submit"
-                                    disabled={
-                                        !serverIsReady ||
-                                        !installVersion ||
-                                        versionsToInstall.length === 0 ||
-                                        isSubmittingInstall
-                                    }
-                                >
-                                    {isSubmittingInstall
-                                        ? 'Installing…'
-                                        : 'Install'}
-                                </Button>
+                                {errors?.version && (
+                                    <p className="text-destructive text-sm">
+                                        {errors.version}
+                                    </p>
+                                )}
                             </form>
                         </CardContent>
                     </Card>
