@@ -4,6 +4,7 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Jobs\InstallStackJob;
 use App\Models\Server;
+use App\Notifications\ServerProvisioningFailed;
 use App\Services\Provisioning\DatabaseService;
 use App\Services\Provisioning\FinalTouchesService;
 use App\Services\Provisioning\NginxService;
@@ -13,6 +14,7 @@ use App\Services\Provisioning\StackInstaller;
 use App\Services\Provisioning\SystemService;
 use App\Services\Ssh\SshRetryHandler;
 use App\Services\Ssh\SshService;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Mockery\MockInterface;
 
@@ -86,4 +88,29 @@ it('orchestrates provisioning steps in order', function () {
 
     expect($server->status)->toBe(ServerStatus::Active)
         ->and($server->provisioning_step)->toBe(ProvisioningStep::Finished);
+});
+
+it('stores the error message and sends a notification when the job fails', function () {
+    Notification::fake();
+
+    $server = Server::factory()->provisioning()->create([
+        'provisioning_step' => ProvisioningStep::InstallingNginx,
+    ]);
+
+    $exception = new \RuntimeException('SSH connection timed out');
+
+    $job = new InstallStackJob($server);
+    $job->failed($exception);
+
+    $server->refresh();
+
+    expect($server->status)->toBe(ServerStatus::Error)
+        ->and($server->error_message)->toBe('SSH connection timed out');
+
+    Notification::assertSentTo(
+        $server->user,
+        ServerProvisioningFailed::class,
+        fn (ServerProvisioningFailed $notification) => $notification->server->is($server)
+            && $notification->errorMessage === 'SSH connection timed out'
+    );
 });

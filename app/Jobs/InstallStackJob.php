@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
+use App\Notifications\ServerProvisioningFailed;
 use App\Services\Provisioning\StackInstaller;
 use App\Services\Ssh\SshRetryHandler;
 use App\Services\Ssh\SshService;
@@ -69,7 +70,10 @@ class InstallStackJob implements ShouldQueue
                 ]
             );
 
-            $this->server->update(['status' => ServerStatus::Error]);
+            $this->server->update([
+                'status' => ServerStatus::Error,
+                'error_message' => $e->getMessage(),
+            ]);
 
             throw $e;
         }
@@ -95,6 +99,11 @@ class InstallStackJob implements ShouldQueue
             ]
         );
 
-        $this->server->update(['status' => ServerStatus::Error]);
+        $this->server->update([
+            'status' => ServerStatus::Error,
+            'error_message' => $exception->getMessage(),
+        ]);
+
+        $this->server->user->notify(new ServerProvisioningFailed($this->server, $exception->getMessage()));
     }
 }

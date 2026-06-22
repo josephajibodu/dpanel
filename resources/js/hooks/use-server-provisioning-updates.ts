@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Server } from '@/types/server';
 
@@ -87,6 +88,13 @@ export function useServerProvisioningUpdates(initialServer: Server) {
                     currentStatus: event.current_status,
                     previousProvisioningStep: event.previous_provisioning_step,
                     currentProvisioningStep: event.current_provisioning_step,
+                });
+            }
+
+            if (event.current_status === 'error' && event.previous_status !== 'error') {
+                toast.error(`Server provisioning failed: ${incomingServer.name}`, {
+                    description: incomingServer.error_message ?? 'An unexpected error occurred during provisioning.',
+                    duration: 10000,
                 });
             }
 

@@ -28,6 +28,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     ActivityIcon,
+    AlertCircleIcon,
     ExternalLinkIcon,
     GlobeIcon,
     HardDriveIcon,
@@ -75,6 +76,20 @@ export default function ServersShow({ server }: Props) {
                     </div>
                 ) : (
                     <>
+                        {data.status === 'error' && (
+                            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
+                                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                                <div className="space-y-1">
+                                    <p className="font-medium text-red-800 dark:text-red-200">
+                                        Provisioning failed
+                                    </p>
+                                    <p className="text-red-700 dark:text-red-300">
+                                        {data.error_message ?? 'An unexpected error occurred during provisioning.'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <ServerMetricsOverview serverId={data.id} />
 
                         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">

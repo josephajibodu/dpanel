@@ -30,6 +30,27 @@ it('includes provisioning step metadata in server resource', function () {
         ->and($payload['provisioning_steps'][0])->toHaveKeys(['value', 'label', 'description']);
 });
 
+it('includes error_message in server resource', function () {
+    $server = Server::factory()->create([
+        'status' => ServerStatus::Error,
+        'error_message' => 'SSH connection timed out',
+    ]);
+
+    $payload = ServerResource::make($server)->toArray(Request::create('/'));
+
+    expect($payload['error_message'])->toBe('SSH connection timed out');
+});
+
+it('includes null error_message in server resource when no error', function () {
+    $server = Server::factory()->provisioning()->create([
+        'error_message' => null,
+    ]);
+
+    $payload = ServerResource::make($server)->toArray(Request::create('/'));
+
+    expect($payload['error_message'])->toBeNull();
+});
+
 it('dispatches server status changed event when provisioning step changes', function () {
     Event::fake([ServerStatusChanged::class]);
 

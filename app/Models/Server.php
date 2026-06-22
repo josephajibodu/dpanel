@@ -38,6 +38,7 @@ class Server extends Model
         'ip_address',
         'private_ip_address',
         'status',
+        'error_message',
         'provisioning_step',
         'connection_status',
         'php_version',

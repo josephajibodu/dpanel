@@ -47,6 +47,7 @@ class ServerResource extends JsonResource
                 ])
                 ->values()
                 ->all(),
+            'error_message' => $this->error_message,
             'php_version' => $this->php_version,
             'database_type' => $this->database_type,
             'ssh_port' => $this->ssh_port,

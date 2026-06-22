@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Models\Server;
+use App\Notifications\ServerProvisioningFailed;
 use App\Services\Providers\ProviderManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -75,7 +76,10 @@ class ProvisionServerJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::error("Failed to provision server {$this->server->id}: {$e->getMessage()}");
 
-            $this->server->update(['status' => ServerStatus::Error]);
+            $this->server->update([
+                'status' => ServerStatus::Error,
+                'error_message' => $e->getMessage(),
+            ]);
 
             throw $e;
         }
@@ -126,6 +130,11 @@ class ProvisionServerJob implements ShouldQueue
     {
         Log::error("ProvisionServerJob failed for server {$this->server->id}: {$exception->getMessage()}");
 
-        $this->server->update(['status' => ServerStatus::Error]);
+        $this->server->update([
+            'status' => ServerStatus::Error,
+            'error_message' => $exception->getMessage(),
+        ]);
+
+        $this->server->user->notify(new ServerProvisioningFailed($this->server, $exception->getMessage()));
     }
 }

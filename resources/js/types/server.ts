@@ -22,6 +22,7 @@ export interface Server {
     status: 'pending' | 'creating' | 'provisioning' | 'active' | 'error' | 'deleting';
     status_label: string;
     status_color: 'gray' | 'blue' | 'yellow' | 'green' | 'red' | 'orange';
+    error_message: string | null;
     provisioning_step: ProvisioningStep | null;
     provisioning_steps: ProvisioningStep[];
     php_version: string;
