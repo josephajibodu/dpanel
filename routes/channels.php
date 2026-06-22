@@ -2,6 +2,7 @@
 
 use App\Models\Deployment;
 use App\Models\Server;
+use App\Models\Site;
 use App\Realtime\RealtimeDiagnosticsChannelAuthorizer;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
@@ -37,6 +38,13 @@ Broadcast::channel('deployments.{deploymentId}', function ($user, $deploymentId)
     ]);
 
     return $authorized;
+});
+
+// Site channel - team members can subscribe to a specific site's events
+Broadcast::channel('site.{siteId}', function ($user, $siteId) {
+    $site = Site::find($siteId);
+
+    return $site && $user->belongsToTeam($site->server->team);
 });
 
 Broadcast::channel('realtime.diagnostics.{userId}', function ($user, $userId) {

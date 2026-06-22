@@ -129,7 +129,7 @@ describe('NginxConfigService', function () {
             ->toContain('server_name my-site.flitops.xyz');
     });
 
-    it('uses hostname in both HTTP and HTTPS server blocks for SSL config', function () {
+    it('SSL config has only the HTTPS server block — no inline HTTP redirect', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.10',
         ]);
@@ -144,14 +144,10 @@ describe('NginxConfigService', function () {
         $service = new NginxConfigService;
         $config = $service->generateWithSslForSiteDomain($site, $domain);
 
-        $httpBlock = substr($config, 0, strpos($config, '# HTTPS server'));
-        $httpsBlock = substr($config, strpos($config, '# HTTPS server'));
-
-        expect($httpBlock)
-            ->toContain('server_name test.com');
-
-        expect($httpsBlock)
-            ->toContain('server_name test.com');
+        expect($config)
+            ->toContain('listen 443 ssl http2')
+            ->toContain('server_name test.com')
+            ->not->toContain('return 301'); // redirect lives in before/ssl_redirect.conf
     });
 
     describe('project type configurations', function () {
@@ -268,7 +264,7 @@ describe('NginxConfigService', function () {
         });
     });
 
-    it('includes www redirect preamble when from_www', function () {
+    it('does not inline www redirects — they are reserved for a future before/ snippet', function () {
         $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
         $site = Site::factory()->create([
             'server_id' => $server->id,
@@ -280,8 +276,7 @@ describe('NginxConfigService', function () {
         $service = new NginxConfigService;
         $config = $service->generateForSiteDomain($site, $d->fresh());
 
-        expect($config)->toContain('server_name www.apex.com');
-        expect($config)->toContain('return 301 http://apex.com');
+        expect($config)->not->toContain('return 301');
     });
 
     describe('SSL cert paths', function () {

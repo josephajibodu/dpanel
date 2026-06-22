@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteDomain extends Model
 {
@@ -47,5 +48,17 @@ class SiteDomain extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    public function nginxFiles(): HasMany
+    {
+        return $this->hasMany(SiteNginxFile::class);
+    }
+
+    public function nginxSnippetsBasePath(): string
+    {
+        $this->loadMissing('site');
+
+        return "/etc/nginx/flitops-conf/{$this->site->ulid}/{$this->hostname}";
     }
 }

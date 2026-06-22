@@ -16,7 +16,7 @@ class NginxConfigService
     {
         $normalized = str_replace(['.', '*'], ['-', 'wildcard'], $domain->hostname);
 
-        return "{$site->ulid}--{$normalized}.conf";
+        return "{$normalized}.conf";
     }
 
     public static function configPath(Site $site, SiteDomain $domain): string
@@ -61,7 +61,7 @@ class NginxConfigService
             : $this->generateForSiteDomain($site, $domain);
     }
 
-    private function shouldUseSsl(SiteDomain $domain): bool
+    public function shouldUseSsl(SiteDomain $domain): bool
     {
         $freeDomain = (string) config('server.free_domain');
 

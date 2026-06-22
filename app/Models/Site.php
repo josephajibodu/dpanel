@@ -167,4 +167,19 @@ class Site extends Model
     {
         return $this->hasOne(SiteDomain::class)->where('is_primary', true);
     }
+
+    public function nginxFiles(): HasMany
+    {
+        return $this->hasMany(SiteNginxFile::class);
+    }
+
+    public function nginxHistory(): HasMany
+    {
+        return $this->hasMany(SiteNginxHistory::class)->latest('created_at');
+    }
+
+    public function nginxSnippetsBasePath(): string
+    {
+        return "/etc/flitops/sites/{$this->ulid}/nginx";
+    }
 }

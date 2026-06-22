@@ -181,6 +181,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('servers/{server}/sites/{site}/processes', [\App\Http\Controllers\SiteProcessController::class, 'index'])
                     ->name('servers.sites.processes.index');
 
+                // Nginx file management
+                Route::get('servers/{server}/sites/{site}/nginx', [\App\Http\Controllers\SiteNginxController::class, 'index'])
+                    ->name('servers.sites.nginx.index');
+                Route::post('servers/{server}/sites/{site}/nginx', [\App\Http\Controllers\SiteNginxController::class, 'store'])
+                    ->name('servers.sites.nginx.store');
+                Route::put('servers/{server}/sites/{site}/nginx/{nginxFile}', [\App\Http\Controllers\SiteNginxController::class, 'update'])
+                    ->name('servers.sites.nginx.update');
+                Route::patch('servers/{server}/sites/{site}/nginx/{nginxFile}/rename', [\App\Http\Controllers\SiteNginxController::class, 'rename'])
+                    ->name('servers.sites.nginx.rename');
+                Route::delete('servers/{server}/sites/{site}/nginx/{nginxFile}', [\App\Http\Controllers\SiteNginxController::class, 'destroy'])
+                    ->name('servers.sites.nginx.destroy');
+                Route::get('servers/{server}/sites/{site}/nginx-history/{historyId}', [\App\Http\Controllers\SiteNginxController::class, 'history'])
+                    ->name('servers.sites.nginx.history.show');
+                Route::post('servers/{server}/sites/{site}/nginx-history/{historyId}/restore', [\App\Http\Controllers\SiteNginxController::class, 'restore'])
+                    ->name('servers.sites.nginx.history.restore');
+                Route::post('servers/{server}/sites/{site}/nginx/refresh', [\App\Http\Controllers\SiteNginxController::class, 'refresh'])
+                    ->name('servers.sites.nginx.refresh');
+
                 // Databases and database users
                 Route::get('servers/{server}/databases', [ServerDatabaseController::class, 'index'])
                     ->name('servers.databases.index');
