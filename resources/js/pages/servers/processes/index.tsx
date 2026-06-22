@@ -13,6 +13,7 @@ interface Props {
     workers: { data: Worker[] };
     cronJobs: { data: CronJob[] };
     sites: ProcessSite[];
+    defaultUser: string;
 }
 
 export default function ServerProcessesIndex({
@@ -21,6 +22,7 @@ export default function ServerProcessesIndex({
     workers,
     cronJobs,
     sites,
+    defaultUser,
 }: Props) {
     const server = serverProp && 'data' in serverProp ? serverProp.data : serverProp;
     const teamPath = useTeamPath();
@@ -48,6 +50,7 @@ export default function ServerProcessesIndex({
                     workers={workers?.data ?? []}
                     cronJobs={cronJobs?.data ?? []}
                     sites={sites}
+                    defaultUser={defaultUser}
                 />
             </div>
         </AppLayout>

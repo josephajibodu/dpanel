@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class StoreCronJobRequest extends FormRequest
                 Rule::exists('sites', 'id')->where('server_id', $server->id),
             ],
             'user' => ['required', 'string', 'max:64'],
-            'frequency' => ['required', 'string', 'max:128'],
+            'frequency' => ['required', 'string', 'max:128', new ValidCronExpression],
         ];
     }
 

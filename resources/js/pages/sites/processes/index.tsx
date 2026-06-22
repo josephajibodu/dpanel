@@ -14,6 +14,7 @@ interface Props {
     serverIsReady: boolean;
     workers: { data: Worker[] };
     cronJobs: { data: CronJob[] };
+    defaultUser: string;
 }
 
 export default function SiteProcessesIndex({
@@ -22,6 +23,7 @@ export default function SiteProcessesIndex({
     serverIsReady,
     workers,
     cronJobs,
+    defaultUser,
 }: Props) {
     const server = serverProp && 'data' in serverProp ? serverProp.data : serverProp;
     const site = siteProp && 'data' in siteProp ? siteProp.data : siteProp;
@@ -51,6 +53,7 @@ export default function SiteProcessesIndex({
                     serverIsReady={serverIsReady}
                     workers={workers?.data ?? []}
                     cronJobs={cronJobs?.data ?? []}
+                    defaultUser={defaultUser}
                 />
             </div>
         </AppLayout>

@@ -32,6 +32,7 @@ class SiteProcessController extends Controller
             'serverIsReady' => $server->isReady(),
             'workers' => WorkerResource::collection($workers),
             'cronJobs' => CronJobResource::collection($cronJobs),
+            'defaultUser' => config('server.user'),
         ]);
     }
 }

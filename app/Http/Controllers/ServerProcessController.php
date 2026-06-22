@@ -33,6 +33,7 @@ class ServerProcessController extends Controller
             'workers' => WorkerResource::collection($server->workers),
             'cronJobs' => CronJobResource::collection($server->cronJobs),
             'sites' => $sites,
+            'defaultUser' => config('server.user'),
         ]);
     }
 }

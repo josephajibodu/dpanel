@@ -91,6 +91,8 @@ export interface ProcessesPanelProps {
     cronJobs: CronJob[];
     /** Used only when `site` is not provided (for the picker on the server-scoped page). */
     sites?: ProcessSite[];
+    /** The default system user for new workers and cron jobs (from server config). */
+    defaultUser: string;
     /** Defaults to "Workers and cron jobs on {server name}". */
     headingDescription?: string;
 }
@@ -102,6 +104,7 @@ export function ProcessesPanel({
     workers,
     cronJobs,
     sites = [],
+    defaultUser,
     headingDescription,
 }: ProcessesPanelProps) {
     const scope: 'server' | 'site' = site ? 'site' : 'server';
@@ -133,17 +136,19 @@ export function ProcessesPanel({
         name: '',
         command: '',
         site_id: defaultSiteId as number | '',
-        user: 'deploy',
+        user: defaultUser,
         numprocs: 1,
         auto_start: true,
         auto_restart: true,
+        stdout_logfile: '',
     });
     const [cronForm, setCronForm] = useState({
         command: '',
         site_id: defaultSiteId as number | '',
-        user: 'deploy',
+        user: defaultUser,
         frequency: '* * * * *',
     });
+    const [customCronFreq, setCustomCronFreq] = useState(false);
 
     const resolveSiteId = (value: number | ''): number | null => {
         if (scope === 'site' && site) return site.id;
@@ -183,6 +188,7 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
+                stdout_logfile: workerForm.stdout_logfile || null,
             },
             {
                 preserveScroll: true,
@@ -192,10 +198,11 @@ export function ProcessesPanel({
                         name: '',
                         command: '',
                         site_id: defaultSiteId,
-                        user: 'deploy',
+                        user: defaultUser,
                         numprocs: 1,
                         auto_start: true,
                         auto_restart: true,
+                        stdout_logfile: '',
                     });
                 },
                 onFinish: () => setIsSubmitting(false),
@@ -217,6 +224,7 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
+                stdout_logfile: workerForm.stdout_logfile || null,
             },
             {
                 preserveScroll: true,
@@ -239,6 +247,7 @@ export function ProcessesPanel({
             numprocs: w.numprocs,
             auto_start: w.auto_start,
             auto_restart: w.auto_restart,
+            stdout_logfile: w.stdout_logfile ?? '',
         });
         setEditWorkerOpen(true);
     };
@@ -275,9 +284,10 @@ export function ProcessesPanel({
                     setCronForm({
                         command: '',
                         site_id: defaultSiteId,
-                        user: 'deploy',
+                        user: defaultUser,
                         frequency: '* * * * *',
                     });
+                    setCustomCronFreq(false);
                 },
                 onFinish: () => setIsSubmitting(false),
             },
@@ -315,6 +325,7 @@ export function ProcessesPanel({
             user: c.user,
             frequency: c.frequency,
         });
+        setCustomCronFreq(!CRON_FREQUENCIES.some((f) => f.value === c.frequency));
         setEditCronOpen(true);
     };
 
@@ -771,6 +782,21 @@ export function ProcessesPanel({
                                 }
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="worker-stdout-logfile">Log file path</Label>
+                            <Input
+                                id="worker-stdout-logfile"
+                                value={workerForm.stdout_logfile}
+                                onChange={(e) =>
+                                    setWorkerForm((p) => ({ ...p, stdout_logfile: e.target.value }))
+                                }
+                                placeholder="/home/artisan/worker.log"
+                                className="font-mono"
+                            />
+                            <p className="text-muted-foreground text-xs">
+                                Absolute path where stdout is written. Required to use the Logs button.
+                            </p>
+                        </div>
                         <div className="flex items-center gap-2">
                             <Checkbox
                                 id="worker-auto-start"
@@ -901,6 +927,21 @@ export function ProcessesPanel({
                                 }
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-worker-stdout-logfile">Log file path</Label>
+                            <Input
+                                id="edit-worker-stdout-logfile"
+                                value={workerForm.stdout_logfile}
+                                onChange={(e) =>
+                                    setWorkerForm((p) => ({ ...p, stdout_logfile: e.target.value }))
+                                }
+                                placeholder="/home/artisan/worker.log"
+                                className="font-mono"
+                            />
+                            <p className="text-muted-foreground text-xs">
+                                Absolute path where stdout is written. Required to use the Logs button.
+                            </p>
+                        </div>
                         <div className="flex items-center gap-2">
                             <Checkbox
                                 id="edit-worker-auto-start"
@@ -995,10 +1036,16 @@ export function ProcessesPanel({
                         <div className="space-y-2">
                             <Label>Frequency</Label>
                             <Select
-                                value={cronForm.frequency}
-                                onValueChange={(v) =>
-                                    setCronForm((p) => ({ ...p, frequency: v }))
-                                }
+                                value={customCronFreq ? 'custom' : cronForm.frequency}
+                                onValueChange={(v) => {
+                                    if (v === 'custom') {
+                                        setCustomCronFreq(true);
+                                        setCronForm((p) => ({ ...p, frequency: '' }));
+                                    } else {
+                                        setCustomCronFreq(false);
+                                        setCronForm((p) => ({ ...p, frequency: v }));
+                                    }
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
@@ -1009,8 +1056,20 @@ export function ProcessesPanel({
                                             {f.label}
                                         </SelectItem>
                                     ))}
+                                    <SelectItem value="custom">Custom…</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {customCronFreq && (
+                                <Input
+                                    value={cronForm.frequency}
+                                    onChange={(e) =>
+                                        setCronForm((p) => ({ ...p, frequency: e.target.value }))
+                                    }
+                                    placeholder="0 2 * * 1-5"
+                                    className="font-mono"
+                                    autoFocus
+                                />
+                            )}
                             {errors?.frequency && <p className="text-destructive text-sm">{errors.frequency}</p>}
                         </div>
                         <div className="space-y-2">
@@ -1039,7 +1098,7 @@ export function ProcessesPanel({
             </Sheet>
 
             {/* Edit cron drawer */}
-            <Sheet open={editCronOpen} onOpenChange={setEditCronOpen}>
+            <Sheet open={editCronOpen} onOpenChange={(open) => { setEditCronOpen(open); if (!open) setCustomCronFreq(false); }}>
                 <SheetContent side="right">
                     <SheetHeader>
                         <SheetTitle>Edit cron job</SheetTitle>
@@ -1095,10 +1154,16 @@ export function ProcessesPanel({
                         <div className="space-y-2">
                             <Label>Frequency</Label>
                             <Select
-                                value={cronForm.frequency}
-                                onValueChange={(v) =>
-                                    setCronForm((p) => ({ ...p, frequency: v }))
-                                }
+                                value={customCronFreq ? 'custom' : cronForm.frequency}
+                                onValueChange={(v) => {
+                                    if (v === 'custom') {
+                                        setCustomCronFreq(true);
+                                        setCronForm((p) => ({ ...p, frequency: '' }));
+                                    } else {
+                                        setCustomCronFreq(false);
+                                        setCronForm((p) => ({ ...p, frequency: v }));
+                                    }
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
@@ -1109,8 +1174,20 @@ export function ProcessesPanel({
                                             {f.label}
                                         </SelectItem>
                                     ))}
+                                    <SelectItem value="custom">Custom…</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {customCronFreq && (
+                                <Input
+                                    value={cronForm.frequency}
+                                    onChange={(e) =>
+                                        setCronForm((p) => ({ ...p, frequency: e.target.value }))
+                                    }
+                                    placeholder="0 2 * * 1-5"
+                                    className="font-mono"
+                                    autoFocus
+                                />
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-cron-user">User</Label>
