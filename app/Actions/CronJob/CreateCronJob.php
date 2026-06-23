@@ -62,14 +62,10 @@ class CreateCronJob
 
             $connection->upload($content, $tmpPath);
 
-            // Move into /etc/cron.d AND reset ownership/mode — Debian/Ubuntu
-            // cron silently skips files in /etc/cron.d that aren't owned by
-            // root, so the rename alone is not enough (the file would still
-            // be owned by the SSH user).
-            $connection->sudo(
-                "mv {$tmpPath} {$destPath} && chown root:root {$destPath} && chmod 644 {$destPath}",
-                30
-            );
+            // install atomically moves the file to /etc/cron.d with the correct
+            // owner and mode in one sudo call — avoids the chown/chmod running
+            // without elevated privileges when chained with &&.
+            $connection->sudo("install -o root -g root -m 644 {$tmpPath} {$destPath}", 30);
 
             $cronJob->update(['status' => 'active']);
         } finally {

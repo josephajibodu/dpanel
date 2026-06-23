@@ -56,10 +56,7 @@ class UpdateCronJob
             $tmpPath = '/tmp/'.$filename;
 
             $connection->upload($content, $tmpPath);
-            $connection->sudo(
-                "mv {$tmpPath} {$destPath} && chown root:root {$destPath} && chmod 644 {$destPath}",
-                30
-            );
+            $connection->sudo("install -o root -g root -m 644 {$tmpPath} {$destPath}", 30);
         } finally {
             $connection->disconnect();
         }
