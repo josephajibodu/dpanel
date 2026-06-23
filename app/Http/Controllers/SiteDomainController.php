@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Sites\SetPrimarySiteDomainAction;
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
+use App\Events\SiteDomainsUpdated;
 use App\Http\Requests\StoreSiteDomainRequest;
 use App\Http\Requests\UpdateSiteDomainRequest;
 use App\Http\Requests\ValidateSiteDomainRequest;
@@ -107,6 +108,7 @@ class SiteDomainController extends Controller
         ]);
 
         SyncSiteNginxJob::dispatch($site);
+        broadcast(new SiteDomainsUpdated($site));
 
         $flash = $cloudflareWarning
             ? ['warning' => $cloudflareWarning]
@@ -144,6 +146,7 @@ class SiteDomainController extends Controller
         $siteDomain->update($data);
 
         SyncSiteNginxJob::dispatch($site);
+        broadcast(new SiteDomainsUpdated($site));
 
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])
@@ -191,6 +194,7 @@ class SiteDomainController extends Controller
         }
 
         $action->execute($site, $siteDomain);
+        broadcast(new SiteDomainsUpdated($site));
 
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])

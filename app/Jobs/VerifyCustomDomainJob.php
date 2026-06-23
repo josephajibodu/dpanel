@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\SiteDomainType;
+use App\Events\SiteDomainsUpdated;
 use App\Models\SiteDomain;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -45,6 +46,7 @@ class VerifyCustomDomainJob implements ShouldQueue
         }
 
         $this->siteDomain->update(['verified_at' => now()]);
+        broadcast(new SiteDomainsUpdated($this->siteDomain->site));
 
         IssueSslForDomainJob::dispatch($this->siteDomain, $this->siteDomain->site);
     }

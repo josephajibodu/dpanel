@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\SiteDomainsUpdated;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -57,6 +58,7 @@ class DeleteSiteDomainJob implements ShouldQueue
     public function handle(SshService $sshService, CloudflareDnsService $cloudflare): void
     {
         $domain = SiteDomain::find($this->domainId);
+        $site = Site::find($this->siteId);
         $server = Server::find($this->serverId);
 
         // Cascade delete removes associated SiteNginxFile rows automatically.
@@ -68,6 +70,10 @@ class DeleteSiteDomainJob implements ShouldQueue
             } catch (\Throwable $e) {
                 Log::warning("Failed to delete Cloudflare DNS record {$this->cloudflareDnsRecordId} for {$this->hostname}: {$e->getMessage()}");
             }
+        }
+
+        if ($site) {
+            broadcast(new SiteDomainsUpdated($site));
         }
 
         if (! $server) {

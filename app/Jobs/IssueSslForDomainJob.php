@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\NginxFileSection;
+use App\Events\SiteDomainsUpdated;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Ssh\SshService;
@@ -74,6 +75,7 @@ class IssueSslForDomainJob implements ShouldQueue
             $connection->exec("sudo chmod 600 {$certDir}/server.key");
 
             $this->siteDomain->update(['ssl_enabled_at' => now()]);
+            broadcast(new SiteDomainsUpdated($this->site));
 
             // Clear the stale main nginx file so SyncSiteNginxJob regenerates it with SSL.
             $this->site->nginxFiles()

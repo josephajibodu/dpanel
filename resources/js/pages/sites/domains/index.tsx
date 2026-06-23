@@ -1,4 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useSiteDomainsUpdates } from '@/hooks/use-site-domains-updates';
 import {
     CheckIcon,
     ChevronDownIcon,
@@ -82,11 +84,14 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     const { flash, currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
 
+    useSiteDomainsUpdates(site.id);
+
     const [newHostname, setNewHostname] = useState('');
     const [hostnameError, setHostnameError] = useState<string | null>(null);
     const [validating, setValidating] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [expandedDns, setExpandedDns] = useState<Record<string, boolean>>({});
+    const [domainToDelete, setDomainToDelete] = useState<SiteDomain | null>(null);
 
     const addForm = useForm({
         hostname: '',
@@ -201,6 +206,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                     setExpandedDns={setExpandedDns}
                                     onCopy={copyText}
                                     onVisit={visitDomain}
+                                    onDelete={setDomainToDelete}
                                     teamPath={teamPath}
                                 />
                             ))
@@ -249,6 +255,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                         setExpandedDns={setExpandedDns}
                                         onCopy={copyText}
                                         onVisit={visitDomain}
+                                        onDelete={setDomainToDelete}
                                         teamPath={teamPath}
                                     />
                                 ))}
@@ -378,6 +385,21 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
+
+            <ConfirmDialog
+                open={domainToDelete !== null}
+                onOpenChange={(open) => { if (!open) setDomainToDelete(null); }}
+                title={`Remove ${domainToDelete?.hostname ?? 'domain'}?`}
+                description="This will remove the domain from this site and clean up its nginx configuration."
+                confirmLabel="Remove"
+                variant="destructive"
+                onConfirm={() => {
+                    if (!domainToDelete) return;
+                    router.delete(teamPath(`/servers/${serverId}/sites/${site.id}/domains/${domainToDelete.ulid}`), {
+                        onFinish: () => setDomainToDelete(null),
+                    });
+                }}
+            />
         </AppLayout>
     );
 }
@@ -390,6 +412,7 @@ function DomainRow({
     setExpandedDns,
     onCopy,
     onVisit,
+    onDelete,
     teamPath,
 }: {
     domain: SiteDomain;
@@ -399,6 +422,7 @@ function DomainRow({
     setExpandedDns: Dispatch<SetStateAction<Record<string, boolean>>>;
     onCopy: (s: string) => void;
     onVisit: (hostname: string) => void;
+    onDelete: (domain: SiteDomain) => void;
     teamPath: (path: string) => string;
 }) {
     const open = expandedDns[domain.ulid] ?? false;
@@ -513,11 +537,7 @@ function DomainRow({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() => {
-                                        if (confirm(`Remove ${domain.hostname} from this site?`)) {
-                                            router.delete(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`));
-                                        }
-                                    }}
+                                    onClick={() => onDelete(domain)}
                                 >
                                     Delete
                                 </DropdownMenuItem>
