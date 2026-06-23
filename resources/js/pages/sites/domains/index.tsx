@@ -427,11 +427,12 @@ function DomainRow({
 }) {
     const open = expandedDns[domain.ulid] ?? false;
     const hasDns = domain.dns_records.length > 0;
+    const isDeleting = domain.status === 'deleting';
 
     const isCustomUnverified = domain.type === 'custom' && !domain.is_verified;
 
     return (
-        <div className="border-border bg-card rounded-lg border">
+        <div className={cn('border-border bg-card rounded-lg border', isDeleting && 'opacity-60')}>
             <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                     <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
@@ -439,7 +440,12 @@ function DomainRow({
                     {domain.type === 'system' && <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                    {domain.type === 'custom' && (
+                    {isDeleting && (
+                        <span className="border-destructive/40 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
+                            <Loader2Icon className="size-3 animate-spin" /> Deleting
+                        </span>
+                    )}
+                    {!isDeleting && domain.type === 'custom' && (
                         <span
                             className={cn(
                                 'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
@@ -459,26 +465,28 @@ function DomainRow({
                             )}
                         </span>
                     )}
-                    <span
-                        className={cn(
-                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
-                            domain.is_enabled
-                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                : 'border-muted-foreground/40 text-muted-foreground',
-                        )}
-                    >
-                        {domain.is_enabled ? (
-                            <>
-                                <CheckIcon className="size-3" /> Enabled
-                            </>
-                        ) : (
-                            'Disabled'
-                        )}
-                    </span>
+                    {!isDeleting && (
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                                domain.is_enabled
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'border-muted-foreground/40 text-muted-foreground',
+                            )}
+                        >
+                            {domain.is_enabled ? (
+                                <>
+                                    <CheckIcon className="size-3" /> Enabled
+                                </>
+                            ) : (
+                                'Disabled'
+                            )}
+                        </span>
+                    )}
                 </div>
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                    <DropdownMenuTrigger asChild disabled={isDeleting}>
+                        <Button variant="ghost" size="icon" className="size-8 shrink-0" disabled={isDeleting}>
                             <MoreVerticalIcon className="size-4" />
                             <span className="sr-only">Actions</span>
                         </Button>

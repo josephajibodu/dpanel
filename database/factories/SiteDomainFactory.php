@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
 use App\Models\SiteDomain;
@@ -28,6 +29,7 @@ class SiteDomainFactory extends Factory
             'wildcard_enabled' => false,
             'www_redirect' => WwwRedirect::None,
             'is_enabled' => true,
+            'status' => SiteDomainStatus::Active,
             'cloudflare_dns_record_id' => null,
             'verified_at' => null,
             'ssl_enabled_at' => null,

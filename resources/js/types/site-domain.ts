@@ -15,6 +15,7 @@ export interface SiteDomain {
     www_redirect: string;
     www_redirect_label: string;
     is_enabled: boolean;
+    status: 'active' | 'deleting';
     is_verified: boolean;
     verified_at: string | null;
     has_ssl: boolean;

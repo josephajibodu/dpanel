@@ -37,6 +37,7 @@ class SiteDomainResource extends JsonResource
             'www_redirect' => $this->www_redirect->value,
             'www_redirect_label' => $this->www_redirect->label(),
             'is_enabled' => $this->is_enabled,
+            'status' => $this->status->value,
             'is_verified' => $this->resource->isVerified(),
             'verified_at' => $this->verified_at?->toIso8601String(),
             'has_ssl' => $this->resource->hasSsl(),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Sites\SetPrimarySiteDomainAction;
+use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
 use App\Events\SiteDomainsUpdated;
@@ -176,11 +177,13 @@ class SiteDomainController extends Controller
                 ->with('error', 'Set another domain as primary before deleting this one.');
         }
 
+        $siteDomain->update(['status' => SiteDomainStatus::Deleting]);
+        broadcast(new SiteDomainsUpdated($site));
+
         DeleteSiteDomainJob::dispatch($siteDomain, $site);
 
         return redirect()
-            ->route('servers.sites.domains.index', [$team, $server, $site])
-            ->with('success', 'Domain removed.');
+            ->route('servers.sites.domains.index', [$team, $server, $site]);
     }
 
     public function setPrimary(Team $team, Server $server, Site $site, SiteDomain $siteDomain, SetPrimarySiteDomainAction $action): RedirectResponse

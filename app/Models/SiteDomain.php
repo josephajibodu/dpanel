@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -23,6 +24,7 @@ class SiteDomain extends Model
         'wildcard_enabled',
         'www_redirect',
         'is_enabled',
+        'status',
         'cloudflare_dns_record_id',
         'verified_at',
         'ssl_enabled_at',
@@ -35,6 +37,7 @@ class SiteDomain extends Model
     {
         return [
             'type' => SiteDomainType::class,
+            'status' => SiteDomainStatus::class,
             'is_primary' => 'boolean',
             'wildcard_enabled' => 'boolean',
             'www_redirect' => WwwRedirect::class,
