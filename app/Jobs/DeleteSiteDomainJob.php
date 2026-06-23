@@ -6,7 +6,6 @@ use App\Events\SiteDomainsUpdated;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
-use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
@@ -32,8 +31,6 @@ class DeleteSiteDomainJob implements ShouldQueue
 
     protected bool $hasSsl;
 
-    protected ?string $cloudflareDnsRecordId;
-
     protected int $siteId;
 
     protected int $domainId;
@@ -49,28 +46,18 @@ class DeleteSiteDomainJob implements ShouldQueue
         $this->configFileName = NginxConfigService::configFileName($site, $siteDomain);
         $this->snippetsBasePath = $siteDomain->nginxSnippetsBasePath();
         $this->hasSsl = $siteDomain->hasSsl();
-        $this->cloudflareDnsRecordId = $siteDomain->cloudflare_dns_record_id;
         $this->siteId = $site->id;
         $this->domainId = $siteDomain->id;
         $this->serverId = $site->server_id;
     }
 
-    public function handle(SshService $sshService, CloudflareDnsService $cloudflare): void
+    public function handle(SshService $sshService): void
     {
         $domain = SiteDomain::find($this->domainId);
         $site = Site::find($this->siteId);
         $server = Server::find($this->serverId);
 
-        // Cascade delete removes associated SiteNginxFile rows automatically.
         $domain?->delete();
-
-        if ($this->cloudflareDnsRecordId) {
-            try {
-                $cloudflare->deleteRecord($this->cloudflareDnsRecordId);
-            } catch (\Throwable $e) {
-                Log::warning("Failed to delete Cloudflare DNS record {$this->cloudflareDnsRecordId} for {$this->hostname}: {$e->getMessage()}");
-            }
-        }
 
         if ($site) {
             broadcast(new SiteDomainsUpdated($site));

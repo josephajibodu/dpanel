@@ -27,7 +27,6 @@ class StoreSiteDomainRequest extends FormRequest
             ],
             'wildcard_enabled' => ['required', 'boolean'],
             'www_redirect' => ['required', 'string', Rule::enum(WwwRedirect::class)],
-            'use_cloudflare' => ['sometimes', 'boolean'],
         ];
     }
 

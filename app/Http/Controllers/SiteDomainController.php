@@ -20,17 +20,13 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\Team;
-use App\Services\Cloudflare\CloudflareDnsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SiteDomainController extends Controller
 {
-    public function __construct(private CloudflareDnsService $cloudflare) {}
-
     public function index(Team $team, Server $server, Site $site): Response
     {
         $this->authorize('view', $site);
@@ -42,7 +38,6 @@ class SiteDomainController extends Controller
             'site' => new SiteResource($site),
             'domains' => SiteDomainResource::collection($site->domains),
             'freeDomain' => config('server.free_domain'),
-            'cloudflareConfigured' => $this->cloudflare->isConfigured(),
         ]);
     }
 
@@ -79,24 +74,6 @@ class SiteDomainController extends Controller
                 ->withErrors(['hostname' => 'That domain is already in use.']);
         }
 
-        $cloudflareRecordId = null;
-        $cloudflareWarning = null;
-
-        if (! empty($data['use_cloudflare']) && $server->ip_address) {
-            try {
-                $zoneId = $this->cloudflare->findZoneId($hostname);
-
-                if ($zoneId) {
-                    $cloudflareRecordId = $this->cloudflare->createARecordInZone($zoneId, $hostname, $server->ip_address);
-                } else {
-                    $cloudflareWarning = "No Cloudflare zone found for {$hostname}. DNS was not automated — add the A record manually.";
-                }
-            } catch (\Throwable $e) {
-                Log::warning("Cloudflare A record creation failed for {$hostname}: {$e->getMessage()}");
-                $cloudflareWarning = 'Cloudflare DNS automation failed. Add the A record manually.';
-            }
-        }
-
         SiteDomain::query()->create([
             'site_id' => $site->id,
             'hostname' => $hostname,
@@ -105,19 +82,15 @@ class SiteDomainController extends Controller
             'wildcard_enabled' => $data['wildcard_enabled'],
             'www_redirect' => WwwRedirect::from($data['www_redirect']),
             'is_enabled' => true,
-            'cloudflare_dns_record_id' => $cloudflareRecordId,
+            'cloudflare_dns_record_id' => null,
         ]);
 
         SyncSiteNginxJob::dispatch($site);
         broadcast(new SiteDomainsUpdated($site));
 
-        $flash = $cloudflareWarning
-            ? ['warning' => $cloudflareWarning]
-            : ['success' => 'Domain added'.($cloudflareRecordId ? ' and DNS record created in Cloudflare.' : '.')];
-
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])
-            ->with($flash);
+            ->with('success', 'Domain added.');
     }
 
     public function update(UpdateSiteDomainRequest $request, Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse

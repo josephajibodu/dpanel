@@ -70,55 +70,6 @@ class CloudflareDnsService
         return $response->json('result.id');
     }
 
-    public function isConfigured(): bool
-    {
-        return ! empty(config('server.cloudflare_api_token'));
-    }
-
-    /**
-     * Find the Cloudflare zone ID for a given domain by querying the API.
-     * Returns null when no active zone is found for the domain's root.
-     */
-    public function findZoneId(string $domain): ?string
-    {
-        $parts = explode('.', $domain);
-        $rootDomain = implode('.', array_slice($parts, -2));
-
-        $response = $this->http->get('zones', ['name' => $rootDomain, 'status' => 'active']);
-
-        if (! $response->successful() || ! $response->json('success')) {
-            return null;
-        }
-
-        $zones = $response->json('result', []);
-
-        return count($zones) > 0 ? $zones[0]['id'] : null;
-    }
-
-    /**
-     * Create an A record in a specific zone.
-     *
-     * @return string The Cloudflare DNS record ID.
-     */
-    public function createARecordInZone(string $zoneId, string $domain, string $ipAddress): string
-    {
-        $response = $this->http->post("zones/{$zoneId}/dns_records", [
-            'type' => 'A',
-            'name' => $domain,
-            'content' => $ipAddress,
-            'ttl' => 1,
-            'proxied' => false,
-        ]);
-
-        if (! $response->successful() || ! $response->json('success')) {
-            throw new RuntimeException(
-                'Failed to create Cloudflare DNS record: '.$response->body()
-            );
-        }
-
-        return $response->json('result.id');
-    }
-
     /**
      * Delete a DNS record by its Cloudflare record ID.
      */
