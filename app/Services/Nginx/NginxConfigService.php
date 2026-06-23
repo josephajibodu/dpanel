@@ -63,6 +63,10 @@ class NginxConfigService
 
     public function shouldUseSsl(SiteDomain $domain): bool
     {
+        if ($domain->hasSsl()) {
+            return true;
+        }
+
         $freeDomain = (string) config('server.free_domain');
 
         if ($freeDomain === '' || ! str_ends_with($domain->hostname, '.'.$freeDomain)) {

@@ -148,6 +148,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.domains.destroy');
                 Route::post('servers/{server}/sites/{site}/domains/{site_domain}/primary', [SiteDomainController::class, 'setPrimary'])
                     ->name('servers.sites.domains.primary');
+                Route::post('servers/{server}/sites/{site}/domains/{site_domain}/verify', [SiteDomainController::class, 'verify'])
+                    ->name('servers.sites.domains.verify');
 
                 // Environment & deploy script
                 Route::get('servers/{server}/sites/{site}/environment', [EnvironmentController::class, 'show'])

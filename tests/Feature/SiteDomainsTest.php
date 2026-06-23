@@ -3,6 +3,7 @@
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
 use App\Jobs\SyncSiteNginxJob;
+use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -67,7 +68,7 @@ it('rejects duplicate hostname on another site', function () {
     $response->assertStatus(422);
 });
 
-it('stores a custom domain and dispatches nginx sync', function () {
+it('stores a custom domain with a verification token and dispatches nginx sync', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
@@ -79,13 +80,66 @@ it('stores a custom domain and dispatches nginx sync', function () {
 
     $response->assertRedirect();
 
-    $this->assertDatabaseHas('site_domains', [
-        'site_id' => $this->site->id,
-        'hostname' => 'my-custom.com',
-        'type' => SiteDomainType::Custom->value,
-    ]);
+    $domain = \App\Models\SiteDomain::query()->where('hostname', 'my-custom.com')->first();
+
+    expect($domain)->not->toBeNull()
+        ->and($domain->site_id)->toBe($this->site->id)
+        ->and($domain->type->value)->toBe(SiteDomainType::Custom->value)
+        ->and($domain->verified_at)->toBeNull()
+        ->and($domain->ssl_enabled_at)->toBeNull();
 
     Queue::assertPushed(SyncSiteNginxJob::class);
+});
+
+it('dispatches verify job for an unverified custom domain', function () {
+    Queue::fake();
+
+    $domain = SiteDomain::factory()->for($this->site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'to-verify.com',
+        'verified_at' => null,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$domain->ulid}/verify");
+
+    $response->assertRedirect();
+
+    Queue::assertPushed(VerifyCustomDomainJob::class, fn ($job) => $job->siteDomain->id === $domain->id);
+});
+
+it('returns error when attempting to verify a system domain', function () {
+    Queue::fake();
+
+    $domain = SiteDomain::factory()->for($this->site)->system()->create([
+        'hostname' => 'unique-system.flitops.xyz',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$domain->ulid}/verify");
+
+    $response->assertRedirect();
+    expect(session('error'))->toContain('Only custom domains');
+
+    Queue::assertNotPushed(VerifyCustomDomainJob::class);
+});
+
+it('returns success immediately when domain is already verified', function () {
+    Queue::fake();
+
+    $domain = SiteDomain::factory()->for($this->site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'already-verified.com',
+        'verified_at' => now(),
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$domain->ulid}/verify");
+
+    $response->assertRedirect();
+    expect(session('success'))->toContain('already verified');
+
+    Queue::assertNotPushed(VerifyCustomDomainJob::class);
 });
 
 it('sets primary domain', function () {

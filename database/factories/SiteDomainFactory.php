@@ -29,6 +29,8 @@ class SiteDomainFactory extends Factory
             'www_redirect' => WwwRedirect::None,
             'is_enabled' => true,
             'cloudflare_dns_record_id' => null,
+            'verified_at' => null,
+            'ssl_enabled_at' => null,
         ];
     }
 

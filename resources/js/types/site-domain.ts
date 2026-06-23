@@ -15,6 +15,10 @@ export interface SiteDomain {
     www_redirect: string;
     www_redirect_label: string;
     is_enabled: boolean;
+    is_verified: boolean;
+    verified_at: string | null;
+    has_ssl: boolean;
+    ssl_enabled_at: string | null;
     dns_records: SiteDomainDnsRecord[];
     created_at: string;
     updated_at: string;

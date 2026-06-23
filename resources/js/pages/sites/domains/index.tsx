@@ -9,6 +9,8 @@ import {
     Loader2Icon,
     LockIcon,
     MoreVerticalIcon,
+    ShieldCheckIcon,
+    ShieldXIcon,
 } from 'lucide-react';
 import { FormEvent, useState, type Dispatch, type SetStateAction } from 'react';
 
@@ -369,30 +371,54 @@ function DomainRow({
     const open = expandedDns[domain.ulid] ?? false;
     const hasDns = domain.dns_records.length > 0;
 
+    const isCustomUnverified = domain.type === 'custom' && !domain.is_verified;
+
     return (
         <div className="border-border bg-card rounded-lg border">
             <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                     <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
                     <span className="truncate font-medium">{domain.hostname}</span>
-                    <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+                    {domain.type === 'system' && <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />}
                 </div>
-                <span
-                    className={cn(
-                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
-                        domain.is_enabled
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'border-muted-foreground/40 text-muted-foreground',
+                <div className="flex shrink-0 items-center gap-2">
+                    {domain.type === 'custom' && (
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                                domain.is_verified
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                            )}
+                        >
+                            {domain.is_verified ? (
+                                <>
+                                    <ShieldCheckIcon className="size-3" /> Verified
+                                </>
+                            ) : (
+                                <>
+                                    <ShieldXIcon className="size-3" /> Unverified
+                                </>
+                            )}
+                        </span>
                     )}
-                >
-                    {domain.is_enabled ? (
-                        <>
-                            <CheckIcon className="size-3" /> Enabled
-                        </>
-                    ) : (
-                        'Disabled'
-                    )}
-                </span>
+                    <span
+                        className={cn(
+                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                            domain.is_enabled
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'border-muted-foreground/40 text-muted-foreground',
+                        )}
+                    >
+                        {domain.is_enabled ? (
+                            <>
+                                <CheckIcon className="size-3" /> Enabled
+                            </>
+                        ) : (
+                            'Disabled'
+                        )}
+                    </span>
+                </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8 shrink-0">
@@ -419,7 +445,16 @@ function DomainRow({
                                     }))
                                 }
                             >
-                                <GlobeIcon className="mr-2 size-4" /> View configuration
+                                <GlobeIcon className="mr-2 size-4" /> View DNS records
+                            </DropdownMenuItem>
+                        )}
+                        {domain.type === 'custom' && !domain.is_verified && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/verify`))
+                                }
+                            >
+                                <ShieldCheckIcon className="mr-2 size-4" /> Verify domain
                             </DropdownMenuItem>
                         )}
                         {domain.type === 'custom' && !domain.is_primary && domain.is_enabled && (
@@ -458,6 +493,18 @@ function DomainRow({
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+
+            {isCustomUnverified && (
+                <div className="border-t px-4 py-3">
+                    <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+                        <ShieldXIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                            Point your DNS A record to this server&apos;s IP, then use{' '}
+                            <span className="font-medium">Verify domain</span> in the menu. Once verified, SSL will be issued automatically.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {hasDns && (
                 <Collapsible open={open} onOpenChange={(v) => setExpandedDns((prev) => ({ ...prev, [domain.ulid]: v }))}>

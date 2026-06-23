@@ -12,6 +12,7 @@ use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteDomainResource;
 use App\Http\Resources\SiteResource;
 use App\Jobs\SyncSiteNginxJob;
+use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -168,5 +169,28 @@ class SiteDomainController extends Controller
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Primary domain updated.');
+    }
+
+    public function verify(Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        if ($siteDomain->type !== SiteDomainType::Custom) {
+            return redirect()
+                ->route('servers.sites.domains.index', [$team, $server, $site])
+                ->with('error', 'Only custom domains require verification.');
+        }
+
+        if ($siteDomain->isVerified()) {
+            return redirect()
+                ->route('servers.sites.domains.index', [$team, $server, $site])
+                ->with('success', 'Domain is already verified.');
+        }
+
+        VerifyCustomDomainJob::dispatch($siteDomain);
+
+        return redirect()
+            ->route('servers.sites.domains.index', [$team, $server, $site])
+            ->with('success', 'Verification started. Refresh the page in a moment to see the updated status.');
     }
 }

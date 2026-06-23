@@ -101,6 +101,7 @@ class SiteNginxSyncService
         }
 
         $this->syncSslRedirectSnippet($connection, $site, $domain, $usesSsl);
+        $this->syncWwwRedirectSnippet($connection, $site, $domain, $usesSsl);
     }
 
     /**
@@ -171,6 +172,15 @@ class SiteNginxSyncService
     protected function buildSslRedirectBlock(SiteDomain $domain): string
     {
         $hostname = $domain->hostname;
+        $parts = explode('.', $hostname);
+        $isApex = count($parts) === 2 && ! str_starts_with($hostname, 'www.');
+
+        // For to_www, the main HTTPS server listens on www.hostname.
+        // ssl_redirect must match that same server_name so it doesn't
+        // conflict with www_redirect.conf which handles the apex redirect.
+        if ($isApex && $domain->www_redirect->value === 'to_www') {
+            $hostname = 'www.'.$hostname;
+        }
 
         return <<<NGINX
 server {
@@ -180,6 +190,167 @@ server {
 
     server_name {$hostname};
     return 301 https://\$host\$request_uri;
+}
+NGINX;
+    }
+
+    /**
+     * Write or remove before/www_redirect.conf for a specific domain.
+     * Handles both HTTP-only and HTTPS (SSL) cases.
+     */
+    protected function syncWwwRedirectSnippet(SshConnection $connection, Site $site, SiteDomain $domain, bool $usesSsl): void
+    {
+        $dbPath = 'before/www_redirect.conf';
+        $snippetAbsPath = $domain->nginxSnippetsBasePath().'/before/www_redirect.conf';
+
+        $content = $this->buildWwwRedirectBlock($domain, $site, $usesSsl);
+
+        if ($content === '') {
+            $connection->exec("sudo rm -f {$snippetAbsPath}");
+            $site->nginxFiles()
+                ->where('site_domain_id', $domain->id)
+                ->where('section', NginxFileSection::Before->value)
+                ->where('path', $dbPath)
+                ->delete();
+
+            return;
+        }
+
+        $content .= "\n";
+        $escaped = str_replace("'", "'\\''", $content);
+        $connection->exec("echo '{$escaped}' | sudo tee {$snippetAbsPath} > /dev/null");
+
+        $site->nginxFiles()->updateOrCreate(
+            ['site_domain_id' => $domain->id, 'section' => NginxFileSection::Before->value, 'path' => $dbPath],
+            [
+                'content' => $content,
+                'hash' => md5($content),
+                'last_synced_at' => now(),
+                'sync_status' => 'synced',
+                'sync_error' => null,
+            ]
+        );
+    }
+
+    protected function buildWwwRedirectBlock(SiteDomain $domain, Site $site, bool $usesSsl): string
+    {
+        $hostname = $domain->hostname;
+        $parts = explode('.', $hostname);
+        $isApex = count($parts) === 2 && ! str_starts_with($hostname, 'www.');
+
+        if (! $isApex || $domain->www_redirect->value === 'none') {
+            return '';
+        }
+
+        $certDir = "/etc/nginx/ssl/domains/{$site->id}/{$domain->id}";
+        $webRoot = $site->webRoot();
+
+        if ($domain->www_redirect->value === 'from_www') {
+            $wwwHost = 'www.'.$hostname;
+            $httpTarget = "http://{$hostname}";
+            $httpsTarget = "https://{$hostname}";
+
+            if ($usesSsl) {
+                return <<<NGINX
+# Redirect www → apex (HTTP and HTTPS)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$wwwHost};
+    server_tokens off;
+
+    location /.well-known/ {
+        root {$webRoot};
+    }
+
+    location / {
+        return 301 {$httpsTarget}\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {$wwwHost};
+    server_tokens off;
+    ssl_certificate {$certDir}/server.crt;
+    ssl_certificate_key {$certDir}/server.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 301 {$httpsTarget}\$request_uri;
+}
+NGINX;
+            }
+
+            return <<<NGINX
+# Redirect www → apex
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$wwwHost};
+    server_tokens off;
+
+    location /.well-known/ {
+        root {$webRoot};
+    }
+
+    location / {
+        return 301 {$httpTarget}\$request_uri;
+    }
+}
+NGINX;
+        }
+
+        // to_www
+        $wwwHost = 'www.'.$hostname;
+        $httpTarget = "http://{$wwwHost}";
+        $httpsTarget = "https://{$wwwHost}";
+
+        if ($usesSsl) {
+            return <<<NGINX
+# Redirect apex → www (HTTP and HTTPS)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$hostname};
+    server_tokens off;
+
+    location /.well-known/ {
+        root {$webRoot};
+    }
+
+    location / {
+        return 301 {$httpsTarget}\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {$hostname};
+    server_tokens off;
+    ssl_certificate {$certDir}/server.crt;
+    ssl_certificate_key {$certDir}/server.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 301 {$httpsTarget}\$request_uri;
+}
+NGINX;
+        }
+
+        return <<<NGINX
+# Redirect apex → www
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$hostname};
+    server_tokens off;
+
+    location /.well-known/ {
+        root {$webRoot};
+    }
+
+    location / {
+        return 301 {$httpTarget}\$request_uri;
+    }
 }
 NGINX;
     }

@@ -24,6 +24,8 @@ class SiteDomain extends Model
         'www_redirect',
         'is_enabled',
         'cloudflare_dns_record_id',
+        'verified_at',
+        'ssl_enabled_at',
     ];
 
     /**
@@ -37,7 +39,19 @@ class SiteDomain extends Model
             'wildcard_enabled' => 'boolean',
             'www_redirect' => WwwRedirect::class,
             'is_enabled' => 'boolean',
+            'verified_at' => 'datetime',
+            'ssl_enabled_at' => 'datetime',
         ];
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->verified_at !== null;
+    }
+
+    public function hasSsl(): bool
+    {
+        return $this->ssl_enabled_at !== null;
     }
 
     public function uniqueIds(): array
