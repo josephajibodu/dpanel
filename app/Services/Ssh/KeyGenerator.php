@@ -18,10 +18,11 @@ class KeyGenerator
     public function generate(): KeyPair
     {
         $privateKey = EC::createKey('Ed25519');
+        $appSlug = \Illuminate\Support\Str::slug((string) config('app.name'), '-');
 
         return new KeyPair(
             privateKey: $privateKey->toString('OpenSSH'),
-            publicKey: $privateKey->getPublicKey()->toString('OpenSSH'),
+            publicKey: $privateKey->getPublicKey()->toString('OpenSSH', ['comment' => "{$appSlug}-worker"]),
         );
     }
 

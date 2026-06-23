@@ -112,8 +112,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Servers
             Route::get('servers/generate-name', [ServerController::class, 'generateName'])
                 ->name('servers.generate-name');
+            Route::post('servers/custom', [ServerController::class, 'storeCustom'])
+                ->name('servers.store-custom');
             Route::resource('servers', ServerController::class)
                 ->except(['edit', 'update']);
+            Route::get('servers/{server}/setup', [ServerController::class, 'setup'])
+                ->name('servers.setup');
+            Route::post('servers/{server}/test-connection', [ServerController::class, 'testConnection'])
+                ->name('servers.test-connection');
+            Route::post('servers/{server}/provision', [ServerController::class, 'provision'])
+                ->name('servers.provision');
             Route::post('servers/{server}/restart', [ServerController::class, 'restart'])
                 ->name('servers.restart');
 

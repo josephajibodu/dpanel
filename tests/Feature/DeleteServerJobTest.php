@@ -142,3 +142,29 @@ it('continues server deletion even if a site cleanup throws', function () {
 
     $this->assertDatabaseMissing('servers', ['id' => $server->id]);
 });
+
+it('skips provider API calls when deleting a custom server', function () {
+    Event::fake([ServerDeleted::class]);
+
+    $server = Server::factory()->custom()->create();
+
+    // ProviderManager must NOT be called for custom servers
+    $mockProviderManager = \Mockery::mock(ProviderManager::class);
+    $mockProviderManager->shouldNotReceive('forAccount');
+
+    $mockSourceControl = \Mockery::mock(SourceControlService::class);
+    $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->once()->andReturn(null);
+
+    $this->app->instance(ProviderManager::class, $mockProviderManager);
+    $this->app->instance(SourceControlService::class, $mockSourceControl);
+
+    $job = new DeleteServerJob($server);
+    $job->handle(
+        app(ProviderManager::class),
+        app(SourceControlService::class),
+        app(CleanupSiteExternalResourcesAction::class),
+    );
+
+    Event::assertDispatched(ServerDeleted::class, fn ($e) => $e->serverId === $server->id);
+    $this->assertDatabaseMissing('servers', ['id' => $server->id]);
+});

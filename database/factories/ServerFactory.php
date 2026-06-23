@@ -24,7 +24,7 @@ class ServerFactory extends Factory
      */
     public function definition(): array
     {
-        $provider = fake()->randomElement(Provider::cases());
+        $provider = fake()->randomElement([Provider::DigitalOcean, Provider::Hetzner, Provider::Vultr]);
 
         return [
             'team_id' => Team::factory(),
@@ -133,6 +133,17 @@ class ServerFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => ServerStatus::Error,
             'provisioned_at' => null,
+        ]);
+    }
+
+    public function custom(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'provider' => Provider::Custom,
+            'provider_account_id' => null,
+            'provider_server_id' => null,
+            'size' => null,
+            'region' => null,
         ]);
     }
 }

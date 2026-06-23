@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Servers\CreateCustomServerAction;
 use App\Actions\Servers\CreateServerAction;
 use App\Actions\Servers\DeleteServerAction;
+use App\Data\CustomServerData;
 use App\Data\ServerData;
+use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
+use App\Http\Requests\StoreCustomServerRequest;
 use App\Http\Requests\StoreServerRequest;
 use App\Http\Resources\ProviderAccountResource;
 use App\Http\Resources\ServerResource;
+use App\Jobs\InstallStackJob;
 use App\Jobs\RestartServiceJob;
+use App\Jobs\TestServerConnectionJob;
 use App\Models\ProviderRegion;
 use App\Models\ProviderSize;
 use App\Models\Server;
@@ -113,6 +119,60 @@ class ServerController extends Controller
         return redirect()
             ->route('servers.show', [$team, $server])
             ->with('success', 'Server is being provisioned...');
+    }
+
+    public function storeCustom(Team $team, StoreCustomServerRequest $request, CreateCustomServerAction $action): RedirectResponse
+    {
+        $server = $action->execute(
+            user: auth()->user(),
+            team: $team,
+            data: CustomServerData::from($request->validated()),
+        );
+
+        return redirect()->route('servers.setup', [$team, $server]);
+    }
+
+    public function setup(Team $team, Server $server): Response|RedirectResponse
+    {
+        $this->authorize('view', $server);
+
+        if ($server->status !== ServerStatus::Pending) {
+            return redirect()->route('servers.show', [$team, $server]);
+        }
+
+        $publicKey = $server->credential('public_key')?->value;
+        $command = "mkdir -p /root/.ssh && touch /root/.ssh/authorized_keys && echo \"{$publicKey}\" >> /root/.ssh/authorized_keys";
+
+        return Inertia::render('servers/setup', [
+            'server' => new ServerResource($server),
+            'authorized_keys_command' => $command,
+        ]);
+    }
+
+    public function testConnection(Team $team, Server $server): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        TestServerConnectionJob::dispatch($server);
+
+        return back();
+    }
+
+    public function provision(Team $team, Server $server): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        if ($server->status !== ServerStatus::Pending) {
+            return redirect()->route('servers.show', [$team, $server]);
+        }
+
+        $server->update(['status' => ServerStatus::Provisioning]);
+
+        InstallStackJob::dispatch($server);
+
+        return redirect()
+            ->route('servers.show', [$team, $server])
+            ->with('success', 'Server provisioning started...');
     }
 
     public function show(Team $team, Server $server): Response

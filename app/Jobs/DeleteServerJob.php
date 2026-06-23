@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
+use App\Enums\Provider;
 use App\Enums\ServerStatus;
 use App\Events\ServerDeleted;
 use App\Models\Server;
@@ -40,8 +41,6 @@ class DeleteServerJob implements ShouldQueue
         Log::info("Starting deletion of server {$this->server->id} ({$this->server->name})");
 
         try {
-            $provider = $providerManager->forAccount($this->server->providerAccount);
-
             // Tear down external resources for each site BEFORE destroying the
             // VPS, since those resources (Cloudflare A records) are tracked by
             // the site's domain rows that the DB cascade will wipe. We skip
@@ -70,25 +69,29 @@ class DeleteServerJob implements ShouldQueue
                 }
             }
 
-            // Delete server at provider if it exists
-            if ($this->server->provider_server_id) {
-                try {
-                    $provider->deleteServer($this->server->provider_server_id);
-                    Log::info("Deleted server at provider: {$this->server->provider_server_id}");
-                } catch (\Exception $e) {
-                    // Server might already be deleted
-                    Log::warning("Failed to delete server at provider (may already be deleted): {$e->getMessage()}");
-                }
-            }
+            if ($this->server->provider !== Provider::Custom) {
+                $provider = $providerManager->forAccount($this->server->providerAccount);
 
-            // Delete SSH key at provider
-            $sshKeyId = $this->server->meta['provider_ssh_key_id'] ?? null;
-            if ($sshKeyId) {
-                try {
-                    $provider->deleteSshKey($sshKeyId);
-                    Log::info("Deleted SSH key at provider: {$sshKeyId}");
-                } catch (\Exception $e) {
-                    Log::warning("Failed to delete SSH key at provider: {$e->getMessage()}");
+                // Delete server at provider if it exists
+                if ($this->server->provider_server_id) {
+                    try {
+                        $provider->deleteServer($this->server->provider_server_id);
+                        Log::info("Deleted server at provider: {$this->server->provider_server_id}");
+                    } catch (\Exception $e) {
+                        // Server might already be deleted
+                        Log::warning("Failed to delete server at provider (may already be deleted): {$e->getMessage()}");
+                    }
+                }
+
+                // Delete SSH key at provider
+                $sshKeyId = $this->server->meta['provider_ssh_key_id'] ?? null;
+                if ($sshKeyId) {
+                    try {
+                        $provider->deleteSshKey($sshKeyId);
+                        Log::info("Deleted SSH key at provider: {$sshKeyId}");
+                    } catch (\Exception $e) {
+                        Log::warning("Failed to delete SSH key at provider: {$e->getMessage()}");
+                    }
                 }
             }
 

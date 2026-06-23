@@ -7,6 +7,7 @@ enum Provider: string
     case DigitalOcean = 'digitalocean';
     case Hetzner = 'hetzner';
     case Vultr = 'vultr';
+    case Custom = 'custom';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum Provider: string
             self::DigitalOcean => 'DigitalOcean',
             self::Hetzner => 'Hetzner',
             self::Vultr => 'Vultr',
+            self::Custom => 'Custom Server',
         };
     }
 
@@ -23,6 +25,7 @@ enum Provider: string
             self::DigitalOcean => 'digitalocean',
             self::Hetzner => 'hetzner',
             self::Vultr => 'vultr',
+            self::Custom => 'server',
         };
     }
 }
