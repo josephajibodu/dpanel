@@ -201,6 +201,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                     setExpandedDns={setExpandedDns}
                                     onCopy={copyText}
                                     onVisit={visitDomain}
+                                    teamPath={teamPath}
                                 />
                             ))
                         )}
@@ -248,6 +249,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                         setExpandedDns={setExpandedDns}
                                         onCopy={copyText}
                                         onVisit={visitDomain}
+                                        teamPath={teamPath}
                                     />
                                 ))}
                             </div>
@@ -388,6 +390,7 @@ function DomainRow({
     setExpandedDns,
     onCopy,
     onVisit,
+    teamPath,
 }: {
     domain: SiteDomain;
     serverId: number;
@@ -396,6 +399,7 @@ function DomainRow({
     setExpandedDns: Dispatch<SetStateAction<Record<string, boolean>>>;
     onCopy: (s: string) => void;
     onVisit: (hostname: string) => void;
+    teamPath: (path: string) => string;
 }) {
     const open = expandedDns[domain.ulid] ?? false;
     const hasDns = domain.dns_records.length > 0;
