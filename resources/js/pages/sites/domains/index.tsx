@@ -65,6 +65,7 @@ interface Props {
     site: { data: Site };
     domains: { data: SiteDomain[] };
     freeDomain: string;
+    cloudflareConfigured: boolean;
 }
 
 const wwwOptions = [
@@ -73,7 +74,7 @@ const wwwOptions = [
     { value: 'none', label: 'No redirect', description: 'Serve both independently' },
 ] as const;
 
-export default function SiteDomainsIndex({ server: serverProp, site: siteProp, domains, freeDomain }: Props) {
+export default function SiteDomainsIndex({ server: serverProp, site: siteProp, domains, freeDomain, cloudflareConfigured }: Props) {
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -91,6 +92,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
         hostname: '',
         wildcard_enabled: false,
         www_redirect: 'from_www' as string,
+        use_cloudflare: false,
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -135,6 +137,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                 hostname: trimmed,
                 wildcard_enabled: false,
                 www_redirect: 'from_www',
+                use_cloudflare: false,
             });
             setSheetOpen(true);
         } finally {
@@ -334,6 +337,32 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                             )}
                         </div>
                     </div>
+
+                    {cloudflareConfigured && (
+                        <div className="border-t px-4 py-6">
+                            <div className="space-y-3">
+                                <Label className="text-base font-medium">Cloudflare DNS</Label>
+                                <p className="text-muted-foreground text-sm">
+                                    Automatically create a DNS A record in your Cloudflare zone pointing this domain to
+                                    the server.
+                                </p>
+                                <label className="flex cursor-pointer gap-3 rounded-md border p-3 has-[:checked]:border-primary">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1"
+                                        checked={addForm.data.use_cloudflare}
+                                        onChange={(e) => addForm.setData('use_cloudflare', e.target.checked)}
+                                    />
+                                    <span>
+                                        <span className="font-medium">Create A record in Cloudflare</span>
+                                        <span className="text-muted-foreground block text-sm">
+                                            Points {addForm.data.hostname || 'this domain'} → server IP automatically.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
 
                     <SheetFooter className="border-t p-4">
                         <Button

@@ -5,6 +5,7 @@ use App\Jobs\DeleteSiteDomainJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +27,14 @@ function fakeSshForDeleteJob(Server $server): SshService
     return $sshService;
 }
 
+function fakeCloudflare(): CloudflareDnsService
+{
+    $cloudflare = \Mockery::mock(CloudflareDnsService::class);
+    $cloudflare->shouldReceive('deleteRecord')->andReturn(null);
+
+    return $cloudflare;
+}
+
 it('deletes the domain and runs nginx cleanup on the server', function () {
     $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
     $site = Site::factory()->create(['server_id' => $server->id]);
@@ -38,7 +47,7 @@ it('deletes the domain and runs nginx cleanup on the server', function () {
     $this->app->instance(SshService::class, fakeSshForDeleteJob($server));
 
     $job = new DeleteSiteDomainJob($domain, $site);
-    $job->handle(app(SshService::class));
+    $job->handle(app(SshService::class), fakeCloudflare());
 
     $this->assertDatabaseMissing('site_domains', ['id' => $domain->id]);
 });
@@ -58,7 +67,28 @@ it('deletes a domain that has ssl enabled', function () {
     $this->app->instance(SshService::class, fakeSshForDeleteJob($server));
 
     $job = new DeleteSiteDomainJob($domain, $site);
-    $job->handle(app(SshService::class));
+    $job->handle(app(SshService::class), fakeCloudflare());
+
+    $this->assertDatabaseMissing('site_domains', ['id' => $domain->id]);
+});
+
+it('deletes the cloudflare dns record when one exists', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'cf-domain.com',
+        'is_primary' => false,
+        'cloudflare_dns_record_id' => 'abc123',
+    ]);
+
+    $cloudflare = \Mockery::mock(CloudflareDnsService::class);
+    $cloudflare->shouldReceive('deleteRecord')->with('abc123')->once();
+
+    $this->app->instance(SshService::class, fakeSshForDeleteJob($server));
+
+    $job = new DeleteSiteDomainJob($domain, $site);
+    $job->handle(app(SshService::class), $cloudflare);
 
     $this->assertDatabaseMissing('site_domains', ['id' => $domain->id]);
 });
@@ -82,7 +112,7 @@ it('deletes the domain even when the server is missing', function () {
 
     $server->delete();
 
-    $job->handle(app(SshService::class));
+    $job->handle(app(SshService::class), fakeCloudflare());
 
     $this->assertDatabaseMissing('site_domains', ['id' => $domain->id]);
 });
