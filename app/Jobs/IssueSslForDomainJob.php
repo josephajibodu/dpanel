@@ -14,7 +14,7 @@ class IssueSslForDomainJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 120;
+    public int $timeout = 420;
 
     public int $tries = 3;
 
@@ -35,6 +35,12 @@ class IssueSslForDomainJob implements ShouldQueue
         $connection = $sshService->connect($server);
 
         try {
+            // Install certbot if it wasn't present when the server was provisioned.
+            $hasCertbot = trim($connection->exec('which certbot 2>/dev/null || true')) !== '';
+            if (! $hasCertbot) {
+                $connection->exec('sudo DEBIAN_FRONTEND=noninteractive apt-get install -y certbot', 300);
+            }
+
             $certDir = "/etc/nginx/ssl/domains/{$this->site->id}/{$this->siteDomain->id}";
 
             $webRoot = $this->site->webRoot();

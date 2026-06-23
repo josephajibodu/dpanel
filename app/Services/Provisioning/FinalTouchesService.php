@@ -24,6 +24,9 @@ class FinalTouchesService
         // Git
         $context->packages->ensureInstalled('git');
 
+        // Certbot (Let's Encrypt)
+        $context->packages->ensureInstalled('certbot');
+
         // Firewall
         $context->packages->ensureInstalled('ufw');
         $context->runner->runQuietly('ufw allow 22', 60);
