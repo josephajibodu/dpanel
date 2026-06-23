@@ -11,6 +11,7 @@ use App\Http\Requests\ValidateSiteDomainRequest;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteDomainResource;
 use App\Http\Resources\SiteResource;
+use App\Jobs\DeleteSiteDomainJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
@@ -145,9 +146,7 @@ class SiteDomainController extends Controller
                 ->with('error', 'Set another domain as primary before deleting this one.');
         }
 
-        $siteDomain->delete();
-
-        SyncSiteNginxJob::dispatch($site);
+        DeleteSiteDomainJob::dispatch($siteDomain, $site);
 
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])

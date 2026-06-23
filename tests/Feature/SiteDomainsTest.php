@@ -2,6 +2,7 @@
 
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
+use App\Jobs\DeleteSiteDomainJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
@@ -140,6 +141,69 @@ it('returns success immediately when domain is already verified', function () {
     expect(session('success'))->toContain('already verified');
 
     Queue::assertNotPushed(VerifyCustomDomainJob::class);
+});
+
+it('dispatches delete job when removing a custom domain', function () {
+    Queue::fake();
+
+    $custom = SiteDomain::factory()
+        ->for($this->site)
+        ->notPrimary()
+        ->create([
+            'hostname' => 'to-delete.com',
+            'type' => SiteDomainType::Custom,
+        ]);
+
+    $response = $this->actingAs($this->user)
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$custom->ulid}");
+
+    $response->assertRedirect();
+
+    Queue::assertPushed(DeleteSiteDomainJob::class);
+});
+
+it('prevents deleting the last domain', function () {
+    Queue::fake();
+
+    // The site has exactly one domain (the system one created in beforeEach).
+    $system = $this->site->domains()->first();
+
+    // We need a second custom domain as the target but only 1 domain total to trigger the guard.
+    // Instead, delete the custom domain when it's the only one.
+    $custom = SiteDomain::factory()
+        ->for($this->site)
+        ->notPrimary()
+        ->create([
+            'hostname' => 'only-domain.com',
+            'type' => SiteDomainType::Custom,
+        ]);
+
+    // Remove the system domain so only the custom one remains.
+    $system?->forceDelete();
+
+    $response = $this->actingAs($this->user)
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$custom->ulid}");
+
+    $response->assertRedirect();
+    expect(session('error'))->toContain('at least one domain');
+
+    Queue::assertNotPushed(DeleteSiteDomainJob::class);
+});
+
+it('prevents deleting a system domain', function () {
+    Queue::fake();
+
+    $system = SiteDomain::factory()->for($this->site)->system()->create([
+        'hostname' => 'system-only.flitops.xyz',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->delete("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$system->ulid}");
+
+    $response->assertRedirect();
+    expect(session('error'))->toContain('system domain');
+
+    Queue::assertNotPushed(DeleteSiteDomainJob::class);
 });
 
 it('sets primary domain', function () {
