@@ -198,12 +198,17 @@ NGINX;
         return <<<NGINX
     # PHP-FPM configuration
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php{$phpVersion}-fpm.sock;
+        fastcgi_pass unix:/run/php/php{$phpVersion}-fpm-{$this->serverUser()}.sock;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
     }
 NGINX;
+    }
+
+    protected function serverUser(): string
+    {
+        return config('server.user');
     }
 
     /**

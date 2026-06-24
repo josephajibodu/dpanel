@@ -23,7 +23,7 @@ class PhpRuntimeResolver
     {
         return [
             'binary' => "php{$version}",
-            'fpm_socket' => "/var/run/php/php{$version}-fpm.sock",
+            'fpm_socket' => '/run/php/php'.$version.'-fpm-'.config('server.user').'.sock',
             'fpm_service' => "php{$version}-fpm",
             'composer' => "php{$version} /usr/local/bin/composer",
         ];
