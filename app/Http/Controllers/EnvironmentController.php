@@ -24,20 +24,26 @@ class EnvironmentController extends Controller
         $site->load(['server']);
 
         $hasWorkers = $site->server->workers()->where('site_id', $site->id)->exists();
-        $envContent = '';
-
-        try {
-            $connection = $sshService->connect($site->server);
-            $envContent = $connection->download($site->rootPath().'/.env');
-        } catch (\Throwable) {
-            $envContent = '';
-        }
 
         return Inertia::render('sites/environment/show', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'has_workers' => $hasWorkers,
-            'env_content' => $envContent,
+            'env_content' => Inertia::defer(function () use ($site, $sshService): string {
+                if ($site->env_content !== null) {
+                    return $site->env_content;
+                }
+
+                try {
+                    $connection = $sshService->connect($site->server);
+                    $content = $connection->download($site->rootPath().'/.env');
+                    $connection->disconnect();
+
+                    return $content;
+                } catch (\Throwable) {
+                    return '';
+                }
+            }),
         ]);
     }
 
@@ -54,6 +60,8 @@ class EnvironmentController extends Controller
         $clearConfigCache = (bool) ($validated['clear_config_cache'] ?? false);
         $restartQueue = (bool) ($validated['restart_queue'] ?? false);
         $variables = $this->parseEnvContent($validated['env_content']);
+
+        $site->update(['env_content' => $validated['env_content']]);
 
         // Get existing variables to detect deletions
         $existingKeys = $site->environmentVariables()->pluck('key')->all();

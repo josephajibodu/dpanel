@@ -41,6 +41,7 @@ class Site extends Model
         'auto_deploy',
         'deployment_started_at',
         'deployment_finished_at',
+        'env_content',
     ];
 
     /**

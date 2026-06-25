@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { Loader2Icon } from 'lucide-react';
+import { EyeIcon, LockIcon, Loader2Icon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,39 +12,42 @@ import { useAppearance } from '@/hooks/use-appearance';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { type EnvironmentVariable, type Site } from '@/types/site';
+import { type Site } from '@/types/site';
 
 interface Props {
     server: { data: { id: number; name: string } };
     site: {
         data: Site & {
             server?: { id: number; name: string; ip_address: string };
-            environment_variables?: EnvironmentVariable[];
         };
     };
     has_workers: boolean;
     env_content?: string;
 }
 
-export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false, env_content = '' }: Props) {
+export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false, env_content }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
     const { resolvedAppearance } = useAppearance();
-    const fallbackVariables: EnvironmentVariable[] = site.environment_variables ?? [];
-    const initialContent = env_content !== ''
-        ? env_content
-        : fallbackVariables.length
-        ? fallbackVariables.map((variable) => `${variable.key}=${variable.value ?? ''}`).join('\n')
-        : '';
+    const [revealed, setRevealed] = useState(false);
+    const initialized = useRef(false);
 
     const form = useForm({
-        env_content: initialContent,
+        env_content: '',
         clear_config_cache: false,
         restart_queue: false,
     });
+
+    // Sync deferred env_content into form once the deferred request resolves
+    useEffect(() => {
+        if (env_content !== undefined && !initialized.current) {
+            form.setData('env_content', env_content);
+            initialized.current = true;
+        }
+    }, [env_content]);
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -96,6 +100,8 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
         });
     };
 
+    const isLoading = revealed && env_content === undefined;
+
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
@@ -117,7 +123,7 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                     <CardContent className="pt-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <div className="overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
+                                <div className="relative overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
                                     <Editor
                                         height="420px"
                                         language="dotenv"
@@ -136,8 +142,32 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                                             tabSize: 2,
                                             padding: { top: 8, bottom: 8 },
                                             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                            readOnly: !revealed || env_content === undefined,
                                         }}
                                     />
+
+                                    {!revealed && (
+                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/90 backdrop-blur-xs">
+                                            <LockIcon className="text-muted-foreground h-8 w-8" />
+                                            <p className="text-muted-foreground text-sm">Environment variables are hidden for security.</p>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setRevealed(true)}
+                                            >
+                                                <EyeIcon className="mr-2 h-4 w-4" />
+                                                Reveal secrets
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {isLoading && (
+                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-background/70 backdrop-blur-xs">
+                                            <Loader2Icon className="text-muted-foreground h-6 w-6 animate-spin" />
+                                            <p className="text-muted-foreground text-xs">Loading environment...</p>
+                                        </div>
+                                    )}
                                 </div>
                                 {form.errors.env_content && (
                                     <p className="text-destructive text-sm">{form.errors.env_content}</p>
@@ -170,7 +200,7 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                             <Separator />
 
                             <div className="flex justify-end">
-                                <Button type="submit" disabled={form.processing}>
+                                <Button type="submit" disabled={form.processing || !revealed || env_content === undefined}>
                                     {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
                                     Save & Sync
                                 </Button>

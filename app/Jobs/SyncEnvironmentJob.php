@@ -33,34 +33,29 @@ class SyncEnvironmentJob implements ShouldQueue
         Log::info("Syncing environment variables for site {$site->domain}");
 
         try {
-            // Load environment variables
-            $variables = $site->environmentVariables()->get();
-
-            if ($variables->isEmpty()) {
-                Log::info("No environment variables to sync for site {$site->domain}");
-
-                return;
-            }
-
-            // Build .env content
-            $envContent = $variables->map(function ($var) {
-                $value = $var->value;
-                // Quote values with spaces or special characters
-                if (preg_match('/[\s"\'#]/', $value) || str_contains($value, '=')) {
-                    $value = '"'.addslashes($value).'"';
-                }
-
-                return "{$var->key}={$value}";
-            })->implode("\n");
-
-            $connection = $sshService->connect($server);
-
             $siteRoot = $site->rootPath();
             $envPath = "{$siteRoot}/.env";
 
-            // Write .env file
-            $escapedContent = str_replace("'", "'\\''", $envContent);
-            $connection->exec("echo '{$escapedContent}' > {$envPath}");
+            // Use stored raw content when available; fall back to rebuilding from key-value pairs
+            // for sites that predate the env_content column.
+            if ($site->env_content !== null) {
+                $envContent = $site->env_content;
+            } else {
+                $variables = $site->environmentVariables()->get();
+
+                if ($variables->isEmpty()) {
+                    Log::info("No environment variables to sync for site {$site->domain}");
+
+                    return;
+                }
+
+                $envContent = $variables->map(fn ($var) => "{$var->key}={$var->value}")->implode("\n");
+            }
+
+            $connection = $sshService->connect($server);
+
+            // Write .env file using upload to avoid shell escaping issues.
+            $connection->upload($envContent, $envPath);
 
             // Set proper permissions
             $serverUser = config('server.user');
