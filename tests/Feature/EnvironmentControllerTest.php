@@ -70,10 +70,8 @@ describe('update', function () {
 
         $response->assertRedirect();
 
-        $this->assertDatabaseHas('sites', [
-            'id' => $this->site->id,
-            'env_content' => $envContent,
-        ]);
+        // env_content is encrypted — verify via model decryption
+        expect($this->site->fresh()->env_content)->toBe($envContent);
 
         Queue::assertPushed(SyncEnvironmentJob::class, fn ($job) => $job->site->id === $this->site->id);
     });
@@ -88,10 +86,8 @@ describe('update', function () {
                 'env_content' => $envContent,
             ]);
 
-        $this->assertDatabaseHas('sites', [
-            'id' => $this->site->id,
-            'env_content' => $envContent,
-        ]);
+        // env_content is encrypted — verify via model decryption
+        expect($this->site->fresh()->env_content)->toBe($envContent);
     });
 
     it('also syncs individual environment variables', function () {

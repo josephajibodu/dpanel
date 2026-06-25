@@ -58,6 +58,7 @@ class Site extends Model
             'auto_deploy' => 'boolean',
             'deployment_started_at' => 'datetime',
             'deployment_finished_at' => 'datetime',
+            'env_content' => 'encrypted',
         ];
     }
 
