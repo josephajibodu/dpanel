@@ -2,6 +2,8 @@
 
 A server management and application deployment platform inspired by [Laravel Forge](https://forge.laravel.com/), built with Laravel 12, Inertia v2, React, and Shadcn UI.
 
+See **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** for a checklist of features thay must be completed before full production use. 
+
 ## 📋 Documentation
 
 | Document | Purpose |
