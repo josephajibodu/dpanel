@@ -7,6 +7,7 @@ use App\Actions\Servers\CreateServerAction;
 use App\Actions\Servers\DeleteServerAction;
 use App\Data\CustomServerData;
 use App\Data\ServerData;
+use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
 use App\Http\Requests\StoreCustomServerRequest;
@@ -162,17 +163,31 @@ class ServerController extends Controller
     {
         $this->authorize('update', $server);
 
-        if ($server->status !== ServerStatus::Pending) {
+        if (! in_array($server->status, [ServerStatus::Pending, ServerStatus::Error], true)) {
             return redirect()->route('servers.show', [$team, $server]);
         }
 
-        $server->update(['status' => ServerStatus::Provisioning]);
+        $isRetry = $server->status === ServerStatus::Error;
+
+        $server->update([
+            'status' => ServerStatus::Provisioning,
+            'provisioning_step' => ProvisioningStep::WaitingForServer,
+            'error_message' => null,
+        ]);
+
+        if ($isRetry) {
+            $server->provisioningLogs()->create([
+                'type' => 'info',
+                'message' => 'Retrying provisioning...',
+                'created_at' => now(),
+            ]);
+        }
 
         InstallStackJob::dispatch($server);
 
         return redirect()
             ->route('servers.show', [$team, $server])
-            ->with('success', 'Server provisioning started...');
+            ->with('success', $isRetry ? 'Retrying provisioning...' : 'Server provisioning started...');
     }
 
     public function show(Team $team, Server $server): Response

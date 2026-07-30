@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     ActivityIcon,
@@ -74,6 +74,11 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
     }));
     const logs = useServerProvisioningLogs(data.id, initialLogLines);
 
+    const retryForm = useForm({});
+    const handleRetryProvisioning = () => {
+        retryForm.post(teamPath(`/servers/${data.id}/provision`));
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
         { title: data.name, href: teamPath(`/servers/${data.id}`) },
@@ -105,7 +110,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
                                     <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                                    <div className="space-y-1">
+                                    <div className="flex-1 space-y-1">
                                         <p className="font-medium text-red-800 dark:text-red-200">
                                             Provisioning failed
                                         </p>
@@ -113,6 +118,15 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                             {data.error_message ?? 'An unexpected error occurred during provisioning.'}
                                         </p>
                                     </div>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleRetryProvisioning}
+                                        disabled={retryForm.processing}
+                                    >
+                                        {retryForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                                        Retry provisioning
+                                    </Button>
                                 </div>
 
                                 {logs.length > 0 && (
