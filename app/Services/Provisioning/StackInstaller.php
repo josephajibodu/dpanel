@@ -8,6 +8,7 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
+use App\Events\ProvisioningOutput;
 use App\Models\Server;
 use App\Services\Remote\SshRemoteCommandRunner;
 use App\Services\Remote\SshRemoteFilesystem;
@@ -35,7 +36,10 @@ class StackInstaller
      */
     public function install(Server $server, SshConnection $connection): void
     {
-        $runner = new SshRemoteCommandRunner($connection);
+        $runner = new SshRemoteCommandRunner(
+            $connection,
+            fn (string $line) => $this->logOutput($server, $line),
+        );
         $files = new SshRemoteFilesystem($connection);
         $packages = new AptPackageManager($runner);
         $services = new SystemdServiceManager($runner);
@@ -68,17 +72,21 @@ class StackInstaller
         );
 
         $server->update(['provisioning_step' => ProvisioningStep::PreparingServer]);
+        $this->logStep($server, ProvisioningStep::PreparingServer);
         $this->systemService->prepareServer($context);
 
         $server->update(['provisioning_step' => ProvisioningStep::ConfiguringSwap]);
+        $this->logStep($server, ProvisioningStep::ConfiguringSwap);
         $this->systemService->configureSwap($context);
 
         $server->update(['provisioning_step' => ProvisioningStep::InstallingBaseDependencies]);
+        $this->logStep($server, ProvisioningStep::InstallingBaseDependencies);
         $this->systemService->installBaseDependencies($context);
 
         $defaults = $server->type?->defaultServices() ?? [];
 
         if ($defaults['php'] ?? false) {
+            $this->logStep($server, ProvisioningStep::InstallingPhp);
             $phpService = $server->createService(ServiceType::Php, $server->php_version, true);
             $context->service = $phpService;
             $phpService->install($context);
@@ -86,24 +94,28 @@ class StackInstaller
         }
 
         if ($defaults['nginx'] ?? false) {
+            $this->logStep($server, ProvisioningStep::InstallingNginx);
             $service = $server->createService(ServiceType::Nginx, null, true);
             $context->service = $service;
             $service->install($context);
         }
 
         if ($defaults['database'] ?? false) {
+            $this->logStep($server, ProvisioningStep::InstallingDatabase);
             $service = $server->createService($server->databaseServiceType(), null, true);
             $context->service = $service;
             $service->install($context);
         }
 
         if ($defaults['redis'] ?? false) {
+            $this->logStep($server, ProvisioningStep::InstallingRedis);
             $service = $server->createService(ServiceType::Redis, null, true);
             $context->service = $service;
             $service->install($context);
         }
 
         $server->update(['provisioning_step' => ProvisioningStep::MakingFinalTouches]);
+        $this->logStep($server, ProvisioningStep::MakingFinalTouches);
         $this->finalTouchesService->run($context);
 
         if ($defaults['supervisor'] ?? false) {
@@ -123,6 +135,29 @@ class StackInstaller
 
         $this->appendMetadata($runner, $updateData);
         $server->update($updateData);
+        $this->logOutput($server, ProvisioningStep::Finished->label(), 'success');
+    }
+
+    /**
+     * Persist a provisioning transcript line and broadcast it live.
+     */
+    private function logOutput(Server $server, string $line, string $type = 'output'): void
+    {
+        $server->provisioningLogs()->create([
+            'type' => $type,
+            'message' => $line,
+            'created_at' => now(),
+        ]);
+
+        broadcast(new ProvisioningOutput(server: $server, line: $line, type: $type));
+    }
+
+    /**
+     * Log a narrated phase header (e.g. "Installing PHP") in the transcript.
+     */
+    private function logStep(Server $server, ProvisioningStep $step): void
+    {
+        $this->logOutput($server, $step->label(), 'info');
     }
 
     /**

@@ -98,6 +98,14 @@ class SshConnection
     }
 
     /**
+     * Stderr captured by the most recently completed exec()/execWithOutput() call.
+     */
+    public function lastStdError(): string
+    {
+        return $this->ssh->getStdError();
+    }
+
+    /**
      * Upload file content to server.
      */
     public function upload(string $content, string $remotePath): void

@@ -226,6 +226,14 @@ class Server extends Model
     }
 
     /**
+     * Line-by-line transcript of the provisioning SSH session.
+     */
+    public function provisioningLogs(): HasMany
+    {
+        return $this->hasMany(ServerProvisioningLog::class);
+    }
+
+    /**
      * Installed software services (PHP, Nginx, Redis, etc.) on this server.
      */
     public function installedServices(): HasMany

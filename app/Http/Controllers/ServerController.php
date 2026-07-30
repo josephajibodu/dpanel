@@ -185,8 +185,17 @@ class ServerController extends Controller
             'actions' => fn ($q) => $q->latest()->limit(10),
         ]);
 
+        $provisioningLifecycle = [ServerStatus::Pending, ServerStatus::Creating, ServerStatus::Provisioning, ServerStatus::Error];
+
         return Inertia::render('servers/show', [
             'server' => new ServerResource($server),
+            'provisioningLogs' => in_array($server->status, $provisioningLifecycle, true)
+                ? $server->provisioningLogs()->orderBy('id')->get()->map(fn ($log) => [
+                    'type' => $log->type,
+                    'message' => $log->message,
+                    'created_at' => $log->created_at->toIso8601String(),
+                ])
+                : [],
         ]);
     }
 

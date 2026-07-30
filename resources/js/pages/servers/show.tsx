@@ -1,5 +1,19 @@
-import { ServerStatusBadge } from '@/components/servers/server-status-badge';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
+import {
+    ActivityIcon,
+    AlertCircleIcon,
+    ExternalLinkIcon,
+    GlobeIcon,
+    HardDriveIcon,
+    Loader2Icon,
+    PlusIcon,
+    ServerIcon,
+} from 'lucide-react';
+
+import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { ProvisioningStepTimeline } from '@/components/servers/provisioning-step-timeline';
+import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,23 +32,14 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { type DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { useServerProvisioningLogs } from '@/hooks/use-server-provisioning-logs';
 import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server } from '@/types/server';
 import { Site } from '@/types/site';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
-import {
-    ActivityIcon,
-    AlertCircleIcon,
-    ExternalLinkIcon,
-    GlobeIcon,
-    HardDriveIcon,
-    PlusIcon,
-    ServerIcon,
-} from 'lucide-react';
 
 interface Props {
     server: {
@@ -48,14 +53,26 @@ interface Props {
             }>;
         };
     };
+    provisioningLogs?: Array<{
+        type: string;
+        message: string;
+        created_at: string;
+    }>;
 }
 
-export default function ServersShow({ server }: Props) {
+export default function ServersShow({ server, provisioningLogs }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const { server: data, connectionState } = useServerProvisioningUpdates(server.data);
     const sites = data.sites ?? [];
     const isProvisioningLifecycle = ['pending', 'creating', 'provisioning'].includes(data.status);
+
+    const initialLogLines: DeploymentLogLine[] = (provisioningLogs ?? []).map((log) => ({
+        type: log.type as DeploymentLogLine['type'],
+        message: log.message,
+        timestamp: log.created_at,
+    }));
+    const logs = useServerProvisioningLogs(data.id, initialLogLines);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -71,22 +88,41 @@ export default function ServersShow({ server }: Props) {
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 {isProvisioningLifecycle ? (
-                    <div className="mx-auto w-full max-w-2xl">
+                    <div className="mx-auto w-full max-w-2xl space-y-6">
                         <ProvisioningStepTimeline server={data} />
+
+                        <div className="rounded-lg border bg-card">
+                            <div className="flex items-center gap-2 border-b px-4 py-3">
+                                <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                                <h2 className="font-medium">Provisioning log</h2>
+                            </div>
+                            <DeploymentLog logs={logs} isDeploying />
+                        </div>
                     </div>
                 ) : (
                     <>
                         {data.status === 'error' && (
-                            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
-                                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                                <div className="space-y-1">
-                                    <p className="font-medium text-red-800 dark:text-red-200">
-                                        Provisioning failed
-                                    </p>
-                                    <p className="text-red-700 dark:text-red-300">
-                                        {data.error_message ?? 'An unexpected error occurred during provisioning.'}
-                                    </p>
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
+                                    <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                                    <div className="space-y-1">
+                                        <p className="font-medium text-red-800 dark:text-red-200">
+                                            Provisioning failed
+                                        </p>
+                                        <p className="text-red-700 dark:text-red-300">
+                                            {data.error_message ?? 'An unexpected error occurred during provisioning.'}
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {logs.length > 0 && (
+                                    <div className="rounded-lg border bg-card">
+                                        <div className="border-b px-4 py-3">
+                                            <h2 className="font-medium">Provisioning log</h2>
+                                        </div>
+                                        <DeploymentLog logs={logs} />
+                                    </div>
+                                )}
                             </div>
                         )}
 
