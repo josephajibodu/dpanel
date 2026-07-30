@@ -29,6 +29,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Supported Ubuntu Versions
+    |--------------------------------------------------------------------------
+    |
+    | Provisioning only supports these Ubuntu VERSION_ID values (as reported by
+    | /etc/os-release). StackInstaller checks this before doing any real work
+    | so an incompatible server fails fast with a clear message instead of
+    | partway through an opaque apt-get error.
+    |
+    */
+
+    'supported_ubuntu_versions' => ['22.04', '24.04', '26.04'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Server Home Directory
     |--------------------------------------------------------------------------
     |

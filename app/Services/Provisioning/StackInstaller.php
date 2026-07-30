@@ -71,6 +71,8 @@ class StackInstaller
             installationRunner: $installationRunner,
         );
 
+        $this->assertSupportedOperatingSystem($server, $runner);
+
         $server->update(['provisioning_step' => ProvisioningStep::PreparingServer]);
         $this->logStep($server, ProvisioningStep::PreparingServer);
         $this->systemService->prepareServer($context);
@@ -158,6 +160,53 @@ class StackInstaller
     private function logStep(Server $server, ProvisioningStep $step): void
     {
         $this->logOutput($server, $step->label(), 'info');
+    }
+
+    /**
+     * Fail fast with a clear message if the server isn't running a supported
+     * Ubuntu version, instead of discovering it partway through an opaque
+     * apt-get error. Detection is best-effort: if the probe itself fails or
+     * the OS can't be identified, provisioning continues rather than
+     * blocking on a false positive.
+     */
+    private function assertSupportedOperatingSystem(Server $server, RemoteCommandRunner $runner): void
+    {
+        $this->logOutput($server, 'Checking operating system compatibility...', 'info');
+
+        try {
+            $osRelease = $runner->run('cat /etc/os-release 2>/dev/null || true', 15);
+        } catch (\Throwable) {
+            return;
+        }
+
+        $id = $this->extractOsReleaseValue($osRelease, 'ID');
+
+        if ($id === '') {
+            return;
+        }
+
+        $version = $this->extractOsReleaseValue($osRelease, 'VERSION_ID');
+        $supported = config('server.supported_ubuntu_versions', []);
+
+        if ($id === 'ubuntu' && in_array($version, $supported, true)) {
+            return;
+        }
+
+        $supportedList = implode(', ', $supported);
+        $message = "Unsupported server: detected {$id} {$version}. FlitOps currently supports Ubuntu ({$supportedList}) only.";
+
+        $this->logOutput($server, $message, 'error');
+
+        throw new \RuntimeException($message);
+    }
+
+    private function extractOsReleaseValue(string $osRelease, string $key): string
+    {
+        if (! preg_match('/^'.preg_quote($key, '/').'=(.*)$/m', $osRelease, $matches)) {
+            return '';
+        }
+
+        return trim($matches[1], "\"'\r\n ");
     }
 
     /**
