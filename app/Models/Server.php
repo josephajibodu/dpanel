@@ -358,6 +358,22 @@ class Server extends Model
     }
 
     /**
+     * Redact known secret credential values (sudo/database passwords) from a
+     * message before it is stored, emailed, or broadcast. SSH command
+     * failures can embed these plaintext values verbatim.
+     */
+    public function redactSecrets(string $message): string
+    {
+        $secrets = $this->credentials()
+            ->whereIn('type', ['sudo_password', 'database_password'])
+            ->pluck('value')
+            ->filter()
+            ->all();
+
+        return $secrets === [] ? $message : str_replace($secrets, '[redacted]', $message);
+    }
+
+    /**
      * Check if the server is ready (active and connected).
      */
     public function isReady(): bool

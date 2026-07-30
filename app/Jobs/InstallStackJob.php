@@ -56,23 +56,25 @@ class InstallStackJob implements ShouldQueue
                 $connection->disconnect();
             }
         } catch (\Throwable $e) {
+            $errorMessage = $this->server->redactSecrets($e->getMessage());
+
             Log::error(
                 "Failed to install stack on server {$this->server->id}",
                 [
                     'server_id' => $this->server->id,
                     'exception' => get_class($e),
-                    'message' => $e->getMessage(),
+                    'message' => $errorMessage,
                     'trace' => $e->getTraceAsString(),
                     'previous' => $e->getPrevious() ? [
                         'exception' => get_class($e->getPrevious()),
-                        'message' => $e->getPrevious()->getMessage(),
+                        'message' => $this->server->redactSecrets($e->getPrevious()->getMessage()),
                     ] : null,
                 ]
             );
 
             $this->server->update([
                 'status' => ServerStatus::Error,
-                'error_message' => $e->getMessage(),
+                'error_message' => $errorMessage,
             ]);
 
             throw $e;
@@ -84,16 +86,18 @@ class InstallStackJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
+        $errorMessage = $this->server->redactSecrets($exception->getMessage());
+
         Log::error(
             "InstallStackJob failed for server {$this->server->id}",
             [
                 'server_id' => $this->server->id,
                 'exception' => get_class($exception),
-                'message' => $exception->getMessage(),
+                'message' => $errorMessage,
                 'trace' => $exception->getTraceAsString(),
                 'previous' => $exception->getPrevious() ? [
                     'exception' => get_class($exception->getPrevious()),
-                    'message' => $exception->getPrevious()->getMessage(),
+                    'message' => $this->server->redactSecrets($exception->getPrevious()->getMessage()),
                     'trace' => $exception->getPrevious()->getTraceAsString(),
                 ] : null,
             ]
@@ -101,9 +105,9 @@ class InstallStackJob implements ShouldQueue
 
         $this->server->update([
             'status' => ServerStatus::Error,
-            'error_message' => $exception->getMessage(),
+            'error_message' => $errorMessage,
         ]);
 
-        $this->server->user->notify(new ServerProvisioningFailed($this->server, $exception->getMessage()));
+        $this->server->user->notify(new ServerProvisioningFailed($this->server, $errorMessage));
     }
 }
