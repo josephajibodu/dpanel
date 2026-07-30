@@ -1,10 +1,9 @@
 import { router } from '@inertiajs/react';
+import { useConnectionStatus, useEcho } from '@laravel/echo-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Server } from '@/types/server';
-
-type RealtimeConnectionState = 'connected' | 'connecting' | 'disconnected';
 
 interface ServerStatusEvent {
     server?: Server | { data?: Server };
@@ -18,12 +17,14 @@ function isProvisioningLifecycle(status: Server['status']): boolean {
     return ['pending', 'creating', 'provisioning'].includes(status);
 }
 
+function extractServer(payload?: Server | { data?: Server }): Server | undefined {
+    return (payload as { data?: Server })?.data ?? (payload as Server | undefined);
+}
+
 export function useServerProvisioningUpdates(initialServer: Server) {
     const [server, setServer] = useState<Server>(initialServer);
-    const [connectionState, setConnectionState] = useState<RealtimeConnectionState>('connecting');
-    const channelRef = useRef<any>(null);
+    const connectionState = useConnectionStatus();
     const pollingIntervalRef = useRef<number | null>(null);
-    const debugEnabled = import.meta.env.VITE_REALTIME_DEBUG === 'true';
 
     const shouldPollFallback = useMemo(() => {
         return isProvisioningLifecycle(server.status) && connectionState !== 'connected';
@@ -33,62 +34,13 @@ export function useServerProvisioningUpdates(initialServer: Server) {
         setServer(initialServer);
     }, [initialServer]);
 
-    useEffect(() => {
-        if (!window.Echo) {
-            setConnectionState('disconnected');
-            return;
-        }
-
-        const pusherConnection = window.Echo.connector?.pusher?.connection;
-        const onStateChange = (states: { current: string }) => {
-            if (states.current === 'connected') {
-                setConnectionState('connected');
-                return;
-            }
-
-            if (states.current === 'connecting') {
-                setConnectionState('connecting');
-                return;
-            }
-
-            setConnectionState('disconnected');
-        };
-
-        pusherConnection?.bind('state_change', onStateChange);
-
-        const channel = window.Echo.private(`server.${initialServer.id}`);
-        channelRef.current = channel;
-
-        channel.subscribed(() => {
-            setConnectionState('connected');
-            if (debugEnabled) {
-                console.debug('[realtime][server] subscribed', { serverId: initialServer.id });
-            }
-        });
-
-        channel.error((error: unknown) => {
-            setConnectionState('disconnected');
-            console.error('[realtime][server] channel error', {
-                serverId: initialServer.id,
-                error,
-            });
-        });
-
-        channel.listen('.server.status.changed', (event: ServerStatusEvent) => {
-            const incomingServer = (event.server as { data?: Server })?.data ?? (event.server as Server | undefined);
-
+    useEcho<ServerStatusEvent>(
+        `server.${initialServer.id}`,
+        '.server.status.changed',
+        (event) => {
+            const incomingServer = extractServer(event.server);
             if (!incomingServer || incomingServer.id !== initialServer.id) {
                 return;
-            }
-
-            if (debugEnabled) {
-                console.debug('[realtime][server] status update', {
-                    serverId: incomingServer.id,
-                    previousStatus: event.previous_status,
-                    currentStatus: event.current_status,
-                    previousProvisioningStep: event.previous_provisioning_step,
-                    currentProvisioningStep: event.current_provisioning_step,
-                });
             }
 
             if (event.current_status === 'error' && event.previous_status !== 'error') {
@@ -102,48 +54,38 @@ export function useServerProvisioningUpdates(initialServer: Server) {
                 ...previousServer,
                 ...incomingServer,
             }));
-        });
+        },
+        [initialServer.id],
+    );
 
-        channel.listen('.server.sites.updated', (event: { server?: Server }) => {
-            const incomingServer = (event.server as { data?: Server })?.data ?? (event.server as Server | undefined);
-
+    useEcho<{ server?: Server }>(
+        `server.${initialServer.id}`,
+        '.server.sites.updated',
+        (event) => {
+            const incomingServer = extractServer(event.server);
             if (!incomingServer || incomingServer.id !== initialServer.id) {
                 return;
-            }
-
-            if (debugEnabled) {
-                console.debug('[realtime][server] sites update', {
-                    serverId: incomingServer.id,
-                    sitesCount: incomingServer.sites?.length ?? 0,
-                });
             }
 
             setServer((previousServer) => ({
                 ...previousServer,
                 ...incomingServer,
             }));
-        });
+        },
+        [initialServer.id],
+    );
 
-        channel.listen('.deployment.status.changed', () => {
-            if (debugEnabled) {
-                console.debug('[realtime][server] deployment status changed, reloading server', {
-                    serverId: initialServer.id,
-                });
-            }
+    useEcho(
+        `server.${initialServer.id}`,
+        '.deployment.status.changed',
+        () => {
             router.reload({
                 only: ['server'],
                 preserveScroll: true,
             });
-        });
-
-        return () => {
-            channel.stopListening('.server.status.changed');
-            channel.stopListening('.server.sites.updated');
-            channel.stopListening('.deployment.status.changed');
-            window.Echo.leave(`server.${initialServer.id}`);
-            pusherConnection?.unbind('state_change', onStateChange);
-        };
-    }, [debugEnabled, initialServer.id]);
+        },
+        [initialServer.id],
+    );
 
     useEffect(() => {
         if (!shouldPollFallback) {

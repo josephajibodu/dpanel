@@ -1,13 +1,15 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { ArrowLeftIcon, DatabaseIcon, EyeIcon, EyeOffIcon, GlobeIcon, Loader2Icon, PackageIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { RepositorySelector } from '@/components/sites/repository-selector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
@@ -17,7 +19,6 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
 import { PhpVersion, ProjectType } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
-import { toast } from 'sonner';
 
 interface Repository {
     id: number;
@@ -130,22 +131,9 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
     const readyDatabases = dbList.filter((db) => db.status === 'ready');
     const pendingDatabases = dbList.filter((db) => db.status === 'pending');
 
-    useEffect(() => {
-        if (!serverData.id || !window.Echo) {
-            return;
-        }
-
-        const channel = window.Echo.private(`server.${serverData.id}`);
-
-        channel.listen('.server.databases.updated', () => {
-            router.reload({ only: ['databases'], preserveScroll: true });
-        });
-
-        return () => {
-            channel.stopListening('.server.databases.updated');
-            window.Echo.leave(`server.${serverData.id}`);
-        };
-    }, [serverData.id]);
+    useEcho(`server.${serverData.id}`, '.server.databases.updated', () => {
+        router.reload({ only: ['databases'], preserveScroll: true });
+    });
 
     useEffect(() => {
         if (pendingDbNameRef.current) {

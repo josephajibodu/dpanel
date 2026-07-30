@@ -1,12 +1,14 @@
+import { Head } from '@inertiajs/react';
+import { useConnectionStatus, useEcho } from '@laravel/echo-react';
+import { Loader2Icon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { Loader2Icon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 
 interface Props {
     channel: string;
@@ -28,12 +30,18 @@ interface DiagnosticEventPayload {
     user_id: number;
 }
 
-type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
 type AuthorizationStatus = 'unknown' | 'authorizing' | 'authorized' | 'failed';
 
+const STATUS_BADGE_CLASSES = {
+    connected: 'bg-green-500/15 text-green-700 dark:text-green-300',
+    connecting: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300',
+    reconnecting: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300',
+    disconnected: 'bg-muted text-muted-foreground',
+    failed: 'bg-red-500/15 text-red-700 dark:text-red-300',
+} as const;
+
 export default function RealtimeTest({ channel, user, reverb }: Props) {
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
-    const [authorizationStatus, setAuthorizationStatus] = useState<AuthorizationStatus>('unknown');
+    const [authorizationStatus, setAuthorizationStatus] = useState<AuthorizationStatus>('authorizing');
     const [lastError, setLastError] = useState<string | null>(null);
     const [messages, setMessages] = useState<DiagnosticEventPayload[]>([]);
     const [messageToSend, setMessageToSend] = useState('Hello from realtime diagnostics');
@@ -44,54 +52,14 @@ export default function RealtimeTest({ channel, user, reverb }: Props) {
         { title: 'Realtime test', href: '/realtime/test' },
     ];
 
-    const statusBadgeClasses = useMemo(() => {
-        return {
-            connected: 'bg-green-500/15 text-green-700 dark:text-green-300',
-            connecting: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300',
-            disconnected: 'bg-muted text-muted-foreground',
-            error: 'bg-red-500/15 text-red-700 dark:text-red-300',
-            idle: 'bg-muted text-muted-foreground',
-        };
-    }, []);
+    const connectionStatus = useConnectionStatus();
+
+    const { channel: getChannel } = useEcho<DiagnosticEventPayload>(channel, '.realtime.diagnostic.message', (event) => {
+        setMessages((prev) => [...prev, event]);
+    });
 
     useEffect(() => {
-        if (!window.Echo) {
-            setConnectionStatus('error');
-            setAuthorizationStatus('failed');
-            setLastError('Echo is not initialized on window.');
-            return;
-        }
-
-        setConnectionStatus('connecting');
-        setAuthorizationStatus('authorizing');
-
-        const pusherConnection = window.Echo.connector?.pusher?.connection;
-        const channelInstance = window.Echo.private(channel);
-
-        const onConnected = () => {
-            setConnectionStatus('connected');
-            setLastError(null);
-        };
-        const onDisconnected = () => {
-            setConnectionStatus('disconnected');
-        };
-        const onError = (error: unknown) => {
-            setConnectionStatus('error');
-            setLastError(JSON.stringify(error));
-        };
-        const onStateChange = (states: { previous: string; current: string }) => {
-            if (states.current === 'connected') {
-                setConnectionStatus('connected');
-            }
-            if (states.current === 'disconnected') {
-                setConnectionStatus('disconnected');
-            }
-        };
-
-        pusherConnection?.bind('connected', onConnected);
-        pusherConnection?.bind('disconnected', onDisconnected);
-        pusherConnection?.bind('error', onError);
-        pusherConnection?.bind('state_change', onStateChange);
+        const channelInstance = getChannel();
 
         channelInstance.subscribed(() => {
             setAuthorizationStatus('authorized');
@@ -102,21 +70,7 @@ export default function RealtimeTest({ channel, user, reverb }: Props) {
             setAuthorizationStatus('failed');
             setLastError(JSON.stringify(error));
         });
-
-        channelInstance.listen('.realtime.diagnostic.message', (event: DiagnosticEventPayload) => {
-            setMessages((prev) => [...prev, event]);
-        });
-
-        return () => {
-            channelInstance.stopListening('.realtime.diagnostic.message');
-            window.Echo.leave(channel);
-
-            pusherConnection?.unbind('connected', onConnected);
-            pusherConnection?.unbind('disconnected', onDisconnected);
-            pusherConnection?.unbind('error', onError);
-            pusherConnection?.unbind('state_change', onStateChange);
-        };
-    }, [channel]);
+    }, [getChannel]);
 
     async function triggerMessage(): Promise<void> {
         setIsSending(true);
@@ -170,7 +124,7 @@ export default function RealtimeTest({ channel, user, reverb }: Props) {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Socket</span>
-                                    <span className={`rounded px-2 py-1 text-xs font-medium ${statusBadgeClasses[connectionStatus]}`}>
+                                    <span className={`rounded px-2 py-1 text-xs font-medium ${STATUS_BADGE_CLASSES[connectionStatus]}`}>
                                         {connectionStatus}
                                     </span>
                                 </div>

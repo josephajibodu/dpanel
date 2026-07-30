@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { useEffect, useRef } from 'react';
+import { useEcho } from '@laravel/echo-react';
 
 /**
  * Hook to listen for site provisioning updates via WebSocket.
@@ -11,48 +11,16 @@ import { useEffect, useRef } from 'react';
  * @param siteId - Site ID (used to determine if we should reload)
  * @param enabled - Only subscribe when site is installing or pending
  */
-export function useSiteProvisioningUpdates(
-    serverId: number,
-    siteId?: number,
-    enabled = true,
-) {
-    const channelRef = useRef<any>(null);
-    const debugEnabled = import.meta.env.VITE_REALTIME_DEBUG === 'true';
-
-    useEffect(() => {
-        if (!serverId || !siteId || !enabled || !window.Echo) {
-            if (debugEnabled && !window.Echo) {
-                console.warn('[realtime][site-provisioning] Echo not available');
-            }
-            return;
-        }
-
-        if (debugEnabled) {
-            console.debug('[realtime][site-provisioning] subscribing to server channel', {
-                serverId,
-                siteId,
-            });
-        }
-
-        const channel = window.Echo.private(`server.${serverId}`);
-        channelRef.current = channel;
-
-        channel.listen('.server.sites.updated', () => {
-            if (debugEnabled) {
-                console.debug('[realtime][site-provisioning] server sites updated, reloading site');
-            }
-
+export function useSiteProvisioningUpdates(serverId: number, siteId?: number, enabled = true) {
+    useEcho(
+        enabled && siteId ? `server.${serverId}` : '',
+        '.server.sites.updated',
+        () => {
             router.reload({
                 only: ['site'],
                 preserveScroll: true,
             });
-        });
-
-        return () => {
-            if (channelRef.current) {
-                channelRef.current.stopListening('.server.sites.updated');
-                window.Echo.leave(`server.${serverId}`);
-            }
-        };
-    }, [debugEnabled, enabled, serverId, siteId]);
+        },
+        [],
+    );
 }

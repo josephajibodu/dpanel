@@ -1,12 +1,14 @@
+import { Head, Link, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
+import { CheckCircleIcon, CheckIcon, ClipboardIcon, Loader2Icon, ServerIcon, TriangleAlertIcon, XCircleIcon } from 'lucide-react';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { CheckCircleIcon, CheckIcon, ClipboardIcon, Loader2Icon, ServerIcon, TriangleAlertIcon, XCircleIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 
 interface Props {
     server: { data: Server } | Server;
@@ -26,7 +28,6 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
     const [copied, setCopied] = useState(false);
     const [testState, setTestState] = useState<ConnectionTestState>('idle');
     const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
-    const channelRef = useRef<any>(null);
 
     const provisionForm = useForm({});
     const testForm = useForm({});
@@ -37,24 +38,10 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
         { title: 'Setup', href: teamPath(`/servers/${server.id}/setup`) },
     ];
 
-    useEffect(() => {
-        if (!window.Echo) {
-            return;
-        }
-
-        const channel = window.Echo.private(`server.${server.id}`);
-        channelRef.current = channel;
-
-        channel.listen('.server.connection.tested', (event: ConnectionTestResult) => {
-            setTestResult(event);
-            setTestState(event.successful ? 'success' : 'failed');
-        });
-
-        return () => {
-            channel.stopListening('.server.connection.tested');
-            window.Echo.leave(`server.${server.id}`);
-        };
-    }, [server.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEcho<ConnectionTestResult>(`server.${server.id}`, '.server.connection.tested', (event) => {
+        setTestResult(event);
+        setTestState(event.successful ? 'success' : 'failed');
+    });
 
     const handleCopy = () => {
         navigator.clipboard.writeText(authorized_keys_command).then(() => {
