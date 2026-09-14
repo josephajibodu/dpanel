@@ -1,3 +1,13 @@
+import { Link, router, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
+import {
+    CloudIcon,
+    MoreVerticalIcon,
+    RefreshCwIcon,
+    ServerIcon,
+    Trash2Icon,
+} from 'lucide-react';
+
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,15 +25,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { type SharedData } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { Link, router, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
-import {
-    CloudIcon,
-    MoreVerticalIcon,
-    RefreshCwIcon,
-    ServerIcon,
-    Trash2Icon,
-} from 'lucide-react';
 
 interface ProviderCardProps {
     account: ProviderAccount;
@@ -55,9 +56,7 @@ export function ProviderCard({ account, onDelete }: ProviderCardProps) {
                             )}
                         </div>
                         <div>
-                            <CardTitle className="text-base">
-                                {account.name}
-                            </CardTitle>
+                            <CardTitle>{account.name}</CardTitle>
                             <CardDescription>
                                 {account.provider_label}
                             </CardDescription>

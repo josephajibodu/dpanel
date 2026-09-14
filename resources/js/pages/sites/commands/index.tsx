@@ -9,6 +9,7 @@ import {
 import { useCallback, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge, type StatusColor } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -54,7 +55,7 @@ interface CommandRun {
     command: string;
     status: string;
     status_label: string;
-    status_color: string;
+    status_color: StatusColor;
     exit_code: number | null;
     started_at: string | null;
     finished_at: string | null;
@@ -93,7 +94,10 @@ export default function SiteCommandsIndex({
     const site = siteProp?.data ?? siteProp;
     const serverId = server?.id ?? site?.server?.id;
     const siteId = site?.id;
-    useServerCommandRunUpdates(Number(serverId ?? 0), siteId ? Number(siteId) : undefined);
+    useServerCommandRunUpdates(
+        Number(serverId ?? 0),
+        siteId ? Number(siteId) : undefined,
+    );
 
     const [runSheetOpen, setRunSheetOpen] = useState(false);
     const [commandInput, setCommandInput] = useState('');
@@ -144,7 +148,9 @@ export default function SiteCommandsIndex({
             setLogsContent('');
             setLogsLoading(true);
             fetch(
-                teamPath(`/servers/${serverId}/sites/${siteId}/command-runs/${run.id}`),
+                teamPath(
+                    `/servers/${serverId}/sites/${siteId}/command-runs/${run.id}`,
+                ),
                 {
                     headers: {
                         Accept: 'application/json',
@@ -189,7 +195,7 @@ export default function SiteCommandsIndex({
                         <h1 className="text-2xl font-semibold tracking-tight">
                             Commands
                         </h1>
-                        <p className="text-muted-foreground mt-1 text-sm">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Run commands on the server in this site’s directory.
                         </p>
                     </div>
@@ -226,35 +232,27 @@ export default function SiteCommandsIndex({
                                     <TableBody>
                                         {runs.map((run) => (
                                             <TableRow key={run.id}>
-                                                <TableCell className="font-mono text-sm max-w-[320px] truncate">
-                                                    {truncateCommand(run.command)}
+                                                <TableCell className="max-w-[320px] truncate font-mono text-sm">
+                                                    {truncateCommand(
+                                                        run.command,
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span
-                                                        className={
-                                                            {
-                                                                pending:
-                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-                                                                running:
-                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-                                                                completed:
-                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-                                                                failed:
-                                                                    'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-                                                            }[run.status] ??
-                                                            'inline-flex min-w-[100px] items-center justify-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                    <StatusBadge
+                                                        status={
+                                                            run.status_label
                                                         }
-                                                    >
-                                                        {run.status === 'running' && (
-                                                            <Loader2Icon className="h-3 w-3 animate-spin" />
-                                                        )}
-                                                        {run.status_label}
-                                                    </span>
+                                                        color={run.status_color}
+                                                        pulse={
+                                                            run.status ===
+                                                            'running'
+                                                        }
+                                                    />
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
+                                                <TableCell className="text-sm text-muted-foreground">
                                                     {run.exit_code ?? '—'}
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                                                <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
                                                     {run.finished_at
                                                         ? new Date(
                                                               run.finished_at,
@@ -265,9 +263,11 @@ export default function SiteCommandsIndex({
                                                 </TableCell>
                                                 <TableCell>
                                                     <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
                                                             <Button
-                                                                variant="ghost"
+                                                                variant="outline"
                                                                 size="icon"
                                                                 className="h-8 w-8"
                                                                 aria-label="Actions"
@@ -278,7 +278,9 @@ export default function SiteCommandsIndex({
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem
                                                                 onClick={() =>
-                                                                    openLogs(run)
+                                                                    openLogs(
+                                                                        run,
+                                                                    )
                                                                 }
                                                             >
                                                                 <FileTextIcon className="mr-2 h-4 w-4" />
@@ -324,7 +326,7 @@ export default function SiteCommandsIndex({
                         <div className="py-6">
                             <label
                                 htmlFor="command-input"
-                                className="text-muted-foreground mb-2 block text-sm font-medium"
+                                className="mb-2 block text-sm font-medium text-muted-foreground"
                             >
                                 Command (runs in site root on the server)
                             </label>
@@ -335,7 +337,7 @@ export default function SiteCommandsIndex({
                                     setCommandInput(e.target.value)
                                 }
                                 placeholder="e.g. php artisan --version"
-                                className="bg-muted/50 border-input focus-visible:ring-ring min-h-[120px] w-full resize-y rounded-md border px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2"
+                                className="min-h-[120px] w-full resize-y rounded-md border border-input bg-muted/50 px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                 rows={4}
                             />
                         </div>
@@ -349,9 +351,7 @@ export default function SiteCommandsIndex({
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={
-                                    isSubmitting || !commandInput.trim()
-                                }
+                                disabled={isSubmitting || !commandInput.trim()}
                             >
                                 {isSubmitting ? (
                                     <>
@@ -377,7 +377,7 @@ export default function SiteCommandsIndex({
                         <DialogTitle>
                             Command output
                             {logsRun && (
-                                <span className="text-muted-foreground ml-2 font-mono text-sm font-normal">
+                                <span className="ml-2 font-mono text-sm font-normal text-muted-foreground">
                                     {truncateCommand(logsRun.command, 40)}
                                 </span>
                             )}
@@ -385,16 +385,16 @@ export default function SiteCommandsIndex({
                     </DialogHeader>
                     <div className="px-6 pb-6">
                         <div className="max-h-[60vh] min-h-[200px] overflow-y-auto rounded-md border bg-muted/30 p-3">
-                        {logsLoading ? (
-                            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                                <Loader2Icon className="h-4 w-4 animate-spin" />
-                                Loading…
-                            </p>
-                        ) : (
-                            <pre className="font-mono text-xs whitespace-pre-wrap break-words">
-                                {logsContent || 'No output.'}
-                            </pre>
-                        )}
+                            {logsLoading ? (
+                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                                    Loading…
+                                </p>
+                            ) : (
+                                <pre className="font-mono text-xs break-words whitespace-pre-wrap">
+                                    {logsContent || 'No output.'}
+                                </pre>
+                            )}
                         </div>
                     </div>
                 </DialogContent>

@@ -1,32 +1,26 @@
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { StatusBadge, type StatusColor } from '@/components/status-badge';
 
 interface SiteStatusBadgeProps {
     status: string;
     statusLabel: string;
-    statusColor: string;
+    statusColor: StatusColor;
+    className?: string;
 }
 
-export function SiteStatusBadge({ status, statusLabel, statusColor }: SiteStatusBadgeProps) {
-    const colorClasses = {
-        gray: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
-        blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-        teal: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300',
-        green: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-        yellow: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
-        red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-        orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-    };
+const PULSING_STATUSES = ['installing', 'deploying', 'deleting'];
 
-    const isPulsing = status === 'installing' || status === 'deploying' || status === 'deleting';
-
+export function SiteStatusBadge({
+    status,
+    statusLabel,
+    statusColor,
+    className,
+}: SiteStatusBadgeProps) {
     return (
-        <Badge
-            variant="outline"
-            className={cn('border-transparent font-medium', colorClasses[statusColor as keyof typeof colorClasses] || colorClasses.gray)}
-        >
-            {isPulsing && <span className="mr-1.5 h-2 w-2 animate-pulse rounded-full bg-current" />}
-            {statusLabel}
-        </Badge>
+        <StatusBadge
+            status={statusLabel}
+            color={statusColor}
+            pulse={PULSING_STATUSES.includes(status)}
+            className={className}
+        />
     );
 }

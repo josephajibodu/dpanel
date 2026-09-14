@@ -1,5 +1,18 @@
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
+import {
+    BookOpenIcon,
+    EyeIcon,
+    MoreVerticalIcon,
+    PlusIcon,
+    ServerIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,7 +22,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import {
     getPaginationUrls,
     Pagination,
@@ -28,18 +40,6 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server } from '@/types/server';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
-import {
-    BookOpenIcon,
-    EyeIcon,
-    MoreVerticalIcon,
-    PlusIcon,
-    SearchIcon,
-    ServerIcon,
-    Trash2Icon,
-} from 'lucide-react';
-import { useMemo, useState } from 'react';
 
 interface Props {
     servers: {
@@ -95,8 +95,10 @@ export default function ServersIndex({ servers }: Props) {
 
         router.delete(teamPath(`/servers/${id}`), {
             preserveScroll: true,
-            onSuccess: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
-            onError: () => setDeletingIds((prev) => prev.filter((x) => x !== id)),
+            onSuccess: () =>
+                setDeletingIds((prev) => prev.filter((x) => x !== id)),
+            onError: () =>
+                setDeletingIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -109,8 +111,10 @@ export default function ServersIndex({ servers }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Servers</h1>
-                        <p className="text-muted-foreground text-sm">
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Servers
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
                             All of the servers of your project listed here.
                         </p>
                     </div>
@@ -146,25 +150,19 @@ export default function ServersIndex({ servers }: Props) {
                     />
                 ) : (
                     <>
-                        <div className="w-full max-w-sm">
-                            <div className="relative">
-                                <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="pl-9"
-                                    aria-label="Search servers"
-                                />
-                            </div>
-                        </div>
+                        <SearchInput
+                            value={search}
+                            onChange={setSearch}
+                            aria-label="Search servers"
+                        />
 
                         <Card>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12">ID</TableHead>
+                                        <TableHead className="w-12">
+                                            ID
+                                        </TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>IP</TableHead>
                                         <TableHead>Created at</TableHead>
@@ -175,77 +173,132 @@ export default function ServersIndex({ servers }: Props) {
                                 <TableBody>
                                     {filteredServers.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
-                                                <span className="text-muted-foreground text-sm">
-                                                    No servers match your search.
+                                            <TableCell
+                                                colSpan={6}
+                                                className="h-24 text-center"
+                                            >
+                                                <span className="text-sm text-muted-foreground">
+                                                    No servers match your
+                                                    search.
                                                 </span>
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         filteredServers.map((server) => {
                                             const isDeleting =
-                                                deletingIds.includes(server.id) ||
+                                                deletingIds.includes(
+                                                    server.id,
+                                                ) ||
                                                 server.status === 'deleting';
                                             return (
-                                            <TableRow key={server.id}>
-                                                <TableCell className="font-mono text-muted-foreground text-xs">
-                                                    {server.id}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Link
-                                                        href={teamPath(`/servers/${server.id}`)}
-                                                        className="font-medium hover:underline"
-                                                    >
-                                                        {server.name}
-                                                    </Link>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-sm">
-                                                    {server.ip_address ?? '—'}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {format(new Date(server.created_at), 'yyyy-MM-dd HH:mm:ss')}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <ServerStatusBadge
-                                                        status={isDeleting ? 'deleting' : server.status}
-                                                        statusLabel={isDeleting ? 'Deleting...' : server.status_label}
-                                                        statusColor={isDeleting ? 'orange' : server.status_color}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                                                            <Link href={teamPath(`/servers/${server.id}`)} aria-label="View server">
-                                                                <EyeIcon className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="outline" size="icon" className="h-8 w-8">
-                                                                    <MoreVerticalIcon className="h-4 w-4" />
-                                                                    <span className="sr-only">Actions</span>
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={teamPath(`/servers/${server.id}`)}>
-                                                                        View Details
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                {!isDeleting && (
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => handleDelete(server)}
-                                                                        className="text-destructive focus:text-destructive"
+                                                <TableRow key={server.id}>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {server.id}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Link
+                                                            href={teamPath(
+                                                                `/servers/${server.id}`,
+                                                            )}
+                                                            className="font-medium hover:underline"
+                                                        >
+                                                            {server.name}
+                                                        </Link>
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-sm">
+                                                        {server.ip_address ??
+                                                            '—'}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {format(
+                                                            new Date(
+                                                                server.created_at,
+                                                            ),
+                                                            'yyyy-MM-dd HH:mm:ss',
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <ServerStatusBadge
+                                                            status={
+                                                                isDeleting
+                                                                    ? 'deleting'
+                                                                    : server.status
+                                                            }
+                                                            statusLabel={
+                                                                isDeleting
+                                                                    ? 'Deleting...'
+                                                                    : server.status_label
+                                                            }
+                                                            statusColor={
+                                                                isDeleting
+                                                                    ? 'orange'
+                                                                    : server.status_color
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${server.id}`,
+                                                                    )}
+                                                                    aria-label="View server"
+                                                                >
+                                                                    <EyeIcon className="h-4 w-4" />
+                                                                </Link>
+                                                            </Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger
+                                                                    asChild
+                                                                >
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="h-8 w-8"
                                                                     >
-                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                        Delete
+                                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                                        <span className="sr-only">
+                                                                            Actions
+                                                                        </span>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem
+                                                                        asChild
+                                                                    >
+                                                                        <Link
+                                                                            href={teamPath(
+                                                                                `/servers/${server.id}`,
+                                                                            )}
+                                                                        >
+                                                                            View
+                                                                            Details
+                                                                        </Link>
                                                                     </DropdownMenuItem>
-                                                                )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
+                                                                    {!isDeleting && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleDelete(
+                                                                                    server,
+                                                                                )
+                                                                            }
+                                                                            className="text-destructive focus:text-destructive"
+                                                                        >
+                                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                            Delete
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })
                                     )}

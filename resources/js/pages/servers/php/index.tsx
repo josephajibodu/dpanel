@@ -1,3 +1,8 @@
+import { Head, router, usePage } from '@inertiajs/react';
+import { CodeIcon, DownloadIcon, SettingsIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -16,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -31,9 +36,6 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import type { Server } from '@/types/server';
-import { Head, router, usePage } from '@inertiajs/react';
-import { CodeIcon, DownloadIcon, SettingsIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 export interface PhpSettings {
     upload_max_filesize?: string;
@@ -90,7 +92,9 @@ export default function ServerPhpIndex({
 
     const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
     const [isSubmittingInstall, setIsSubmittingInstall] = useState(false);
-    const [isSubmittingDefault, setIsSubmittingDefault] = useState<string | null>(null);
+    const [isSubmittingDefault, setIsSubmittingDefault] = useState<
+        string | null
+    >(null);
     const [upgradeSites, setUpgradeSites] = useState(false);
 
     const [settingsForm, setSettingsForm] = useState({
@@ -127,43 +131,59 @@ export default function ServerPhpIndex({
         e.preventDefault();
         if (!server?.id) return;
         setIsSubmittingSettings(true);
-        router.put(teamPath(`/servers/${server.id}/php/settings`), {
-            upload_max_filesize: settingsForm.upload_max_filesize || undefined,
-            post_max_size: settingsForm.post_max_size || undefined,
-            max_execution_time: settingsForm.max_execution_time
-                ? Number(settingsForm.max_execution_time)
-                : undefined,
-            memory_limit: settingsForm.memory_limit || undefined,
-        }, {
-            preserveScroll: true,
-            onFinish: () => setIsSubmittingSettings(false),
-        });
+        router.put(
+            teamPath(`/servers/${server.id}/php/settings`),
+            {
+                upload_max_filesize:
+                    settingsForm.upload_max_filesize || undefined,
+                post_max_size: settingsForm.post_max_size || undefined,
+                max_execution_time: settingsForm.max_execution_time
+                    ? Number(settingsForm.max_execution_time)
+                    : undefined,
+                memory_limit: settingsForm.memory_limit || undefined,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setIsSubmittingSettings(false),
+            },
+        );
     };
 
     const handleInstallVersion = (e: React.FormEvent) => {
         e.preventDefault();
         if (!server?.id || !installVersion) return;
         setIsSubmittingInstall(true);
-        router.post(teamPath(`/servers/${server.id}/php/versions`), { version: installVersion }, {
-            preserveScroll: true,
-            onSuccess: () => setInstallVersion(''),
-            onFinish: () => setIsSubmittingInstall(false),
-        });
+        router.post(
+            teamPath(`/servers/${server.id}/php/versions`),
+            { version: installVersion },
+            {
+                preserveScroll: true,
+                onSuccess: () => setInstallVersion(''),
+                onFinish: () => setIsSubmittingInstall(false),
+            },
+        );
     };
 
     const handleSetDefault = (version: string) => {
         if (!server?.id) return;
         setIsSubmittingDefault(version);
-        router.patch(teamPath(`/servers/${server.id}/php/default-version`), { version, upgrade_sites: upgradeSites }, {
-            preserveScroll: true,
-            onFinish: () => setIsSubmittingDefault(null),
-        });
+        router.patch(
+            teamPath(`/servers/${server.id}/php/default-version`),
+            { version, upgrade_sites: upgradeSites },
+            {
+                preserveScroll: true,
+                onFinish: () => setIsSubmittingDefault(null),
+            },
+        );
     };
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(phpPageProps.currentTeam?.slug ?? '', server.id)}
+            subNavItems={getServerSubNavItems(
+                phpPageProps.currentTeam?.slug ?? '',
+                server.id,
+            )}
         >
             <Head title={`PHP - ${server.name}`} />
 
@@ -173,7 +193,7 @@ export default function ServerPhpIndex({
                         <h1 className="text-2xl font-semibold tracking-tight">
                             PHP
                         </h1>
-                        <p className="text-muted-foreground text-sm">
+                        <p className="text-sm text-muted-foreground">
                             PHP versions and settings on {server.name}.
                         </p>
                     </div>
@@ -188,20 +208,25 @@ export default function ServerPhpIndex({
                                     PHP settings
                                 </CardTitle>
                                 {settingsSyncStatus && (
-                                    <StatusBadge
+                                    <AutoStatusBadge
                                         status={settingsSyncStatus}
-                                        label={SYNC_STATUS_LABELS[settingsSyncStatus] ?? settingsSyncStatus}
+                                        label={
+                                            SYNC_STATUS_LABELS[
+                                                settingsSyncStatus
+                                            ] ?? settingsSyncStatus
+                                        }
                                     />
                                 )}
                             </div>
                             <CardDescription>
-                                Configure php.ini for the default PHP version
-                                ({defaultVersion || '—'}).
-                                {settingsSyncStatus === 'failed' && settingsSyncError && (
-                                    <span className="text-destructive ml-1">
-                                        Error: {settingsSyncError}
-                                    </span>
-                                )}
+                                Configure php.ini for the default PHP version (
+                                {defaultVersion || '—'}).
+                                {settingsSyncStatus === 'failed' &&
+                                    settingsSyncError && (
+                                        <span className="ml-1 text-destructive">
+                                            Error: {settingsSyncError}
+                                        </span>
+                                    )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -216,11 +241,14 @@ export default function ServerPhpIndex({
                                         </Label>
                                         <Input
                                             id="upload_max_filesize"
-                                            value={settingsForm.upload_max_filesize}
+                                            value={
+                                                settingsForm.upload_max_filesize
+                                            }
                                             onChange={(e) =>
                                                 setSettingsForm((p) => ({
                                                     ...p,
-                                                    upload_max_filesize: e.target.value,
+                                                    upload_max_filesize:
+                                                        e.target.value,
                                                 }))
                                             }
                                             placeholder="e.g. 64M"
@@ -228,7 +256,7 @@ export default function ServerPhpIndex({
                                             disabled={!serverIsReady}
                                         />
                                         {errors?.upload_max_filesize && (
-                                            <p className="text-destructive text-sm">
+                                            <p className="text-sm text-destructive">
                                                 {errors.upload_max_filesize}
                                             </p>
                                         )}
@@ -243,7 +271,8 @@ export default function ServerPhpIndex({
                                             onChange={(e) =>
                                                 setSettingsForm((p) => ({
                                                     ...p,
-                                                    post_max_size: e.target.value,
+                                                    post_max_size:
+                                                        e.target.value,
                                                 }))
                                             }
                                             placeholder="e.g. 64M"
@@ -251,7 +280,7 @@ export default function ServerPhpIndex({
                                             disabled={!serverIsReady}
                                         />
                                         {errors?.post_max_size && (
-                                            <p className="text-destructive text-sm">
+                                            <p className="text-sm text-destructive">
                                                 {errors.post_max_size}
                                             </p>
                                         )}
@@ -265,11 +294,14 @@ export default function ServerPhpIndex({
                                             type="number"
                                             min={1}
                                             max={86400}
-                                            value={settingsForm.max_execution_time}
+                                            value={
+                                                settingsForm.max_execution_time
+                                            }
                                             onChange={(e) =>
                                                 setSettingsForm((p) => ({
                                                     ...p,
-                                                    max_execution_time: e.target.value,
+                                                    max_execution_time:
+                                                        e.target.value,
                                                 }))
                                             }
                                             placeholder="e.g. 30"
@@ -277,7 +309,7 @@ export default function ServerPhpIndex({
                                             disabled={!serverIsReady}
                                         />
                                         {errors?.max_execution_time && (
-                                            <p className="text-destructive text-sm">
+                                            <p className="text-sm text-destructive">
                                                 {errors.max_execution_time}
                                             </p>
                                         )}
@@ -292,7 +324,8 @@ export default function ServerPhpIndex({
                                             onChange={(e) =>
                                                 setSettingsForm((p) => ({
                                                     ...p,
-                                                    memory_limit: e.target.value,
+                                                    memory_limit:
+                                                        e.target.value,
                                                 }))
                                             }
                                             placeholder="e.g. 256M"
@@ -300,7 +333,7 @@ export default function ServerPhpIndex({
                                             disabled={!serverIsReady}
                                         />
                                         {errors?.memory_limit && (
-                                            <p className="text-destructive text-sm">
+                                            <p className="text-sm text-destructive">
                                                 {errors.memory_limit}
                                             </p>
                                         )}
@@ -308,7 +341,9 @@ export default function ServerPhpIndex({
                                 </div>
                                 <Button
                                     type="submit"
-                                    disabled={!serverIsReady || isSubmittingSettings}
+                                    disabled={
+                                        !serverIsReady || isSubmittingSettings
+                                    }
                                 >
                                     {isSubmittingSettings
                                         ? 'Saving…'
@@ -334,11 +369,17 @@ export default function ServerPhpIndex({
                                 <Checkbox
                                     id="upgrade-sites"
                                     checked={upgradeSites}
-                                    onCheckedChange={(checked) => setUpgradeSites(!!checked)}
+                                    onCheckedChange={(checked) =>
+                                        setUpgradeSites(!!checked)
+                                    }
                                     disabled={!serverIsReady}
                                 />
-                                <Label htmlFor="upgrade-sites" className="font-normal">
-                                    Also update all sites to the new default version
+                                <Label
+                                    htmlFor="upgrade-sites"
+                                    className="font-normal"
+                                >
+                                    Also update all sites to the new default
+                                    version
                                 </Label>
                             </div>
                             <Table>
@@ -354,13 +395,12 @@ export default function ServerPhpIndex({
                                     {phpServices.length === 0 &&
                                     installedVersions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell
-                                                colSpan={4}
-                                                className="h-24 text-center text-muted-foreground text-sm"
-                                            >
-                                                No PHP versions detected. Install
-                                                one below or ensure the server
-                                                is connected.
+                                            <TableCell colSpan={4}>
+                                                <EmptyState
+                                                    icon={CodeIcon}
+                                                    title="No PHP versions detected"
+                                                    description="Install one below or ensure the server is connected."
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : phpServices.length > 0 ? (
@@ -375,39 +415,44 @@ export default function ServerPhpIndex({
                                                         {v || '—'}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <StatusBadge status={s.status} />
+                                                        <AutoStatusBadge
+                                                            status={s.status}
+                                                        />
                                                     </TableCell>
                                                     <TableCell>
                                                         {s.is_default ? (
-                                                            <StatusBadge status="default" label="Default" />
+                                                            <AutoStatusBadge
+                                                                status="default"
+                                                                label="Default"
+                                                            />
                                                         ) : (
                                                             '—'
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {!s.is_default &&
-                                                            v && (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    disabled={
-                                                                        !serverIsReady ||
-                                                                        isSubmittingDefault ===
-                                                                            v ||
-                                                                        s.status === 'installing'
-                                                                    }
-                                                                    onClick={() =>
-                                                                        handleSetDefault(
-                                                                            v,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {isSubmittingDefault ===
-                                                                    v
-                                                                        ? 'Setting…'
-                                                                        : 'Set as default'}
-                                                                </Button>
-                                                            )}
+                                                        {!s.is_default && v && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={
+                                                                    !serverIsReady ||
+                                                                    isSubmittingDefault ===
+                                                                        v ||
+                                                                    s.status ===
+                                                                        'installing'
+                                                                }
+                                                                onClick={() =>
+                                                                    handleSetDefault(
+                                                                        v,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {isSubmittingDefault ===
+                                                                v
+                                                                    ? 'Setting…'
+                                                                    : 'Set as default'}
+                                                            </Button>
+                                                        )}
                                                     </TableCell>
                                                 </TableRow>
                                             );
@@ -421,7 +466,10 @@ export default function ServerPhpIndex({
                                                 <TableCell>—</TableCell>
                                                 <TableCell>
                                                     {v === defaultVersion ? (
-                                                        <StatusBadge status="default" label="Default" />
+                                                        <AutoStatusBadge
+                                                            status="default"
+                                                            label="Default"
+                                                        />
                                                     ) : (
                                                         '—'
                                                     )}
@@ -433,13 +481,17 @@ export default function ServerPhpIndex({
                                                             size="sm"
                                                             disabled={
                                                                 !serverIsReady ||
-                                                                isSubmittingDefault === v
+                                                                isSubmittingDefault ===
+                                                                    v
                                                             }
                                                             onClick={() =>
-                                                                handleSetDefault(v)
+                                                                handleSetDefault(
+                                                                    v,
+                                                                )
                                                             }
                                                         >
-                                                            {isSubmittingDefault === v
+                                                            {isSubmittingDefault ===
+                                                            v
                                                                 ? 'Setting…'
                                                                 : 'Set as default'}
                                                         </Button>
@@ -469,32 +521,27 @@ export default function ServerPhpIndex({
                                 onSubmit={handleInstallVersion}
                                 className="space-y-2"
                             >
-                                <Label htmlFor="install-version">
-                                    Version
-                                </Label>
+                                <Label htmlFor="install-version">Version</Label>
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <Select
                                         value={installVersion}
                                         onValueChange={setInstallVersion}
                                         disabled={!serverIsReady}
                                     >
-                                        <SelectTrigger id="install-version" className="w-full sm:w-[200px]">
+                                        <SelectTrigger
+                                            id="install-version"
+                                            className="w-full sm:w-[200px]"
+                                        >
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {versionsToInstall.map((v) => (
-                                                <SelectItem
-                                                    key={v}
-                                                    value={v}
-                                                >
+                                                <SelectItem key={v} value={v}>
                                                     PHP {v}
                                                 </SelectItem>
                                             ))}
                                             {versionsToInstall.length === 0 && (
-                                                <SelectItem
-                                                    value=""
-                                                    disabled
-                                                >
+                                                <SelectItem value="" disabled>
                                                     All versions installed
                                                 </SelectItem>
                                             )}
@@ -516,7 +563,7 @@ export default function ServerPhpIndex({
                                     </Button>
                                 </div>
                                 {errors?.version && (
-                                    <p className="text-destructive text-sm">
+                                    <p className="text-sm text-destructive">
                                         {errors.version}
                                     </p>
                                 )}

@@ -1,6 +1,21 @@
+import { router, usePage } from '@inertiajs/react';
+import {
+    ClockIcon,
+    FileTextIcon,
+    Loader2Icon,
+    PencilIcon,
+    PlayIcon,
+    PlusIcon,
+    PowerIcon,
+    PowerOffIcon,
+    RefreshCwIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useCallback, useState } from 'react';
+
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/ui/status-badge';
 import {
     Card,
     CardContent,
@@ -31,6 +46,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -41,27 +57,7 @@ import {
 } from '@/components/ui/table';
 import { useTeamPath } from '@/hooks/use-team-path';
 import type { SharedData } from '@/types';
-import type {
-    CronJob,
-    ProcessSite,
-    Server,
-    Worker,
-} from '@/types/server';
-import { router, usePage } from '@inertiajs/react';
-import {
-    ClockIcon,
-    FileTextIcon,
-    Loader2Icon,
-    PencilIcon,
-    PlayIcon,
-    PlusIcon,
-    PowerIcon,
-    PowerOffIcon,
-    RefreshCwIcon,
-    Trash2Icon,
-} from 'lucide-react';
-
-import { useCallback, useState } from 'react';
+import type { CronJob, ProcessSite, Server, Worker } from '@/types/server';
 
 const CRON_FREQUENCIES: { value: string; label: string }[] = [
     { value: '* * * * *', label: 'Every minute' },
@@ -164,7 +160,10 @@ export function ProcessesPanel({
             setLogsContent('');
             setLogsLoading(true);
             fetch(teamPath(`/servers/${server.id}/workers/${w.id}/logs`), {
-                headers: { Accept: 'text/plain', 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {
+                    Accept: 'text/plain',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
             })
                 .then((r) => r.text())
                 .then((text) => setLogsContent(text))
@@ -260,8 +259,10 @@ export function ProcessesPanel({
         setDeletingWorkerIds((prev) => [...prev, id]);
         router.delete(teamPath(`/servers/${server.id}/workers/${id}`), {
             preserveScroll: true,
-            onSuccess: () => setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
-            onError: () => setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
+            onSuccess: () =>
+                setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
+            onError: () =>
+                setDeletingWorkerIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -325,7 +326,9 @@ export function ProcessesPanel({
             user: c.user,
             frequency: c.frequency,
         });
-        setCustomCronFreq(!CRON_FREQUENCIES.some((f) => f.value === c.frequency));
+        setCustomCronFreq(
+            !CRON_FREQUENCIES.some((f) => f.value === c.frequency),
+        );
         setEditCronOpen(true);
     };
 
@@ -337,8 +340,10 @@ export function ProcessesPanel({
         setDeletingCronIds((prev) => [...prev, id]);
         router.delete(teamPath(`/servers/${server.id}/cron-jobs/${id}`), {
             preserveScroll: true,
-            onSuccess: () => setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
-            onError: () => setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
+            onSuccess: () =>
+                setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
+            onError: () =>
+                setDeletingCronIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -367,8 +372,12 @@ export function ProcessesPanel({
         <>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Processes</h1>
-                    <p className="text-muted-foreground text-sm">{pageHeadingDescription}</p>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Processes
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        {pageHeadingDescription}
+                    </p>
                 </div>
             </div>
 
@@ -381,7 +390,9 @@ export function ProcessesPanel({
                                     <PowerIcon className="h-5 w-5" />
                                     Workers
                                 </CardTitle>
-                                <CardDescription>{workersDescription}</CardDescription>
+                                <CardDescription>
+                                    {workersDescription}
+                                </CardDescription>
                             </div>
                             {serverIsReady && (
                                 <Button
@@ -402,7 +413,9 @@ export function ProcessesPanel({
                                     <TableHead>Name</TableHead>
                                     <TableHead>Command</TableHead>
                                     <TableHead>User</TableHead>
-                                    {showSiteColumn && <TableHead>Site</TableHead>}
+                                    {showSiteColumn && (
+                                        <TableHead>Site</TableHead>
+                                    )}
                                     <TableHead>Status</TableHead>
                                     <TableHead>Numprocs</TableHead>
                                     <TableHead className="w-[220px]" />
@@ -413,9 +426,11 @@ export function ProcessesPanel({
                                     <TableRow>
                                         <TableCell
                                             colSpan={showSiteColumn ? 7 : 6}
-                                            className="h-24 text-center text-muted-foreground text-sm"
                                         >
-                                            No workers yet.
+                                            <EmptyState
+                                                icon={PowerIcon}
+                                                title="No workers yet"
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -424,114 +439,159 @@ export function ProcessesPanel({
                                             deletingWorkerIds.includes(w.id) ||
                                             w.status === 'deleting';
                                         return (
-                                        <TableRow key={w.id}>
-                                            <TableCell className="font-medium">{w.name}</TableCell>
-                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
-                                                {truncate(w.command, 40)}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm font-mono">
-                                                {w.user}
-                                            </TableCell>
-                                            {showSiteColumn && (
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {w.site?.domain ?? 'Server'}
+                                            <TableRow key={w.id}>
+                                                <TableCell className="font-medium">
+                                                    {w.name}
                                                 </TableCell>
-                                            )}
-                                            <TableCell>
-                                                <StatusBadge
-                                                    status={isWorkerDeleting ? 'deleting' : w.status}
-                                                    label={isWorkerDeleting ? 'Deleting...' : undefined}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {w.numprocs}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap items-center gap-1">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() => openEditWorker(w)}
-                                                        aria-label="Edit worker"
-                                                    >
-                                                        <PencilIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() => fetchLogs(w)}
-                                                        aria-label="View logs"
-                                                    >
-                                                        <FileTextIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(`/servers/${server.id}/workers/${w.id}/start`),
-                                                                {},
-                                                                { preserveScroll: true },
-                                                            )
+                                                <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                                    {truncate(w.command, 40)}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm text-muted-foreground">
+                                                    {w.user}
+                                                </TableCell>
+                                                {showSiteColumn && (
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {w.site?.domain ??
+                                                            'Server'}
+                                                    </TableCell>
+                                                )}
+                                                <TableCell>
+                                                    <AutoStatusBadge
+                                                        status={
+                                                            isWorkerDeleting
+                                                                ? 'deleting'
+                                                                : w.status
                                                         }
-                                                        aria-label="Start"
-                                                    >
-                                                        <PlayIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(`/servers/${server.id}/workers/${w.id}/stop`),
-                                                                {},
-                                                                { preserveScroll: true },
-                                                            )
+                                                        label={
+                                                            isWorkerDeleting
+                                                                ? 'Deleting...'
+                                                                : undefined
                                                         }
-                                                        aria-label="Stop"
-                                                    >
-                                                        <PowerOffIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(`/servers/${server.id}/workers/${w.id}/restart`),
-                                                                {},
-                                                                { preserveScroll: true },
-                                                            )
-                                                        }
-                                                        aria-label="Restart"
-                                                    >
-                                                        <RefreshCwIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isWorkerDeleting}
-                                                        onClick={() => {
-                                                            setWorkerToDelete(w);
-                                                            setDeleteWorkerOpen(true);
-                                                        }}
-                                                        aria-label="Delete worker"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {w.numprocs}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-wrap items-center gap-1">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() =>
+                                                                openEditWorker(
+                                                                    w,
+                                                                )
+                                                            }
+                                                            aria-label="Edit worker"
+                                                        >
+                                                            <PencilIcon className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() =>
+                                                                fetchLogs(w)
+                                                            }
+                                                            aria-label="View logs"
+                                                        >
+                                                            <FileTextIcon className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/start`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                            aria-label="Start"
+                                                        >
+                                                            <PlayIcon className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/stop`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                            aria-label="Stop"
+                                                        >
+                                                            <PowerOffIcon className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/restart`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                            aria-label="Restart"
+                                                        >
+                                                            <RefreshCwIcon className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting
+                                                            }
+                                                            onClick={() => {
+                                                                setWorkerToDelete(
+                                                                    w,
+                                                                );
+                                                                setDeleteWorkerOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            aria-label="Delete worker"
+                                                        >
+                                                            <Trash2Icon className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
                                         );
                                     })
                                 )}
@@ -548,7 +608,9 @@ export function ProcessesPanel({
                                     <ClockIcon className="h-5 w-5" />
                                     Cron jobs
                                 </CardTitle>
-                                <CardDescription>{cronDescription}</CardDescription>
+                                <CardDescription>
+                                    {cronDescription}
+                                </CardDescription>
                             </div>
                             {serverIsReady && (
                                 <Button
@@ -569,7 +631,9 @@ export function ProcessesPanel({
                                     <TableHead>Command</TableHead>
                                     <TableHead>User</TableHead>
                                     <TableHead>Frequency</TableHead>
-                                    {showSiteColumn && <TableHead>Site</TableHead>}
+                                    {showSiteColumn && (
+                                        <TableHead>Site</TableHead>
+                                    )}
                                     <TableHead>Enabled</TableHead>
                                     <TableHead className="w-[120px]" />
                                 </TableRow>
@@ -579,9 +643,11 @@ export function ProcessesPanel({
                                     <TableRow>
                                         <TableCell
                                             colSpan={showSiteColumn ? 6 : 5}
-                                            className="h-24 text-center text-muted-foreground text-sm"
                                         >
-                                            No cron jobs yet.
+                                            <EmptyState
+                                                icon={ClockIcon}
+                                                title="No cron jobs yet"
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -590,88 +656,123 @@ export function ProcessesPanel({
                                             deletingCronIds.includes(c.id) ||
                                             c.status === 'deleting';
                                         return (
-                                        <TableRow key={c.id}>
-                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
-                                                {truncate(c.command, 40)}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm font-mono">
-                                                {c.user}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {frequencyLabel(c.frequency)}
-                                            </TableCell>
-                                            {showSiteColumn && (
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {c.site?.domain ?? 'Server'}
+                                            <TableRow key={c.id}>
+                                                <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                                    {truncate(c.command, 40)}
                                                 </TableCell>
-                                            )}
-                                            <TableCell>
-                                                {isCronDeleting ? (
-                                                    <StatusBadge status="deleting" label="Deleting..." />
-                                                ) : (
-                                                    <StatusBadge
-                                                        status={c.hidden ? 'disabled' : 'enabled'}
-                                                        label={c.hidden ? 'Disabled' : 'Enabled'}
-                                                    />
+                                                <TableCell className="font-mono text-sm text-muted-foreground">
+                                                    {c.user}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {frequencyLabel(
+                                                        c.frequency,
+                                                    )}
+                                                </TableCell>
+                                                {showSiteColumn && (
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {c.site?.domain ??
+                                                            'Server'}
+                                                    </TableCell>
                                                 )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isCronDeleting}
-                                                        onClick={() => openEditCron(c)}
-                                                        aria-label="Edit cron job"
-                                                    >
-                                                        <PencilIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    {!isCronDeleting && (c.hidden ? (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8"
-                                                            onClick={() =>
-                                                                router.visit(
-                                                                    teamPath(`/servers/${server.id}/cron-jobs/${c.id}/enable`),
-                                                                    { method: 'patch', preserveScroll: true },
-                                                                )
-                                                            }
-                                                        >
-                                                            Enable
-                                                        </Button>
+                                                <TableCell>
+                                                    {isCronDeleting ? (
+                                                        <AutoStatusBadge
+                                                            status="deleting"
+                                                            label="Deleting..."
+                                                        />
                                                     ) : (
+                                                        <AutoStatusBadge
+                                                            status={
+                                                                c.hidden
+                                                                    ? 'disabled'
+                                                                    : 'enabled'
+                                                            }
+                                                            label={
+                                                                c.hidden
+                                                                    ? 'Disabled'
+                                                                    : 'Enabled'
+                                                            }
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1">
                                                         <Button
                                                             variant="outline"
-                                                            size="sm"
-                                                            className="h-8"
-                                                            onClick={() =>
-                                                                router.visit(
-                                                                    teamPath(`/servers/${server.id}/cron-jobs/${c.id}/disable`),
-                                                                    { method: 'patch', preserveScroll: true },
-                                                                )
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isCronDeleting
                                                             }
+                                                            onClick={() =>
+                                                                openEditCron(c)
+                                                            }
+                                                            aria-label="Edit cron job"
                                                         >
-                                                            Disable
+                                                            <PencilIcon className="h-4 w-4" />
                                                         </Button>
-                                                    ))}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isCronDeleting}
-                                                        onClick={() => {
-                                                            setCronToDelete(c);
-                                                            setDeleteCronOpen(true);
-                                                        }}
-                                                        aria-label="Delete cron job"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                                                        {!isCronDeleting &&
+                                                            (c.hidden ? (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8"
+                                                                    onClick={() =>
+                                                                        router.visit(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/cron-jobs/${c.id}/enable`,
+                                                                            ),
+                                                                            {
+                                                                                method: 'patch',
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Enable
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8"
+                                                                    onClick={() =>
+                                                                        router.visit(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/cron-jobs/${c.id}/disable`,
+                                                                            ),
+                                                                            {
+                                                                                method: 'patch',
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Disable
+                                                                </Button>
+                                                            ))}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isCronDeleting
+                                                            }
+                                                            onClick={() => {
+                                                                setCronToDelete(
+                                                                    c,
+                                                                );
+                                                                setDeleteCronOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            aria-label="Delete cron job"
+                                                        >
+                                                            <Trash2Icon className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
                                         );
                                     })
                                 )}
@@ -687,19 +788,29 @@ export function ProcessesPanel({
                     <SheetHeader>
                         <SheetTitle>Create worker</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={handleCreateWorker} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                    <form
+                        onSubmit={handleCreateWorker}
+                        className="flex flex-1 flex-col gap-4 p-4 pt-4"
+                    >
                         <div className="space-y-2">
                             <Label htmlFor="worker-name">Name</Label>
                             <Input
                                 id="worker-name"
                                 value={workerForm.name}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, name: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        name: e.target.value,
+                                    }))
                                 }
                                 placeholder="worker-1"
                                 autoComplete="off"
                             />
-                            {errors?.name && <p className="text-destructive text-sm">{errors.name}</p>}
+                            {errors?.name && (
+                                <p className="text-sm text-destructive">
+                                    {errors.name}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="worker-command">Command</Label>
@@ -707,16 +818,27 @@ export function ProcessesPanel({
                                 id="worker-command"
                                 value={workerForm.command}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, command: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        command: e.target.value,
+                                    }))
                                 }
                                 placeholder="php artisan queue:work"
                                 className="font-mono"
                             />
-                            <p className="text-muted-foreground text-xs">
-                                <code>php</code> will use default PHP CLI. For a specific version use a path like{' '}
-                                <code className="font-mono">/usr/bin/php8.4</code>.
+                            <p className="text-xs text-muted-foreground">
+                                <code>php</code> will use default PHP CLI. For a
+                                specific version use a path like{' '}
+                                <code className="font-mono">
+                                    /usr/bin/php8.4
+                                </code>
+                                .
                             </p>
-                            {errors?.command && <p className="text-destructive text-sm">{errors.command}</p>}
+                            {errors?.command && (
+                                <p className="text-sm text-destructive">
+                                    {errors.command}
+                                </p>
+                            )}
                         </div>
                         {showSitePicker ? (
                             <div className="space-y-2">
@@ -730,7 +852,8 @@ export function ProcessesPanel({
                                     onValueChange={(v) =>
                                         setWorkerForm((p) => ({
                                             ...p,
-                                            site_id: v === 'server' ? '' : Number(v),
+                                            site_id:
+                                                v === 'server' ? '' : Number(v),
                                         }))
                                     }
                                 >
@@ -738,9 +861,14 @@ export function ProcessesPanel({
                                         <SelectValue placeholder="Server (no site)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="server">Server (no site)</SelectItem>
+                                        <SelectItem value="server">
+                                            Server (no site)
+                                        </SelectItem>
                                         {sites.map((s) => (
-                                            <SelectItem key={s.id} value={String(s.id)}>
+                                            <SelectItem
+                                                key={s.id}
+                                                value={String(s.id)}
+                                            >
                                                 {s.domain}
                                             </SelectItem>
                                         ))}
@@ -759,12 +887,19 @@ export function ProcessesPanel({
                                 id="worker-user"
                                 value={workerForm.user}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, user: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        user: e.target.value,
+                                    }))
                                 }
                                 placeholder="deploy"
                                 className="font-mono"
                             />
-                            {errors?.user && <p className="text-destructive text-sm">{errors.user}</p>}
+                            {errors?.user && (
+                                <p className="text-sm text-destructive">
+                                    {errors.user}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="worker-numprocs">Numprocs</Label>
@@ -777,24 +912,33 @@ export function ProcessesPanel({
                                 onChange={(e) =>
                                     setWorkerForm((p) => ({
                                         ...p,
-                                        numprocs: Math.max(1, parseInt(e.target.value, 10) || 1),
+                                        numprocs: Math.max(
+                                            1,
+                                            parseInt(e.target.value, 10) || 1,
+                                        ),
                                     }))
                                 }
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="worker-stdout-logfile">Log file path</Label>
+                            <Label htmlFor="worker-stdout-logfile">
+                                Log file path
+                            </Label>
                             <Input
                                 id="worker-stdout-logfile"
                                 value={workerForm.stdout_logfile}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, stdout_logfile: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        stdout_logfile: e.target.value,
+                                    }))
                                 }
                                 placeholder="/home/artisan/worker.log"
                                 className="font-mono"
                             />
-                            <p className="text-muted-foreground text-xs">
-                                Absolute path where stdout is written. Required to use the Logs button.
+                            <p className="text-xs text-muted-foreground">
+                                Absolute path where stdout is written. Required
+                                to use the Logs button.
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -802,10 +946,16 @@ export function ProcessesPanel({
                                 id="worker-auto-start"
                                 checked={workerForm.auto_start}
                                 onCheckedChange={(checked) =>
-                                    setWorkerForm((p) => ({ ...p, auto_start: checked === true }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        auto_start: checked === true,
+                                    }))
                                 }
                             />
-                            <Label htmlFor="worker-auto-start" className="font-normal">
+                            <Label
+                                htmlFor="worker-auto-start"
+                                className="font-normal"
+                            >
                                 Auto start
                             </Label>
                         </div>
@@ -814,15 +964,25 @@ export function ProcessesPanel({
                                 id="worker-auto-restart"
                                 checked={workerForm.auto_restart}
                                 onCheckedChange={(checked) =>
-                                    setWorkerForm((p) => ({ ...p, auto_restart: checked === true }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        auto_restart: checked === true,
+                                    }))
                                 }
                             />
-                            <Label htmlFor="worker-auto-restart" className="font-normal">
+                            <Label
+                                htmlFor="worker-auto-restart"
+                                className="font-normal"
+                            >
                                 Auto restart
                             </Label>
                         </div>
                         <SheetFooter>
-                            <Button type="button" variant="outline" onClick={() => setCreateWorkerOpen(false)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setCreateWorkerOpen(false)}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
@@ -837,20 +997,32 @@ export function ProcessesPanel({
             <Sheet open={editWorkerOpen} onOpenChange={setEditWorkerOpen}>
                 <SheetContent side="right">
                     <SheetHeader>
-                        <SheetTitle>Edit worker {workerToEdit?.name}</SheetTitle>
+                        <SheetTitle>
+                            Edit worker {workerToEdit?.name}
+                        </SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={handleUpdateWorker} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                    <form
+                        onSubmit={handleUpdateWorker}
+                        className="flex flex-1 flex-col gap-4 p-4 pt-4"
+                    >
                         <div className="space-y-2">
                             <Label htmlFor="edit-worker-name">Name</Label>
                             <Input
                                 id="edit-worker-name"
                                 value={workerForm.name}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, name: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        name: e.target.value,
+                                    }))
                                 }
                                 autoComplete="off"
                             />
-                            {errors?.name && <p className="text-destructive text-sm">{errors.name}</p>}
+                            {errors?.name && (
+                                <p className="text-sm text-destructive">
+                                    {errors.name}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-worker-command">Command</Label>
@@ -858,11 +1030,18 @@ export function ProcessesPanel({
                                 id="edit-worker-command"
                                 value={workerForm.command}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, command: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        command: e.target.value,
+                                    }))
                                 }
                                 className="font-mono"
                             />
-                            {errors?.command && <p className="text-destructive text-sm">{errors.command}</p>}
+                            {errors?.command && (
+                                <p className="text-sm text-destructive">
+                                    {errors.command}
+                                </p>
+                            )}
                         </div>
                         {showSitePicker ? (
                             <div className="space-y-2">
@@ -876,7 +1055,8 @@ export function ProcessesPanel({
                                     onValueChange={(v) =>
                                         setWorkerForm((p) => ({
                                             ...p,
-                                            site_id: v === 'server' ? '' : Number(v),
+                                            site_id:
+                                                v === 'server' ? '' : Number(v),
                                         }))
                                     }
                                 >
@@ -884,9 +1064,14 @@ export function ProcessesPanel({
                                         <SelectValue placeholder="Server (no site)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="server">Server (no site)</SelectItem>
+                                        <SelectItem value="server">
+                                            Server (no site)
+                                        </SelectItem>
                                         {sites.map((s) => (
-                                            <SelectItem key={s.id} value={String(s.id)}>
+                                            <SelectItem
+                                                key={s.id}
+                                                value={String(s.id)}
+                                            >
                                                 {s.domain}
                                             </SelectItem>
                                         ))}
@@ -905,14 +1090,23 @@ export function ProcessesPanel({
                                 id="edit-worker-user"
                                 value={workerForm.user}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, user: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        user: e.target.value,
+                                    }))
                                 }
                                 className="font-mono"
                             />
-                            {errors?.user && <p className="text-destructive text-sm">{errors.user}</p>}
+                            {errors?.user && (
+                                <p className="text-sm text-destructive">
+                                    {errors.user}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit-worker-numprocs">Numprocs</Label>
+                            <Label htmlFor="edit-worker-numprocs">
+                                Numprocs
+                            </Label>
                             <Input
                                 id="edit-worker-numprocs"
                                 type="number"
@@ -922,24 +1116,33 @@ export function ProcessesPanel({
                                 onChange={(e) =>
                                     setWorkerForm((p) => ({
                                         ...p,
-                                        numprocs: Math.max(1, parseInt(e.target.value, 10) || 1),
+                                        numprocs: Math.max(
+                                            1,
+                                            parseInt(e.target.value, 10) || 1,
+                                        ),
                                     }))
                                 }
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit-worker-stdout-logfile">Log file path</Label>
+                            <Label htmlFor="edit-worker-stdout-logfile">
+                                Log file path
+                            </Label>
                             <Input
                                 id="edit-worker-stdout-logfile"
                                 value={workerForm.stdout_logfile}
                                 onChange={(e) =>
-                                    setWorkerForm((p) => ({ ...p, stdout_logfile: e.target.value }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        stdout_logfile: e.target.value,
+                                    }))
                                 }
                                 placeholder="/home/artisan/worker.log"
                                 className="font-mono"
                             />
-                            <p className="text-muted-foreground text-xs">
-                                Absolute path where stdout is written. Required to use the Logs button.
+                            <p className="text-xs text-muted-foreground">
+                                Absolute path where stdout is written. Required
+                                to use the Logs button.
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -947,10 +1150,16 @@ export function ProcessesPanel({
                                 id="edit-worker-auto-start"
                                 checked={workerForm.auto_start}
                                 onCheckedChange={(checked) =>
-                                    setWorkerForm((p) => ({ ...p, auto_start: checked === true }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        auto_start: checked === true,
+                                    }))
                                 }
                             />
-                            <Label htmlFor="edit-worker-auto-start" className="font-normal">
+                            <Label
+                                htmlFor="edit-worker-auto-start"
+                                className="font-normal"
+                            >
                                 Auto start
                             </Label>
                         </div>
@@ -959,15 +1168,25 @@ export function ProcessesPanel({
                                 id="edit-worker-auto-restart"
                                 checked={workerForm.auto_restart}
                                 onCheckedChange={(checked) =>
-                                    setWorkerForm((p) => ({ ...p, auto_restart: checked === true }))
+                                    setWorkerForm((p) => ({
+                                        ...p,
+                                        auto_restart: checked === true,
+                                    }))
                                 }
                             />
-                            <Label htmlFor="edit-worker-auto-restart" className="font-normal">
+                            <Label
+                                htmlFor="edit-worker-auto-restart"
+                                className="font-normal"
+                            >
                                 Auto restart
                             </Label>
                         </div>
                         <SheetFooter>
-                            <Button type="button" variant="outline" onClick={() => setEditWorkerOpen(false)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setEditWorkerOpen(false)}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
@@ -984,19 +1203,29 @@ export function ProcessesPanel({
                     <SheetHeader>
                         <SheetTitle>Create cron job</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={handleCreateCron} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                    <form
+                        onSubmit={handleCreateCron}
+                        className="flex flex-1 flex-col gap-4 p-4 pt-4"
+                    >
                         <div className="space-y-2">
                             <Label htmlFor="cron-command">Command</Label>
                             <Input
                                 id="cron-command"
                                 value={cronForm.command}
                                 onChange={(e) =>
-                                    setCronForm((p) => ({ ...p, command: e.target.value }))
+                                    setCronForm((p) => ({
+                                        ...p,
+                                        command: e.target.value,
+                                    }))
                                 }
                                 placeholder="php artisan schedule:run"
                                 className="font-mono"
                             />
-                            {errors?.command && <p className="text-destructive text-sm">{errors.command}</p>}
+                            {errors?.command && (
+                                <p className="text-sm text-destructive">
+                                    {errors.command}
+                                </p>
+                            )}
                         </div>
                         {showSitePicker ? (
                             <div className="space-y-2">
@@ -1010,7 +1239,8 @@ export function ProcessesPanel({
                                     onValueChange={(v) =>
                                         setCronForm((p) => ({
                                             ...p,
-                                            site_id: v === 'server' ? '' : Number(v),
+                                            site_id:
+                                                v === 'server' ? '' : Number(v),
                                         }))
                                     }
                                 >
@@ -1018,9 +1248,14 @@ export function ProcessesPanel({
                                         <SelectValue placeholder="Server (no site)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="server">Server (no site)</SelectItem>
+                                        <SelectItem value="server">
+                                            Server (no site)
+                                        </SelectItem>
                                         {sites.map((s) => (
-                                            <SelectItem key={s.id} value={String(s.id)}>
+                                            <SelectItem
+                                                key={s.id}
+                                                value={String(s.id)}
+                                            >
                                                 {s.domain}
                                             </SelectItem>
                                         ))}
@@ -1036,14 +1271,24 @@ export function ProcessesPanel({
                         <div className="space-y-2">
                             <Label>Frequency</Label>
                             <Select
-                                value={customCronFreq ? 'custom' : cronForm.frequency}
+                                value={
+                                    customCronFreq
+                                        ? 'custom'
+                                        : cronForm.frequency
+                                }
                                 onValueChange={(v) => {
                                     if (v === 'custom') {
                                         setCustomCronFreq(true);
-                                        setCronForm((p) => ({ ...p, frequency: '' }));
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: '',
+                                        }));
                                     } else {
                                         setCustomCronFreq(false);
-                                        setCronForm((p) => ({ ...p, frequency: v }));
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: v,
+                                        }));
                                     }
                                 }}
                             >
@@ -1052,25 +1297,37 @@ export function ProcessesPanel({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {CRON_FREQUENCIES.map((f) => (
-                                        <SelectItem key={f.value} value={f.value}>
+                                        <SelectItem
+                                            key={f.value}
+                                            value={f.value}
+                                        >
                                             {f.label}
                                         </SelectItem>
                                     ))}
-                                    <SelectItem value="custom">Custom…</SelectItem>
+                                    <SelectItem value="custom">
+                                        Custom…
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             {customCronFreq && (
                                 <Input
                                     value={cronForm.frequency}
                                     onChange={(e) =>
-                                        setCronForm((p) => ({ ...p, frequency: e.target.value }))
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: e.target.value,
+                                        }))
                                     }
                                     placeholder="0 2 * * 1-5"
                                     className="font-mono"
                                     autoFocus
                                 />
                             )}
-                            {errors?.frequency && <p className="text-destructive text-sm">{errors.frequency}</p>}
+                            {errors?.frequency && (
+                                <p className="text-sm text-destructive">
+                                    {errors.frequency}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cron-user">User</Label>
@@ -1078,15 +1335,26 @@ export function ProcessesPanel({
                                 id="cron-user"
                                 value={cronForm.user}
                                 onChange={(e) =>
-                                    setCronForm((p) => ({ ...p, user: e.target.value }))
+                                    setCronForm((p) => ({
+                                        ...p,
+                                        user: e.target.value,
+                                    }))
                                 }
                                 placeholder="deploy"
                                 className="font-mono"
                             />
-                            {errors?.user && <p className="text-destructive text-sm">{errors.user}</p>}
+                            {errors?.user && (
+                                <p className="text-sm text-destructive">
+                                    {errors.user}
+                                </p>
+                            )}
                         </div>
                         <SheetFooter>
-                            <Button type="button" variant="outline" onClick={() => setCreateCronOpen(false)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setCreateCronOpen(false)}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
@@ -1098,23 +1366,39 @@ export function ProcessesPanel({
             </Sheet>
 
             {/* Edit cron drawer */}
-            <Sheet open={editCronOpen} onOpenChange={(open) => { setEditCronOpen(open); if (!open) setCustomCronFreq(false); }}>
+            <Sheet
+                open={editCronOpen}
+                onOpenChange={(open) => {
+                    setEditCronOpen(open);
+                    if (!open) setCustomCronFreq(false);
+                }}
+            >
                 <SheetContent side="right">
                     <SheetHeader>
                         <SheetTitle>Edit cron job</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={handleUpdateCron} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                    <form
+                        onSubmit={handleUpdateCron}
+                        className="flex flex-1 flex-col gap-4 p-4 pt-4"
+                    >
                         <div className="space-y-2">
                             <Label htmlFor="edit-cron-command">Command</Label>
                             <Input
                                 id="edit-cron-command"
                                 value={cronForm.command}
                                 onChange={(e) =>
-                                    setCronForm((p) => ({ ...p, command: e.target.value }))
+                                    setCronForm((p) => ({
+                                        ...p,
+                                        command: e.target.value,
+                                    }))
                                 }
                                 className="font-mono"
                             />
-                            {errors?.command && <p className="text-destructive text-sm">{errors.command}</p>}
+                            {errors?.command && (
+                                <p className="text-sm text-destructive">
+                                    {errors.command}
+                                </p>
+                            )}
                         </div>
                         {showSitePicker ? (
                             <div className="space-y-2">
@@ -1128,7 +1412,8 @@ export function ProcessesPanel({
                                     onValueChange={(v) =>
                                         setCronForm((p) => ({
                                             ...p,
-                                            site_id: v === 'server' ? '' : Number(v),
+                                            site_id:
+                                                v === 'server' ? '' : Number(v),
                                         }))
                                     }
                                 >
@@ -1136,9 +1421,14 @@ export function ProcessesPanel({
                                         <SelectValue placeholder="Server (no site)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="server">Server (no site)</SelectItem>
+                                        <SelectItem value="server">
+                                            Server (no site)
+                                        </SelectItem>
                                         {sites.map((s) => (
-                                            <SelectItem key={s.id} value={String(s.id)}>
+                                            <SelectItem
+                                                key={s.id}
+                                                value={String(s.id)}
+                                            >
                                                 {s.domain}
                                             </SelectItem>
                                         ))}
@@ -1154,14 +1444,24 @@ export function ProcessesPanel({
                         <div className="space-y-2">
                             <Label>Frequency</Label>
                             <Select
-                                value={customCronFreq ? 'custom' : cronForm.frequency}
+                                value={
+                                    customCronFreq
+                                        ? 'custom'
+                                        : cronForm.frequency
+                                }
                                 onValueChange={(v) => {
                                     if (v === 'custom') {
                                         setCustomCronFreq(true);
-                                        setCronForm((p) => ({ ...p, frequency: '' }));
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: '',
+                                        }));
                                     } else {
                                         setCustomCronFreq(false);
-                                        setCronForm((p) => ({ ...p, frequency: v }));
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: v,
+                                        }));
                                     }
                                 }}
                             >
@@ -1170,18 +1470,26 @@ export function ProcessesPanel({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {CRON_FREQUENCIES.map((f) => (
-                                        <SelectItem key={f.value} value={f.value}>
+                                        <SelectItem
+                                            key={f.value}
+                                            value={f.value}
+                                        >
                                             {f.label}
                                         </SelectItem>
                                     ))}
-                                    <SelectItem value="custom">Custom…</SelectItem>
+                                    <SelectItem value="custom">
+                                        Custom…
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             {customCronFreq && (
                                 <Input
                                     value={cronForm.frequency}
                                     onChange={(e) =>
-                                        setCronForm((p) => ({ ...p, frequency: e.target.value }))
+                                        setCronForm((p) => ({
+                                            ...p,
+                                            frequency: e.target.value,
+                                        }))
                                     }
                                     placeholder="0 2 * * 1-5"
                                     className="font-mono"
@@ -1195,14 +1503,25 @@ export function ProcessesPanel({
                                 id="edit-cron-user"
                                 value={cronForm.user}
                                 onChange={(e) =>
-                                    setCronForm((p) => ({ ...p, user: e.target.value }))
+                                    setCronForm((p) => ({
+                                        ...p,
+                                        user: e.target.value,
+                                    }))
                                 }
                                 className="font-mono"
                             />
-                            {errors?.user && <p className="text-destructive text-sm">{errors.user}</p>}
+                            {errors?.user && (
+                                <p className="text-sm text-destructive">
+                                    {errors.user}
+                                </p>
+                            )}
                         </div>
                         <SheetFooter>
-                            <Button type="button" variant="outline" onClick={() => setEditCronOpen(false)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setEditCronOpen(false)}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
@@ -1217,7 +1536,10 @@ export function ProcessesPanel({
             <Dialog open={logsOpen} onOpenChange={setLogsOpen}>
                 <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                        <DialogTitle>Worker logs {logsWorker ? `— ${logsWorker.name}` : ''}</DialogTitle>
+                        <DialogTitle>
+                            Worker logs{' '}
+                            {logsWorker ? `— ${logsWorker.name}` : ''}
+                        </DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[60vh] overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
                         {logsLoading ? (
@@ -1228,7 +1550,9 @@ export function ProcessesPanel({
                         ) : logsContent ? (
                             logsContent
                         ) : (
-                            <span className="text-muted-foreground">No log output.</span>
+                            <span className="text-muted-foreground">
+                                No log output.
+                            </span>
                         )}
                     </div>
                 </DialogContent>

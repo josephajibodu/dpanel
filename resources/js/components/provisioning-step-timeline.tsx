@@ -1,26 +1,42 @@
-import { cn } from '@/lib/utils';
-import { Server } from '@/types/server';
 import { CheckCircle2Icon, CircleIcon, Loader2Icon } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
+
+interface ProvisioningStep {
+    value: number;
+    label: string;
+    description: string;
+}
+
 interface ProvisioningStepTimelineProps {
-    server: Server;
+    heading: string;
+    waitingDescription: string;
+    currentStep: { value: number; label: string; description: string } | null;
+    steps: ProvisioningStep[];
     className?: string;
 }
 
-export function ProvisioningStepTimeline({ server, className }: ProvisioningStepTimelineProps) {
-    const currentStepValue = server.provisioning_step?.value ?? 0;
-    const currentStepLabel = server.provisioning_step?.label ?? 'Pending';
-    const currentStepDescription = server.provisioning_step?.description ?? 'Waiting to start provisioning.';
+export function ProvisioningStepTimeline({
+    heading,
+    waitingDescription,
+    currentStep,
+    steps,
+    className,
+}: ProvisioningStepTimelineProps) {
+    const currentStepValue = currentStep?.value ?? 0;
+    const currentStepLabel = currentStep?.label ?? 'Pending';
+    const currentStepDescription =
+        currentStep?.description ?? waitingDescription;
     const isStarting = currentStepValue === 0;
 
     return (
         <div className={cn('rounded-lg border bg-card p-4', className)}>
             <div className="mb-4">
                 <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
-                    Provisioning progress
+                    {heading}
                     {isStarting && (
                         <Loader2Icon
-                            className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400"
+                            className="h-4 w-4 animate-spin text-primary"
                             aria-hidden
                         />
                     )}
@@ -34,17 +50,20 @@ export function ProvisioningStepTimeline({ server, className }: ProvisioningStep
             </div>
 
             <div className="space-y-3">
-                {server.provisioning_steps.map((step) => {
+                {steps.map((step) => {
                     const isCompleted = step.value < currentStepValue;
                     const isCurrent = step.value === currentStepValue;
 
                     return (
-                        <div key={step.value} className="flex items-start gap-3">
+                        <div
+                            key={step.value}
+                            className="flex items-start gap-3"
+                        >
                             <div className="pt-0.5">
                                 {isCompleted ? (
                                     <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
                                 ) : isCurrent ? (
-                                    <Loader2Icon className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                                    <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
                                 ) : (
                                     <CircleIcon className="h-4 w-4 text-muted-foreground" />
                                 )}
@@ -56,7 +75,9 @@ export function ProvisioningStepTimeline({ server, className }: ProvisioningStep
                                         'text-sm font-medium',
                                         isCurrent && 'text-foreground',
                                         isCompleted && 'text-foreground',
-                                        !isCompleted && !isCurrent && 'text-muted-foreground',
+                                        !isCompleted &&
+                                            !isCurrent &&
+                                            'text-muted-foreground',
                                     )}
                                 >
                                     {step.label}
@@ -64,7 +85,9 @@ export function ProvisioningStepTimeline({ server, className }: ProvisioningStep
                                 <p
                                     className={cn(
                                         'mt-0.5 text-xs',
-                                        isCurrent ? 'text-muted-foreground' : 'text-muted-foreground/80',
+                                        isCurrent
+                                            ? 'text-muted-foreground'
+                                            : 'text-muted-foreground/80',
                                     )}
                                 >
                                     {step.description}

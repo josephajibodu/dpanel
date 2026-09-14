@@ -1,3 +1,20 @@
+import { Head, router, usePage } from '@inertiajs/react';
+import Editor from '@monaco-editor/react';
+import {
+    ChevronDownIcon,
+    ChevronRightIcon,
+    ClockIcon,
+    FileIcon,
+    FilePlusIcon,
+    GlobeIcon,
+    LockIcon,
+    PencilIcon,
+    RefreshCwIcon,
+    RotateCcwIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,30 +33,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useAppearance } from '@/hooks/use-appearance';
 import { useSiteNginxUpdates } from '@/hooks/use-site-nginx-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Site } from '@/types/site';
-import { Head, router, usePage } from '@inertiajs/react';
-import Editor from '@monaco-editor/react';
-import {
-    ChevronDownIcon,
-    ChevronRightIcon,
-    ClockIcon,
-    FileIcon,
-    FilePlusIcon,
-    GlobeIcon,
-    LockIcon,
-    PencilIcon,
-    RefreshCwIcon,
-    RotateCcwIcon,
-    Trash2Icon,
-} from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { useAppearance } from '@/hooks/use-appearance';
 
 interface NginxFile {
     id: number;
@@ -119,8 +120,12 @@ export default function SiteNginxIndex({
     const [editorContent, setEditorContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [collapsedDomains, setCollapsedDomains] = useState<Set<number>>(new Set());
-    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+    const [collapsedDomains, setCollapsedDomains] = useState<Set<number>>(
+        new Set(),
+    );
+    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+        new Set(),
+    );
     const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
     const [createDialog, setCreateDialog] = useState(false);
@@ -138,7 +143,8 @@ export default function SiteNginxIndex({
     const [deleteDialog, setDeleteDialog] = useState<NginxFile | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const editorTheme = resolvedAppearance === 'dark' ? 'nginx-dark' : 'nginx-light';
+    const editorTheme =
+        resolvedAppearance === 'dark' ? 'nginx-dark' : 'nginx-light';
 
     useEffect(() => {
         if (selectedFile) {
@@ -149,19 +155,18 @@ export default function SiteNginxIndex({
         }
     }, [nginxFiles]);
 
-    const openFile = useCallback(
-        (file: NginxFile) => {
-            setSelectedFile(file);
-            setEditorContent(file.content ?? '');
-        },
-        [],
-    );
+    const openFile = useCallback((file: NginxFile) => {
+        setSelectedFile(file);
+        setEditorContent(file.content ?? '');
+    }, []);
 
     const handleSave = () => {
         if (!selectedFile) return;
         setIsSaving(true);
         router.put(
-            teamPath(`/servers/${serverId}/sites/${site.id}/nginx/${selectedFile.id}`),
+            teamPath(
+                `/servers/${serverId}/sites/${site.id}/nginx/${selectedFile.id}`,
+            ),
             { content: editorContent },
             {
                 preserveScroll: true,
@@ -200,7 +205,9 @@ export default function SiteNginxIndex({
         if (!renameDialog) return;
         setIsRenaming(true);
         router.patch(
-            teamPath(`/servers/${serverId}/sites/${site.id}/nginx/${renameDialog.id}/rename`),
+            teamPath(
+                `/servers/${serverId}/sites/${site.id}/nginx/${renameDialog.id}/rename`,
+            ),
             { name: renameName },
             {
                 preserveScroll: true,
@@ -214,7 +221,9 @@ export default function SiteNginxIndex({
         if (!deleteDialog) return;
         setIsDeleting(true);
         router.delete(
-            teamPath(`/servers/${serverId}/sites/${site.id}/nginx/${deleteDialog.id}`),
+            teamPath(
+                `/servers/${serverId}/sites/${site.id}/nginx/${deleteDialog.id}`,
+            ),
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -243,7 +252,9 @@ export default function SiteNginxIndex({
 
     const handleRestore = (historyId: number) => {
         router.post(
-            teamPath(`/servers/${serverId}/sites/${site.id}/nginx-history/${historyId}/restore`),
+            teamPath(
+                `/servers/${serverId}/sites/${site.id}/nginx-history/${historyId}/restore`,
+            ),
             {},
             { preserveScroll: true },
         );
@@ -277,24 +288,40 @@ export default function SiteNginxIndex({
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
-        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
-        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
-        { title: 'Nginx', href: teamPath(`/servers/${serverId}/sites/${site.id}/nginx`) },
+        {
+            title: server?.name || site.server?.name || 'Server',
+            href: teamPath(`/servers/${serverId}`),
+        },
+        {
+            title: site.domain,
+            href: teamPath(`/servers/${serverId}/sites/${site.id}`),
+        },
+        {
+            title: 'Nginx',
+            href: teamPath(`/servers/${serverId}/sites/${site.id}/nginx`),
+        },
     ];
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}
+            subNavItems={getSiteSubNavItems(
+                currentTeam?.slug ?? '',
+                String(serverId ?? ''),
+                site.id,
+            )}
         >
             <Head title={`Nginx - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Nginx</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                            Manage nginx configuration snippets for {site.domain}.
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Nginx
+                        </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Manage nginx configuration snippets for{' '}
+                            {site.domain}.
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -305,7 +332,9 @@ export default function SiteNginxIndex({
                             disabled={isRefreshing}
                             title="Sync file contents from server"
                         >
-                            <RefreshCwIcon className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            <RefreshCwIcon
+                                className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                            />
                             Refresh
                         </Button>
                         <Button
@@ -316,10 +345,7 @@ export default function SiteNginxIndex({
                             <ClockIcon className="mr-1.5 h-4 w-4" />
                             History
                         </Button>
-                        <Button
-                            size="sm"
-                            onClick={() => setCreateDialog(true)}
-                        >
+                        <Button size="sm" onClick={() => setCreateDialog(true)}>
                             <FilePlusIcon className="mr-1.5 h-4 w-4" />
                             New file
                         </Button>
@@ -330,29 +356,40 @@ export default function SiteNginxIndex({
                     {/* File explorer — domain → section → files */}
                     <div className="w-64 shrink-0 overflow-y-auto rounded-lg border">
                         {domains.length === 0 && (
-                            <p className="text-muted-foreground px-4 py-3 text-xs italic">
+                            <p className="px-4 py-3 text-xs text-muted-foreground italic">
                                 No domains configured yet.
                             </p>
                         )}
                         {domains.map((domain) => {
-                            const isDomainCollapsed = collapsedDomains.has(domain.id);
-                            const domainFiles = nginxFiles.filter((f) => f.site_domain_id === domain.id);
+                            const isDomainCollapsed = collapsedDomains.has(
+                                domain.id,
+                            );
+                            const domainFiles = nginxFiles.filter(
+                                (f) => f.site_domain_id === domain.id,
+                            );
 
                             return (
-                                <div key={domain.id} className="border-b last:border-b-0">
+                                <div
+                                    key={domain.id}
+                                    className="border-b last:border-b-0"
+                                >
                                     <button
                                         onClick={() => toggleDomain(domain.id)}
-                                        className="hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold"
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/50"
                                     >
                                         {isDomainCollapsed ? (
-                                            <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                            <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                         ) : (
-                                            <ChevronDownIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                            <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                         )}
-                                        <GlobeIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                                        <span className="flex-1 truncate font-mono text-xs">{domain.hostname}</span>
+                                        <GlobeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                        <span className="flex-1 truncate font-mono text-xs">
+                                            {domain.hostname}
+                                        </span>
                                         {domain.is_primary && (
-                                            <span className="text-muted-foreground text-xs">primary</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                primary
+                                            </span>
                                         )}
                                     </button>
 
@@ -360,88 +397,144 @@ export default function SiteNginxIndex({
                                         <div className="pl-2">
                                             {sections.map((section) => {
                                                 const sectionKey = `${domain.id}:${section.value}`;
-                                                const isSectionCollapsed = collapsedSections.has(sectionKey);
-                                                const sectionFiles = domainFiles.filter((f) => f.section === section.value);
+                                                const isSectionCollapsed =
+                                                    collapsedSections.has(
+                                                        sectionKey,
+                                                    );
+                                                const sectionFiles =
+                                                    domainFiles.filter(
+                                                        (f) =>
+                                                            f.section ===
+                                                            section.value,
+                                                    );
 
                                                 return (
-                                                    <div key={section.value} className="border-b last:border-b-0">
+                                                    <div
+                                                        key={section.value}
+                                                        className="border-b last:border-b-0"
+                                                    >
                                                         <button
-                                                            onClick={() => toggleSection(sectionKey)}
-                                                            className="hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium"
+                                                            onClick={() =>
+                                                                toggleSection(
+                                                                    sectionKey,
+                                                                )
+                                                            }
+                                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium hover:bg-muted/50"
                                                         >
                                                             {isSectionCollapsed ? (
-                                                                <ChevronRightIcon className="text-muted-foreground h-3 w-3 shrink-0" />
+                                                                <ChevronRightIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                                                             ) : (
-                                                                <ChevronDownIcon className="text-muted-foreground h-3 w-3 shrink-0" />
+                                                                <ChevronDownIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                                                             )}
-                                                            <span className="capitalize">{section.label}</span>
-                                                            {sectionFiles.length > 0 && (
-                                                                <span className="text-muted-foreground ml-auto text-xs">
-                                                                    {sectionFiles.length}
+                                                            <span className="capitalize">
+                                                                {section.label}
+                                                            </span>
+                                                            {sectionFiles.length >
+                                                                0 && (
+                                                                <span className="ml-auto text-xs text-muted-foreground">
+                                                                    {
+                                                                        sectionFiles.length
+                                                                    }
                                                                 </span>
                                                             )}
                                                         </button>
 
                                                         {!isSectionCollapsed && (
                                                             <div className="pb-1">
-                                                                {sectionFiles.length === 0 && (
-                                                                    <p className="text-muted-foreground px-4 py-1 text-xs italic">
-                                                                        {section.read_only ? 'None yet.' : 'No files'}
+                                                                {sectionFiles.length ===
+                                                                    0 && (
+                                                                    <p className="px-4 py-1 text-xs text-muted-foreground italic">
+                                                                        {section.read_only
+                                                                            ? 'None yet.'
+                                                                            : 'No files'}
                                                                     </p>
                                                                 )}
-                                                                {sectionFiles.map((file) => (
-                                                                    <div
-                                                                        key={file.id}
-                                                                        className={`group flex items-center gap-1.5 px-4 py-1.5 text-sm ${
-                                                                            selectedFile?.id === file.id
-                                                                                ? 'bg-accent text-accent-foreground'
-                                                                                : 'hover:bg-muted/50 cursor-pointer'
-                                                                        }`}
-                                                                        onClick={() => openFile(file)}
-                                                                    >
-                                                                        {section.read_only ? (
-                                                                            <LockIcon className="text-muted-foreground h-3 w-3 shrink-0" />
-                                                                        ) : (
-                                                                            <FileIcon className="text-muted-foreground h-3 w-3 shrink-0" />
-                                                                        )}
-                                                                        <span className="flex-1 truncate font-mono text-xs">
-                                                                            {file.path.replace(`${section.value}/`, '')}
-                                                                        </span>
-                                                                        {file.sync_status !== 'synced' && (
-                                                                            <span className="shrink-0">
-                                                                                <StatusBadge
-                                                                                    status={file.sync_status}
-                                                                                    label={SYNC_STATUS_LABELS[file.sync_status] ?? file.sync_status}
-                                                                                />
+                                                                {sectionFiles.map(
+                                                                    (file) => (
+                                                                        <div
+                                                                            key={
+                                                                                file.id
+                                                                            }
+                                                                            className={`group flex items-center gap-1.5 px-4 py-1.5 text-sm ${
+                                                                                selectedFile?.id ===
+                                                                                file.id
+                                                                                    ? 'bg-accent text-accent-foreground'
+                                                                                    : 'cursor-pointer hover:bg-muted/50'
+                                                                            }`}
+                                                                            onClick={() =>
+                                                                                openFile(
+                                                                                    file,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {section.read_only ? (
+                                                                                <LockIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                            ) : (
+                                                                                <FileIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                            )}
+                                                                            <span className="flex-1 truncate font-mono text-xs">
+                                                                                {file.path.replace(
+                                                                                    `${section.value}/`,
+                                                                                    '',
+                                                                                )}
                                                                             </span>
-                                                                        )}
-                                                                        {!section.read_only && (
-                                                                            <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setRenameDialog(file);
-                                                                                        setRenameName(basename(file.path));
-                                                                                    }}
-                                                                                    className="text-muted-foreground hover:text-foreground rounded p-0.5"
-                                                                                    title="Rename"
-                                                                                >
-                                                                                    <PencilIcon className="h-3 w-3" />
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setDeleteDialog(file);
-                                                                                    }}
-                                                                                    className="text-muted-foreground hover:text-destructive rounded p-0.5"
-                                                                                    title="Delete"
-                                                                                >
-                                                                                    <Trash2Icon className="h-3 w-3" />
-                                                                                </button>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
+                                                                            {file.sync_status !==
+                                                                                'synced' && (
+                                                                                <span className="shrink-0">
+                                                                                    <AutoStatusBadge
+                                                                                        status={
+                                                                                            file.sync_status
+                                                                                        }
+                                                                                        label={
+                                                                                            SYNC_STATUS_LABELS[
+                                                                                                file
+                                                                                                    .sync_status
+                                                                                            ] ??
+                                                                                            file.sync_status
+                                                                                        }
+                                                                                    />
+                                                                                </span>
+                                                                            )}
+                                                                            {!section.read_only && (
+                                                                                <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e,
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            setRenameDialog(
+                                                                                                file,
+                                                                                            );
+                                                                                            setRenameName(
+                                                                                                basename(
+                                                                                                    file.path,
+                                                                                                ),
+                                                                                            );
+                                                                                        }}
+                                                                                        className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                                                                                        title="Rename"
+                                                                                    >
+                                                                                        <PencilIcon className="h-3 w-3" />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e,
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            setDeleteDialog(
+                                                                                                file,
+                                                                                            );
+                                                                                        }}
+                                                                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                                                                        title="Delete"
+                                                                                    >
+                                                                                        <Trash2Icon className="h-3 w-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ),
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -463,12 +556,22 @@ export default function SiteNginxIndex({
                                         <span className="font-mono text-sm font-medium">
                                             {selectedFile.path}
                                         </span>
-                                        {selectedFile.sync_status && selectedFile.sync_status !== 'synced' && (
-                                            <StatusBadge
-                                                status={selectedFile.sync_status}
-                                                label={SYNC_STATUS_LABELS[selectedFile.sync_status] ?? selectedFile.sync_status}
-                                            />
-                                        )}
+                                        {selectedFile.sync_status &&
+                                            selectedFile.sync_status !==
+                                                'synced' && (
+                                                <AutoStatusBadge
+                                                    status={
+                                                        selectedFile.sync_status
+                                                    }
+                                                    label={
+                                                        SYNC_STATUS_LABELS[
+                                                            selectedFile
+                                                                .sync_status
+                                                        ] ??
+                                                        selectedFile.sync_status
+                                                    }
+                                                />
+                                            )}
                                     </div>
                                     <Button
                                         size="sm"
@@ -479,11 +582,13 @@ export default function SiteNginxIndex({
                                     </Button>
                                 </div>
 
-                                {selectedFile.sync_status === 'failed' && selectedFile.sync_error && (
-                                    <div className="bg-destructive/10 text-destructive border-b px-4 py-2 font-mono text-xs">
-                                        <strong>Nginx error:</strong> {selectedFile.sync_error}
-                                    </div>
-                                )}
+                                {selectedFile.sync_status === 'failed' &&
+                                    selectedFile.sync_error && (
+                                        <div className="border-b bg-destructive/10 px-4 py-2 font-mono text-xs text-destructive">
+                                            <strong>Nginx error:</strong>{' '}
+                                            {selectedFile.sync_error}
+                                        </div>
+                                    )}
 
                                 <div className="flex-1 overflow-hidden [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
                                     <Editor
@@ -491,20 +596,28 @@ export default function SiteNginxIndex({
                                         language="nginx"
                                         value={editorContent}
                                         theme={editorTheme}
-                                        onChange={(v) => setEditorContent(v ?? '')}
+                                        onChange={(v) =>
+                                            setEditorContent(v ?? '')
+                                        }
                                         beforeMount={(monaco) => {
-                                            monaco.editor.defineTheme('nginx-dark', {
-                                                base: 'vs-dark',
-                                                inherit: true,
-                                                rules: [],
-                                                colors: {},
-                                            });
-                                            monaco.editor.defineTheme('nginx-light', {
-                                                base: 'vs',
-                                                inherit: true,
-                                                rules: [],
-                                                colors: {},
-                                            });
+                                            monaco.editor.defineTheme(
+                                                'nginx-dark',
+                                                {
+                                                    base: 'vs-dark',
+                                                    inherit: true,
+                                                    rules: [],
+                                                    colors: {},
+                                                },
+                                            );
+                                            monaco.editor.defineTheme(
+                                                'nginx-light',
+                                                {
+                                                    base: 'vs',
+                                                    inherit: true,
+                                                    rules: [],
+                                                    colors: {},
+                                                },
+                                            );
                                         }}
                                         options={{
                                             minimap: { enabled: false },
@@ -516,15 +629,18 @@ export default function SiteNginxIndex({
                                             lineHeight: 20,
                                             tabSize: 4,
                                             padding: { top: 8, bottom: 8 },
-                                            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                            fontFamily:
+                                                'Menlo, Monaco, "Courier New", monospace',
                                         }}
                                     />
                                 </div>
                             </>
                         ) : (
-                            <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2">
+                            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
                                 <FileIcon className="h-10 w-10 opacity-30" />
-                                <p className="text-sm">Select a file to edit, or create a new one.</p>
+                                <p className="text-sm">
+                                    Select a file to edit, or create a new one.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -533,17 +649,19 @@ export default function SiteNginxIndex({
                     {showHistoryPanel && (
                         <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border">
                             <div className="flex items-center justify-between border-b px-3 py-2.5">
-                                <span className="text-sm font-medium">History</span>
+                                <span className="text-sm font-medium">
+                                    History
+                                </span>
                                 <button
                                     onClick={() => setShowHistoryPanel(false)}
-                                    className="text-muted-foreground hover:text-foreground text-xs"
+                                    className="text-xs text-muted-foreground hover:text-foreground"
                                 >
                                     Close
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto">
                                 {nginxHistory.length === 0 ? (
-                                    <p className="text-muted-foreground px-3 py-4 text-center text-xs">
+                                    <p className="px-3 py-4 text-center text-xs text-muted-foreground">
                                         No history yet.
                                     </p>
                                 ) : (
@@ -553,31 +671,45 @@ export default function SiteNginxIndex({
                                             className="border-b px-3 py-2.5 last:border-b-0"
                                         >
                                             <div className="mb-1 flex items-center gap-1.5">
-                                                <span className="text-muted-foreground text-xs font-medium uppercase">
-                                                    {EVENT_LABELS[entry.event] ?? entry.event}
+                                                <span className="text-xs font-medium text-muted-foreground uppercase">
+                                                    {EVENT_LABELS[
+                                                        entry.event
+                                                    ] ?? entry.event}
                                                 </span>
                                             </div>
-                                            <p className="font-mono text-xs break-all">{entry.path}</p>
+                                            <p className="font-mono text-xs break-all">
+                                                {entry.path}
+                                            </p>
                                             {entry.old_path && (
-                                                <p className="text-muted-foreground font-mono text-xs">
+                                                <p className="font-mono text-xs text-muted-foreground">
                                                     ← {entry.old_path}
                                                 </p>
                                             )}
                                             <div className="mt-1.5 flex items-center justify-between">
-                                                <span className="text-muted-foreground text-xs">
-                                                    {entry.user_name ?? 'System'} ·{' '}
-                                                    {new Date(entry.created_at).toLocaleString()}
+                                                <span className="text-xs text-muted-foreground">
+                                                    {entry.user_name ??
+                                                        'System'}{' '}
+                                                    ·{' '}
+                                                    {new Date(
+                                                        entry.created_at,
+                                                    ).toLocaleString()}
                                                 </span>
-                                                {entry.has_content && entry.event !== 'deleted' && (
-                                                    <button
-                                                        onClick={() => handleRestore(entry.id)}
-                                                        className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
-                                                        title="Restore this version"
-                                                    >
-                                                        <RotateCcwIcon className="h-3 w-3" />
-                                                        Restore
-                                                    </button>
-                                                )}
+                                                {entry.has_content &&
+                                                    entry.event !==
+                                                        'deleted' && (
+                                                        <button
+                                                            onClick={() =>
+                                                                handleRestore(
+                                                                    entry.id,
+                                                                )
+                                                            }
+                                                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                                            title="Restore this version"
+                                                        >
+                                                            <RotateCcwIcon className="h-3 w-3" />
+                                                            Restore
+                                                        </button>
+                                                    )}
                                             </div>
                                         </div>
                                     ))
@@ -594,22 +726,33 @@ export default function SiteNginxIndex({
                     <DialogHeader>
                         <DialogTitle>New nginx file</DialogTitle>
                         <DialogDescription>
-                            Create a configuration snippet in one of the nginx include sections.
+                            Create a configuration snippet in one of the nginx
+                            include sections.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>Domain</Label>
-                            <Select value={createDomainId} onValueChange={setCreateDomainId}>
+                            <Select
+                                value={createDomainId}
+                                onValueChange={setCreateDomainId}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Choose domain…" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {domains.map((d) => (
-                                        <SelectItem key={d.id} value={String(d.id)}>
-                                            <span className="font-mono">{d.hostname}</span>
+                                        <SelectItem
+                                            key={d.id}
+                                            value={String(d.id)}
+                                        >
+                                            <span className="font-mono">
+                                                {d.hostname}
+                                            </span>
                                             {d.is_primary && (
-                                                <span className="text-muted-foreground ml-2 text-xs">primary</span>
+                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                    primary
+                                                </span>
                                             )}
                                         </SelectItem>
                                     ))}
@@ -618,19 +761,29 @@ export default function SiteNginxIndex({
                         </div>
                         <div className="space-y-2">
                             <Label>Section</Label>
-                            <Select value={createSection} onValueChange={setCreateSection}>
+                            <Select
+                                value={createSection}
+                                onValueChange={setCreateSection}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Choose section…" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {sections.filter((s) => !s.read_only).map((s) => (
-                                        <SelectItem key={s.value} value={s.value}>
-                                            <span className="font-medium">{s.label}</span>
-                                            <span className="text-muted-foreground ml-2 text-xs">
-                                                {s.description}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
+                                    {sections
+                                        .filter((s) => !s.read_only)
+                                        .map((s) => (
+                                            <SelectItem
+                                                key={s.value}
+                                                value={s.value}
+                                            >
+                                                <span className="font-medium">
+                                                    {s.label}
+                                                </span>
+                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                    {s.description}
+                                                </span>
+                                            </SelectItem>
+                                        ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -639,12 +792,16 @@ export default function SiteNginxIndex({
                                 <Label>Sub-path (optional)</Label>
                                 <Input
                                     value={createSubPath}
-                                    onChange={(e) => setCreateSubPath(e.target.value)}
+                                    onChange={(e) =>
+                                        setCreateSubPath(e.target.value)
+                                    }
                                     placeholder="e.g. php"
                                     className="font-mono"
                                 />
-                                <p className="text-muted-foreground text-xs">
-                                    Creates the file under locations/{createSubPath || 'example'}/{createName || 'file.conf'}
+                                <p className="text-xs text-muted-foreground">
+                                    Creates the file under locations/
+                                    {createSubPath || 'example'}/
+                                    {createName || 'file.conf'}
                                 </p>
                             </div>
                         )}
@@ -674,19 +831,29 @@ export default function SiteNginxIndex({
                                         fontSize: 12,
                                         tabSize: 4,
                                         padding: { top: 4, bottom: 4 },
-                                        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                                        fontFamily:
+                                            'Menlo, Monaco, "Courier New", monospace',
                                     }}
                                 />
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setCreateDialog(false)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCreateDialog(false)}
+                        >
                             Cancel
                         </Button>
                         <Button
                             onClick={handleCreate}
-                            disabled={isCreating || !createDomainId || !createSection || !createName || !createContent}
+                            disabled={
+                                isCreating ||
+                                !createDomainId ||
+                                !createSection ||
+                                !createName ||
+                                !createContent
+                            }
                         >
                             {isCreating ? 'Creating…' : 'Create'}
                         </Button>
@@ -695,12 +862,18 @@ export default function SiteNginxIndex({
             </Dialog>
 
             {/* Rename dialog */}
-            <Dialog open={!!renameDialog} onOpenChange={() => setRenameDialog(null)}>
+            <Dialog
+                open={!!renameDialog}
+                onOpenChange={() => setRenameDialog(null)}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Rename file</DialogTitle>
                         <DialogDescription>
-                            Rename <span className="font-mono">{renameDialog?.path}</span>
+                            Rename{' '}
+                            <span className="font-mono">
+                                {renameDialog?.path}
+                            </span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
@@ -713,7 +886,10 @@ export default function SiteNginxIndex({
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setRenameDialog(null)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setRenameDialog(null)}
+                        >
                             Cancel
                         </Button>
                         <Button
@@ -727,16 +903,27 @@ export default function SiteNginxIndex({
             </Dialog>
 
             {/* Delete confirmation dialog */}
-            <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+            <Dialog
+                open={!!deleteDialog}
+                onOpenChange={() => setDeleteDialog(null)}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Delete file</DialogTitle>
                         <DialogDescription>
-                            Delete <span className="font-mono">{deleteDialog?.path}</span>? This will remove the file from the server and cannot be undone (history is kept).
+                            Delete{' '}
+                            <span className="font-mono">
+                                {deleteDialog?.path}
+                            </span>
+                            ? This will remove the file from the server and
+                            cannot be undone (history is kept).
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialog(null)}
+                        >
                             Cancel
                         </Button>
                         <Button

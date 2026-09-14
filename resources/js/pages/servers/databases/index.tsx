@@ -1,4 +1,19 @@
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    DatabaseIcon,
+    EyeIcon,
+    EyeOffIcon,
+    MoreVerticalIcon,
+    PencilIcon,
+    PlusIcon,
+    Trash2Icon,
+    UserPlusIcon,
+    UsersIcon,
+} from 'lucide-react';
+import { useState } from 'react';
+
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -8,6 +23,12 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,6 +38,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -25,28 +47,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import type {
-    DatabaseUser,
-    Server,
-    ServerDatabase,
-} from '@/types/server';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import {
-    DatabaseIcon,
-    EyeIcon,
-    EyeOffIcon,
-    PencilIcon,
-    PlusIcon,
-    Trash2Icon,
-    UserPlusIcon,
-} from 'lucide-react';
-import { useState } from 'react';
+import type { DatabaseUser, Server, ServerDatabase } from '@/types/server';
 
 interface Props {
     server: { data: Server } | Server;
@@ -54,7 +60,6 @@ interface Props {
     databases: { data: ServerDatabase[] };
     databaseUsers: { data: DatabaseUser[] };
 }
-
 
 export default function ServerDatabasesIndex({
     server: serverProp,
@@ -84,7 +89,13 @@ export default function ServerDatabasesIndex({
     const [deletingDbIds, setDeletingDbIds] = useState<number[]>([]);
     const [deletingUserIds, setDeletingUserIds] = useState<number[]>([]);
 
-    const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+    const [dbForm, setDbForm] = useState({
+        name: '',
+        charset: '',
+        collation: '',
+        db_user: '',
+        db_password: '',
+    });
     const [showDbPassword, setShowDbPassword] = useState(false);
     const [userForm, setUserForm] = useState({
         username: '',
@@ -101,13 +112,17 @@ export default function ServerDatabasesIndex({
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
         { title: server.name, href: teamPath(`/servers/${server.id}`) },
-        { title: 'Databases', href: teamPath(`/servers/${server.id}/databases`) },
+        {
+            title: 'Databases',
+            href: teamPath(`/servers/${server.id}/databases`),
+        },
     ];
 
     const isServerReady = serverIsReady;
 
     const generatePassword = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        const chars =
+            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
         let password = '';
         const array = new Uint32Array(24);
         crypto.getRandomValues(array);
@@ -121,50 +136,65 @@ export default function ServerDatabasesIndex({
         e.preventDefault();
         if (!server?.id) return;
         setIsSubmitting(true);
-        router.post(teamPath(`/servers/${server.id}/databases`), {
-            name: dbForm.name,
-            charset: dbForm.charset || undefined,
-            collation: dbForm.collation || undefined,
-            db_user: dbForm.db_user || undefined,
-            db_password: dbForm.db_password || undefined,
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setCreateDbOpen(false);
-                setDbForm({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
-                setShowDbPassword(false);
+        router.post(
+            teamPath(`/servers/${server.id}/databases`),
+            {
+                name: dbForm.name,
+                charset: dbForm.charset || undefined,
+                collation: dbForm.collation || undefined,
+                db_user: dbForm.db_user || undefined,
+                db_password: dbForm.db_password || undefined,
             },
-            onFinish: () => setIsSubmitting(false),
-        });
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setCreateDbOpen(false);
+                    setDbForm({
+                        name: '',
+                        charset: '',
+                        collation: '',
+                        db_user: '',
+                        db_password: '',
+                    });
+                    setShowDbPassword(false);
+                },
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
     };
 
     const handleCreateUser = (e: React.FormEvent) => {
         e.preventDefault();
         if (!server?.id || userForm.databases.length === 0) return;
         setIsSubmitting(true);
-        router.post(teamPath(`/servers/${server.id}/database-users`), {
-            username: userForm.username,
-            password: userForm.password,
-            databases: userForm.databases,
-            host: userForm.host || 'localhost',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setCreateUserOpen(false);
-                setUserForm({
-                    username: '',
-                    password: '',
-                    databases: [],
-                    host: 'localhost',
-                });
+        router.post(
+            teamPath(`/servers/${server.id}/database-users`),
+            {
+                username: userForm.username,
+                password: userForm.password,
+                databases: userForm.databases,
+                host: userForm.host || 'localhost',
             },
-            onFinish: () => setIsSubmitting(false),
-        });
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setCreateUserOpen(false);
+                    setUserForm({
+                        username: '',
+                        password: '',
+                        databases: [],
+                        host: 'localhost',
+                    });
+                },
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
     };
 
     const handleUpdateUser = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!server?.id || !userToEdit || editUserForm.databases.length === 0) return;
+        if (!server?.id || !userToEdit || editUserForm.databases.length === 0)
+            return;
         setIsSubmitting(true);
         router.put(
             teamPath(`/servers/${server.id}/database-users/${userToEdit.id}`),
@@ -178,7 +208,11 @@ export default function ServerDatabasesIndex({
                 onSuccess: () => {
                     setEditUserOpen(false);
                     setUserToEdit(null);
-                    setEditUserForm({ password: '', databases: [], host: 'localhost' });
+                    setEditUserForm({
+                        password: '',
+                        databases: [],
+                        host: 'localhost',
+                    });
                 },
                 onFinish: () => setIsSubmitting(false),
             },
@@ -208,8 +242,10 @@ export default function ServerDatabasesIndex({
         setDeletingDbIds((prev) => [...prev, id]);
         router.delete(teamPath(`/servers/${server.id}/databases/${id}`), {
             preserveScroll: true,
-            onSuccess: () => setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
-            onError: () => setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
+            onSuccess: () =>
+                setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
+            onError: () =>
+                setDeletingDbIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
@@ -221,15 +257,20 @@ export default function ServerDatabasesIndex({
         setDeletingUserIds((prev) => [...prev, id]);
         router.delete(teamPath(`/servers/${server.id}/database-users/${id}`), {
             preserveScroll: true,
-            onSuccess: () => setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
-            onError: () => setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
+            onSuccess: () =>
+                setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
+            onError: () =>
+                setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
         });
     };
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(pageProps.currentTeam?.slug ?? '', server.id)}
+            subNavItems={getServerSubNavItems(
+                pageProps.currentTeam?.slug ?? '',
+                server.id,
+            )}
         >
             <Head title={`Databases - ${server.name}`} />
 
@@ -239,8 +280,9 @@ export default function ServerDatabasesIndex({
                         <h1 className="text-2xl font-semibold tracking-tight">
                             Databases
                         </h1>
-                        <p className="text-muted-foreground text-sm">
-                            Manage databases and database users on {server.name}.
+                        <p className="text-sm text-muted-foreground">
+                            Manage databases and database users on {server.name}
+                            .
                         </p>
                     </div>
                 </div>
@@ -284,11 +326,11 @@ export default function ServerDatabasesIndex({
                                 <TableBody>
                                     {dbList.length === 0 ? (
                                         <TableRow>
-                                            <TableCell
-                                                colSpan={5}
-                                                className="h-24 text-center text-muted-foreground text-sm"
-                                            >
-                                                No databases yet.
+                                            <TableCell colSpan={5}>
+                                                <EmptyState
+                                                    icon={DatabaseIcon}
+                                                    title="No databases yet"
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -297,40 +339,56 @@ export default function ServerDatabasesIndex({
                                                 deletingDbIds.includes(db.id) ||
                                                 db.status === 'deleting';
                                             return (
-                                            <TableRow key={db.id}>
-                                                <TableCell className="font-medium font-mono">
-                                                    {db.name}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {db.charset ?? '—'}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {db.collation ?? '—'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <StatusBadge
-                                                        status={isDeleting ? 'deleting' : db.status}
-                                                        label={isDeleting ? 'Deleting...' : undefined}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isDeleting}
-                                                        onClick={() => {
-                                                            if (!isDeleting) {
-                                                                setDbToDelete(db);
-                                                                setDeleteDbOpen(true);
+                                                <TableRow key={db.id}>
+                                                    <TableCell className="font-mono font-medium">
+                                                        {db.name}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {db.charset ?? '—'}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {db.collation ?? '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <AutoStatusBadge
+                                                            status={
+                                                                isDeleting
+                                                                    ? 'deleting'
+                                                                    : db.status
                                                             }
-                                                        }}
-                                                        aria-label="Delete database"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
+                                                            label={
+                                                                isDeleting
+                                                                    ? 'Deleting...'
+                                                                    : undefined
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isDeleting
+                                                            }
+                                                            onClick={() => {
+                                                                if (
+                                                                    !isDeleting
+                                                                ) {
+                                                                    setDbToDelete(
+                                                                        db,
+                                                                    );
+                                                                    setDeleteDbOpen(
+                                                                        true,
+                                                                    );
+                                                                }
+                                                            }}
+                                                            aria-label="Delete database"
+                                                        >
+                                                            <Trash2Icon className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })
                                     )}
@@ -377,63 +435,95 @@ export default function ServerDatabasesIndex({
                                 <TableBody>
                                     {userList.length === 0 ? (
                                         <TableRow>
-                                            <TableCell
-                                                colSpan={5}
-                                                className="h-24 text-center text-muted-foreground text-sm"
-                                            >
-                                                No database users yet.
+                                            <TableCell colSpan={5}>
+                                                <EmptyState
+                                                    icon={UsersIcon}
+                                                    title="No database users yet"
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         userList.map((user) => {
                                             const isDeleting =
-                                                deletingUserIds.includes(user.id) ||
-                                                user.status === 'deleting';
+                                                deletingUserIds.includes(
+                                                    user.id,
+                                                ) || user.status === 'deleting';
                                             return (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-mono font-medium">
-                                                    {user.username}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm font-mono">
-                                                    {user.host ?? 'localhost'}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {(user.databases ?? []).join(', ') || '—'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <StatusBadge
-                                                        status={isDeleting ? 'deleting' : user.status}
-                                                        label={isDeleting ? 'Deleting...' : undefined}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={isDeleting}
-                                                            onClick={() => openEditUser(user)}
-                                                            aria-label="Edit user"
-                                                        >
-                                                            <PencilIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={isDeleting}
-                                                            onClick={() => {
-                                                                setUserToDelete(user);
-                                                                setDeleteUserOpen(true);
-                                                            }}
-                                                            aria-label="Delete user"
-                                                        >
-                                                            <Trash2Icon className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
+                                                <TableRow key={user.id}>
+                                                    <TableCell className="font-mono font-medium">
+                                                        {user.username}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-sm text-muted-foreground">
+                                                        {user.host ??
+                                                            'localhost'}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {(
+                                                            user.databases ?? []
+                                                        ).join(', ') || '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <AutoStatusBadge
+                                                            status={
+                                                                isDeleting
+                                                                    ? 'deleting'
+                                                                    : user.status
+                                                            }
+                                                            label={
+                                                                isDeleting
+                                                                    ? 'Deleting...'
+                                                                    : undefined
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    disabled={
+                                                                        isDeleting
+                                                                    }
+                                                                >
+                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                    <span className="sr-only">
+                                                                        Actions
+                                                                    </span>
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        openEditUser(
+                                                                            user,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PencilIcon className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onClick={() => {
+                                                                        setUserToDelete(
+                                                                            user,
+                                                                        );
+                                                                        setDeleteUserOpen(
+                                                                            true,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                    Delete
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })
                                     )}
@@ -459,32 +549,42 @@ export default function ServerDatabasesIndex({
                                 id="db-name"
                                 value={dbForm.name}
                                 onChange={(e) =>
-                                    setDbForm((p) => ({ ...p, name: e.target.value }))
+                                    setDbForm((p) => ({
+                                        ...p,
+                                        name: e.target.value,
+                                    }))
                                 }
                                 placeholder="mydb"
                                 className="font-mono"
                                 autoComplete="off"
                             />
                             {errors?.name && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.name}
                                 </p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="db-charset">Charset (optional)</Label>
+                            <Label htmlFor="db-charset">
+                                Charset (optional)
+                            </Label>
                             <Input
                                 id="db-charset"
                                 value={dbForm.charset}
                                 onChange={(e) =>
-                                    setDbForm((p) => ({ ...p, charset: e.target.value }))
+                                    setDbForm((p) => ({
+                                        ...p,
+                                        charset: e.target.value,
+                                    }))
                                 }
                                 placeholder="utf8mb4"
                                 className="font-mono"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="db-collation">Collation (optional)</Label>
+                            <Label htmlFor="db-collation">
+                                Collation (optional)
+                            </Label>
                             <Input
                                 id="db-collation"
                                 value={dbForm.collation}
@@ -499,7 +599,9 @@ export default function ServerDatabasesIndex({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="db-user">Database user (optional)</Label>
+                            <Label htmlFor="db-user">
+                                Database user (optional)
+                            </Label>
                             <Input
                                 id="db-user"
                                 value={dbForm.db_user}
@@ -514,7 +616,7 @@ export default function ServerDatabasesIndex({
                                 autoComplete="off"
                             />
                             {errors?.db_user && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.db_user}
                                 </p>
                             )}
@@ -524,10 +626,13 @@ export default function ServerDatabasesIndex({
                                 <Label htmlFor="db-password">Password</Label>
                                 <button
                                     type="button"
-                                    className="text-primary text-sm font-medium hover:underline"
+                                    className="text-sm font-medium text-primary hover:underline"
                                     onClick={() => {
                                         const pw = generatePassword();
-                                        setDbForm((p) => ({ ...p, db_password: pw }));
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            db_password: pw,
+                                        }));
                                         setShowDbPassword(true);
                                     }}
                                 >
@@ -551,7 +656,7 @@ export default function ServerDatabasesIndex({
                                 />
                                 <button
                                     type="button"
-                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowDbPassword((v) => !v)}
                                     tabIndex={-1}
                                 >
@@ -563,7 +668,7 @@ export default function ServerDatabasesIndex({
                                 </button>
                             </div>
                             {errors?.db_password && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.db_password}
                                 </p>
                             )}
@@ -609,7 +714,7 @@ export default function ServerDatabasesIndex({
                                 autoComplete="off"
                             />
                             {errors?.username && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.username}
                                 </p>
                             )}
@@ -630,7 +735,7 @@ export default function ServerDatabasesIndex({
                                 autoComplete="new-password"
                             />
                             {errors?.password && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.password}
                                 </p>
                             )}
@@ -644,7 +749,9 @@ export default function ServerDatabasesIndex({
                                         className="flex cursor-pointer items-center gap-2"
                                     >
                                         <Checkbox
-                                            checked={userForm.databases.includes(db.name)}
+                                            checked={userForm.databases.includes(
+                                                db.name,
+                                            )}
                                             onCheckedChange={() =>
                                                 setUserForm((p) => ({
                                                     ...p,
@@ -662,7 +769,7 @@ export default function ServerDatabasesIndex({
                                 ))}
                             </div>
                             {errors?.databases && (
-                                <p className="text-destructive text-sm">
+                                <p className="text-sm text-destructive">
                                     {errors.databases}
                                 </p>
                             )}
@@ -673,7 +780,10 @@ export default function ServerDatabasesIndex({
                                 id="user-host"
                                 value={userForm.host}
                                 onChange={(e) =>
-                                    setUserForm((p) => ({ ...p, host: e.target.value }))
+                                    setUserForm((p) => ({
+                                        ...p,
+                                        host: e.target.value,
+                                    }))
                                 }
                                 placeholder="localhost"
                                 className="font-mono"

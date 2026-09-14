@@ -3,8 +3,6 @@ import { format } from 'date-fns';
 import {
     ActivityIcon,
     AlertCircleIcon,
-    ExternalLinkIcon,
-    GlobeIcon,
     HardDriveIcon,
     Loader2Icon,
     PlusIcon,
@@ -12,8 +10,8 @@ import {
 } from 'lucide-react';
 
 import { DeploymentLog } from '@/components/deployments/deployment-log';
-import { ProvisioningStepTimeline } from '@/components/servers/provisioning-step-timeline';
-import { ServerStatusBadge } from '@/components/servers/server-status-badge';
+import { EmptyState } from '@/components/empty-state';
+import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +21,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Stat } from '@/components/ui/stat';
 import {
     Table,
     TableBody,
@@ -63,15 +62,23 @@ interface Props {
 export default function ServersShow({ server, provisioningLogs }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
-    const { server: data, connectionState } = useServerProvisioningUpdates(server.data);
+    const { server: data, connectionState } = useServerProvisioningUpdates(
+        server.data,
+    );
     const sites = data.sites ?? [];
-    const isProvisioningLifecycle = ['pending', 'creating', 'provisioning'].includes(data.status);
+    const isProvisioningLifecycle = [
+        'pending',
+        'creating',
+        'provisioning',
+    ].includes(data.status);
 
-    const initialLogLines: DeploymentLogLine[] = (provisioningLogs ?? []).map((log) => ({
-        type: log.type as DeploymentLogLine['type'],
-        message: log.message,
-        timestamp: log.created_at,
-    }));
+    const initialLogLines: DeploymentLogLine[] = (provisioningLogs ?? []).map(
+        (log) => ({
+            type: log.type as DeploymentLogLine['type'],
+            message: log.message,
+            timestamp: log.created_at,
+        }),
+    );
     const logs = useServerProvisioningLogs(data.id, initialLogLines);
 
     const retryForm = useForm({});
@@ -94,12 +101,19 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 {isProvisioningLifecycle ? (
                     <div className="mx-auto w-full max-w-2xl space-y-6">
-                        <ProvisioningStepTimeline server={data} />
+                        <ProvisioningStepTimeline
+                            heading="Provisioning progress"
+                            waitingDescription="Waiting to start provisioning."
+                            currentStep={data.provisioning_step ?? null}
+                            steps={data.provisioning_steps ?? []}
+                        />
 
                         <div className="rounded-lg border bg-card">
                             <div className="flex items-center gap-2 border-b px-4 py-3">
                                 <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
-                                <h2 className="font-medium">Provisioning log</h2>
+                                <h2 className="font-medium">
+                                    Provisioning log
+                                </h2>
                             </div>
                             <DeploymentLog logs={logs} isDeploying />
                         </div>
@@ -115,7 +129,8 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                             Provisioning failed
                                         </p>
                                         <p className="text-red-700 dark:text-red-300">
-                                            {data.error_message ?? 'An unexpected error occurred during provisioning.'}
+                                            {data.error_message ??
+                                                'An unexpected error occurred during provisioning.'}
                                         </p>
                                     </div>
                                     <Button
@@ -124,7 +139,9 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                         onClick={handleRetryProvisioning}
                                         disabled={retryForm.processing}
                                     >
-                                        {retryForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                                        {retryForm.processing && (
+                                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                        )}
                                         Retry provisioning
                                     </Button>
                                 </div>
@@ -132,7 +149,9 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                 {logs.length > 0 && (
                                     <div className="rounded-lg border bg-card">
                                         <div className="border-b px-4 py-3">
-                                            <h2 className="font-medium">Provisioning log</h2>
+                                            <h2 className="font-medium">
+                                                Provisioning log
+                                            </h2>
                                         </div>
                                         <DeploymentLog logs={logs} />
                                     </div>
@@ -154,8 +173,16 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                                 Sites
                                             </CardTitle>
                                             {data.status === 'active' && (
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={teamPath(`/servers/${data.id}/sites/create`)}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={teamPath(
+                                                            `/servers/${data.id}/sites/create`,
+                                                        )}
+                                                    >
                                                         <PlusIcon className="mr-2 h-4 w-4" />
                                                         New site
                                                     </Link>
@@ -168,55 +195,79 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                     </CardHeader>
                                     <CardContent>
                                         {sites.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed py-10 text-center">
-                                                <HardDriveIcon className="text-muted-foreground h-10 w-10" />
-                                                <div>
-                                                    <p className="text-sm font-medium">
-                                                        No sites on this server yet
-                                                    </p>
-                                                    <p className="text-muted-foreground mt-1 text-xs">
-                                                        Get started by creating your
-                                                        first site.
-                                                    </p>
-                                                </div>
-                                                {data.status === 'active' && (
-                                                    <Button variant="outline" size="sm" asChild>
-                                                        <Link href={teamPath(`/servers/${data.id}/sites/create`)}>
-                                                            <PlusIcon className="mr-2 h-4 w-4" />
-                                                            New site
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            <EmptyState
+                                                bordered
+                                                icon={HardDriveIcon}
+                                                title="No sites on this server yet"
+                                                description="Get started by creating your first site."
+                                                action={
+                                                    data.status ===
+                                                        'active' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${data.id}/sites/create`,
+                                                                )}
+                                                            >
+                                                                <PlusIcon className="mr-2 h-4 w-4" />
+                                                                New site
+                                                            </Link>
+                                                        </Button>
+                                                    )
+                                                }
+                                            />
                                         ) : (
                                             <div className="overflow-x-auto">
                                                 <Table>
                                                     <TableHeader>
                                                         <TableRow>
-                                                            <TableHead>Domain</TableHead>
-                                                            <TableHead>Type</TableHead>
-                                                            <TableHead>Status</TableHead>
+                                                            <TableHead>
+                                                                Domain
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Type
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Status
+                                                            </TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {sites.map((site) => (
-                                                            <TableRow key={site.id}>
+                                                            <TableRow
+                                                                key={site.id}
+                                                            >
                                                                 <TableCell>
                                                                     <Link
-                                                                        href={teamPath(`/servers/${data.id}/sites/${site.id}`)}
+                                                                        href={teamPath(
+                                                                            `/servers/${data.id}/sites/${site.id}`,
+                                                                        )}
                                                                         className="font-medium hover:underline"
                                                                     >
-                                                                        {site.domain}
+                                                                        {
+                                                                            site.domain
+                                                                        }
                                                                     </Link>
                                                                 </TableCell>
                                                                 <TableCell className="text-sm text-muted-foreground">
-                                                                    {site.project_type_label ?? '—'}
+                                                                    {site.project_type_label ??
+                                                                        '—'}
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <SiteStatusBadge
-                                                                        status={site.status}
-                                                                        statusLabel={site.status_label}
-                                                                        statusColor={site.status_color}
+                                                                        status={
+                                                                            site.status
+                                                                        }
+                                                                        statusLabel={
+                                                                            site.status_label
+                                                                        }
+                                                                        statusColor={
+                                                                            site.status_color
+                                                                        }
                                                                     />
                                                                 </TableCell>
                                                             </TableRow>
@@ -236,14 +287,23 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                                 <ServerIcon className="h-5 w-5" />
                                                 Databases
                                             </CardTitle>
-                                            <Button variant="outline" size="sm" asChild>
-                                                <Link href={teamPath(`/servers/${data.id}/databases`)}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${data.id}/databases`,
+                                                    )}
+                                                >
                                                     View databases
                                                 </Link>
                                             </Button>
                                         </div>
                                         <CardDescription>
-                                            Manage databases and database users on this server.
+                                            Manage databases and database users
+                                            on this server.
                                         </CardDescription>
                                     </CardHeader>
                                 </Card>
@@ -257,29 +317,36 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                                 Recent events
                                             </CardTitle>
                                             <CardDescription>
-                                                Latest provisioning and management actions.
+                                                Latest provisioning and
+                                                management actions.
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-2 text-sm">
-                                            {data.actions.slice(0, 5).map((action) => (
-                                                <div
-                                                    key={action.id}
-                                                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                                                >
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{action.action}</span>
-                                                        <span className="text-muted-foreground text-xs">
-                                                            {format(
-                                                                new Date(action.created_at),
-                                                                'MMM d, yyyy HH:mm',
-                                                            )}
+                                            {data.actions
+                                                .slice(0, 5)
+                                                .map((action) => (
+                                                    <div
+                                                        key={action.id}
+                                                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">
+                                                                {action.action}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {format(
+                                                                    new Date(
+                                                                        action.created_at,
+                                                                    ),
+                                                                    'MMM d, yyyy HH:mm',
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {action.status}
                                                         </span>
                                                     </div>
-                                                    <span className="text-muted-foreground text-xs">
-                                                        {action.status}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                                ))}
                                         </CardContent>
                                     </Card>
                                 )}
@@ -296,7 +363,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                     </CardHeader>
                                     <CardContent className="space-y-5 text-sm">
                                         <div className="space-y-2">
-                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase">
                                                 Server
                                             </p>
                                             <DetailRow
@@ -306,7 +373,8 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                             <DetailRow
                                                 label="Provider account"
                                                 value={
-                                                    data.provider_account?.name ??
+                                                    data.provider_account
+                                                        ?.name ??
                                                     data.provider_label
                                                 }
                                             />
@@ -326,50 +394,56 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                         </div>
 
                                         <div className="space-y-2 border-t pt-4">
-                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase">
                                                 IP addresses
                                             </p>
                                             <DetailRow
                                                 label="Public"
                                                 value={
-                                                    data.ip_address || 'Pending...'
+                                                    data.ip_address ||
+                                                    'Pending...'
                                                 }
                                                 valueClassName="font-mono"
                                             />
                                             <DetailRow
                                                 label="Private"
                                                 value={
-                                                    data.private_ip_address ?? '—'
+                                                    data.private_ip_address ??
+                                                    '—'
                                                 }
                                                 valueClassName="font-mono"
                                             />
                                         </div>
 
                                         <div className="space-y-2 border-t pt-4">
-                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase">
                                                 Runtime
                                             </p>
                                             <p className="text-sm font-medium">
                                                 PHP {data.php_version} ·{' '}
                                                 {data.database_type === 'mysql'
                                                     ? 'MySQL'
-                                                    : data.database_type === 'postgresql'
+                                                    : data.database_type ===
+                                                        'postgresql'
                                                       ? 'PostgreSQL'
                                                       : 'MariaDB'}
                                             </p>
                                         </div>
 
                                         <div className="space-y-2 border-t pt-4">
-                                            <p className="text-muted-foreground text-xs font-medium uppercase">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase">
                                                 Status
                                             </p>
                                             <p className="text-sm font-medium">
                                                 {data.status_label}
                                             </p>
-                                            <p className="text-muted-foreground text-xs">
-                                                Realtime {connectionState === 'connected' ? 'connected' : 'fallback mode'}
+                                            <p className="text-xs text-muted-foreground">
+                                                Realtime{' '}
+                                                {connectionState === 'connected'
+                                                    ? 'connected'
+                                                    : 'fallback mode'}
                                             </p>
-                                            <p className="text-muted-foreground text-xs">
+                                            <p className="text-xs text-muted-foreground">
                                                 Created{' '}
                                                 {format(
                                                     new Date(data.created_at),
@@ -377,16 +451,18 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                                 )}
                                             </p>
                                             {data.provisioned_at && (
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     Provisioned{' '}
                                                     {format(
-                                                        new Date(data.provisioned_at),
+                                                        new Date(
+                                                            data.provisioned_at,
+                                                        ),
                                                         'MMM d, yyyy',
                                                     )}
                                                 </p>
                                             )}
                                             {data.last_ssh_connection_at && (
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     Last SSH connection{' '}
                                                     {format(
                                                         new Date(
@@ -417,7 +493,7 @@ interface DetailRowProps {
 function DetailRow({ label, value, valueClassName }: DetailRowProps) {
     return (
         <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground text-xs">{label}</span>
+            <span className="text-xs text-muted-foreground">{label}</span>
             <span className={`text-sm font-medium ${valueClassName ?? ''}`}>
                 {value}
             </span>
@@ -436,58 +512,33 @@ function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
         <section className="space-y-3">
             <div>
                 <h2 className="text-base font-semibold">Overview</h2>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                     Here you can see an overview of your server.
                 </p>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
-                <MetricCard
-                    label="CPU load"
-                    value="N/A"
-                    description="No data yet"
-                    href={teamPath(`/servers/${serverId}/observe`)}
-                />
-                <MetricCard
-                    label="Memory usage"
-                    value="N/A"
-                    description="No data yet"
-                    href={teamPath(`/servers/${serverId}/observe`)}
-                />
-                <MetricCard
-                    label="Disk usage"
-                    value="N/A"
-                    description="No data yet"
-                    href={teamPath(`/servers/${serverId}/observe`)}
-                />
+                {(['CPU load', 'Memory usage', 'Disk usage'] as const).map(
+                    (label) => (
+                        <Stat
+                            key={label}
+                            bordered
+                            label={label}
+                            value="N/A"
+                            hint="No data yet"
+                            action={
+                                <Link
+                                    href={teamPath(
+                                        `/servers/${serverId}/observe`,
+                                    )}
+                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                >
+                                    View
+                                </Link>
+                            }
+                        />
+                    ),
+                )}
             </div>
         </section>
     );
 }
-
-interface MetricCardProps {
-    label: string;
-    value: string;
-    description: string;
-    href: string;
-}
-
-function MetricCard({ label, value, description, href }: MetricCardProps) {
-    return (
-        <div className="flex flex-col justify-between rounded-lg border bg-background p-3">
-            <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{label}</span>
-                <Link
-                    href={href}
-                    className="text-muted-foreground hover:text-foreground text-[11px] font-medium"
-                >
-                    View
-                </Link>
-            </div>
-            <div className="mt-3 text-2xl font-semibold">{value}</div>
-            <div className="text-muted-foreground mt-1 text-[11px]">
-                {description}
-            </div>
-        </div>
-    );
-}
-

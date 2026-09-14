@@ -1,40 +1,37 @@
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { StatusBadge, type StatusColor } from '@/components/status-badge';
 
-const STATUS_COLORS: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    ready: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    enabled: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    installed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    synced: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    installing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    creating: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    syncing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
-    stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
-    disabled: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
-    default: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    deleting: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+const STATUS_COLORS: Record<string, StatusColor> = {
+    active: 'green',
+    ready: 'green',
+    enabled: 'green',
+    installed: 'green',
+    synced: 'green',
+    default: 'green',
+    installing: 'blue',
+    creating: 'blue',
+    syncing: 'blue',
+    pending: 'gray',
+    stopped: 'gray',
+    disabled: 'gray',
+    failed: 'red',
+    error: 'red',
+    deleting: 'orange',
 };
 
 const PULSING_STATUSES = new Set(['installing', 'creating', 'pending', 'deleting', 'syncing']);
 
-interface StatusBadgeProps {
+interface AutoStatusBadgeProps {
     status: string;
     label?: string;
 }
 
-export function StatusBadge({ status, label }: StatusBadgeProps) {
-    const colorClass = STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-    const isPulsing = PULSING_STATUSES.has(status);
+/** Renders the canonical StatusBadge, inferring a color from a raw status string
+ *  for callers that don't have a backend-supplied color (see STATUS_COLORS above). */
+export function AutoStatusBadge({ status, label }: AutoStatusBadgeProps) {
+    const color = STATUS_COLORS[status] ?? 'gray';
     const displayLabel = label ?? status.charAt(0).toUpperCase() + status.slice(1);
 
     return (
-        <Badge variant="outline" className={cn('border-transparent font-medium', colorClass)}>
-            {isPulsing && <span className="mr-1.5 h-2 w-2 animate-pulse rounded-full bg-current" />}
-            {displayLabel}
-        </Badge>
+        <StatusBadge status={displayLabel} color={color} pulse={PULSING_STATUSES.has(status)} />
     );
 }

@@ -1,15 +1,36 @@
+import { Head, router } from '@inertiajs/react';
+import {
+    CodeIcon,
+    ExternalLinkIcon,
+    MoreVerticalIcon,
+    PlusIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useState } from 'react';
+
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { RepositoryProvider, SourceControlAccount } from '@/types/source-control';
-import { Head, Link, router } from '@inertiajs/react';
-import { CodeIcon, ExternalLinkIcon, MoreVerticalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { useState } from 'react';
+import {
+    RepositoryProvider,
+    SourceControlAccount,
+} from '@/types/source-control';
 
 interface Props {
     accounts: {
@@ -41,7 +62,8 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
     ];
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [accountToDelete, setAccountToDelete] = useState<SourceControlAccount | null>(null);
+    const [accountToDelete, setAccountToDelete] =
+        useState<SourceControlAccount | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = (account: SourceControlAccount) => {
@@ -73,10 +95,14 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Source Control</h1>
-                        <p className="text-muted-foreground text-sm">
-                            Connecting to your source control providers allows your deployment platform to access your project's codebase,
-                            making it possible to deploy your applications.
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Source Control
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Connecting to your source control providers allows
+                            your deployment platform to access your project's
+                            codebase, making it possible to deploy your
+                            applications.
                         </p>
                     </div>
                     {providers.length > 0 && (
@@ -89,15 +115,27 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 {providers.map((provider) => {
-                                    const existingAccount = accounts.data.find((acc) => acc.provider === provider.value);
+                                    const existingAccount = accounts.data.find(
+                                        (acc) =>
+                                            acc.provider === provider.value,
+                                    );
                                     return (
                                         <DropdownMenuItem
                                             key={provider.value}
                                             disabled={!!existingAccount}
-                                            onClick={() => !existingAccount && handleConnect(provider.value)}
+                                            onClick={() =>
+                                                !existingAccount &&
+                                                handleConnect(provider.value)
+                                            }
                                         >
-                                            <span className="mr-2">{getProviderIcon(provider.value)}</span>
-                                            {existingAccount ? `${provider.label} (Connected)` : `Continue with ${provider.label}`}
+                                            <span className="mr-2">
+                                                {getProviderIcon(
+                                                    provider.value,
+                                                )}
+                                            </span>
+                                            {existingAccount
+                                                ? `${provider.label} (Connected)`
+                                                : `Continue with ${provider.label}`}
                                         </DropdownMenuItem>
                                     );
                                 })}
@@ -122,8 +160,19 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         {providers.map((provider) => (
-                                            <DropdownMenuItem key={provider.value} onClick={() => handleConnect(provider.value)}>
-                                                <span className="mr-2">{getProviderIcon(provider.value)}</span>
+                                            <DropdownMenuItem
+                                                key={provider.value}
+                                                onClick={() =>
+                                                    handleConnect(
+                                                        provider.value,
+                                                    )
+                                                }
+                                            >
+                                                <span className="mr-2">
+                                                    {getProviderIcon(
+                                                        provider.value,
+                                                    )}
+                                                </span>
                                                 Continue with {provider.label}
                                             </DropdownMenuItem>
                                         ))}
@@ -139,46 +188,76 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-lg text-xl">
-                                                {getProviderIcon(account.provider)}
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-xl">
+                                                {getProviderIcon(
+                                                    account.provider,
+                                                )}
                                             </div>
                                             <div>
-                                                <CardTitle className="text-base">{account.provider_label}</CardTitle>
-                                                <CardDescription>@{account.provider_username}</CardDescription>
+                                                <CardTitle>
+                                                    {account.provider_label}
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    @{account.provider_username}
+                                                </CardDescription>
                                             </div>
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                >
                                                     <MoreVerticalIcon className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {account.provider === 'github' && (
+                                                {account.provider ===
+                                                    'github' && (
                                                     <DropdownMenuItem asChild>
-                                                        <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                                                        <a
+                                                            href="https://github.com"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
                                                             <ExternalLinkIcon className="mr-2 h-4 w-4" />
                                                             Visit GitHub
                                                         </a>
                                                     </DropdownMenuItem>
                                                 )}
-                                                {account.provider === 'gitlab' && (
+                                                {account.provider ===
+                                                    'gitlab' && (
                                                     <DropdownMenuItem asChild>
-                                                        <a href="https://gitlab.com" target="_blank" rel="noopener noreferrer">
+                                                        <a
+                                                            href="https://gitlab.com"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
                                                             <ExternalLinkIcon className="mr-2 h-4 w-4" />
                                                             Visit GitLab
                                                         </a>
                                                     </DropdownMenuItem>
                                                 )}
-                                                {account.provider === 'bitbucket' && (
+                                                {account.provider ===
+                                                    'bitbucket' && (
                                                     <DropdownMenuItem asChild>
-                                                        <a href="https://bitbucket.org" target="_blank" rel="noopener noreferrer">
+                                                        <a
+                                                            href="https://bitbucket.org"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
                                                             <ExternalLinkIcon className="mr-2 h-4 w-4" />
                                                             Visit Bitbucket
                                                         </a>
                                                     </DropdownMenuItem>
                                                 )}
-                                                <DropdownMenuItem onClick={() => handleDelete(account)} className="text-destructive focus:text-destructive">
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleDelete(account)
+                                                    }
+                                                    className="text-destructive focus:text-destructive"
+                                                >
                                                     <Trash2Icon className="mr-2 h-4 w-4" />
                                                     Disconnect
                                                 </DropdownMenuItem>
@@ -188,22 +267,38 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground text-sm">Name</span>
-                                        <span className="text-sm">{account.name}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Name
+                                        </span>
+                                        <span className="text-sm">
+                                            {account.name}
+                                        </span>
                                     </div>
                                     {account.email && (
                                         <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground text-sm">Email</span>
-                                            <span className="text-sm">{account.email}</span>
+                                            <span className="text-sm text-muted-foreground">
+                                                Email
+                                            </span>
+                                            <span className="text-sm">
+                                                {account.email}
+                                            </span>
                                         </div>
                                     )}
                                     <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground text-sm">Connected</span>
-                                        <span className="text-sm">{new Date(account.connected_at).toLocaleDateString()}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Connected
+                                        </span>
+                                        <span className="text-sm">
+                                            {new Date(
+                                                account.connected_at,
+                                            ).toLocaleDateString()}
+                                        </span>
                                     </div>
                                     {account.is_token_expired && (
                                         <div className="rounded-lg bg-amber-50 p-2 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
-                                            <p className="text-xs font-medium">Token expired - Please reconnect</p>
+                                            <p className="text-xs font-medium">
+                                                Token expired - Please reconnect
+                                            </p>
                                         </div>
                                     )}
                                 </CardContent>

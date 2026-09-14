@@ -7,9 +7,9 @@ import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Stat } from '@/components/ui/stat';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
 
@@ -97,33 +97,35 @@ export default function Dashboard({
                     />
                 ) : (
                     <>
-                        <Card className="shadow-none">
+                        <Card>
                             <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-                                <StatCell
+                                <Stat
                                     label="Servers"
                                     value={stats.servers}
                                     hint={`${stats.active_servers} active`}
                                 />
-                                <StatCell label="Sites" value={stats.sites} />
-                                <StatCell
+                                <Stat label="Sites" value={stats.sites} />
+                                <Stat
                                     label="Deployments"
                                     value={stats.deployments_this_week}
                                     hint="last 7 days"
                                 />
-                                <StatCell
+                                <Stat
                                     label="SSL alerts"
                                     value={stats.ssl_alerts}
-                                    warning={stats.ssl_alerts > 0}
+                                    tone={
+                                        stats.ssl_alerts > 0
+                                            ? 'warning'
+                                            : 'default'
+                                    }
                                 />
                             </div>
                         </Card>
 
                         <div className="grid gap-4 lg:grid-cols-2">
-                            <Card className="shadow-none">
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base font-semibold">
-                                        Recent servers
-                                    </CardTitle>
+                                    <CardTitle>Recent servers</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     {servers.length === 0 ? (
@@ -171,11 +173,9 @@ export default function Dashboard({
                                 </CardContent>
                             </Card>
 
-                            <Card className="shadow-none">
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base font-semibold">
-                                        Recent deployments
-                                    </CardTitle>
+                                    <CardTitle>Recent deployments</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     {recentDeployments.length === 0 ? (
@@ -245,32 +245,5 @@ export default function Dashboard({
                 )}
             </div>
         </AppLayout>
-    );
-}
-
-function StatCell({
-    label,
-    value,
-    hint,
-    warning = false,
-}: {
-    label: string;
-    value: number;
-    hint?: string;
-    warning?: boolean;
-}) {
-    return (
-        <div className="px-6 py-4">
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p
-                className={cn(
-                    'text-2xl font-semibold',
-                    warning && 'text-destructive',
-                )}
-            >
-                {value}
-            </p>
-            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        </div>
     );
 }
