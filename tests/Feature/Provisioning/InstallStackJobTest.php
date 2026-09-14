@@ -114,3 +114,38 @@ it('stores the error message and sends a notification when the job fails', funct
             && $notification->errorMessage === 'SSH connection timed out'
     );
 });
+
+it('redacts sudo and database passwords from the stored and notified error message', function () {
+    Notification::fake();
+
+    $server = Server::factory()->provisioning()->create([
+        'provisioning_step' => ProvisioningStep::InstallingNginx,
+    ]);
+
+    $server->credentials()->createMany([
+        ['type' => 'sudo_password', 'value' => 'super-secret-sudo'],
+        ['type' => 'database_password', 'value' => 'super-secret-db'],
+    ]);
+
+    $exception = new \RuntimeException(
+        "SSH command failed with exit code 1: echo \"deploy:super-secret-sudo\" | chpasswd\n".
+        "STDERR: ALTER USER 'root'@'localhost' IDENTIFIED BY 'super-secret-db';"
+    );
+
+    $job = new InstallStackJob($server);
+    $job->failed($exception);
+
+    $server->refresh();
+
+    expect($server->error_message)
+        ->not->toContain('super-secret-sudo')
+        ->not->toContain('super-secret-db')
+        ->toContain('[redacted]');
+
+    Notification::assertSentTo(
+        $server->user,
+        ServerProvisioningFailed::class,
+        fn (ServerProvisioningFailed $notification) => ! str_contains($notification->errorMessage, 'super-secret-sudo')
+            && ! str_contains($notification->errorMessage, 'super-secret-db')
+    );
+});
