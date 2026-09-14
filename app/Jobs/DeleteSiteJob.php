@@ -44,6 +44,11 @@ class DeleteSiteJob implements ShouldQueue
      */
     protected array $nginxConfigBasenames;
 
+    /**
+     * @var array<int, int>
+     */
+    protected array $siteDomainIds;
+
     public function __construct(Site $site)
     {
         $site->loadMissing('domains');
@@ -61,6 +66,10 @@ class DeleteSiteJob implements ShouldQueue
             ->all();
         $this->nginxConfigBasenames = $site->domains
             ->map(fn ($d) => NginxConfigService::configFileName($site, $d))
+            ->values()
+            ->all();
+        $this->siteDomainIds = $site->domains
+            ->pluck('id')
             ->values()
             ->all();
     }
@@ -105,8 +114,10 @@ class DeleteSiteJob implements ShouldQueue
                 $connection->exec("sudo rm -f {$configPath}");
             }
 
-            $sslPath = "/etc/nginx/ssl/{$this->domain}";
-            $connection->exec("sudo rm -rf {$sslPath}");
+            foreach ($this->siteDomainIds as $domainId) {
+                $certDir = "/etc/nginx/ssl/domains/{$this->siteId}/{$domainId}";
+                $connection->exec("sudo rm -rf {$certDir}");
+            }
 
             $connection->exec('sudo systemctl reload nginx');
 
