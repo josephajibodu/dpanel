@@ -20,6 +20,8 @@ export interface SiteDomain {
     verified_at: string | null;
     has_ssl: boolean;
     ssl_enabled_at: string | null;
+    ssl_expires_at: string | null;
+    ssl_status: 'none' | 'valid' | 'expiring_soon' | 'expired';
     dns_records: SiteDomainDnsRecord[];
     created_at: string;
     updated_at: string;

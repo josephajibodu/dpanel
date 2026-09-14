@@ -7,8 +7,10 @@ use App\Events\SiteDomainsUpdated;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Ssh\SshService;
+use DateTimeImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class IssueSslForDomainJob implements ShouldQueue
 {
@@ -80,7 +82,12 @@ class IssueSslForDomainJob implements ShouldQueue
             $connection->exec("sudo chmod 644 {$certDir}/server.crt");
             $connection->exec("sudo chmod 600 {$certDir}/server.key");
 
-            $this->siteDomain->update(['ssl_enabled_at' => now()]);
+            $expiresAt = $this->readExpiry($connection->exec("sudo cat {$certDir}/server.crt"), $hostname);
+
+            $this->siteDomain->update([
+                'ssl_enabled_at' => now(),
+                ...($expiresAt !== null ? ['ssl_expires_at' => $expiresAt] : []),
+            ]);
             broadcast(new SiteDomainsUpdated($this->site));
 
             // Clear the stale main nginx file so SyncSiteNginxJob regenerates it with SSL.
@@ -93,5 +100,18 @@ class IssueSslForDomainJob implements ShouldQueue
         } finally {
             $connection->disconnect();
         }
+    }
+
+    private function readExpiry(string $certContents, string $hostname): ?DateTimeImmutable
+    {
+        $parsed = @openssl_x509_parse($certContents);
+
+        if (! is_array($parsed) || ! isset($parsed['validTo_time_t'])) {
+            Log::warning("Unable to parse SSL certificate expiry for {$hostname}");
+
+            return null;
+        }
+
+        return new DateTimeImmutable('@'.$parsed['validTo_time_t']);
     }
 }

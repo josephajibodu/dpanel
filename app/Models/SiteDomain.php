@@ -28,6 +28,7 @@ class SiteDomain extends Model
         'cloudflare_dns_record_id',
         'verified_at',
         'ssl_enabled_at',
+        'ssl_expires_at',
     ];
 
     /**
@@ -44,6 +45,7 @@ class SiteDomain extends Model
             'is_enabled' => 'boolean',
             'verified_at' => 'datetime',
             'ssl_enabled_at' => 'datetime',
+            'ssl_expires_at' => 'datetime',
         ];
     }
 

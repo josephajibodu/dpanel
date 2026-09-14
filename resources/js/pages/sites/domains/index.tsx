@@ -1,4 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useSiteDomainsUpdates } from '@/hooks/use-site-domains-updates';
 import {
@@ -454,6 +455,25 @@ function DomainRow({
                             )}
                         </span>
                     )}
+                    {!isDeleting && domain.ssl_status !== 'none' && (
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                                domain.ssl_status === 'valid' &&
+                                    'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                                domain.ssl_status === 'expiring_soon' &&
+                                    'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                                domain.ssl_status === 'expired' &&
+                                    'border-destructive/40 bg-destructive/10 text-destructive',
+                            )}
+                        >
+                            <LockIcon className="size-3" />
+                            {domain.ssl_status === 'valid' &&
+                                `SSL · expires ${domain.ssl_expires_at ? format(new Date(domain.ssl_expires_at), 'MMM d, yyyy') : ''}`}
+                            {domain.ssl_status === 'expiring_soon' && 'SSL expires soon'}
+                            {domain.ssl_status === 'expired' && 'SSL expired'}
+                        </span>
+                    )}
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild disabled={isDeleting}>
@@ -491,6 +511,15 @@ function DomainRow({
                                 }
                             >
                                 <ShieldCheckIcon className="mr-2 size-4" /> Verify domain
+                            </DropdownMenuItem>
+                        )}
+                        {domain.type === 'custom' && domain.is_verified && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/ssl/renew`))
+                                }
+                            >
+                                <LockIcon className="mr-2 size-4" /> Renew SSL
                             </DropdownMenuItem>
                         )}
                         {domain.type === 'custom' && !domain.is_primary && domain.is_enabled && (

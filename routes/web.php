@@ -158,6 +158,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.domains.primary');
                 Route::post('servers/{server}/sites/{site}/domains/{site_domain}/verify', [SiteDomainController::class, 'verify'])
                     ->name('servers.sites.domains.verify');
+                Route::post('servers/{server}/sites/{site}/domains/{site_domain}/ssl/renew', [SiteDomainController::class, 'renewSsl'])
+                    ->name('servers.sites.domains.ssl.renew');
 
                 // Environment & deploy script
                 Route::get('servers/{server}/sites/{site}/environment', [EnvironmentController::class, 'show'])

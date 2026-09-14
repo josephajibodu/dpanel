@@ -14,6 +14,7 @@ use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteDomainResource;
 use App\Http\Resources\SiteResource;
 use App\Jobs\DeleteSiteDomainJob;
+use App\Jobs\IssueSslForDomainJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
@@ -198,5 +199,28 @@ class SiteDomainController extends Controller
         return redirect()
             ->route('servers.sites.domains.index', [$team, $server, $site])
             ->with('success', 'Verification started. Refresh the page in a moment to see the updated status.');
+    }
+
+    public function renewSsl(Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        if ($siteDomain->type !== SiteDomainType::Custom) {
+            return redirect()
+                ->route('servers.sites.domains.index', [$team, $server, $site])
+                ->with('error', 'Only custom domains have a certificate to renew.');
+        }
+
+        if (! $siteDomain->isVerified()) {
+            return redirect()
+                ->route('servers.sites.domains.index', [$team, $server, $site])
+                ->with('error', 'Verify the domain before requesting a certificate.');
+        }
+
+        IssueSslForDomainJob::dispatch($siteDomain, $site);
+
+        return redirect()
+            ->route('servers.sites.domains.index', [$team, $server, $site])
+            ->with('success', 'Renewing SSL certificate. Refresh in a moment to see the updated status.');
     }
 }
