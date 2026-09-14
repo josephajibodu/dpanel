@@ -3,11 +3,20 @@
 namespace App\Services\Cloudflare;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class CloudflareDnsService
 {
+    /**
+     * Cloudflare's error code for "a record with this type/name/content
+     * already exists" — not a real failure, just an idempotency conflict
+     * (e.g. a retried site creation, or a stale record left behind by a
+     * delete that failed silently).
+     */
+    private const IDENTICAL_RECORD_EXISTS = 81058;
+
     private PendingRequest $http;
 
     private string $zoneId;
@@ -37,13 +46,7 @@ class CloudflareDnsService
             'proxied' => false,
         ]);
 
-        if (! $response->successful() || ! $response->json('success')) {
-            throw new RuntimeException(
-                'Failed to create Cloudflare DNS record: '.$response->body()
-            );
-        }
-
-        return $response->json('result.id');
+        return $this->recordIdOrExisting($response, 'A', $domain, 'create Cloudflare DNS record');
     }
 
     /**
@@ -61,13 +64,49 @@ class CloudflareDnsService
             'ttl' => $ttl,
         ]);
 
-        if (! $response->successful() || ! $response->json('success')) {
-            throw new RuntimeException(
-                'Failed to create Cloudflare TXT record: '.$response->body()
-            );
+        return $this->recordIdOrExisting($response, 'TXT', $name, 'create Cloudflare TXT record');
+    }
+
+    /**
+     * Return the newly created record's ID, or — if Cloudflare rejected the
+     * create because an identical record already exists — look up and reuse
+     * that existing record's ID instead of failing the whole operation.
+     */
+    private function recordIdOrExisting(Response $response, string $type, string $name, string $action): string
+    {
+        if ($response->successful() && $response->json('success')) {
+            return $response->json('result.id');
         }
 
-        return $response->json('result.id');
+        if ($this->isIdenticalRecordExists($response)) {
+            $existingId = $this->findRecordId($type, $name);
+
+            if ($existingId !== null) {
+                return $existingId;
+            }
+        }
+
+        throw new RuntimeException("Failed to {$action}: ".$response->body());
+    }
+
+    private function isIdenticalRecordExists(Response $response): bool
+    {
+        return collect($response->json('errors', []))
+            ->contains(fn (array $error) => ($error['code'] ?? null) === self::IDENTICAL_RECORD_EXISTS);
+    }
+
+    private function findRecordId(string $type, string $name): ?string
+    {
+        $response = $this->http->get("zones/{$this->zoneId}/dns_records", [
+            'type' => $type,
+            'name' => $name,
+        ]);
+
+        if (! $response->successful() || ! $response->json('success')) {
+            return null;
+        }
+
+        return $response->json('result.0.id');
     }
 
     /**

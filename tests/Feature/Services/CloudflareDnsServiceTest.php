@@ -51,6 +51,47 @@ describe('createARecord', function () {
         $service = new CloudflareDnsService;
         $service->createARecord('fail.flitops.xyz', '1.2.3.4');
     })->throws(RuntimeException::class, 'Failed to create Cloudflare DNS record');
+
+    it('reuses the existing record ID instead of failing when an identical record already exists', function () {
+        Http::fake(function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response([
+                    'success' => false,
+                    'errors' => [['code' => 81058, 'message' => 'An identical record already exists.']],
+                ], 400);
+            }
+
+            expect($request->method())->toBe('GET')
+                ->and($request['type'])->toBe('A')
+                ->and($request['name'])->toBe('myapp.flitops.xyz');
+
+            return Http::response([
+                'success' => true,
+                'result' => [['id' => 'existing-record-id']],
+            ]);
+        });
+
+        $service = new CloudflareDnsService;
+        $recordId = $service->createARecord('myapp.flitops.xyz', '203.0.113.42');
+
+        expect($recordId)->toBe('existing-record-id');
+    });
+
+    it('throws when an identical record exists but cannot be looked up', function () {
+        Http::fake(function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response([
+                    'success' => false,
+                    'errors' => [['code' => 81058, 'message' => 'An identical record already exists.']],
+                ], 400);
+            }
+
+            return Http::response(['success' => false, 'errors' => []], 500);
+        });
+
+        $service = new CloudflareDnsService;
+        $service->createARecord('myapp.flitops.xyz', '203.0.113.42');
+    })->throws(RuntimeException::class, 'Failed to create Cloudflare DNS record');
 });
 
 describe('deleteRecord', function () {
