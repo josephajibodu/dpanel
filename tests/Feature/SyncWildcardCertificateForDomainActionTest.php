@@ -2,9 +2,17 @@
 
 use App\Actions\Certificates\SyncWildcardCertificateForDomainAction;
 use App\Models\Certificate;
+use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+
+function syncWildcardCertificateAction(): SyncWildcardCertificateForDomainAction
+{
+    // None of these tests exercise a stale certificate, so the issuer is
+    // never actually invoked — a real instance is inert here.
+    return new SyncWildcardCertificateForDomainAction(new WildcardCertificateIssuer);
+}
 
 uses(RefreshDatabase::class);
 
@@ -46,7 +54,7 @@ it('uploads cert + key for one (site, domain) and lands them at the ID-based pat
         $uploads[$path] = $content;
     });
 
-    $result = (new SyncWildcardCertificateForDomainAction)->execute($connection, siteId: 42, domainId: 7);
+    $result = syncWildcardCertificateAction()->execute($connection, siteId: 42, domainId: 7);
 
     expect($result)->toBeTrue();
 
@@ -75,7 +83,7 @@ it('returns false and does no work when the remote cert hash already matches', f
     });
     $connection->shouldReceive('upload')->never();
 
-    $result = (new SyncWildcardCertificateForDomainAction)->execute($connection, siteId: 1, domainId: 1);
+    $result = syncWildcardCertificateAction()->execute($connection, siteId: 1, domainId: 1);
 
     expect($result)->toBeFalse();
 });
@@ -87,7 +95,7 @@ it('returns false when no wildcard certificate exists yet', function () {
     $connection->shouldNotReceive('exec');
     $connection->shouldNotReceive('upload');
 
-    $result = (new SyncWildcardCertificateForDomainAction)->execute($connection, siteId: 1, domainId: 1);
+    $result = syncWildcardCertificateAction()->execute($connection, siteId: 1, domainId: 1);
 
     expect($result)->toBeFalse();
 });
@@ -99,6 +107,57 @@ it('throws when the wildcard cert files are missing on disk', function () {
     $connection->shouldReceive('exec')->andReturn('');
     $connection->shouldReceive('upload')->never();
 
-    expect(fn () => (new SyncWildcardCertificateForDomainAction)->execute($connection, siteId: 1, domainId: 1))
+    expect(fn () => syncWildcardCertificateAction()->execute($connection, siteId: 1, domainId: 1))
         ->toThrow(RuntimeException::class, 'missing on disk');
+});
+
+it('renews a certificate that is due for renewal before installing it', function () {
+    $this->cert->update(['expires_at' => now()->addDays(10)]);
+
+    $renewedCert = Certificate::factory()->make([
+        'domain' => '*.flitops.test',
+        'certificate_path' => "{$this->certDir}/server.crt",
+        'private_key_path' => "{$this->certDir}/server.key",
+        'expires_at' => now()->addDays(90),
+    ]);
+
+    $issuer = Mockery::mock(WildcardCertificateIssuer::class);
+    $issuer->shouldReceive('issueOrRenew')->once()->with('*.flitops.test')->andReturn($renewedCert);
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('upload')->andReturnNull();
+
+    $result = (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1);
+
+    expect($result)->toBeTrue();
+});
+
+it('falls back to the existing certificate when renewal fails but it is still valid', function () {
+    $this->cert->update(['expires_at' => now()->addDays(10)]);
+
+    $issuer = Mockery::mock(WildcardCertificateIssuer::class);
+    $issuer->shouldReceive('issueOrRenew')->once()->andThrow(new RuntimeException('acme.sh unreachable'));
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('upload')->andReturnNull();
+
+    $result = (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1);
+
+    expect($result)->toBeTrue();
+});
+
+it('throws instead of installing a certificate when renewal fails and the existing one has already expired', function () {
+    $this->cert->update(['expires_at' => now()->subDay()]);
+
+    $issuer = Mockery::mock(WildcardCertificateIssuer::class);
+    $issuer->shouldReceive('issueOrRenew')->once()->andThrow(new RuntimeException('acme.sh unreachable'));
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldNotReceive('exec');
+    $connection->shouldNotReceive('upload');
+
+    expect(fn () => (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1))
+        ->toThrow(RuntimeException::class, 'already expired');
 });

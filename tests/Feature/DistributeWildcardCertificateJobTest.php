@@ -7,6 +7,7 @@ use App\Models\Certificate;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,7 +19,8 @@ function makeDistributeAction(SshService $sshService): DistributeWildcardCertifi
 {
     return new DistributeWildcardCertificateToServerAction(
         $sshService,
-        new SyncWildcardCertificateForDomainAction,
+        // None of these tests exercise a stale certificate, so the issuer is never actually invoked.
+        new SyncWildcardCertificateForDomainAction(new WildcardCertificateIssuer),
     );
 }
 

@@ -3,7 +3,9 @@
 namespace App\Actions\Certificates;
 
 use App\Models\Certificate;
+use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -18,10 +20,14 @@ use RuntimeException;
  */
 class SyncWildcardCertificateForDomainAction
 {
+    public function __construct(
+        private WildcardCertificateIssuer $issuer,
+    ) {}
+
     public function execute(SshConnection $connection, int $siteId, int $domainId): bool
     {
         $wildcardDomain = '*.'.config('server.free_domain');
-        $certificate = Certificate::firstWhere('domain', $wildcardDomain);
+        $certificate = $this->currentCertificate($wildcardDomain);
 
         if (! $certificate) {
             return false;
@@ -53,6 +59,43 @@ class SyncWildcardCertificateForDomainAction
         $this->uploadAsRoot($connection, $keyContent, $keyPath, '0600');
 
         return true;
+    }
+
+    /**
+     * Look up the wildcard certificate, self-healing if it's due for renewal
+     * (a stale one could otherwise get installed on a brand-new site — see
+     * the incident this guards against: the scheduler that would normally
+     * keep this current silently never ran, and a new site inherited an
+     * already-expired cert straight from provisioning).
+     *
+     * A renewal attempt that fails is only fatal if the certificate we'd
+     * otherwise install is actually expired right now — an early renewal
+     * attempt failing while the existing cert still has weeks left shouldn't
+     * block site creation. A domain with no certificate row at all (never
+     * issued) is a separate, pre-existing gap — left alone here, unchanged.
+     */
+    private function currentCertificate(string $wildcardDomain): ?Certificate
+    {
+        $certificate = Certificate::firstWhere('domain', $wildcardDomain);
+
+        if (! $certificate || ! $certificate->needsRenewal()) {
+            return $certificate;
+        }
+
+        try {
+            return $this->issuer->issueOrRenew($wildcardDomain);
+        } catch (\Throwable $e) {
+            if ($certificate->isExpired()) {
+                throw new RuntimeException(
+                    "Unable to issue or renew the wildcard certificate for {$wildcardDomain}, and the existing certificate has already expired: {$e->getMessage()}",
+                    previous: $e,
+                );
+            }
+
+            Log::warning("Wildcard certificate renewal failed for {$wildcardDomain}; continuing with the existing certificate, which is still valid until {$certificate->expires_at}: {$e->getMessage()}");
+
+            return $certificate;
+        }
     }
 
     private function remoteHash(SshConnection $connection, string $path): ?string

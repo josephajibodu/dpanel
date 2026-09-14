@@ -39,6 +39,7 @@ class Certificate extends Model
 
     /**
      * True when the certificate is missing, expired, or within the renewal window.
+     * Used to decide whether it's worth *attempting* a renewal.
      */
     public function needsRenewal(): bool
     {
@@ -47,5 +48,16 @@ class Certificate extends Model
         }
 
         return $this->expires_at->isBefore(now()->addDays(self::RENEWAL_WINDOW_DAYS));
+    }
+
+    /**
+     * True when the certificate is missing or has already expired — i.e. it
+     * would fail in a browser right now. Stricter than needsRenewal(): a cert
+     * expiring in three weeks needsRenewal() but isn't expired() yet, so it's
+     * still safe to install on a new site if a renewal attempt fails.
+     */
+    public function isExpired(): bool
+    {
+        return $this->expires_at === null || $this->expires_at->isPast();
     }
 }
