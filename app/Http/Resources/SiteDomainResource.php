@@ -19,7 +19,7 @@ class SiteDomainResource extends JsonResource
      * Days before expiry at which we consider the cert "expiring soon".
      * Mirrors Certificate::RENEWAL_WINDOW_DAYS.
      */
-    private const RENEWAL_WINDOW_DAYS = 30;
+    public const RENEWAL_WINDOW_DAYS = 30;
 
     /**
      * @return array<string, mixed>
@@ -56,14 +56,18 @@ class SiteDomainResource extends JsonResource
             'has_ssl' => $this->resource->hasSsl(),
             'ssl_enabled_at' => $this->ssl_enabled_at?->toIso8601String(),
             'ssl_expires_at' => $sslExpiresAt?->toIso8601String(),
-            'ssl_status' => $this->sslStatus($sslExpiresAt),
+            'ssl_status' => self::sslStatusFor($sslExpiresAt),
             'dns_records' => $dnsRecords,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
     }
 
-    private function sslStatus(?CarbonInterface $expiresAt): string
+    /**
+     * Shared none/valid/expiring_soon/expired classification for a certificate
+     * expiry, used both here and by DashboardController's SSL-alerts count.
+     */
+    public static function sslStatusFor(?CarbonInterface $expiresAt): string
     {
         if ($expiresAt === null) {
             return 'none';

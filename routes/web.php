@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CronJobController;
 use App\Http\Controllers\CurrentTeamController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeploymentWebhookController;
@@ -74,9 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->prefix('{team}')
         ->group(function () {
 
-            Route::get('dashboard', function () {
-                return Inertia::render('dashboard');
-            })->name('dashboard');
+            Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
             // SSH Keys (team-scoped URLs; keys remain user-owned)
             Route::resource('ssh-keys', SshKeyController::class)
