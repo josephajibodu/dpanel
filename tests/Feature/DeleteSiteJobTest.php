@@ -63,6 +63,32 @@ it('removes the SSL certificate directory for every domain on the site, at the c
     $this->assertDatabaseMissing('sites', ['id' => $site->id]);
 });
 
+it('removes the nginx snippet directory for every domain on the site', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create([
+        'server_id' => $server->id,
+        'source_control_account_id' => null,
+    ]);
+    $extraDomain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'extra.example.com',
+        'is_primary' => false,
+    ]);
+    $primaryDomain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForDeleteSiteJob($server, $execCalls));
+
+    $job = new DeleteSiteJob($site);
+    $job->handle(app(SshService::class), app(CleanupSiteExternalResourcesAction::class));
+
+    $removals = collect($execCalls)->filter(fn ($c) => str_contains($c, '/etc/nginx/flitops-conf/'));
+
+    expect($removals)->toHaveCount(2)
+        ->and($removals->contains(fn ($c) => $c === 'sudo rm -rf '.escapeshellarg("/etc/nginx/flitops-conf/{$site->ulid}/{$primaryDomain->hostname}")))->toBeTrue()
+        ->and($removals->contains(fn ($c) => $c === 'sudo rm -rf '.escapeshellarg("/etc/nginx/flitops-conf/{$site->ulid}/{$extraDomain->hostname}")))->toBeTrue();
+});
+
 it('deletes the site even when the server is missing, without attempting SSL cleanup', function () {
     $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
     $site = Site::factory()->create([

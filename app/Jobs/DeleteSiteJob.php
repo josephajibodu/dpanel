@@ -49,6 +49,11 @@ class DeleteSiteJob implements ShouldQueue
      */
     protected array $siteDomainIds;
 
+    /**
+     * @var array<int, string>
+     */
+    protected array $nginxSnippetBasePaths;
+
     public function __construct(Site $site)
     {
         $site->loadMissing('domains');
@@ -70,6 +75,12 @@ class DeleteSiteJob implements ShouldQueue
             ->all();
         $this->siteDomainIds = $site->domains
             ->pluck('id')
+            ->values()
+            ->all();
+        // Mirrors SiteDomain::nginxSnippetsBasePath() without touching the
+        // relation, since the site row may be gone by the time the job runs.
+        $this->nginxSnippetBasePaths = $site->domains
+            ->map(fn ($d) => "/etc/nginx/flitops-conf/{$site->ulid}/{$d->hostname}")
             ->values()
             ->all();
     }
@@ -112,6 +123,10 @@ class DeleteSiteJob implements ShouldQueue
                 $enabledPath = "/etc/nginx/sites-enabled/{$basename}";
                 $connection->exec("sudo rm -f {$enabledPath}");
                 $connection->exec("sudo rm -f {$configPath}");
+            }
+
+            foreach ($this->nginxSnippetBasePaths as $snippetsBasePath) {
+                $connection->exec('sudo rm -rf '.escapeshellarg($snippetsBasePath));
             }
 
             foreach ($this->siteDomainIds as $domainId) {
