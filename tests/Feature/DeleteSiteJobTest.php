@@ -3,12 +3,17 @@
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Enums\SiteDomainType;
 use App\Jobs\DeleteSiteJob;
+use App\Jobs\DestroyCronJobJob;
+use App\Jobs\DestroyWorkerJob;
+use App\Models\CronJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\Worker;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -87,6 +92,36 @@ it('removes the nginx snippet directory for every domain on the site', function 
     expect($removals)->toHaveCount(2)
         ->and($removals->contains(fn ($c) => $c === 'sudo rm -rf '.escapeshellarg("/etc/nginx/flitops-conf/{$site->ulid}/{$primaryDomain->hostname}")))->toBeTrue()
         ->and($removals->contains(fn ($c) => $c === 'sudo rm -rf '.escapeshellarg("/etc/nginx/flitops-conf/{$site->ulid}/{$extraDomain->hostname}")))->toBeTrue();
+});
+
+it('destroys workers and cron jobs tied to the site, but leaves other sites untouched', function () {
+    Queue::fake([DestroyWorkerJob::class, DestroyCronJobJob::class]);
+
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create([
+        'server_id' => $server->id,
+        'source_control_account_id' => null,
+    ]);
+    $otherSite = Site::factory()->create([
+        'server_id' => $server->id,
+        'source_control_account_id' => null,
+    ]);
+
+    $worker = Worker::factory()->forSite($site)->create();
+    $cronJob = CronJob::factory()->forSite($site)->create();
+    $otherWorker = Worker::factory()->forSite($otherSite)->create();
+    $otherCronJob = CronJob::factory()->forSite($otherSite)->create();
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForDeleteSiteJob($server, $execCalls));
+
+    $job = new DeleteSiteJob($site);
+    $job->handle(app(SshService::class), app(CleanupSiteExternalResourcesAction::class));
+
+    Queue::assertPushed(DestroyWorkerJob::class, fn (DestroyWorkerJob $job) => $job->worker->is($worker));
+    Queue::assertPushed(DestroyCronJobJob::class, fn (DestroyCronJobJob $job) => $job->cronJob->is($cronJob));
+    Queue::assertNotPushed(DestroyWorkerJob::class, fn (DestroyWorkerJob $job) => $job->worker->is($otherWorker));
+    Queue::assertNotPushed(DestroyCronJobJob::class, fn (DestroyCronJobJob $job) => $job->cronJob->is($otherCronJob));
 });
 
 it('deletes the site even when the server is missing, without attempting SSL cleanup', function () {

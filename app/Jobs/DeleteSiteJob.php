@@ -4,7 +4,9 @@ namespace App\Jobs;
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Events\ServerSitesUpdated;
+use App\Models\CronJob;
 use App\Models\Site;
+use App\Models\Worker;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
@@ -101,6 +103,12 @@ class DeleteSiteJob implements ShouldQueue
             domain: $this->domain,
         );
 
+        // Fetched before $site->delete(), which nulls site_id on these via the
+        // FK's nullOnDelete() the moment it runs — after that they're no
+        // longer findable by site_id at all.
+        $workers = Worker::where('site_id', $this->siteId)->get();
+        $cronJobs = CronJob::where('site_id', $this->siteId)->get();
+
         if (! $server) {
             Log::warning("Server {$this->serverId} not found, skipping site deletion");
 
@@ -113,6 +121,18 @@ class DeleteSiteJob implements ShouldQueue
 
         if ($site) {
             $site->delete();
+        }
+
+        // Each dispatched job removes its own remote supervisor/cron.d file and
+        // deletes its row once that succeeds — otherwise these would survive
+        // with site_id nulled, still running against a site directory that's
+        // about to be rm -rf'd below.
+        foreach ($workers as $worker) {
+            DestroyWorkerJob::dispatch($worker);
+        }
+
+        foreach ($cronJobs as $cronJob) {
+            DestroyCronJobJob::dispatch($cronJob);
         }
 
         try {
