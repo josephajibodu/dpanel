@@ -161,7 +161,64 @@ it('uploads the site custom deploy script when one is defined', function () {
 
     expect($uploaded)->toContain('CUSTOM_DEPLOY_MARKER')
         ->and($uploaded)->toContain("BRANCH='main'")
-        ->and($uploaded)->toContain('cd $SITE_ROOT');
+        ->and($uploaded)->toContain('RELEASE_PATH=')
+        ->and($uploaded)->toContain('cd "$RELEASE_PATH"');
+});
+
+it('clones into a fresh release directory and symlinks shared paths', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $uploaded = null;
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
+        $uploaded = $content;
+    });
+    $connection->shouldReceive('execWithOutput')->once()->andReturn(0);
+    $connection->shouldReceive('disconnect')->andReturnNull();
+
+    $job = new DeploySiteJob($deployment);
+    $job->handle(deploySshServiceMock($connection));
+
+    expect($uploaded)->toContain('git clone --branch main')
+        ->and($uploaded)->toContain('"$RELEASE_PATH/.env"')
+        ->and($uploaded)->toContain('"$RELEASE_PATH/storage"')
+        ->and($uploaded)->toContain('ln -sfn "$RELEASE_PATH"');
+});
+
+it('prunes old releases after a successful deploy', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $lsCalled = false;
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('upload')->andReturnNull();
+    $connection->shouldReceive('execWithOutput')->andReturnUsing(function (string $command, callable $onOutput) {
+        $onOutput('Done');
+
+        return 0;
+    });
+    $connection->shouldReceive('disconnect')->andReturnNull();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$lsCalled) {
+        if (str_contains($command, 'ls -1') && str_contains($command, '/releases')) {
+            $lsCalled = true;
+        }
+
+        return match (true) {
+            str_contains($command, 'git rev-parse HEAD') => 'a1b2c3d4e5f67890',
+            default => '',
+        };
+    });
+
+    $job = new DeploySiteJob($deployment);
+    $job->handle(deploySshServiceMock($connection));
+
+    expect($lsCalled)->toBeTrue();
 });
 
 it('marks the deployment and site failed when the deploy script exits non-zero', function () {
@@ -275,7 +332,7 @@ it('makes the uploaded deploy script self-delete and runs it by path', function 
 
     // The self-delete is the first command, ahead of the deploy body.
     expect($uploaded)->toContain("rm -f '/tmp/deploy_")
-        ->and(strpos($uploaded, 'rm -f'))->toBeLessThan(strpos($uploaded, 'cd $SITE_ROOT'));
+        ->and(strpos($uploaded, 'rm -f'))->toBeLessThan(strpos($uploaded, 'cd "$RELEASE_PATH"'));
 
     // The run command is just the script path — no fragile trailing cleanup chain.
     expect($ranCommand)->toStartWith('/tmp/deploy_')

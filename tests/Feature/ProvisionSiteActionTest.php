@@ -419,3 +419,50 @@ it('syncs the wildcard certificate to the (site, domain) folder before nginx -t 
     @unlink("{$certDir}/server.key");
     @rmdir($certDir);
 });
+
+// --------------------------------------------------------------------------
+// Zero-downtime release layout
+// --------------------------------------------------------------------------
+
+it('creates the releases/shared layout and a bootstrap release symlinked as current', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => null,
+        'source_control_account_id' => null,
+        'project_type' => ProjectType::StaticHtml,
+        'directory' => '/',
+    ]);
+
+    $execCalls = [];
+    $mockConnection = mockSshConnection($execCalls);
+    $this->app->instance(SshService::class, mockSshService($mockConnection));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'mkdir -p') && str_contains($c, '/releases') && str_contains($c, '/shared')))
+        ->toBeTrue();
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'releases/bootstrap')))
+        ->toBeTrue('expected a releases/bootstrap directory to be created');
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'ln -sfn') && str_contains($c, 'releases/bootstrap') && str_contains($c, '/current')))
+        ->toBeTrue('expected current to be symlinked to releases/bootstrap');
+});
+
+it('never clones the repository during provisioning — the first deploy does that', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => 'username/repo',
+        'source_control_account_id' => null,
+        'project_type' => ProjectType::Laravel,
+    ]);
+    $site->deployScript()->create(['script' => 'echo "deploy"']);
+
+    $execCalls = [];
+    $mockConnection = mockSshConnection($execCalls);
+    $this->app->instance(SshService::class, mockSshService($mockConnection));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'git clone')))->toBeFalse();
+});

@@ -36,7 +36,7 @@ class EnvironmentController extends Controller
 
                 try {
                     $connection = $sshService->connect($site->server);
-                    $content = $connection->download($site->rootPath().'/.env');
+                    $content = $connection->download($site->sharedPath().'/.env');
                     $connection->disconnect();
 
                     return $content;

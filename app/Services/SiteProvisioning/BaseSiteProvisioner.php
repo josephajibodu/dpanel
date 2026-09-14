@@ -70,7 +70,7 @@ abstract class BaseSiteProvisioner
         $parentDir = dirname($this->siteRoot);
 
         $this->connection->exec("sudo rm -rf {$this->siteRoot}");
-        $this->connection->exec("mkdir -p {$this->siteRoot}");
+        $this->connection->exec("mkdir -p {$this->siteRoot}/releases {$this->siteRoot}/shared");
         $this->connection->exec("sudo chmod 755 {$parentDir}");
         $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->serverUser} {$this->siteRoot}");
     }
@@ -103,12 +103,14 @@ abstract class BaseSiteProvisioner
     protected function cloneOrPlaceholder(): void
     {
         if ($this->site->repository && $this->site->sourceControlAccount) {
+            // Only set up the deploy key + known_hosts here — the real clone
+            // happens via the first deploy that ProvisionSiteAction triggers
+            // automatically once provisioning finishes (see createBootstrapRelease()).
             $this->sourceControlService->ensureAccountSshKey($this->site->server, $this->site->sourceControlAccount);
             $this->configureSshForGit();
-            $this->cloneRepository();
-        } else {
-            $this->createPlaceholder();
         }
+
+        $this->createBootstrapRelease();
     }
 
     /**
@@ -163,42 +165,25 @@ abstract class BaseSiteProvisioner
         $this->connection->exec("chown -R {$this->serverUser}:{$this->serverUser} {$sshDir}");
     }
 
-    protected function cloneRepository(): void
+    /**
+     * Every site starts pointed at a placeholder release, regardless of
+     * whether a repository is configured — real code always arrives via the
+     * first deploy (ProvisionSiteAction triggers one automatically when a
+     * repository is set), so `current` is never left dangling in the gap
+     * before that runs.
+     */
+    protected function createBootstrapRelease(): void
     {
-        $repoUrl = $this->buildGitUrl();
-        $sshKeyPath = "/home/{$this->serverUser}/.ssh/id_ed25519";
-
-        $gitCommand = "GIT_SSH_COMMAND='ssh -i {$sshKeyPath} -o StrictHostKeyChecking=accept-new' git clone --branch {$this->site->branch} {$repoUrl} .";
-        $this->connection->exec("cd {$this->siteRoot} && {$gitCommand}", timeout: 120);
-
-        $this->connection->exec("git -C {$this->siteRoot} config --global --add safe.directory {$this->siteRoot}");
-    }
-
-    protected function buildGitUrl(): string
-    {
-        $baseUrl = $this->site->repository_provider?->baseUrl();
-
-        if (! $baseUrl) {
-            return $this->site->repository;
-        }
-
-        return match ($this->site->repository_provider?->value) {
-            'github' => "git@github.com:{$this->site->repository}.git",
-            'gitlab' => "git@gitlab.com:{$this->site->repository}.git",
-            'bitbucket' => "git@bitbucket.org:{$this->site->repository}.git",
-            default => $this->site->repository,
-        };
-    }
-
-    protected function createPlaceholder(): void
-    {
+        $releasePath = "{$this->siteRoot}/releases/bootstrap";
         $webDir = ltrim($this->site->directory ?: '/', '/');
 
+        $this->connection->exec("mkdir -p {$releasePath}");
+
         if ($webDir && $webDir !== '/') {
-            $this->connection->exec("mkdir -p {$this->siteRoot}/{$webDir}");
+            $this->connection->exec("mkdir -p {$releasePath}/{$webDir}");
         }
 
-        $placeholderPath = $webDir ? "{$this->siteRoot}/{$webDir}/index.php" : "{$this->siteRoot}/index.php";
+        $placeholderPath = $webDir && $webDir !== '/' ? "{$releasePath}/{$webDir}/index.php" : "{$releasePath}/index.php";
         $appName = addslashes((string) config('app.name'));
         $placeholder = <<<PHP
 <?php
@@ -208,6 +193,7 @@ PHP;
 
         $escapedPlaceholder = str_replace("'", "'\\''", $placeholder);
         $this->connection->exec("echo '{$escapedPlaceholder}' > {$placeholderPath}");
+        $this->connection->exec("ln -sfn {$releasePath} {$this->siteRoot}/current");
     }
 
     // ------------------------------------------------------------------

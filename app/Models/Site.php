@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DeploymentStatus;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
@@ -75,12 +76,57 @@ class Site extends Model
 
     /**
      * Get the full web root path including the directory.
+     *
+     * Resolves through the `current` release symlink, so this always points
+     * at whatever release is actively serving traffic.
      */
     public function webRoot(): string
     {
         $directory = $this->directory ?: '/';
 
-        return rtrim($this->rootPath(), '/').'/'.ltrim($directory, '/');
+        return rtrim($this->currentPath(), '/').'/'.ltrim($directory, '/');
+    }
+
+    /**
+     * Directory holding every release this site has ever deployed.
+     */
+    public function releasesPath(): string
+    {
+        return $this->rootPath().'/releases';
+    }
+
+    /**
+     * Directory holding files persisted across releases (.env, storage, etc).
+     */
+    public function sharedPath(): string
+    {
+        return $this->rootPath().'/shared';
+    }
+
+    /**
+     * Path to the `current` symlink, which points at the active release.
+     */
+    public function currentPath(): string
+    {
+        return $this->rootPath().'/current';
+    }
+
+    /**
+     * Build the authenticated SSH clone URL for this site's repository, in
+     * the same form used both at provisioning time and at deploy time.
+     */
+    public function gitCloneUrl(): ?string
+    {
+        if (! $this->repository) {
+            return null;
+        }
+
+        return match ($this->repository_provider?->value) {
+            'github' => "git@github.com:{$this->repository}.git",
+            'gitlab' => "git@gitlab.com:{$this->repository}.git",
+            'bitbucket' => "git@bitbucket.org:{$this->repository}.git",
+            default => $this->repository,
+        };
     }
 
     /**
@@ -183,5 +229,38 @@ class Site extends Model
     public function nginxSnippetsBasePath(): string
     {
         return "/etc/flitops/sites/{$this->ulid}/nginx";
+    }
+
+    /**
+     * The most recent finished deployment for this site — a proxy for "the
+     * release `current` is actually pointing at" for UI purposes (the app
+     * doesn't track the real symlink target; that's server-side truth only).
+     */
+    public function currentDeploymentId(): ?int
+    {
+        return $this->deployments()
+            ->where('status', DeploymentStatus::Finished)
+            ->latest('id')
+            ->value('id');
+    }
+
+    /**
+     * The release folders most likely to still exist on disk — the newest
+     * `releases_to_keep` releases actually created by a deploy (rollbacks reuse
+     * an existing folder rather than creating a new one, so they don't count).
+     * Used to decide whether to offer a "roll back to this" action in the UI;
+     * the authoritative check happens on the server when a rollback runs.
+     *
+     * @return array<int, string>
+     */
+    public function availableRollbackReleaseFolders(): array
+    {
+        return $this->deployments()
+            ->where('status', DeploymentStatus::Finished)
+            ->where('triggered_by', '!=', 'rollback')
+            ->latest('id')
+            ->limit((int) config('server.releases_to_keep'))
+            ->pluck('ulid')
+            ->all();
     }
 }

@@ -27,7 +27,7 @@ it('runs command on server and updates run with output and completed status', fu
     $mockConnection->shouldReceive('exec')
         ->once()
         ->with(\Mockery::on(function (string $cmd) use ($site) {
-            return str_contains($cmd, $site->rootPath())
+            return str_contains($cmd, $site->currentPath())
                 && str_contains($cmd, 'bash -lc')
                 && str_contains($cmd, 'php artisan --version');
         }), 300)

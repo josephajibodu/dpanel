@@ -51,9 +51,8 @@ class RunSiteCommand
         $connection = $this->sshService->connect($server);
 
         try {
-            $rootPath = $site->rootPath();
             $escapedCommand = $this->escapeForShell($run->command);
-            $fullCommand = "cd {$rootPath} && bash -lc {$escapedCommand} 2>&1";
+            $fullCommand = "cd {$site->currentPath()} && bash -lc {$escapedCommand} 2>&1";
 
             try {
                 $output = $connection->exec($fullCommand, 300);

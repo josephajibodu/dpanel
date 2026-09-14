@@ -1,18 +1,21 @@
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { formatDistanceToNow } from 'date-fns';
+import { ClockIcon, GitBranchIcon, HistoryIcon, Loader2Icon, WrenchIcon, GlobeIcon, RotateCwIcon, XCircleIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { Button } from '@/components/ui/button';
-import { Deployment } from '@/types/deployment';
-import { Site } from '@/types/site';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deployment-logs';
 import { useDeploymentUpdates } from '@/hooks/use-deployment-updates';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useTeamPath } from '@/hooks/use-team-path';
-import { formatDistanceToNow } from 'date-fns';
-import { useEffect } from 'react';
-import { toast } from 'sonner';
-import { ClockIcon, GitBranchIcon, Loader2Icon, WrenchIcon, GlobeIcon, RotateCwIcon, XCircleIcon } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Deployment } from '@/types/deployment';
+import { Site } from '@/types/site';
+
 
 type SiteData = Site & { server?: { id: number; name: string } };
 
@@ -45,6 +48,18 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
 
     const cancelForm = useForm({});
     const redeployForm = useForm({});
+    const rollbackForm = useForm({});
+    const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
+
+    const handleRollback = () => {
+        rollbackForm.post(teamPath(`/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}/rollback`), {
+            onError: (errors) => {
+                const message = (errors as Record<string, string>).rollback;
+                toast.error(message ?? 'Could not roll back to this deployment.');
+            },
+            onFinish: () => setRollbackDialogOpen(false),
+        });
+    };
 
     const handleRedeploy = () => {
         redeployForm.post(teamPath(`/servers/${serverId}/sites/${site.id}/deployments`), {
@@ -166,6 +181,12 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                     Redeploy
                                 </Button>
                             )}
+                            {deployment.rollback_available && (
+                                <Button variant="outline" onClick={() => setRollbackDialogOpen(true)} disabled={rollbackForm.processing}>
+                                    <HistoryIcon className="h-4 w-4" />
+                                    Rollback to this
+                                </Button>
+                            )}
                             <Link
                                 href={siteUrl}
                                 target="_blank"
@@ -189,6 +210,17 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                     </div>
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={rollbackDialogOpen}
+                onOpenChange={setRollbackDialogOpen}
+                title="Roll back to this deployment?"
+                description={`This will point the site back at ${commitShort} without rebuilding it. Database migrations are not reversed.`}
+                confirmLabel="Roll back"
+                variant="destructive"
+                onConfirm={handleRollback}
+                loading={rollbackForm.processing}
+            />
         </AppLayout>
     );
 }

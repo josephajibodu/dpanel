@@ -115,7 +115,7 @@ class SiteNginxSyncService
             return;
         }
 
-        $envPath = $site->rootPath().'/.env';
+        $envPath = $site->sharedPath().'/.env';
         $url = 'https://'.$primary->hostname;
         $escapedValue = str_replace(['\\', '#', '&'], ['\\\\', '\\#', '\\&'], $url);
 

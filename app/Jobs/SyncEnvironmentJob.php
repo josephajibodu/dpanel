@@ -33,8 +33,7 @@ class SyncEnvironmentJob implements ShouldQueue
         Log::info("Syncing environment variables for site {$site->domain}");
 
         try {
-            $siteRoot = $site->rootPath();
-            $envPath = "{$siteRoot}/.env";
+            $envPath = "{$site->sharedPath()}/.env";
 
             // Use stored raw content when available; fall back to rebuilding from key-value pairs
             // for sites that predate the env_content column.
@@ -65,12 +64,17 @@ class SyncEnvironmentJob implements ShouldQueue
             $phpVersion = $site->php_version ?? '8.4';
             $phpBinary = "php{$phpVersion}";
 
+            // .env is symlinked into whichever release `current` points at, so
+            // artisan needs to run from there (the site root itself holds no
+            // application code — see releases/current/shared under Site::rootPath()).
+            $currentPath = $site->currentPath();
+
             if ($this->clearConfigCache) {
-                $connection->exec("cd {$siteRoot} && {$phpBinary} artisan config:cache");
+                $connection->exec("cd {$currentPath} && {$phpBinary} artisan config:cache");
             }
 
             if ($this->restartQueue) {
-                $connection->exec("cd {$siteRoot} && {$phpBinary} artisan queue:restart");
+                $connection->exec("cd {$currentPath} && {$phpBinary} artisan queue:restart");
             }
 
             $connection->disconnect();

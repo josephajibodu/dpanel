@@ -13,6 +13,8 @@ class PhpSiteProvisioner extends BaseSiteProvisioner
 
     protected function createEnvironmentFile(): void
     {
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env.example ]; then cp {$this->siteRoot}/.env.example {$this->siteRoot}/.env && sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env && sudo chmod 640 {$this->siteRoot}/.env; fi");
+        $sharedPath = $this->site->sharedPath();
+
+        $this->connection->exec("touch {$sharedPath}/.env && sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
     }
 }

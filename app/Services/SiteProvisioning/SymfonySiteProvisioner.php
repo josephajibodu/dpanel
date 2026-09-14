@@ -13,19 +13,25 @@ class SymfonySiteProvisioner extends BaseSiteProvisioner
 
     protected function createEnvironmentFile(): void
     {
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env.local.php ]; then true; elif [ -f {$this->siteRoot}/.env ]; then cp {$this->siteRoot}/.env {$this->siteRoot}/.env.local; fi");
+        $sharedPath = $this->site->sharedPath();
 
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env.local ]; then sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env.local && sudo chmod 640 {$this->siteRoot}/.env.local; fi");
+        // No real code exists yet at provisioning time (see createBootstrapRelease()),
+        // so both files start empty — the app's env-var management UI (SyncEnvironmentJob)
+        // fills in .env; .env.local persists whatever the app itself writes to it.
+        $this->connection->exec("touch {$sharedPath}/.env {$sharedPath}/.env.local");
 
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env ]; then sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env && sudo chmod 640 {$this->siteRoot}/.env; fi");
+        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env.local && sudo chmod 640 {$sharedPath}/.env.local");
+        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
     }
 
     protected function setPermissions(): void
     {
         parent::setPermissions();
 
-        $this->connection->exec("mkdir -p {$this->siteRoot}/var/cache {$this->siteRoot}/var/log");
-        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$this->siteRoot}/var/cache {$this->siteRoot}/var/log");
-        $this->connection->exec("sudo chmod -R 775 {$this->siteRoot}/var/cache {$this->siteRoot}/var/log");
+        $sharedPath = $this->site->sharedPath();
+
+        $this->connection->exec("mkdir -p {$sharedPath}/var/cache {$sharedPath}/var/log");
+        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$sharedPath}/var/cache {$sharedPath}/var/log");
+        $this->connection->exec("sudo chmod -R 775 {$sharedPath}/var/cache {$sharedPath}/var/log");
     }
 }

@@ -3,13 +3,12 @@
 namespace App\Jobs;
 
 use App\Enums\DeploymentStatus;
-use App\Enums\SiteStatus;
-use App\Events\DeploymentOutput as DeploymentOutputEvent;
-use App\Events\DeploymentStatusChanged;
 use App\Exceptions\DeploymentFailedException;
+use App\Jobs\Concerns\ManagesDeploymentLifecycle;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Deployment\DeploymentStrategy;
+use App\Services\Deployment\ReleaseManager;
 use App\Services\PhpRuntimeResolver;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
@@ -23,7 +22,7 @@ use Illuminate\Support\Str;
 
 class DeploySiteJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, ManagesDeploymentLifecycle, Queueable, SerializesModels;
 
     public int $tries = 1;
 
@@ -65,24 +64,14 @@ class DeploySiteJob implements ShouldQueue
             // Deployment execution (remote)
             $connection = $sshService->connect($server);
 
-            $this->logOutput('Fetching latest commit information...', 'info');
-            $commitInfo = $this->getCommitInfo($connection, $site);
-
-            if ($commitInfo) {
-                $this->deployment->update([
-                    'commit_hash' => $commitInfo['hash'] ?? null,
-                    'commit_message' => Str::limit($commitInfo['message'] ?? '', 255),
-                    'commit_author' => $commitInfo['author'] ?? null,
-                ]);
-            }
-
             $exitCode = 0;
 
             if (! $site->repository) {
                 $this->logOutput('No repository connected — deployment skipped.', 'info');
             } else {
+                $releasePath = $site->releasesPath().'/'.$this->deployment->releaseFolderName();
                 $script = $site->deployScript?->script ?? $this->getDefaultScript($site);
-                $scriptPath = $this->prepareScript($connection, $script, $site);
+                $scriptPath = $this->prepareScript($connection, $script, $site, $releasePath);
 
                 try {
                     $this->logOutput('Starting deployment script...', 'info');
@@ -94,6 +83,20 @@ class DeploySiteJob implements ShouldQueue
                     $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
                 } finally {
                     $this->cleanupScript($connection, $scriptPath);
+                }
+
+                if ($exitCode === 0) {
+                    $commitInfo = $this->getCommitInfo($connection, $releasePath);
+
+                    if ($commitInfo) {
+                        $this->deployment->update([
+                            'commit_hash' => $commitInfo['hash'] ?? null,
+                            'commit_message' => Str::limit($commitInfo['message'] ?? '', 255),
+                            'commit_author' => $commitInfo['author'] ?? null,
+                        ]);
+                    }
+
+                    app(ReleaseManager::class)->pruneOldReleases($connection, $site, config('server.releases_to_keep'));
                 }
             }
 
@@ -130,28 +133,21 @@ class DeploySiteJob implements ShouldQueue
     }
 
     /**
-     * Get commit information from git repository.
+     * Get commit information from the release the deploy script just built.
      *
      * @return array<string, string>|null
      */
-    private function getCommitInfo($connection, $site): ?array
+    private function getCommitInfo($connection, string $releasePath): ?array
     {
         try {
-            $siteRoot = $site->rootPath();
-
-            // Check if git repository exists
-            if (! $connection->directoryExists("{$siteRoot}/.git")) {
+            if (! $connection->directoryExists("{$releasePath}/.git")) {
                 return null;
             }
 
-            // Get commit hash, message, and author
-            // Use execWithOutput with a timeout to avoid hanging, and catch any errors
             $commitHash = '';
-            $commitMessage = '';
-            $commitAuthor = '';
 
             try {
-                $output = $connection->exec("cd {$siteRoot} && git rev-parse HEAD 2>/dev/null", 10);
+                $output = $connection->exec("cd {$releasePath} && git rev-parse HEAD 2>/dev/null", 10);
                 $commitHash = trim($output);
             } catch (\Throwable $e) {
                 // Git command failed, skip commit info
@@ -162,15 +158,18 @@ class DeploySiteJob implements ShouldQueue
                 return null;
             }
 
+            $commitMessage = '';
+            $commitAuthor = '';
+
             try {
-                $output = $connection->exec("cd {$siteRoot} && git log -1 --format='%s' 2>/dev/null", 10);
+                $output = $connection->exec("cd {$releasePath} && git log -1 --format='%s' 2>/dev/null", 10);
                 $commitMessage = trim($output);
             } catch (\Throwable $e) {
                 // Ignore - message is optional
             }
 
             try {
-                $output = $connection->exec("cd {$siteRoot} && git log -1 --format='%an' 2>/dev/null", 10);
+                $output = $connection->exec("cd {$releasePath} && git log -1 --format='%an' 2>/dev/null", 10);
                 $commitAuthor = trim($output);
             } catch (\Throwable $e) {
                 // Ignore - author is optional
@@ -196,21 +195,22 @@ class DeploySiteJob implements ShouldQueue
      * file open, unlinking it doesn't interrupt execution, so the temp file can't
      * be orphaned by a timeout, dropped connection, or signal mid-deploy.
      */
-    private function prepareScript($connection, string $script, $site): string
+    private function prepareScript($connection, string $script, Site $site, string $releasePath): string
     {
         $siteRoot = $site->rootPath();
-        $webRoot = $site->webRoot();
         $runtime = app(PhpRuntimeResolver::class)->forSite($site);
         $phpBinary = $runtime['binary'];
         $phpFpm = $runtime['fpm_service'];
         $composerBin = $runtime['composer'];
         $phpVersion = $site->php_version ?? '8.4';
 
-        // Preamble: set shell variables that default scripts use ($SITE_ROOT, $BRANCH, $PHP, etc.)
+        // Preamble: set shell variables that default scripts use ($SITE_ROOT is the
+        // persistent base dir; $RELEASE_PATH is this deploy's fresh release, and is
+        // also where the strategy `cd`s to before the user script runs).
         $serverUser = config('server.user');
         $webUser = config('server.web_user');
         $preamble = "SITE_ROOT='{$siteRoot}'\n";
-        $preamble .= "WEB_ROOT='{$webRoot}'\n";
+        $preamble .= "RELEASE_PATH='{$releasePath}'\n";
         $preamble .= "BRANCH='{$site->branch}'\n";
         $preamble .= "PHP='{$phpBinary}'\n";
         $preamble .= "COMPOSER='{$composerBin}'\n";
@@ -219,9 +219,15 @@ class DeploySiteJob implements ShouldQueue
         $preamble .= "WEB_USER='{$webUser}'\n\n";
 
         // Replace placeholder variables in script ({{SITE_PATH}}, {{BRANCH}}, etc.)
+        // {{WEB_ROOT}} points at the release being built, not $site->webRoot()
+        // (which resolves through `current` — still the OLD release at this point,
+        // since the symlink swap only happens after the script succeeds).
+        $directory = $site->directory ?: '/';
+        $releaseWebRoot = rtrim($releasePath, '/').'/'.ltrim($directory, '/');
+
         $replacements = [
-            '{{SITE_PATH}}' => $siteRoot,
-            '{{WEB_ROOT}}' => $webRoot,
+            '{{SITE_PATH}}' => $releasePath,
+            '{{WEB_ROOT}}' => $releaseWebRoot,
             '{{BRANCH}}' => $site->branch,
             '{{DOMAIN}}' => $site->domain,
             '{{PHP_VERSION}}' => $phpVersion,
@@ -264,93 +270,5 @@ class DeploySiteJob implements ShouldQueue
     private function getDefaultScript($site): string
     {
         return $site->project_type->defaultDeployScript();
-    }
-
-    /**
-     * Log output line to database and broadcast.
-     */
-    private function logOutput(string $line, string $type = 'output'): void
-    {
-        $this->deployment->logs()->create([
-            'type' => $type,
-            'message' => $line,
-            'created_at' => now(),
-        ]);
-
-        Log::debug('Broadcasting deployment output event', [
-            'deployment_id' => $this->deployment->id,
-            'type' => $type,
-            'line_preview' => Str::limit($line, 120),
-        ]);
-
-        broadcast(new DeploymentOutputEvent(
-            deployment: $this->deployment,
-            line: $line,
-            type: $type,
-        ));
-    }
-
-    /**
-     * Broadcast deployment status change.
-     */
-    private function broadcastStatus(string $event): void
-    {
-        Log::debug('Broadcasting deployment status event', [
-            'deployment_id' => $this->deployment->id,
-            'status_event' => $event,
-            'status' => $this->deployment->status->value,
-        ]);
-
-        broadcast(new DeploymentStatusChanged(
-            deployment: $this->deployment,
-            event: $event,
-        ));
-    }
-
-    /**
-     * Persist deployment success and update site status.
-     */
-    private function completeDeploymentSuccess(Site $site): void
-    {
-        $this->deployment->update([
-            'status' => DeploymentStatus::Finished,
-            'finished_at' => now(),
-            'duration_seconds' => (int) now()->diffInSeconds($this->deployment->started_at, true),
-        ]);
-
-        $site->update([
-            'status' => $site->repository ? SiteStatus::Deployed : SiteStatus::Provisioned,
-            'deployment_finished_at' => now(),
-        ]);
-
-        $this->logOutput('Deployment completed successfully!', 'success');
-        $this->broadcastStatus('finished');
-    }
-
-    /**
-     * Persist deployment failure and update site status.
-     */
-    private function markDeploymentFailed(Site $site): void
-    {
-        $this->deployment->update([
-            'status' => DeploymentStatus::Failed,
-            'finished_at' => now(),
-            'duration_seconds' => $this->deployment->started_at
-                ? (int) now()->diffInSeconds($this->deployment->started_at, true)
-                : 0,
-        ]);
-
-        $site->update(['status' => SiteStatus::Failed]);
-        $this->broadcastStatus('failed');
-    }
-
-    /**
-     * Handle job failure (timeout, worker crash, etc.) — ensure status is updated.
-     */
-    public function failed(\Throwable $e): void
-    {
-        Log::error("DeploySiteJob failed for deployment {$this->deployment->id}: {$e->getMessage()}");
-
-        $this->markDeploymentFailed($this->deployment->site);
     }
 }

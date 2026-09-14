@@ -13,14 +13,22 @@ class WordPressSiteProvisioner extends BaseSiteProvisioner
 
     protected function createEnvironmentFile(): void
     {
-        $this->connection->exec("if [ -f {$this->siteRoot}/wp-config-sample.php ] && [ ! -f {$this->siteRoot}/wp-config.php ]; then cp {$this->siteRoot}/wp-config-sample.php {$this->siteRoot}/wp-config.php && sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/wp-config.php && sudo chmod 640 {$this->siteRoot}/wp-config.php; fi");
+        $sharedPath = $this->site->sharedPath();
+
+        // Real wp-config.php doesn't exist yet at provisioning time (no code
+        // cloned yet — see createBootstrapRelease()); each release symlinks
+        // this shared file in once the real WordPress install is deployed.
+        $this->connection->exec("touch {$sharedPath}/wp-config.php && sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/wp-config.php && sudo chmod 640 {$sharedPath}/wp-config.php");
+        $this->connection->exec("mkdir -p {$sharedPath}/wp-content/uploads");
     }
 
     protected function setPermissions(): void
     {
         parent::setPermissions();
 
-        $this->connection->exec("if [ -d {$this->siteRoot}/wp-content/uploads ]; then sudo chmod -R 775 {$this->siteRoot}/wp-content/uploads; fi");
-        $this->connection->exec("if [ -d {$this->siteRoot}/wp-content ]; then sudo chown -R {$this->serverUser}:{$this->webUser} {$this->siteRoot}/wp-content; fi");
+        $sharedPath = $this->site->sharedPath();
+
+        $this->connection->exec("sudo chmod -R 775 {$sharedPath}/wp-content/uploads");
+        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$sharedPath}/wp-content");
     }
 }

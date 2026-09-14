@@ -25,6 +25,8 @@ class Deployment extends Model
         'finished_at',
         'duration_seconds',
         'triggered_by',
+        'release_path',
+        'rollback_of_deployment_id',
     ];
 
     /**
@@ -58,5 +60,29 @@ class Deployment extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(DeploymentLog::class);
+    }
+
+    public function rollbackOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'rollback_of_deployment_id');
+    }
+
+    /**
+     * @return HasMany<Deployment, $this>
+     */
+    public function rollbacks(): HasMany
+    {
+        return $this->hasMany(self::class, 'rollback_of_deployment_id');
+    }
+
+    /**
+     * The release folder name this deployment's code lives in under the
+     * site's releases/ directory. Explicit for rollbacks (which reuse an
+     * older release instead of creating one); defaults to this deployment's
+     * own ulid for normal deploys.
+     */
+    public function releaseFolderName(): string
+    {
+        return $this->release_path ?? $this->ulid;
     }
 }

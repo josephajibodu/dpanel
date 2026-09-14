@@ -7,7 +7,8 @@ export interface Deployment {
     status: 'pending' | 'running' | 'finished' | 'failed' | 'cancelled';
     status_label: string;
     status_color: 'gray' | 'blue' | 'green' | 'red' | 'orange';
-    triggered_by: 'manual' | 'webhook' | 'api';
+    triggered_by: 'manual' | 'auto' | 'webhook' | 'api' | 'rollback';
+    rollback_available: boolean;
     started_at: string | null;
     finished_at: string | null;
     duration_seconds: number | null;

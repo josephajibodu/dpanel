@@ -28,7 +28,7 @@ it('includes directory= for site-bound workers', function () {
 
     $config = $worker->supervisorConfig('flitops-worker-'.$worker->id);
 
-    expect($config)->toContain('directory='.$this->site->rootPath())
+    expect($config)->toContain('directory='.$this->site->currentPath())
         ->and($config)->toContain('command=php artisan queue:work')
         ->and($config)->toContain('user=artisan');
 });
@@ -86,7 +86,7 @@ it('prepends cd {site_root} for site-bound cron jobs', function () {
     $line = $cron->cronLine();
 
     expect($line)->toBe(
-        '* * * * * artisan cd '.$this->site->rootPath().' && php artisan schedule:run'."\n"
+        '* * * * * artisan cd '.$this->site->currentPath().' && php artisan schedule:run'."\n"
     );
 });
 

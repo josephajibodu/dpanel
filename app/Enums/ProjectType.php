@@ -49,9 +49,6 @@ enum ProjectType: string
     private function laravelDeployScript(): string
     {
         return <<<'SCRIPT'
-git fetch origin $BRANCH
-git reset --hard origin/$BRANCH
-
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 if [ -f package-lock.json ]; then npm ci; else npm install; fi
@@ -68,9 +65,6 @@ SCRIPT;
     private function symfonyDeployScript(): string
     {
         return <<<'SCRIPT'
-git fetch origin $BRANCH
-git reset --hard origin/$BRANCH
-
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 $PHP bin/console cache:clear --env=prod
@@ -81,26 +75,51 @@ SCRIPT;
     private function phpDeployScript(): string
     {
         return <<<'SCRIPT'
-git fetch origin $BRANCH
-git reset --hard origin/$BRANCH
-
 $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 SCRIPT;
     }
 
     private function htmlDeployScript(): string
     {
-        return <<<'SCRIPT'
-git fetch origin $BRANCH
-git reset --hard origin/$BRANCH
-SCRIPT;
+        return '';
     }
 
     private function wordpressDeployScript(): string
     {
-        return <<<'SCRIPT'
-git fetch origin $BRANCH
-git reset --hard origin/$BRANCH
-SCRIPT;
+        return '';
+    }
+
+    /**
+     * Files/directories that must persist across releases, mapped from their
+     * path inside a fresh release to their path inside the site's shared/
+     * directory (both relative to their respective roots). The zero-downtime
+     * deploy strategy resolves both to absolute paths and symlinks each of
+     * these right after cloning a new release.
+     *
+     * @return array<string, string>
+     */
+    public function sharedSymlinks(): array
+    {
+        return match ($this) {
+            self::Laravel => [
+                '.env' => '.env',
+                'storage' => 'storage',
+                'database/database.sqlite' => 'database/database.sqlite',
+            ],
+            self::Symfony => [
+                '.env' => '.env',
+                '.env.local' => '.env.local',
+                'var/cache' => 'var/cache',
+                'var/log' => 'var/log',
+            ],
+            self::PhpGeneric => [
+                '.env' => '.env',
+            ],
+            self::WordPress => [
+                'wp-config.php' => 'wp-config.php',
+                'wp-content/uploads' => 'wp-content/uploads',
+            ],
+            self::StaticHtml => [],
+        };
     }
 }

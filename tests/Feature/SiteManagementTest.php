@@ -590,7 +590,8 @@ describe('site model', function () {
             'directory' => '/public',
         ]);
 
-        expect($site->webRoot())->toBe('/home/artisan/test.example.com/public');
+        // webRoot() resolves through the `current` release symlink.
+        expect($site->webRoot())->toBe('/home/artisan/test.example.com/current/public');
     });
 
     it('generates correct repository URL', function () {

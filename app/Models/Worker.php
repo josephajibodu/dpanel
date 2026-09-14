@@ -49,10 +49,10 @@ class Worker extends Model
 
     /**
      * Build the supervisord program block for this worker. When the worker is
-     * tied to a site we emit `directory=` pointing at the site root — without
-     * it, supervisord starts the child process from `/`, which breaks the
-     * common Laravel pattern (`php artisan queue:work`) because artisan and
-     * vendor/ are only reachable from the site root.
+     * tied to a site we emit `directory=` pointing at its current release —
+     * without it, supervisord starts the child process from `/`, which breaks
+     * the common Laravel pattern (`php artisan queue:work`) because artisan
+     * and vendor/ only exist inside a release, not the site's base directory.
      */
     public function supervisorConfig(string $programName): string
     {
@@ -62,7 +62,7 @@ class Worker extends Model
             $this->loadMissing('site');
 
             if ($this->site) {
-                $lines[] = 'directory='.$this->site->rootPath();
+                $lines[] = 'directory='.$this->site->currentPath();
             }
         }
 

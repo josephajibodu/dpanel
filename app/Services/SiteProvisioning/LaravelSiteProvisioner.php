@@ -14,16 +14,22 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
 
     protected function createEnvironmentFile(): void
     {
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env.example ]; then cp {$this->siteRoot}/.env.example {$this->siteRoot}/.env; fi");
+        $sharedPath = $this->site->sharedPath();
+
+        // A fresh release won't have .env.example yet at this point (real code
+        // hasn't been cloned — see createBootstrapRelease()), so seed an empty
+        // file here; configureEnvValues() below fills in the real keys.
+        $this->connection->exec("touch {$sharedPath}/.env");
 
         $this->configureEnvValues();
+        $this->createStorageSkeleton();
 
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env ]; then sudo chown {$this->serverUser}:{$this->webUser} {$this->siteRoot}/.env && sudo chmod 640 {$this->siteRoot}/.env; fi");
+        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
     }
 
     protected function configureEnvValues(): void
     {
-        $envPath = "{$this->siteRoot}/.env";
+        $envPath = "{$this->site->sharedPath()}/.env";
         $domain = $this->site->domain;
 
         $this->sedEnv($envPath, 'APP_ENV', 'production');
@@ -69,12 +75,30 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     /**
      * Laravel's default .env.example uses SQLite; create the file so the app
      * can boot (sessions, queues) before the first deploy runs migrations.
+     * Lives in shared/ since the database must persist across releases.
      */
     private function ensureSqliteDatabaseFile(): void
     {
-        $sqlitePath = "{$this->siteRoot}/database/database.sqlite";
+        $sqlitePath = "{$this->site->sharedPath()}/database/database.sqlite";
 
-        $this->connection->exec("mkdir -p {$this->siteRoot}/database && touch {$sqlitePath}");
+        $this->connection->exec('mkdir -p '.dirname($sqlitePath)." && touch {$sqlitePath}");
+    }
+
+    /**
+     * Create the writable storage skeleton in shared/ up front, independent
+     * of whether real application code exists yet — every release symlinks
+     * storage/ into this (see ProjectType::sharedSymlinks()), so sessions,
+     * cached views, and logs survive across deploys and rollbacks.
+     */
+    private function createStorageSkeleton(): void
+    {
+        $storagePath = "{$this->site->sharedPath()}/storage";
+
+        $this->connection->exec(
+            "mkdir -p {$storagePath}/app/public ".
+            "{$storagePath}/framework/cache/data {$storagePath}/framework/sessions {$storagePath}/framework/views ".
+            "{$storagePath}/logs"
+        );
     }
 
     /**
@@ -108,10 +132,13 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     {
         parent::setPermissions();
 
-        $this->connection->exec("sudo chmod -R 775 {$this->siteRoot}/storage {$this->siteRoot}/bootstrap/cache 2>/dev/null || true");
+        $sharedPath = $this->site->sharedPath();
 
-        $this->connection->exec("if [ -d {$this->siteRoot}/database ]; then sudo chmod -R 775 {$this->siteRoot}/database; fi");
-
-        $this->connection->exec("if [ -f {$this->siteRoot}/.env ]; then sudo chmod 640 {$this->siteRoot}/.env; fi");
+        // bootstrap/cache doesn't exist yet (no real code cloned during
+        // provisioning) — the deploy strategy chmods it per-release instead.
+        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$sharedPath}/storage {$sharedPath}/database 2>/dev/null || true");
+        $this->connection->exec("sudo chmod -R 775 {$sharedPath}/storage 2>/dev/null || true");
+        $this->connection->exec("if [ -d {$sharedPath}/database ]; then sudo chmod -R 775 {$sharedPath}/database; fi");
+        $this->connection->exec("if [ -f {$sharedPath}/.env ]; then sudo chmod 640 {$sharedPath}/.env; fi");
     }
 }

@@ -1,7 +1,9 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ClockIcon, GitCommitIcon, RocketIcon, UserIcon } from 'lucide-react';
+import { ClockIcon, GitCommitIcon, HistoryIcon, RocketIcon, UserIcon } from 'lucide-react';
+import { useState } from 'react';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +19,22 @@ interface DeploymentCardProps {
 export function DeploymentCard({ deployment, serverId, siteId }: DeploymentCardProps) {
     const { currentTeam } = usePage<SharedData>().props;
     const slug = currentTeam?.slug ?? '';
+    const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
+    const [isRollingBack, setIsRollingBack] = useState(false);
+
+    const confirmRollback = () => {
+        setIsRollingBack(true);
+        router.post(
+            `/${slug}/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}/rollback`,
+            {},
+            {
+                onFinish: () => {
+                    setIsRollingBack(false);
+                    setRollbackDialogOpen(false);
+                },
+            },
+        );
+    };
 
     const statusColors = {
         pending: 'border-gray-300 bg-gray-100/80 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200',
@@ -75,12 +93,36 @@ export function DeploymentCard({ deployment, serverId, siteId }: DeploymentCardP
                     </div>
                 </div>
 
-                <Button variant="ghost" size="sm" className="h-8 px-3 text-sm" asChild>
-                    <Link href={`/${slug}/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}`}>
-                        View
-                    </Link>
-                </Button>
+                <div className="flex shrink-0 items-center gap-1">
+                    {deployment.rollback_available && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-sm"
+                            onClick={() => setRollbackDialogOpen(true)}
+                        >
+                            <HistoryIcon className="h-3.5 w-3.5" />
+                            Rollback
+                        </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-8 px-3 text-sm" asChild>
+                        <Link href={`/${slug}/servers/${serverId}/sites/${siteId}/deployments/${deployment.id}`}>
+                            View
+                        </Link>
+                    </Button>
+                </div>
             </div>
+
+            <ConfirmDialog
+                open={rollbackDialogOpen}
+                onOpenChange={setRollbackDialogOpen}
+                title="Roll back to this deployment?"
+                description={`This will point the site back at the code from ${deployment.commit_hash ? `commit ${deployment.commit_hash.slice(0, 7)}` : `deployment #${deployment.id}`} without rebuilding it. Database migrations are not reversed.`}
+                confirmLabel="Roll back"
+                variant="destructive"
+                onConfirm={confirmRollback}
+                loading={isRollingBack}
+            />
         </Card>
     );
 }

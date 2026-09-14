@@ -95,4 +95,18 @@ return [
 
     'acme_binary' => env('ACME_BINARY', 'acme.sh'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Releases To Keep
+    |--------------------------------------------------------------------------
+    |
+    | Zero-downtime deploys clone into a fresh releases/{ulid} directory per
+    | deploy and atomically swap a `current` symlink. This caps how many old
+    | releases stay on disk (and therefore how far back a rollback can reach)
+    | before ReleaseManager prunes the oldest ones.
+    |
+    */
+
+    'releases_to_keep' => (int) env('RELEASES_TO_KEEP', 5),
+
 ];

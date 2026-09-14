@@ -3,14 +3,13 @@
 use App\Enums\ProjectType;
 
 describe('ProjectType::defaultDeployScript', function () {
-    it('uses git fetch + hard reset instead of git pull for every project type', function (ProjectType $type) {
+    it('never runs git itself — cloning is the zero-downtime deploy strategy\'s job', function (ProjectType $type) {
         $script = $type->defaultDeployScript();
 
-        // Hard reset against the remote ref is the safe pattern: it cannot be
-        // blocked by uncommitted server-side edits the way `git pull` can.
-        expect($script)->toContain('git fetch origin $BRANCH');
-        expect($script)->toContain('git reset --hard origin/$BRANCH');
-        expect($script)->not->toContain('git pull origin $BRANCH');
+        // Every deploy clones into a brand new releases/{ulid} directory (see
+        // ZeroDowntimeDeploymentStrategy::prepend()), so there's no old state
+        // in that directory to conflict with — no fetch/reset/pull needed here.
+        expect($script)->not->toContain('git ');
     })->with([
         [ProjectType::Laravel],
         [ProjectType::Symfony],

@@ -33,6 +33,7 @@ class DeploymentResource extends JsonResource
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),
             'triggered_by' => $this->triggered_by,
+            'rollback_available' => (bool) ($this->rollback_available ?? false),
             'duration_seconds' => $this->duration_seconds,
             'started_at' => $this->started_at?->toIso8601String(),
             'finished_at' => $this->finished_at?->toIso8601String(),
