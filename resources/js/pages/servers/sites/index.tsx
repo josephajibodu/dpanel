@@ -166,7 +166,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12">
+                                        <TableHead className="w-12 text-right">
                                             ID
                                         </TableHead>
                                         <TableHead>Domain</TableHead>
@@ -195,7 +195,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                 site.status === 'deleting';
                                             return (
                                                 <TableRow key={site.id}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
                                                         {site.id}
                                                     </TableCell>
                                                     <TableCell>

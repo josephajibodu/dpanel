@@ -224,7 +224,9 @@ export default function SiteCommandsIndex({
                                         <TableRow>
                                             <TableHead>Command</TableHead>
                                             <TableHead>Status</TableHead>
-                                            <TableHead>Exit</TableHead>
+                                            <TableHead className="text-right">
+                                                Exit
+                                            </TableHead>
                                             <TableHead>Finished</TableHead>
                                             <TableHead className="w-0" />
                                         </TableRow>
@@ -249,7 +251,7 @@ export default function SiteCommandsIndex({
                                                         }
                                                     />
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-right font-mono text-sm text-muted-foreground">
                                                     {run.exit_code ?? '—'}
                                                 </TableCell>
                                                 <TableCell className="text-sm whitespace-nowrap text-muted-foreground">

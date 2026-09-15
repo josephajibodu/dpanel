@@ -160,7 +160,7 @@ export default function ServersIndex({ servers }: Props) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12">
+                                        <TableHead className="w-12 text-right">
                                             ID
                                         </TableHead>
                                         <TableHead>Name</TableHead>
@@ -192,7 +192,7 @@ export default function ServersIndex({ servers }: Props) {
                                                 server.status === 'deleting';
                                             return (
                                                 <TableRow key={server.id}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
                                                         {server.id}
                                                     </TableCell>
                                                     <TableCell>

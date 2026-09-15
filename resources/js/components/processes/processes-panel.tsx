@@ -417,7 +417,9 @@ export function ProcessesPanel({
                                         <TableHead>Site</TableHead>
                                     )}
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Numprocs</TableHead>
+                                    <TableHead className="text-right">
+                                        Numprocs
+                                    </TableHead>
                                     <TableHead className="w-[220px]" />
                                 </TableRow>
                             </TableHeader>
@@ -469,7 +471,7 @@ export function ProcessesPanel({
                                                         }
                                                     />
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-right font-mono text-sm text-muted-foreground">
                                                     {w.numprocs}
                                                 </TableCell>
                                                 <TableCell>
