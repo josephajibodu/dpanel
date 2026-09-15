@@ -17,10 +17,10 @@ Flitops itself currently runs as a foreground dev process on the operator's lapt
 
 ---
 
-## 1. Deploy script doesn't restart queue workers (found 2026-09-14)
-`ProjectType::laravelDeployScript()` runs composer/npm/migrate/cache commands but never `artisan queue:restart` or `artisan horizon:terminate`. PHP queue workers cache job/listener code in memory and don't hot-reload — every deploy of any queue-using app (Bouclay included, and a self-hosted Flitops especially) silently keeps running stale code until someone manually restarts workers. This is exactly the bug that made a deployment's commit message appear one deploy behind.
+## 1. Deploy script doesn't restart queue workers — done (2026-09-15)
+`ProjectType::laravelDeployScript()` ran composer/npm/migrate/cache commands but never `artisan queue:restart` or `artisan horizon:terminate`. PHP queue workers cache job/listener code in memory and don't hot-reload — every deploy of any queue-using app (Bouclay included, and a self-hosted Flitops especially) silently kept running stale code until someone manually restarted workers. This is exactly the bug that made a deployment's commit message appear one deploy behind.
 
-- [ ] Add a queue-worker restart step to the default deploy script(s)
+- [x] Add a queue-worker restart step to the default deploy script(s) — `$PHP artisan queue:restart` now runs at the end of the Laravel default deploy script, after config/route/view/event caching. This only affects sites created going forward; sites created before 2026-09-15 have their own saved deploy script and need this line added manually via the "Deploy script" page if they run queue workers.
 
 ---
 
@@ -58,8 +58,9 @@ Flitops itself currently runs as a foreground dev process on the operator's lapt
 
 ---
 
-## 6. Database Access & Tooling (new, requested 2026-09-14)
-- [ ] A place in the UI to copy a database's connection string/credentials for use in DB clients (TablePlus, DBeaver, Postico, etc.). All underlying data already exists (`ServerDatabase`, `DatabaseUser`, `Server.ip_address`/`ssh_port`) — this is a UI-only feature, not new backend plumbing. Likely pairs with SSH-tunnel connection details (server IP, SSH user/port) rather than exposing the DB port directly.
+## 6. Database Access & Tooling — done (2026-09-15)
+- [x] A place in the UI to copy a database's connection string/credentials for use in DB clients (TablePlus, DBeaver, Postico, etc.) — shipped as an SSH-tunnel "Connect" dialog per database user (SSH host/port/user, DB host/port/name/username, reveal-on-click password, copyable tunnel command). No database port is exposed publicly.
+- [x] One-click password reset per database user, matching Forge
 - [ ] (optional, later) in-app read-only DB query browser — noted, not prioritized
 
 ---

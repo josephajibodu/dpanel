@@ -59,6 +59,7 @@ $PHP artisan config:cache
 $PHP artisan route:cache
 $PHP artisan view:cache
 $PHP artisan event:cache
+$PHP artisan queue:restart
 SCRIPT;
     }
 
