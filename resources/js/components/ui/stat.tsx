@@ -8,8 +8,7 @@ interface StatProps {
     hint?: string;
     tone?: 'default' | 'warning';
     action?: ReactNode;
-    /** Wraps the cell in its own bordered box, for a grid of standalone tiles. Omit when the
-     *  caller places several Stats inside one divided Card instead. */
+    /** Wraps the cell in its own bordered, shadowed box, for a grid of standalone tiles. */
     bordered?: boolean;
     className?: string;
 }
@@ -26,7 +25,9 @@ export function Stat({
     return (
         <div
             className={cn(
-                bordered ? 'rounded-lg border bg-card p-4' : 'px-6 py-4',
+                bordered
+                    ? 'rounded-lg border bg-card p-4 shadow-md shadow-black/5 dark:shadow-black/20'
+                    : 'px-6 py-4',
                 className,
             )}
         >

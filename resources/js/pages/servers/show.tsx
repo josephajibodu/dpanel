@@ -22,6 +22,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Stat } from '@/components/ui/stat';
+import { StatGroup } from '@/components/ui/stat-group';
 import {
     Table,
     TableBody,
@@ -517,29 +518,31 @@ function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
                     Here you can see an overview of your server.
                 </p>
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
-                {(['CPU load', 'Memory usage', 'Disk usage'] as const).map(
-                    (label) => (
-                        <Stat
-                            key={label}
-                            bordered
-                            label={label}
-                            value="N/A"
-                            hint="No data yet"
-                            action={
-                                <Link
-                                    href={teamPath(
-                                        `/servers/${serverId}/observe`,
-                                    )}
-                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                >
-                                    View
-                                </Link>
-                            }
-                        />
-                    ),
-                )}
-            </div>
+            <StatGroup>
+                <div className="grid gap-2 md:grid-cols-3">
+                    {(['CPU load', 'Memory usage', 'Disk usage'] as const).map(
+                        (label) => (
+                            <Stat
+                                key={label}
+                                bordered
+                                label={label}
+                                value="N/A"
+                                hint="No data yet"
+                                action={
+                                    <Link
+                                        href={teamPath(
+                                            `/servers/${serverId}/observe`,
+                                        )}
+                                        className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                    >
+                                        View
+                                    </Link>
+                                }
+                            />
+                        ),
+                    )}
+                </div>
+            </StatGroup>
         </section>
     );
 }

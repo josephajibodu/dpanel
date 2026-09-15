@@ -6,8 +6,9 @@ import { EmptyState } from '@/components/empty-state';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardTitle } from '@/components/ui/card';
+import { CardTitle } from '@/components/ui/card';
 import { Stat } from '@/components/ui/stat';
+import { StatGroup } from '@/components/ui/stat-group';
 import {
     Table,
     TableBody,
@@ -105,20 +106,27 @@ export default function Dashboard({
                     />
                 ) : (
                     <>
-                        <Card>
-                            <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+                        <StatGroup>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                 <Stat
+                                    bordered
                                     label="Servers"
                                     value={stats.servers}
                                     hint={`${stats.active_servers} active`}
                                 />
-                                <Stat label="Sites" value={stats.sites} />
                                 <Stat
+                                    bordered
+                                    label="Sites"
+                                    value={stats.sites}
+                                />
+                                <Stat
+                                    bordered
                                     label="Deployments"
                                     value={stats.deployments_this_week}
                                     hint="last 7 days"
                                 />
                                 <Stat
+                                    bordered
                                     label="SSL alerts"
                                     value={stats.ssl_alerts}
                                     tone={
@@ -128,7 +136,7 @@ export default function Dashboard({
                                     }
                                 />
                             </div>
-                        </Card>
+                        </StatGroup>
 
                         <div className="grid gap-6 lg:grid-cols-2">
                             <div className="space-y-4">
@@ -138,52 +146,58 @@ export default function Dashboard({
                                         No servers yet.
                                     </p>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Server</TableHead>
-                                                <TableHead>Sites</TableHead>
-                                                <TableHead>Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {servers.map((server) => (
-                                                <TableRow key={server.id}>
-                                                    <TableCell>
-                                                        <Link
-                                                            href={teamPath(
-                                                                `/servers/${server.id}`,
-                                                            )}
-                                                            className="font-medium hover:underline"
-                                                        >
-                                                            {server.name}
-                                                        </Link>
-                                                        <p className="font-mono text-xs text-muted-foreground">
-                                                            {server.ip_address ??
-                                                                '—'}
-                                                        </p>
-                                                    </TableCell>
-                                                    <TableCell className="text-muted-foreground">
-                                                        {server.sites_count ??
-                                                            0}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <ServerStatusBadge
-                                                            status={
-                                                                server.status
-                                                            }
-                                                            statusLabel={
-                                                                server.status_label
-                                                            }
-                                                            statusColor={
-                                                                server.status_color
-                                                            }
-                                                        />
-                                                    </TableCell>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        Server
+                                                    </TableHead>
+                                                    <TableHead>Sites</TableHead>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {servers.map((server) => (
+                                                    <TableRow key={server.id}>
+                                                        <TableCell>
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${server.id}`,
+                                                                )}
+                                                                className="font-medium hover:underline"
+                                                            >
+                                                                {server.name}
+                                                            </Link>
+                                                            <p className="font-mono text-xs text-muted-foreground">
+                                                                {server.ip_address ??
+                                                                    '—'}
+                                                            </p>
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground">
+                                                            {server.sites_count ??
+                                                                0}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <ServerStatusBadge
+                                                                status={
+                                                                    server.status
+                                                                }
+                                                                statusLabel={
+                                                                    server.status_label
+                                                                }
+                                                                statusColor={
+                                                                    server.status_color
+                                                                }
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </div>
 
@@ -194,71 +208,77 @@ export default function Dashboard({
                                         No deployments yet.
                                     </p>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Site</TableHead>
-                                                <TableHead>Commit</TableHead>
-                                                <TableHead>Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {recentDeployments.map(
-                                                (deployment) => (
-                                                    <TableRow
-                                                        key={deployment.id}
-                                                    >
-                                                        <TableCell>
-                                                            <Link
-                                                                href={teamPath(
-                                                                    `/servers/${deployment.site.server_id}/sites/${deployment.site.id}`,
-                                                                )}
-                                                                className="font-medium hover:underline"
-                                                            >
-                                                                {
-                                                                    deployment
-                                                                        .site
-                                                                        .domain
-                                                                }
-                                                            </Link>
-                                                            <p className="truncate text-xs text-muted-foreground">
-                                                                {deployment.commit_hash_short && (
-                                                                    <span className="font-mono">
-                                                                        {
-                                                                            deployment.commit_hash_short
-                                                                        }{' '}
-                                                                        ·{' '}
-                                                                    </span>
-                                                                )}
-                                                                {formatDistanceToNow(
-                                                                    new Date(
-                                                                        deployment.created_at,
-                                                                    ),
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Site</TableHead>
+                                                    <TableHead>
+                                                        Commit
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {recentDeployments.map(
+                                                    (deployment) => (
+                                                        <TableRow
+                                                            key={deployment.id}
+                                                        >
+                                                            <TableCell>
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${deployment.site.server_id}/sites/${deployment.site.id}`,
+                                                                    )}
+                                                                    className="font-medium hover:underline"
+                                                                >
                                                                     {
-                                                                        addSuffix: true,
-                                                                    },
-                                                                )}
-                                                            </p>
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                                                            {deployment.commit_message ??
-                                                                'No commit message'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <StatusBadge
-                                                                status={
-                                                                    deployment.status_label
-                                                                }
-                                                                color={
-                                                                    deployment.status_color
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ),
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                                                                        deployment
+                                                                            .site
+                                                                            .domain
+                                                                    }
+                                                                </Link>
+                                                                <p className="truncate text-xs text-muted-foreground">
+                                                                    {deployment.commit_hash_short && (
+                                                                        <span className="font-mono">
+                                                                            {
+                                                                                deployment.commit_hash_short
+                                                                            }{' '}
+                                                                            ·{' '}
+                                                                        </span>
+                                                                    )}
+                                                                    {formatDistanceToNow(
+                                                                        new Date(
+                                                                            deployment.created_at,
+                                                                        ),
+                                                                        {
+                                                                            addSuffix: true,
+                                                                        },
+                                                                    )}
+                                                                </p>
+                                                            </TableCell>
+                                                            <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                                                {deployment.commit_message ??
+                                                                    'No commit message'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <StatusBadge
+                                                                    status={
+                                                                        deployment.status_label
+                                                                    }
+                                                                    color={
+                                                                        deployment.status_color
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ),
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </div>
                         </div>
