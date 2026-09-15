@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CollectAllServerMetricsJob;
+use App\Jobs\CollectDueBackupsJob;
 use App\Jobs\IssueWildcardCertificateJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -18,3 +19,6 @@ Schedule::job(new IssueWildcardCertificateJob)->dailyAt('03:30');
 
 // Poll CPU/memory/disk stats for every active server.
 Schedule::job(new CollectAllServerMetricsJob)->everyTenMinutes();
+
+// Run any database backups that are due.
+Schedule::job(new CollectDueBackupsJob)->hourly();

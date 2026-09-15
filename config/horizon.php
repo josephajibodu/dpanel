@@ -231,10 +231,12 @@ return [
         'production' => [
             'supervisor-provisioning' => [
                 'connection' => 'redis',
-                'queue' => ['provisioning'],
+                'queue' => ['provisioning', 'backups'],
                 'balance' => 'simple',
                 'processes' => 2,
-                'timeout' => 1900,
+                // 3600s to cover RunBackupJob/RestoreBackupJob's own timeout,
+                // which is longer than a typical provisioning step.
+                'timeout' => 3600,
             ],
             'supervisor-deploy' => [
                 'connection' => 'redis',
@@ -259,11 +261,11 @@ return [
         'local' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue' => ['provisioning', 'deploy', 'ssh', 'default'],
+                'queue' => ['provisioning', 'deploy', 'ssh', 'default', 'backups'],
                 'balance' => 'auto',
                 'autoScalingStrategy' => 'time',
                 'maxProcesses' => 5,
-                'timeout' => 1900,
+                'timeout' => 3600,
             ],
         ],
     ],

@@ -147,6 +147,23 @@ describe('destroy', function () {
 
         $response->assertForbidden();
     });
+
+    it('cannot delete a provider that backups still reference', function () {
+        $provider = StorageProvider::factory()->forTeam($this->team)->create();
+        $serverDatabase = \App\Models\ServerDatabase::factory()->create();
+
+        \App\Models\Backup::factory()->create([
+            'server_database_id' => $serverDatabase->id,
+            'storage_provider_id' => $provider->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->delete("/{$this->team->slug}/storage-providers/{$provider->id}");
+
+        $response->assertRedirect("/{$this->team->slug}/storage-providers");
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('storage_providers', ['id' => $provider->id]);
+    });
 });
 
 describe('validate', function () {

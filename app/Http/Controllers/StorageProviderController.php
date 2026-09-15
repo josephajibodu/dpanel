@@ -63,6 +63,12 @@ class StorageProviderController extends Controller
     {
         $this->authorize('delete', $storageProvider);
 
+        if ($storageProvider->backups()->exists() || $storageProvider->backupSchedules()->exists()) {
+            return redirect()
+                ->route('storage-providers.index', $team)
+                ->with('error', 'Cannot disconnect a storage provider that backups still reference.');
+        }
+
         $storageProvider->delete();
 
         return redirect()
