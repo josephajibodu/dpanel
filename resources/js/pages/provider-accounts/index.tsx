@@ -2,7 +2,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     CloudIcon,
-    EyeIcon,
     MoreVerticalIcon,
     PlusIcon,
     RefreshCwIcon,
@@ -134,8 +133,15 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         <TableBody>
                             {accounts.data.map((account) => (
                                 <TableRow key={account.id}>
-                                    <TableCell className="font-medium">
-                                        {account.name}
+                                    <TableCell>
+                                        <Link
+                                            href={teamPath(
+                                                `/provider-accounts/${account.id}`,
+                                            )}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {account.name}
+                                        </Link>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         <span className="mr-1.5">
@@ -172,21 +178,6 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                asChild
-                                            >
-                                                <Link
-                                                    href={teamPath(
-                                                        `/provider-accounts/${account.id}`,
-                                                    )}
-                                                    aria-label="View provider account"
-                                                >
-                                                    <EyeIcon className="h-4 w-4" />
-                                                </Link>
-                                            </Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
