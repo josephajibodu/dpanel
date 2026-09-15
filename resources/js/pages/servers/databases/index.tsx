@@ -7,7 +7,6 @@ import {
     PencilIcon,
     PlusIcon,
     Trash2Icon,
-    UserPlusIcon,
     UsersIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -285,10 +284,7 @@ export default function ServerDatabasesIndex({
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <DatabaseIcon className="h-5 w-5" />
-                                    Databases
-                                </CardTitle>
+                                <CardTitle>Databases</CardTitle>
                                 <CardDescription>
                                     Databases on this server.
                                 </CardDescription>
@@ -386,10 +382,7 @@ export default function ServerDatabasesIndex({
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <UserPlusIcon className="h-5 w-5" />
-                                    Database users
-                                </CardTitle>
+                                <CardTitle>Database users</CardTitle>
                                 <CardDescription>
                                     Users with access to databases.
                                 </CardDescription>

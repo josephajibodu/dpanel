@@ -1,12 +1,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    ActivityIcon,
     AlertCircleIcon,
     HardDriveIcon,
     Loader2Icon,
     PlusIcon,
-    ServerIcon,
 } from 'lucide-react';
 
 import { DeploymentLog } from '@/components/deployments/deployment-log';
@@ -168,10 +166,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                 {/* Sites */}
                                 <div id="sites" className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle className="flex items-center gap-2">
-                                            <HardDriveIcon className="h-5 w-5" />
-                                            Sites
-                                        </CardTitle>
+                                        <CardTitle>Sites</CardTitle>
                                         {data.status === 'active' && (
                                             <Button
                                                 variant="outline"
@@ -276,10 +271,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                 {/* Databases */}
                                 <div id="databases" className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle className="flex items-center gap-2">
-                                            <ServerIcon className="h-5 w-5" />
-                                            Databases
-                                        </CardTitle>
+                                        <CardTitle>Databases</CardTitle>
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -304,10 +296,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                 {data.actions && data.actions.length > 0 && (
                                     <div className="space-y-4">
                                         <div>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <ActivityIcon className="h-5 w-5" />
-                                                Recent events
-                                            </CardTitle>
+                                            <CardTitle>Recent events</CardTitle>
                                             <CardDescription>
                                                 Latest provisioning and
                                                 management actions.
@@ -358,10 +347,7 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                             <div>
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <ServerIcon className="h-5 w-5" />
-                                            Server details
-                                        </CardTitle>
+                                        <CardTitle>Server details</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-5 text-sm">
                                         <div className="space-y-2">

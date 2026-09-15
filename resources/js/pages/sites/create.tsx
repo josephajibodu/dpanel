@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { ArrowLeftIcon, DatabaseIcon, EyeIcon, EyeOffIcon, GlobeIcon, Loader2Icon, PackageIcon, PlusIcon } from 'lucide-react';
+import { ArrowLeftIcon, EyeIcon, EyeOffIcon, Loader2Icon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -619,10 +619,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <GlobeIcon className="h-5 w-5" />
-                                        Domain Configuration
-                                    </div>
+                                    Domain Configuration
                                     {!useCustomDomain && (
                                         <Button
                                             type="button"
@@ -730,10 +727,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                         {/* Frontend Build Configuration */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PackageIcon className="h-5 w-5" />
-                                    Frontend Build (Optional)
-                                </CardTitle>
+                                <CardTitle>Frontend Build (Optional)</CardTitle>
                                 <CardDescription>Configure package manager and build command for frontend assets.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -782,10 +776,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <DatabaseIcon className="h-5 w-5" />
-                                            Connect to Database
-                                        </CardTitle>
+                                        <CardTitle>Connect to Database</CardTitle>
                                         <CardDescription>Select or create a database to connect to your site.</CardDescription>
                                     </div>
                                     <Switch checked={connectDatabase} onCheckedChange={handleDatabaseToggle} />

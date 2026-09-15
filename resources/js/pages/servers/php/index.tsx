@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { CodeIcon, DownloadIcon, SettingsIcon } from 'lucide-react';
+import { CodeIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -203,10 +203,7 @@ export default function ServerPhpIndex({
                     <Card>
                         <CardHeader>
                             <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <SettingsIcon className="h-5 w-5" />
-                                    PHP settings
-                                </CardTitle>
+                                <CardTitle>PHP settings</CardTitle>
                                 {settingsSyncStatus && (
                                     <AutoStatusBadge
                                         status={settingsSyncStatus}
@@ -355,10 +352,7 @@ export default function ServerPhpIndex({
 
                     <div className="flex flex-col gap-4">
                         <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <CodeIcon className="h-5 w-5" />
-                                Installed versions
-                            </CardTitle>
+                            <CardTitle>Installed versions</CardTitle>
                             <CardDescription>
                                 PHP versions installed on this server. Set which
                                 one is used by default.
@@ -502,10 +496,7 @@ export default function ServerPhpIndex({
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <DownloadIcon className="h-5 w-5" />
-                                Install PHP version
-                            </CardTitle>
+                            <CardTitle>Install PHP version</CardTitle>
                             <CardDescription>
                                 Install an additional PHP version from the
                                 ondrej/php PPA.

@@ -1,3 +1,7 @@
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowLeftIcon, CloudIcon, Loader2Icon, ServerIcon } from 'lucide-react';
+import { useState } from 'react';
+
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +13,6 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
 import { ProviderRegion, ProviderSize } from '@/types/server';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, CloudIcon, Loader2Icon, ServerIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface Props {
     providerAccounts: {
@@ -171,10 +172,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
                         <form onSubmit={handleProviderSubmit} className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <ServerIcon className="h-5 w-5" />
-                                        Server Details
-                                    </CardTitle>
+                                    <CardTitle>Server Details</CardTitle>
                                     <CardDescription>Configure the basic settings for your new server.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
@@ -302,10 +300,7 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
                         <form onSubmit={handleCustomSubmit} className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <ServerIcon className="h-5 w-5" />
-                                        Server Details
-                                    </CardTitle>
+                                    <CardTitle>Server Details</CardTitle>
                                     <CardDescription>
                                         Enter your server details. You'll be shown how to connect FlitOps on the next step.
                                     </CardDescription>

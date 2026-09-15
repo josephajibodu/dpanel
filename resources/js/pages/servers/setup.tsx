@@ -1,6 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircleIcon, CheckIcon, ClipboardIcon, Loader2Icon, ServerIcon, TriangleAlertIcon, XCircleIcon } from 'lucide-react';
+import { CheckCircleIcon, CheckIcon, ClipboardIcon, Loader2Icon, TriangleAlertIcon, XCircleIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -85,10 +85,7 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
                     {/* Step 1 — Add key */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ServerIcon className="h-5 w-5" />
-                                Step 1 — Add FlitOps to your server
-                            </CardTitle>
+                            <CardTitle>Step 1 — Add FlitOps to your server</CardTitle>
                             <CardDescription>
                                 Run this command as root on <strong>{server.ip_address}</strong> (port {server.ssh_port}).
                             </CardDescription>

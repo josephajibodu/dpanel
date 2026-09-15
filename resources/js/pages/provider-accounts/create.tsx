@@ -1,3 +1,6 @@
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowLeftIcon, Loader2Icon } from 'lucide-react';
+
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +11,6 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Provider } from '@/types/provider-account';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, CloudIcon, Loader2Icon } from 'lucide-react';
 
 interface Props {
     providers: Provider[];
@@ -75,10 +76,7 @@ export default function ProviderAccountsCreate({ providers }: Props) {
                 <div className="mx-auto w-full max-w-xl">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <CloudIcon className="h-5 w-5" />
-                                Provider Details
-                            </CardTitle>
+                            <CardTitle>Provider Details</CardTitle>
                             <CardDescription>Enter your cloud provider credentials to connect your account.</CardDescription>
                         </CardHeader>
                         <CardContent>
