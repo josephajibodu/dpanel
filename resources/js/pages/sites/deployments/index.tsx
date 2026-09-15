@@ -1,20 +1,32 @@
-import { DeploymentList } from '@/components/deployments/deployment-list';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
+import { HistoryIcon, Loader2Icon, RocketIcon } from 'lucide-react';
+import { useState } from 'react';
+
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     getPaginationUrls,
     Pagination,
     type PaginationMeta,
 } from '@/components/ui/pagination';
-import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Deployment } from '@/types/deployment';
 import { Site } from '@/types/site';
-import { Head, router, usePage } from '@inertiajs/react';
-import { Loader2Icon, RocketIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface Props {
     server: { data: { id: number; name: string } };
@@ -30,7 +42,11 @@ interface Props {
     };
 }
 
-export default function SiteDeploymentsIndex({ server: serverProp, site: siteProp, deployments }: Props) {
+export default function SiteDeploymentsIndex({
+    server: serverProp,
+    site: siteProp,
+    deployments,
+}: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
@@ -38,21 +54,55 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
     const serverId = server?.id ?? site.server?.id;
     useServerDeploymentUpdates(Number(serverId ?? 0), site.id, ['deployments']);
     const [isDeploying, setIsDeploying] = useState(false);
+    const [rollbackTarget, setRollbackTarget] = useState<Deployment | null>(
+        null,
+    );
+    const [isRollingBack, setIsRollingBack] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
-        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
-        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
-        { title: 'Deployments', href: teamPath(`/servers/${serverId}/sites/${site.id}/deployments`) },
+        {
+            title: server?.name || site.server?.name || 'Server',
+            href: teamPath(`/servers/${serverId}`),
+        },
+        {
+            title: site.domain,
+            href: teamPath(`/servers/${serverId}/sites/${site.id}`),
+        },
+        {
+            title: 'Deployments',
+            href: teamPath(`/servers/${serverId}/sites/${site.id}/deployments`),
+        },
     ];
 
     const handleDeploy = () => {
         setIsDeploying(true);
-        router.post(teamPath(`/servers/${serverId}/sites/${site.id}/deployments`), {}, {
-            onFinish: () => {
-                setIsDeploying(false);
+        router.post(
+            teamPath(`/servers/${serverId}/sites/${site.id}/deployments`),
+            {},
+            {
+                onFinish: () => {
+                    setIsDeploying(false);
+                },
             },
-        });
+        );
+    };
+
+    const confirmRollback = () => {
+        if (!rollbackTarget) return;
+        setIsRollingBack(true);
+        router.post(
+            teamPath(
+                `/servers/${serverId}/sites/${site.id}/deployments/${rollbackTarget.id}/rollback`,
+            ),
+            {},
+            {
+                onFinish: () => {
+                    setIsRollingBack(false);
+                    setRollbackTarget(null);
+                },
+            },
+        );
     };
 
     const deploymentList = deployments.data ?? [];
@@ -61,7 +111,11 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}
+            subNavItems={getSiteSubNavItems(
+                currentTeam?.slug ?? '',
+                String(serverId ?? ''),
+                site.id,
+            )}
         >
             <Head title={`Deployments - ${site.domain}`} />
 
@@ -71,7 +125,7 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
                         <h1 className="text-2xl font-semibold tracking-tight">
                             Deployment History
                         </h1>
-                        <p className="text-muted-foreground mt-1 text-sm">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Recent deployments for this site.
                         </p>
                     </div>
@@ -93,21 +147,139 @@ export default function SiteDeploymentsIndex({ server: serverProp, site: sitePro
                     </Button>
                 </div>
 
-                <div className="space-y-4">
-                    <DeploymentList
-                        deployments={deploymentList}
-                        serverId={Number(serverId)}
-                        siteId={site.id}
+                {deploymentList.length === 0 ? (
+                    <EmptyState
+                        icon={RocketIcon}
+                        title="No deployments yet"
+                        description="Deployments will appear here once you trigger your first deployment."
                     />
-                    {(prevUrl || nextUrl) && (
-                        <Pagination
-                            prevUrl={prevUrl}
-                            nextUrl={nextUrl}
-                            meta={deployments.meta}
-                        />
-                    )}
-                </div>
+                ) : (
+                    <div className="space-y-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Commit</TableHead>
+                                    <TableHead>Triggered by</TableHead>
+                                    <TableHead>Author</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="w-[140px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {deploymentList.map((deployment) => (
+                                    <TableRow key={deployment.id}>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={deployment.status_label}
+                                                color={deployment.status_color}
+                                                pulse={
+                                                    deployment.status ===
+                                                    'running'
+                                                }
+                                            />
+                                        </TableCell>
+                                        <TableCell className="max-w-[240px]">
+                                            {deployment.commit_hash && (
+                                                <span className="mr-2 font-mono text-xs text-muted-foreground">
+                                                    {deployment.commit_hash.slice(
+                                                        0,
+                                                        7,
+                                                    )}
+                                                </span>
+                                            )}
+                                            <span className="truncate text-muted-foreground">
+                                                {deployment.commit_message ??
+                                                    '—'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {deployment.triggered_by ===
+                                            'manual'
+                                                ? 'Manual'
+                                                : deployment.triggered_by}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {deployment.commit_author ?? '—'}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {deployment.finished_at
+                                                ? format(
+                                                      new Date(
+                                                          deployment.finished_at,
+                                                      ),
+                                                      'MMM d, yyyy HH:mm',
+                                                  )
+                                                : deployment.started_at
+                                                  ? format(
+                                                        new Date(
+                                                            deployment.started_at,
+                                                        ),
+                                                        'MMM d, yyyy HH:mm',
+                                                    )
+                                                  : format(
+                                                        new Date(
+                                                            deployment.created_at,
+                                                        ),
+                                                        'MMM d, yyyy HH:mm',
+                                                    )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {deployment.rollback_available && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            setRollbackTarget(
+                                                                deployment,
+                                                            )
+                                                        }
+                                                    >
+                                                        <HistoryIcon className="h-3.5 w-3.5" />
+                                                        Rollback
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={teamPath(
+                                                            `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}`,
+                                                        )}
+                                                    >
+                                                        View
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        {(prevUrl || nextUrl) && (
+                            <Pagination
+                                prevUrl={prevUrl}
+                                nextUrl={nextUrl}
+                                meta={deployments.meta}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
+
+            <ConfirmDialog
+                open={rollbackTarget !== null}
+                onOpenChange={(open) => !open && setRollbackTarget(null)}
+                title="Roll back to this deployment?"
+                description={`This will point the site back at the code from ${rollbackTarget?.commit_hash ? `commit ${rollbackTarget.commit_hash.slice(0, 7)}` : `deployment #${rollbackTarget?.id}`} without rebuilding it. Database migrations are not reversed.`}
+                confirmLabel="Roll back"
+                variant="destructive"
+                onConfirm={confirmRollback}
+                loading={isRollingBack}
+            />
         </AppLayout>
     );
 }

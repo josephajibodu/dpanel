@@ -1,20 +1,49 @@
+import { Head, Link, router } from '@inertiajs/react';
+import { format } from 'date-fns';
+import {
+    CloudIcon,
+    EyeIcon,
+    MoreVerticalIcon,
+    PlusIcon,
+    RefreshCwIcon,
+    Trash2Icon,
+} from 'lucide-react';
+import { useState } from 'react';
+
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
-import { ProviderCard } from '@/components/provider-accounts/provider-card';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { Head, Link, router } from '@inertiajs/react';
-import { CloudIcon, PlusIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface Props {
     accounts: {
         data: ProviderAccount[];
     };
 }
+
+const providerIcons: Record<string, string> = {
+    digitalocean: '🌊',
+    hetzner: '🔴',
+    vultr: '🦅',
+};
 
 export default function ProviderAccountsIndex({ accounts }: Props) {
     const teamPath = useTeamPath();
@@ -23,7 +52,8 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Provider Accounts', href: teamPath('/provider-accounts') },
     ];
-    const [accountToDelete, setAccountToDelete] = useState<ProviderAccount | null>(null);
+    const [accountToDelete, setAccountToDelete] =
+        useState<ProviderAccount | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = (account: ProviderAccount) => {
@@ -44,6 +74,10 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
         });
     };
 
+    const handleValidate = (account: ProviderAccount) => {
+        router.post(teamPath(`/provider-accounts/${account.id}/validate`));
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Provider Accounts" />
@@ -51,8 +85,13 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Provider Accounts</h1>
-                        <p className="text-muted-foreground text-sm">Connect your cloud provider accounts to provision servers.</p>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Provider Accounts
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Connect your cloud provider accounts to provision
+                            servers.
+                        </p>
                     </div>
                     <Button asChild>
                         <Link href={teamPath('/provider-accounts/create')}>
@@ -69,7 +108,9 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         description="Connect a cloud provider account to start provisioning servers."
                         action={
                             <Button asChild>
-                                <Link href={teamPath('/provider-accounts/create')}>
+                                <Link
+                                    href={teamPath('/provider-accounts/create')}
+                                >
                                     <PlusIcon className="mr-2 h-4 w-4" />
                                     Connect Provider
                                 </Link>
@@ -77,11 +118,118 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         }
                     />
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {accounts.data.map((account) => (
-                            <ProviderCard key={account.id} account={account} onDelete={() => handleDelete(account)} />
-                        ))}
-                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Provider</TableHead>
+                                <TableHead className="text-right">
+                                    Servers
+                                </TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Validated</TableHead>
+                                <TableHead className="w-[70px]" />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {accounts.data.map((account) => (
+                                <TableRow key={account.id}>
+                                    <TableCell className="font-medium">
+                                        {account.name}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        <span className="mr-1.5">
+                                            {providerIcons[account.provider]}
+                                        </span>
+                                        {account.provider_label}
+                                    </TableCell>
+                                    <TableCell className="text-right text-muted-foreground">
+                                        {account.servers_count ?? 0}
+                                    </TableCell>
+                                    <TableCell>
+                                        <StatusBadge
+                                            status={
+                                                account.is_valid
+                                                    ? 'Connected'
+                                                    : 'Invalid'
+                                            }
+                                            color={
+                                                account.is_valid
+                                                    ? 'green'
+                                                    : 'red'
+                                            }
+                                        />
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {account.validated_at
+                                            ? format(
+                                                  new Date(
+                                                      account.validated_at,
+                                                  ),
+                                                  'MMM d, yyyy',
+                                              )
+                                            : '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={teamPath(
+                                                        `/provider-accounts/${account.id}`,
+                                                    )}
+                                                    aria-label="View provider account"
+                                                >
+                                                    <EyeIcon className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                        <span className="sr-only">
+                                                            Actions
+                                                        </span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            handleValidate(
+                                                                account,
+                                                            )
+                                                        }
+                                                    >
+                                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                        Re-validate Credentials
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            handleDelete(
+                                                                account,
+                                                            )
+                                                        }
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                        Disconnect
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 )}
             </div>
 

@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { format } from 'date-fns';
 import {
     CodeIcon,
     ExternalLinkIcon,
@@ -10,20 +11,22 @@ import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -49,6 +52,19 @@ function getProviderIcon(provider: string) {
             return '🔷';
         default:
             return '📦';
+    }
+}
+
+function getProviderUrl(provider: string) {
+    switch (provider) {
+        case 'github':
+            return 'https://github.com';
+        case 'gitlab':
+            return 'https://gitlab.com';
+        case 'bitbucket':
+            return 'https://bitbucket.org';
+        default:
+            return null;
     }
 }
 
@@ -88,6 +104,41 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
         window.location.href = `/auth/${provider}/redirect?redirect=${encodeURIComponent(teamPath('/source-control'))}`;
     };
 
+    const addProviderMenu = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button>
+                    <PlusIcon className="mr-2 h-4 w-4" />
+                    Add Provider
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                {providers.map((provider) => {
+                    const existingAccount = accounts.data.find(
+                        (acc) => acc.provider === provider.value,
+                    );
+                    return (
+                        <DropdownMenuItem
+                            key={provider.value}
+                            disabled={!!existingAccount}
+                            onClick={() =>
+                                !existingAccount &&
+                                handleConnect(provider.value)
+                            }
+                        >
+                            <span className="mr-2">
+                                {getProviderIcon(provider.value)}
+                            </span>
+                            {existingAccount
+                                ? `${provider.label} (Connected)`
+                                : `Continue with ${provider.label}`}
+                        </DropdownMenuItem>
+                    );
+                })}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Source Control" />
@@ -105,43 +156,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                             applications.
                         </p>
                     </div>
-                    {providers.length > 0 && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button>
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Add Provider
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {providers.map((provider) => {
-                                    const existingAccount = accounts.data.find(
-                                        (acc) =>
-                                            acc.provider === provider.value,
-                                    );
-                                    return (
-                                        <DropdownMenuItem
-                                            key={provider.value}
-                                            disabled={!!existingAccount}
-                                            onClick={() =>
-                                                !existingAccount &&
-                                                handleConnect(provider.value)
-                                            }
-                                        >
-                                            <span className="mr-2">
-                                                {getProviderIcon(
-                                                    provider.value,
-                                                )}
-                                            </span>
-                                            {existingAccount
-                                                ? `${provider.label} (Connected)`
-                                                : `Continue with ${provider.label}`}
-                                        </DropdownMenuItem>
-                                    );
-                                })}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                    {providers.length > 0 && addProviderMenu}
                 </div>
 
                 {accounts.data.length === 0 ? (
@@ -150,161 +165,116 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                         title="No source control providers connected"
                         description="Connect a source control provider to enable deployments from your repositories."
                         action={
-                            providers.length > 0 ? (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button>
-                                            <PlusIcon className="mr-2 h-4 w-4" />
-                                            Add Provider
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {providers.map((provider) => (
-                                            <DropdownMenuItem
-                                                key={provider.value}
-                                                onClick={() =>
-                                                    handleConnect(
-                                                        provider.value,
-                                                    )
-                                                }
-                                            >
-                                                <span className="mr-2">
-                                                    {getProviderIcon(
-                                                        provider.value,
-                                                    )}
-                                                </span>
-                                                Continue with {provider.label}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            ) : undefined
+                            providers.length > 0 ? addProviderMenu : undefined
                         }
                     />
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {accounts.data.map((account) => (
-                            <Card key={account.id} className="relative">
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-xl">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Provider</TableHead>
+                                <TableHead>Username</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Connected</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="w-[70px]" />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {accounts.data.map((account) => {
+                                const externalUrl = getProviderUrl(
+                                    account.provider,
+                                );
+                                return (
+                                    <TableRow key={account.id}>
+                                        <TableCell className="font-medium">
+                                            <span className="mr-1.5">
                                                 {getProviderIcon(
                                                     account.provider,
                                                 )}
-                                            </div>
-                                            <div>
-                                                <CardTitle>
-                                                    {account.provider_label}
-                                                </CardTitle>
-                                                <CardDescription>
-                                                    @{account.provider_username}
-                                                </CardDescription>
-                                            </div>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <MoreVerticalIcon className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                {account.provider ===
-                                                    'github' && (
-                                                    <DropdownMenuItem asChild>
-                                                        <a
-                                                            href="https://github.com"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                                                            Visit GitHub
-                                                        </a>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {account.provider ===
-                                                    'gitlab' && (
-                                                    <DropdownMenuItem asChild>
-                                                        <a
-                                                            href="https://gitlab.com"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                                                            Visit GitLab
-                                                        </a>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {account.provider ===
-                                                    'bitbucket' && (
-                                                    <DropdownMenuItem asChild>
-                                                        <a
-                                                            href="https://bitbucket.org"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                                                            Visit Bitbucket
-                                                        </a>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        handleDelete(account)
-                                                    }
-                                                    className="text-destructive focus:text-destructive"
-                                                >
-                                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                                    Disconnect
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Name
-                                        </span>
-                                        <span className="text-sm">
-                                            {account.name}
-                                        </span>
-                                    </div>
-                                    {account.email && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground">
-                                                Email
                                             </span>
-                                            <span className="text-sm">
-                                                {account.email}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Connected
-                                        </span>
-                                        <span className="text-sm">
-                                            {new Date(
-                                                account.connected_at,
-                                            ).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    {account.is_token_expired && (
-                                        <div className="rounded-lg bg-amber-50 p-2 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
-                                            <p className="text-xs font-medium">
-                                                Token expired - Please reconnect
-                                            </p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                            {account.provider_label}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            @{account.provider_username}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {account.email ?? '—'}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {format(
+                                                new Date(account.connected_at),
+                                                'MMM d, yyyy',
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {account.is_token_expired ? (
+                                                <StatusBadge
+                                                    status="Token expired"
+                                                    color="red"
+                                                />
+                                            ) : (
+                                                <StatusBadge
+                                                    status="Connected"
+                                                    color="green"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {externalUrl && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        asChild
+                                                    >
+                                                        <a
+                                                            href={externalUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            aria-label={`Visit ${account.provider_label}`}
+                                                        >
+                                                            <ExternalLinkIcon className="h-4 w-4" />
+                                                        </a>
+                                                    </Button>
+                                                )}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    account,
+                                                                )
+                                                            }
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Disconnect
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 )}
             </div>
 

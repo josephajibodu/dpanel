@@ -273,38 +273,36 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                 </div>
 
                                 {/* Databases */}
-                                <Card id="databases">
-                                    <CardHeader>
-                                        <div className="flex items-center justify-between">
-                                            <CardTitle className="flex items-center gap-2">
-                                                <ServerIcon className="h-5 w-5" />
-                                                Databases
-                                            </CardTitle>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
+                                <div id="databases" className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2">
+                                            <ServerIcon className="h-5 w-5" />
+                                            Databases
+                                        </CardTitle>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link
+                                                href={teamPath(
+                                                    `/servers/${data.id}/databases`,
+                                                )}
                                             >
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${data.id}/databases`,
-                                                    )}
-                                                >
-                                                    View databases
-                                                </Link>
-                                            </Button>
-                                        </div>
-                                        <CardDescription>
-                                            Manage databases and database users
-                                            on this server.
-                                        </CardDescription>
-                                    </CardHeader>
-                                </Card>
+                                                View databases
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                    <CardDescription>
+                                        Manage databases and database users on
+                                        this server.
+                                    </CardDescription>
+                                </div>
 
                                 {/* Recent events (optional) */}
                                 {data.actions && data.actions.length > 0 && (
-                                    <Card>
-                                        <CardHeader>
+                                    <div className="space-y-4">
+                                        <div>
                                             <CardTitle className="flex items-center gap-2">
                                                 <ActivityIcon className="h-5 w-5" />
                                                 Recent events
@@ -313,35 +311,45 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                                 Latest provisioning and
                                                 management actions.
                                             </CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2 text-sm">
-                                            {data.actions
-                                                .slice(0, 5)
-                                                .map((action) => (
-                                                    <div
-                                                        key={action.id}
-                                                        className="flex items-center justify-between rounded-md border px-3 py-2"
-                                                    >
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium">
+                                        </div>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        Action
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {data.actions
+                                                    .slice(0, 5)
+                                                    .map((action) => (
+                                                        <TableRow
+                                                            key={action.id}
+                                                        >
+                                                            <TableCell className="font-medium">
                                                                 {action.action}
-                                                            </span>
-                                                            <span className="text-xs text-muted-foreground">
+                                                            </TableCell>
+                                                            <TableCell className="text-muted-foreground">
+                                                                {action.status}
+                                                            </TableCell>
+                                                            <TableCell className="text-muted-foreground">
                                                                 {format(
                                                                     new Date(
                                                                         action.created_at,
                                                                     ),
                                                                     'MMM d, yyyy HH:mm',
                                                                 )}
-                                                            </span>
-                                                        </div>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {action.status}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                        </CardContent>
-                                    </Card>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </div>
 
