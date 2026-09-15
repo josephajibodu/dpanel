@@ -7,18 +7,27 @@ import {
     MoreVerticalIcon,
     PencilIcon,
     PlusIcon,
+    RefreshCwIcon,
     Trash2Icon,
     UsersIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CopyButton } from '@/components/copy-button';
 import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -89,6 +98,10 @@ export default function ServerDatabasesIndex({
     const [editUserOpen, setEditUserOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<DatabaseUser | null>(null);
     const [connectUser, setConnectUser] = useState<DatabaseUser | null>(null);
+    const [resetPasswordUser, setResetPasswordUser] =
+        useState<DatabaseUser | null>(null);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+    const [newPassword, setNewPassword] = useState<string | null>(null);
     const [deleteDbOpen, setDeleteDbOpen] = useState(false);
     const [deleteUserOpen, setDeleteUserOpen] = useState(false);
     const [dbToDelete, setDbToDelete] = useState<ServerDatabase | null>(null);
@@ -277,6 +290,25 @@ export default function ServerDatabasesIndex({
             onError: () =>
                 setDeletingUserIds((prev) => prev.filter((x) => x !== id)),
         });
+    };
+
+    const confirmResetPassword = () => {
+        if (!server?.id || !resetPasswordUser) return;
+        const id = resetPasswordUser.id;
+        const newPw = generatePassword();
+        setIsResettingPassword(true);
+        router.put(
+            teamPath(`/servers/${server.id}/database-users/${id}`),
+            { password: newPw },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setResetPasswordUser(null);
+                    setNewPassword(newPw);
+                },
+                onFinish: () => setIsResettingPassword(false),
+            },
+        );
     };
 
     return (
@@ -527,6 +559,16 @@ export default function ServerDatabasesIndex({
                                                             >
                                                                 <PencilIcon className="mr-2 h-4 w-4" />
                                                                 Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    setResetPasswordUser(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                                Reset password
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 className="text-destructive focus:text-destructive"
@@ -1005,6 +1047,51 @@ export default function ServerDatabasesIndex({
                 variant="destructive"
                 onConfirm={confirmDeleteUser}
             />
+
+            <ConfirmDialog
+                open={!!resetPasswordUser}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setResetPasswordUser(null);
+                    }
+                }}
+                title="Reset password"
+                description={`This generates a new password for "${resetPasswordUser?.username}" and updates it on the server immediately. Any application or client using the current password will stop working until it's updated.`}
+                confirmLabel="Reset password"
+                variant="destructive"
+                loading={isResettingPassword}
+                onConfirm={confirmResetPassword}
+            />
+
+            <Dialog
+                open={newPassword !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setNewPassword(null);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Password reset</DialogTitle>
+                        <DialogDescription>
+                            Copy the new password now. It's also always
+                            available later from the "Connect" action.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                        <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
+                            {newPassword}
+                        </code>
+                        {newPassword && (
+                            <CopyButton
+                                value={newPassword}
+                                className="shrink-0"
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {connectUser && (
                 <ConnectionInfoDialog

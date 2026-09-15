@@ -147,6 +147,32 @@ it('updates a database user and dispatches job', function () {
     \Illuminate\Support\Facades\Queue::assertPushed(UpdateDatabaseUserJob::class);
 });
 
+it('resets a database user password without touching other fields', function () {
+    \Illuminate\Support\Facades\Queue::fake();
+
+    $databaseUser = DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'databases' => ['db1'],
+        'permission' => 'readonly',
+        'host' => '127.0.0.1',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/database-users/{$databaseUser->id}", [
+            'password' => 'brand-new-password-123',
+        ]);
+
+    $response->assertRedirect();
+
+    $databaseUser->refresh();
+    expect($databaseUser->password)->toBe('brand-new-password-123')
+        ->and($databaseUser->databases)->toBe(['db1'])
+        ->and($databaseUser->permission)->toBe('readonly')
+        ->and($databaseUser->host)->toBe('127.0.0.1');
+
+    \Illuminate\Support\Facades\Queue::assertPushed(UpdateDatabaseUserJob::class);
+});
+
 it('dispatches job to destroy a database user', function () {
     \Illuminate\Support\Facades\Queue::fake();
 
