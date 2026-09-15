@@ -65,19 +65,14 @@ export default function ProviderAccountShow({ account }: Props) {
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">
-                                {data.name}
-                            </h1>
-                            <StatusBadge
-                                status={data.is_valid ? 'Connected' : 'Invalid'}
-                                color={data.is_valid ? 'green' : 'red'}
-                            />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            {data.provider_label}
-                        </p>
+                    <div className="flex flex-1 items-center gap-3">
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            {data.name}
+                        </h1>
+                        <StatusBadge
+                            status={data.is_valid ? 'Connected' : 'Invalid'}
+                            color={data.is_valid ? 'green' : 'red'}
+                        />
                     </div>
                     <Button variant="outline" onClick={handleValidate}>
                         <RefreshCwIcon className="mr-2 h-4 w-4" />
