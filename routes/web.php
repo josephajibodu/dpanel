@@ -119,6 +119,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('servers.setup');
             Route::post('servers/{server}/test-connection', [ServerController::class, 'testConnection'])
                 ->name('servers.test-connection');
+            Route::post('servers/{server}/metrics/refresh', [ServerController::class, 'refreshMetrics'])
+                ->name('servers.metrics.refresh');
             Route::post('servers/{server}/provision', [ServerController::class, 'provision'])
                 ->name('servers.provision');
             Route::post('servers/{server}/restart', [ServerController::class, 'restart'])

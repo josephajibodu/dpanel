@@ -14,6 +14,7 @@ use App\Http\Requests\StoreCustomServerRequest;
 use App\Http\Requests\StoreServerRequest;
 use App\Http\Resources\ProviderAccountResource;
 use App\Http\Resources\ServerResource;
+use App\Jobs\CollectServerMetricsJob;
 use App\Jobs\InstallStackJob;
 use App\Jobs\RestartServiceJob;
 use App\Jobs\TestServerConnectionJob;
@@ -159,6 +160,15 @@ class ServerController extends Controller
         return back();
     }
 
+    public function refreshMetrics(Team $team, Server $server): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        CollectServerMetricsJob::dispatch($server);
+
+        return back();
+    }
+
     public function provision(Team $team, Server $server): RedirectResponse
     {
         $this->authorize('update', $server);
@@ -211,6 +221,20 @@ class ServerController extends Controller
                     'created_at' => $log->created_at->toIso8601String(),
                 ])
                 : [],
+            'latestMetric' => Inertia::defer(function () use ($server) {
+                $metric = $server->metrics()->latest()->first();
+
+                return $metric ? [
+                    'load' => $metric->load,
+                    'memory_total' => $metric->memory_total,
+                    'memory_used' => $metric->memory_used,
+                    'memory_free' => $metric->memory_free,
+                    'disk_total' => $metric->disk_total,
+                    'disk_used' => $metric->disk_used,
+                    'disk_free' => $metric->disk_free,
+                    'collected_at' => $metric->created_at->toIso8601String(),
+                ] : null;
+            }),
         ]);
     }
 

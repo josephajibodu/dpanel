@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CollectAllServerMetricsJob;
 use App\Jobs\IssueWildcardCertificateJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -14,3 +15,6 @@ Schedule::command('horizon:snapshot')->everyFiveMinutes();
 // Issue/renew the free-domain wildcard certificate. Idempotent — the issuer
 // short-circuits when the existing cert isn't due for renewal.
 Schedule::job(new IssueWildcardCertificateJob)->dailyAt('03:30');
+
+// Poll CPU/memory/disk stats for every active server.
+Schedule::job(new CollectAllServerMetricsJob)->everyTenMinutes();

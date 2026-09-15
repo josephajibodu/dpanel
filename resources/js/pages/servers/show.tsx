@@ -1,10 +1,11 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
+import { Deferred, Head, Link, useForm, usePage } from '@inertiajs/react';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
     HardDriveIcon,
     Loader2Icon,
     PlusIcon,
+    RefreshCwIcon,
 } from 'lucide-react';
 
 import { DeploymentLog } from '@/components/deployments/deployment-log';
@@ -19,6 +20,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Stat } from '@/components/ui/stat';
 import { StatGroup } from '@/components/ui/stat-group';
 import {
@@ -31,11 +33,13 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { type DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { useServerMetrics } from '@/hooks/use-server-metrics';
 import { useServerProvisioningLogs } from '@/hooks/use-server-provisioning-logs';
 import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type ServerMetric } from '@/types/metric';
 import { Server } from '@/types/server';
 import { Site } from '@/types/site';
 
@@ -56,9 +60,14 @@ interface Props {
         message: string;
         created_at: string;
     }>;
+    latestMetric?: ServerMetric | null;
 }
 
-export default function ServersShow({ server, provisioningLogs }: Props) {
+export default function ServersShow({
+    server,
+    provisioningLogs,
+    latestMetric,
+}: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const { server: data, connectionState } = useServerProvisioningUpdates(
@@ -158,7 +167,15 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                             </div>
                         )}
 
-                        <ServerMetricsOverview serverId={data.id} />
+                        <Deferred
+                            data="latestMetric"
+                            fallback={<ServerMetricsOverviewSkeleton />}
+                        >
+                            <ServerMetricsOverview
+                                serverId={data.id}
+                                initialMetric={latestMetric ?? null}
+                            />
+                        </Deferred>
 
                         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
                             {/* Left column: Sites & databases, SSH, events */}
@@ -489,13 +506,17 @@ function DetailRow({ label, value, valueClassName }: DetailRowProps) {
     );
 }
 
-interface ServerMetricsOverviewProps {
-    serverId: number;
+function formatBytes(bytes: number): string {
+    const gb = bytes / 1024 ** 3;
+
+    if (gb >= 1) {
+        return `${gb.toFixed(1)} GB`;
+    }
+
+    return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
 }
 
-function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
-    const teamPath = useTeamPath();
-
+function ServerMetricsOverviewSkeleton() {
     return (
         <section className="space-y-3">
             <div>
@@ -508,25 +529,121 @@ function ServerMetricsOverview({ serverId }: ServerMetricsOverviewProps) {
                 <div className="grid gap-2 md:grid-cols-3">
                     {(['CPU load', 'Memory usage', 'Disk usage'] as const).map(
                         (label) => (
-                            <Stat
+                            <div
                                 key={label}
-                                bordered
-                                label={label}
-                                value="N/A"
-                                hint="No data yet"
-                                action={
-                                    <Link
-                                        href={teamPath(
-                                            `/servers/${serverId}/observe`,
-                                        )}
-                                        className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                    >
-                                        View
-                                    </Link>
-                                }
-                            />
+                                className="rounded-lg border bg-card p-4 shadow-md shadow-black/5 dark:shadow-black/20"
+                            >
+                                <p className="text-sm text-muted-foreground">
+                                    {label}
+                                </p>
+                                <Skeleton className="mt-2 h-8 w-16" />
+                                <Skeleton className="mt-2 h-3 w-24" />
+                            </div>
                         ),
                     )}
+                </div>
+            </StatGroup>
+        </section>
+    );
+}
+
+interface ServerMetricsOverviewProps {
+    serverId: number;
+    initialMetric: ServerMetric | null;
+}
+
+function ServerMetricsOverview({
+    serverId,
+    initialMetric,
+}: ServerMetricsOverviewProps) {
+    const teamPath = useTeamPath();
+    const { metric, isRefreshing, refresh } = useServerMetrics(
+        serverId,
+        initialMetric,
+    );
+
+    const memoryPercent = metric
+        ? Math.round((metric.memory_used / metric.memory_total) * 100)
+        : null;
+    const diskPercent = metric
+        ? Math.round((metric.disk_used / metric.disk_total) * 100)
+        : null;
+
+    const stats = [
+        {
+            label: 'CPU load',
+            value: metric ? metric.load.toFixed(2) : 'N/A',
+            hint: metric ? '1-minute load average' : 'No data yet',
+        },
+        {
+            label: 'Memory usage',
+            value: memoryPercent !== null ? `${memoryPercent}%` : 'N/A',
+            hint: metric
+                ? `${formatBytes(metric.memory_used)} / ${formatBytes(metric.memory_total)}`
+                : 'No data yet',
+        },
+        {
+            label: 'Disk usage',
+            value: diskPercent !== null ? `${diskPercent}%` : 'N/A',
+            hint: metric
+                ? `${formatBytes(metric.disk_used)} / ${formatBytes(metric.disk_total)}`
+                : 'No data yet',
+        },
+    ];
+
+    return (
+        <section className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+                <div>
+                    <h2 className="text-base font-semibold">Overview</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Here you can see an overview of your server.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {metric && (
+                        <span className="text-xs text-muted-foreground">
+                            Updated{' '}
+                            {formatDistanceToNow(
+                                new Date(metric.collected_at),
+                                { addSuffix: true },
+                            )}
+                        </span>
+                    )}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={refresh}
+                        disabled={isRefreshing}
+                    >
+                        <RefreshCwIcon
+                            className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                        />
+                        Refresh
+                    </Button>
+                </div>
+            </div>
+            <StatGroup>
+                <div className="grid gap-2 md:grid-cols-3">
+                    {stats.map((stat) => (
+                        <Stat
+                            key={stat.label}
+                            bordered
+                            label={stat.label}
+                            value={stat.value}
+                            hint={stat.hint}
+                            action={
+                                <Link
+                                    href={teamPath(
+                                        `/servers/${serverId}/observe`,
+                                    )}
+                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                >
+                                    View
+                                </Link>
+                            }
+                        />
+                    ))}
                 </div>
             </StatGroup>
         </section>
