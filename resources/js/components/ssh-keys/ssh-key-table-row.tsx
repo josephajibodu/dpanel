@@ -1,11 +1,21 @@
 import { format } from 'date-fns';
-import { InfoIcon, MoreVerticalIcon, ServerIcon, Trash2Icon, UploadIcon } from 'lucide-react';
+import {
+    InfoIcon,
+    MoreVerticalIcon,
+    ServerIcon,
+    Trash2Icon,
+    UploadIcon,
+} from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { type SshKey, type SshKeyServerStatus } from '@/types/ssh-key';
+import { type SshKey } from '@/types/ssh-key';
 
 interface SshKeyTableRowProps {
     sshKey: SshKey;
@@ -14,15 +24,12 @@ interface SshKeyTableRowProps {
     onDelete: () => void;
 }
 
-const statusVariants: Record<SshKeyServerStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    pending: 'secondary',
-    syncing: 'default',
-    synced: 'default',
-    revoking: 'secondary',
-    failed: 'destructive',
-};
-
-export function SshKeyTableRow({ sshKey, onOpenDetails, onSync, onDelete }: SshKeyTableRowProps) {
+export function SshKeyTableRow({
+    sshKey,
+    onOpenDetails,
+    onSync,
+    onDelete,
+}: SshKeyTableRowProps) {
     const count = sshKey.servers_count ?? 0;
     const serverLabel = count === 1 ? 'server' : 'servers';
 
@@ -41,25 +48,14 @@ export function SshKeyTableRow({ sshKey, onOpenDetails, onSync, onDelete }: SshK
         >
             <TableCell className="font-medium">{sshKey.name}</TableCell>
             <TableCell>
-                <div className="flex min-w-0 flex-col gap-1.5">
-                    <div className="text-muted-foreground flex items-center gap-1 text-sm">
-                        <ServerIcon className="h-4 w-4 shrink-0" />
-                        <span>
-                            {count} {serverLabel}
-                        </span>
-                    </div>
-                    {sshKey.servers && sshKey.servers.length > 0 && (
-                        <div className="flex max-w-sm flex-wrap gap-1">
-                            {sshKey.servers.map((server) => (
-                                <Badge key={server.id} variant={statusVariants[server.status]} className="text-xs">
-                                    {server.name}
-                                </Badge>
-                            ))}
-                        </div>
-                    )}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <ServerIcon className="h-4 w-4 shrink-0" />
+                    <span>
+                        {count} {serverLabel}
+                    </span>
                 </div>
             </TableCell>
-            <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
                 {format(new Date(sshKey.created_at), 'MMM d, yyyy')}
             </TableCell>
             <TableCell
@@ -83,7 +79,10 @@ export function SshKeyTableRow({ sshKey, onOpenDetails, onSync, onDelete }: SshK
                             <UploadIcon className="mr-2 h-4 w-4" />
                             Sync to Servers
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                        <DropdownMenuItem
+                            onClick={onDelete}
+                            className="text-destructive"
+                        >
                             <Trash2Icon className="mr-2 h-4 w-4" />
                             Delete Key
                         </DropdownMenuItem>
