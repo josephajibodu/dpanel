@@ -3,97 +3,131 @@
 
 This checklist covers what a deployment platform needs beyond basic provisioning, so that Flitops does not become the weak link under a billing system that depends on it running correctly every hour of every day.
 
----
-
-## 1. Provisioning (foundation — likely already solid)
-- [ ] Server creation (VPS spin-up)
-- [ ] Website/site setup on a server
-- [ ] Database creation
-- [ ] SSL certificate provisioning
+Last reviewed: 2026-09-14, after a real incident (an expired wildcard certificate broke a live site's HTTPS because Flitops's own scheduler had never actually run). Ordered by priority based on what that incident revealed, not the original draft order.
 
 ---
 
-## 2. Deployment Mechanics
-- [ ] Zero-downtime deploys via atomic symlink swap
-- [ ] One-click **rollback** to the previous release if a deploy breaks something
-- [ ] Deploy history/log (what was deployed, when, by whom)
-- [ ] Ability to run pre/post-deploy hooks (migrations, cache clear, queue restart)
+## 0. Control Plane Resilience (found 2026-09-14 — highest priority)
+Flitops itself currently runs as a foreground dev process on the operator's laptop (`composer run dev`, no process supervisor). A sleep, reboot, network drop, or closed terminal kills every queue worker silently — no deploys, no cert renewals, no provisioning — with nothing to alert anyone. This undermines every other item below, since they all depend on Flitops's own background jobs actually running.
+
+- [ ] Run the stack under a supervisor (pm2, supervisord, etc.) so a crash restarts it automatically
+- [ ] Move Flitops itself onto an always-on server, with Horizon under systemd
+- [ ] Confirm `php artisan schedule:run` is wired into real system cron on wherever Flitops ends up running (`* * * * * cd {path} && php artisan schedule:run`) — this was found missing and is what let the wildcard cert renewal job never fire
+- [ ] After any code deploy, restart queue workers so they pick up new code — see item 1 below, this needs to become part of the deploy script, not a manual step
 
 ---
 
-## 3. Process & Queue Management
-- [ ] Supervisor-style process manager for queue workers
-- [ ] Workers auto-restart on crash
-- [ ] Dashboard visibility into worker status (running/stopped/crashed)
-- [ ] Access to worker logs without SSH
+## 1. Deploy script doesn't restart queue workers (found 2026-09-14)
+`ProjectType::laravelDeployScript()` runs composer/npm/migrate/cache commands but never `artisan queue:restart` or `artisan horizon:terminate`. PHP queue workers cache job/listener code in memory and don't hot-reload — every deploy of any queue-using app (Bouclay included, and a self-hosted Flitops especially) silently keeps running stale code until someone manually restarts workers. This is exactly the bug that made a deployment's commit message appear one deploy behind.
 
-*Why it matters: Bouclay's webhook processing and dunning retries run through Laravel queues continuously. A silently dead worker means silently failed billing.*
+- [ ] Add a queue-worker restart step to the default deploy script(s)
 
 ---
 
-## 4. Environment & Secrets Management
-- [ ] Per-site environment variable storage
-- [ ] Secrets encrypted at rest
-- [ ] Easy update of env vars without manual SSH + file editing
+## 2. Provisioning (foundation) — done
+- [x] Server creation (VPS spin-up)
+- [x] Website/site setup on a server
+- [x] Database creation — MySQL and PostgreSQL both fully wired end-to-end (provisioning, CRUD actions, `.env` templating, UI selection); confirmed via audit 2026-09-14
+- [x] SSL certificate provisioning
+
+---
+
+## 3. Deployment Mechanics — done (2026-09-14)
+- [x] Zero-downtime deploys via atomic symlink swap (releases/`current` pattern)
+- [x] One-click rollback to the previous release if a deploy breaks something
+- [x] Deploy history/log (what was deployed, when, by whom)
+- [x] Ability to run pre/post-deploy hooks (migrations, cache clear — queue restart still missing, see item 1)
+
+---
+
+## 4. Process & Queue Management — done (pre-existing)
+- [x] Supervisor-style process manager for queue workers
+- [x] Workers auto-restart on crash (supervisord `autorestart`)
+- [x] Dashboard visibility into worker status (running/stopped/crashed)
+- [x] Access to worker logs without SSH — per-worker stdout log fetch exists; general app/server logs do not, see item 8
+
+---
+
+## 5. Environment & Secrets Management — mostly done
+- [x] Per-site environment variable storage
+- [x] Secrets encrypted at rest
+- [x] Easy update of env vars without manual SSH + file editing
 - [ ] Audit trail of who changed what env var and when
 
 *Why it matters: Nomba/Paystack/Flutterwave API keys and DB credentials live here. This is the most sensitive layer of the whole stack.*
 
 ---
 
-## 5. Scheduled Tasks (Cron)
-- [ ] Laravel scheduler cron entry configured automatically per site
-- [ ] **Monitoring that the scheduler is actually firing** (not just that the server is up)
+## 6. Database Access & Tooling (new, requested 2026-09-14)
+- [ ] A place in the UI to copy a database's connection string/credentials for use in DB clients (TablePlus, DBeaver, Postico, etc.). All underlying data already exists (`ServerDatabase`, `DatabaseUser`, `Server.ip_address`/`ssh_port`) — this is a UI-only feature, not new backend plumbing. Likely pairs with SSH-tunnel connection details (server IP, SSH user/port) rather than exposing the DB port directly.
+- [ ] (optional, later) in-app read-only DB query browser — noted, not prioritized
+
+---
+
+## 7. Scheduled Tasks (Cron)
+- [x] Laravel scheduler cron entry configured automatically per site (site-level cron jobs work correctly)
+- [ ] Monitoring that Flitops's own scheduler is actually firing (not just that the server is up) — root cause of the incident; see Control Plane Resilience above
 - [ ] Alert if scheduled tasks stop running
 
-*Why it matters: If the scheduler silently stops, dunning retries and trial expirations silently stop with it — and nobody notices until customers complain.*
+*Why it matters: if the scheduler silently stops, dunning retries and trial expirations silently stop with it — and nobody notices until customers complain. This already happened once, to Flitops's own cert renewal.*
 
 ---
 
-## 6. Monitoring & Alerting
-- [ ] Basic uptime checks (is the server/site reachable)
-- [ ] Application-level health checks (is the queue backed up, is the DB reachable)
-- [ ] Alerts to phone/Slack/email on failure — not just a dashboard you have to check
-- [ ] Historical uptime/incident log
-
-*Why it matters: A day of silent failure on Bouclay means a day of failed payments nobody caught.*
-
----
-
-## 7. Backups
-- [ ] Automated, scheduled database backups
-- [ ] One-click restore
-- [ ] Backup verification (confirm backups are actually restorable, not just "completed")
-- [ ] Off-server backup storage (not just on the same VPS)
-
-*Why it matters: Bouclay's database is customers' billing history and subscription state. This is not recoverable data if lost.*
-
----
-
-## 8. SSL Renewal Reliability
-- [ ] Initial provisioning (already have this)
-- [ ] **Confirmed auto-renewal** actually fires months later, not just configured
+## 8. SSL Renewal Reliability — partially done
+- [x] Initial provisioning
+- [x] Self-healing safety net: a stale/expired wildcard certificate is now renewed (or safely falls back to a still-valid one) automatically the moment a new site is provisioned, instead of blindly installing whatever's on record (fixed 2026-09-14)
+- [ ] Confirmed auto-renewal actually fires reliably on schedule — depends on Control Plane Resilience above (item 0)
 - [ ] Alert before expiry if renewal fails
+- [ ] SSL expiry visible in the UI + manual "Renew SSL" action — in progress in a separate session (task_7340b16c) as of 2026-09-14
 
-*Why it matters: A silently expired cert breaks every incoming webhook from Nomba/Stripe with no warning — this is a subtle, high-impact failure mode.*
+*Why it matters: a silently expired cert breaks every incoming webhook from Nomba/Stripe with no warning — this is a subtle, high-impact failure mode, and the one that already happened.*
 
 ---
 
-## 9. Log Access
+## 9. Log Access — not done
 - [ ] Application logs visible from dashboard
 - [ ] Server logs visible from dashboard
 - [ ] Searchable/filterable logs (not just a raw tail)
 - [ ] No SSH required for routine debugging
 
+There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` columns) that looks scaffolded for exactly this and was never built out — reuse it rather than starting fresh.
+
 ---
 
-## 10. Multi-Environment Support
+## 10. Backups — not done at all
+- [ ] Automated, scheduled database backups
+- [ ] One-click restore
+- [ ] Backup verification (confirm backups are actually restorable, not just "completed")
+- [ ] Off-server backup storage (not just on the same VPS)
+
+Confirmed 2026-09-14: no backup/restore action exists anywhere in the codebase, for either MySQL or PostgreSQL.
+
+*Why it matters: Bouclay's database is customers' billing history and subscription state. This is not recoverable data if lost.*
+
+---
+
+## 11. Monitoring & Alerting — not done
+- [ ] Basic uptime checks (is the server/site reachable)
+- [ ] Application-level health checks (is the queue backed up, is the DB reachable)
+- [ ] Alerts to phone/Slack/email on failure — not just a dashboard you have to check
+- [ ] Historical uptime/incident log
+
+*Why it matters: a day of silent failure on Bouclay means a day of failed payments nobody caught.*
+
+---
+
+## 12. Multi-Environment Support — most deferrable, unchanged
 - [ ] Staging environment that mirrors production
 - [ ] Ability to test billing logic changes safely before touching real subscriptions/money
 - [ ] Easy promotion path from staging to production
 
 ---
 
-## How to use this
+## Also fixed 2026-09-14 (housekeeping, not originally on this list)
+- Site creation no longer fails when Cloudflare reports a DNS record already exists (now reused instead of erroring).
+- Site deletion now correctly cleans up per-domain SSL certificate directories, nginx snippet directories, and workers/cron jobs tied to the site — all three were previously silently orphaned on the server.
 
-Go through each item against Flitops as it exists today. Anything unchecked is a gap — prioritize roughly in the order above, since deployment mechanics and process/queue management are the most likely to cause an actual billing incident if missing, while multi-environment support is the most deferrable.
+---
+
+## How to use this
+Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. Items 5, 9, and 10 (audit trail, log access, backups) are the largest remaining real gaps. Item 12 stays last; it's the most deferrable by a wide margin.
