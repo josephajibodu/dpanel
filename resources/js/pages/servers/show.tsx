@@ -368,11 +368,11 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                                             />
                                             <DetailRow
                                                 label="Size"
-                                                value={data.size}
+                                                value={data.size || '—'}
                                             />
                                             <DetailRow
                                                 label="Region"
-                                                value={data.region}
+                                                value={data.region || '—'}
                                             />
                                             <DetailRow
                                                 label="SSH port"
