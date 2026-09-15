@@ -2,6 +2,7 @@ import { Deferred, Head, Link, useForm, usePage } from '@inertiajs/react';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
+    DatabaseIcon,
     HardDriveIcon,
     Loader2Icon,
     PlusIcon,
@@ -23,6 +24,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Stat } from '@/components/ui/stat';
 import { StatGroup } from '@/components/ui/stat-group';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -40,13 +42,14 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type ServerMetric } from '@/types/metric';
-import { Server } from '@/types/server';
+import { Server, ServerDatabase } from '@/types/server';
 import { Site } from '@/types/site';
 
 interface Props {
     server: {
         data: Server & {
             sites?: Site[];
+            databases?: ServerDatabase[];
             actions?: Array<{
                 id: number;
                 action: string;
@@ -74,6 +77,7 @@ export default function ServersShow({
         server.data,
     );
     const sites = data.sites ?? [];
+    const databases = data.databases ?? [];
     const isProvisioningLifecycle = [
         'pending',
         'creating',
@@ -299,7 +303,7 @@ export default function ServersShow({
                                                     `/servers/${data.id}/databases`,
                                                 )}
                                             >
-                                                View databases
+                                                View All
                                             </Link>
                                         </Button>
                                     </div>
@@ -307,6 +311,51 @@ export default function ServersShow({
                                         Manage databases and database users on
                                         this server.
                                     </CardDescription>
+                                    {databases.length === 0 ? (
+                                        <EmptyState
+                                            bordered
+                                            icon={DatabaseIcon}
+                                            title="No databases on this server yet"
+                                        />
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Name
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Charset
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Status
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {databases.map((db) => (
+                                                        <TableRow key={db.id}>
+                                                            <TableCell className="font-mono font-medium">
+                                                                {db.name}
+                                                            </TableCell>
+                                                            <TableCell className="text-sm text-muted-foreground">
+                                                                {db.charset ??
+                                                                    '—'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <AutoStatusBadge
+                                                                    status={
+                                                                        db.status
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Recent events (optional) */}

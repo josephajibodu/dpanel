@@ -207,6 +207,7 @@ class ServerController extends Controller
         $server->load([
             'providerAccount:id,ulid,name,provider,is_valid,validated_at,created_at,updated_at',
             'sites' => fn ($q) => $q->with('latestDeployment')->latest(),
+            'databases' => fn ($q) => $q->latest()->limit(5),
             'actions' => fn ($q) => $q->latest()->limit(10),
         ]);
 

@@ -53,6 +53,7 @@ class ServerResource extends JsonResource
             'ssh_port' => $this->ssh_port,
             'sites_count' => $this->whenCounted('sites'),
             'sites' => SiteResource::collection($this->whenLoaded('sites')),
+            'databases' => ServerDatabaseResource::collection($this->whenLoaded('databases')),
             'provisioned_at' => $this->provisioned_at?->toIso8601String(),
             'last_ssh_connection_at' => $this->last_ssh_connection_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
