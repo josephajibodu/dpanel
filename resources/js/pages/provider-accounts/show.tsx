@@ -1,14 +1,23 @@
+import { Head, Link, router } from '@inertiajs/react';
+import { format } from 'date-fns';
+import { ArrowLeftIcon, RefreshCwIcon, ServerIcon } from 'lucide-react';
+
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Stat } from '@/components/ui/stat';
+import { StatGroup } from '@/components/ui/stat-group';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { Head, Link, router } from '@inertiajs/react';
-import { format } from 'date-fns';
-import { ArrowLeftIcon, CloudIcon, RefreshCwIcon, ServerIcon } from 'lucide-react';
 
 interface Server {
     id: number;
@@ -56,10 +65,17 @@ export default function ProviderAccountShow({ account }: Props) {
                     </Button>
                     <div className="flex-1">
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-semibold tracking-tight">{data.name}</h1>
-                            <StatusBadge status={data.is_valid ? 'Connected' : 'Invalid'} color={data.is_valid ? 'green' : 'red'} />
+                            <h1 className="text-2xl font-semibold tracking-tight">
+                                {data.name}
+                            </h1>
+                            <StatusBadge
+                                status={data.is_valid ? 'Connected' : 'Invalid'}
+                                color={data.is_valid ? 'green' : 'red'}
+                            />
                         </div>
-                        <p className="text-muted-foreground text-sm">{data.provider_label}</p>
+                        <p className="text-sm text-muted-foreground">
+                            {data.provider_label}
+                        </p>
                     </div>
                     <Button variant="outline" onClick={handleValidate}>
                         <RefreshCwIcon className="mr-2 h-4 w-4" />
@@ -67,39 +83,41 @@ export default function ProviderAccountShow({ account }: Props) {
                     </Button>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Provider</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <CloudIcon className="h-5 w-5" />
-                                {data.provider_label}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Servers</CardDescription>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <ServerIcon className="h-5 w-5" />
-                                {data.servers_count ?? 0}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Last Validated</CardDescription>
-                            <CardTitle className="text-lg">
-                                {data.validated_at ? format(new Date(data.validated_at), 'MMM d, yyyy HH:mm') : 'Never'}
-                            </CardTitle>
-                        </CardHeader>
-                    </Card>
-                </div>
+                <StatGroup>
+                    <div className="grid gap-2 md:grid-cols-3">
+                        <Stat
+                            bordered
+                            label="Provider"
+                            value={data.provider_label}
+                            valueClassName="text-lg"
+                        />
+                        <Stat
+                            bordered
+                            label="Servers"
+                            value={data.servers_count ?? 0}
+                        />
+                        <Stat
+                            bordered
+                            label="Last Validated"
+                            value={
+                                data.validated_at
+                                    ? format(
+                                          new Date(data.validated_at),
+                                          'MMM d, yyyy HH:mm',
+                                      )
+                                    : 'Never'
+                            }
+                            valueClassName="text-lg"
+                        />
+                    </div>
+                </StatGroup>
 
                 <Card>
                     <CardHeader>
                         <CardTitle>Servers</CardTitle>
-                        <CardDescription>Servers provisioned using this provider account.</CardDescription>
+                        <CardDescription>
+                            Servers provisioned using this provider account.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {data.servers && data.servers.length > 0 ? (
@@ -110,17 +128,29 @@ export default function ProviderAccountShow({ account }: Props) {
                                         className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <ServerIcon className="text-muted-foreground h-5 w-5" />
+                                            <ServerIcon className="h-5 w-5 text-muted-foreground" />
                                             <div>
-                                                <p className="font-medium">{server.name}</p>
-                                                <p className="text-muted-foreground text-sm">
-                                                    {server.ip_address || 'No IP yet'} • {server.region}
+                                                <p className="font-medium">
+                                                    {server.name}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {server.ip_address ||
+                                                        'No IP yet'}{' '}
+                                                    • {server.region}
                                                 </p>
                                             </div>
                                         </div>
                                         <StatusBadge
                                             status={server.status_label}
-                                            color={server.status_color as 'gray' | 'blue' | 'yellow' | 'green' | 'red' | 'orange'}
+                                            color={
+                                                server.status_color as
+                                                    | 'gray'
+                                                    | 'blue'
+                                                    | 'yellow'
+                                                    | 'green'
+                                                    | 'red'
+                                                    | 'orange'
+                                            }
                                         />
                                     </div>
                                 ))}

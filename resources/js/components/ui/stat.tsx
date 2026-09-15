@@ -11,6 +11,9 @@ interface StatProps {
     /** Wraps the cell in its own bordered, shadowed box, for a grid of standalone tiles. */
     bordered?: boolean;
     className?: string;
+    /** Override the value's default `text-2xl font-semibold` — e.g. for a longer text value
+     *  (a name, a date) that shouldn't compete with a short glanceable number. */
+    valueClassName?: string;
 }
 
 export function Stat({
@@ -21,6 +24,7 @@ export function Stat({
     action,
     bordered = false,
     className,
+    valueClassName,
 }: StatProps) {
     return (
         <div
@@ -39,6 +43,7 @@ export function Stat({
                 className={cn(
                     'text-2xl font-semibold',
                     tone === 'warning' && 'text-destructive',
+                    valueClassName,
                 )}
             >
                 {value}
