@@ -1,5 +1,6 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
+    DatabaseBackupIcon,
     EyeIcon,
     EyeOffIcon,
     LinkIcon,
@@ -400,25 +401,53 @@ export default function ServerDatabasesIndex({
                                                     />
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={isDeleting}
-                                                        onClick={() => {
-                                                            if (!isDeleting) {
-                                                                setDbToDelete(
-                                                                    db,
-                                                                );
-                                                                setDeleteDbOpen(
-                                                                    true,
-                                                                );
-                                                            }
-                                                        }}
-                                                        aria-label="Delete database"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                disabled={
+                                                                    isDeleting
+                                                                }
+                                                            >
+                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                                <span className="sr-only">
+                                                                    Actions
+                                                                </span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${server.id}/databases/${db.id}/backups`,
+                                                                    )}
+                                                                >
+                                                                    <DatabaseBackupIcon className="mr-2 h-4 w-4" />
+                                                                    Backups
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={() => {
+                                                                    setDbToDelete(
+                                                                        db,
+                                                                    );
+                                                                    setDeleteDbOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         );
