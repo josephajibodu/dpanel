@@ -95,15 +95,15 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 
 ---
 
-## 10. Backups — not done at all
-- [ ] Automated, scheduled database backups
-- [ ] One-click restore
-- [ ] Backup verification (confirm backups are actually restorable, not just "completed")
-- [ ] Off-server backup storage (not just on the same VPS)
-
-Confirmed 2026-09-14: no backup/restore action exists anywhere in the codebase, for either MySQL or PostgreSQL.
+## 10. Backups — done (2026-09-15)
+- [x] Automated, scheduled database backups — per-database schedule (hourly/daily/weekly), fanned out hourly via `CollectDueBackupsJob` the same way server metrics polling works
+- [x] One-click restore — gated behind typing the database name to confirm, since it overwrites live data
+- [x] Backup verification (confirm backups are actually restorable, not just "completed") — every backup is imported into a throwaway scratch database on the same server, then dropped, before being marked completed
+- [x] Off-server backup storage (not just on the same VPS) — new per-team "Storage Providers" (Cloudflare R2 / S3, bring-your-own-credentials, same model as `ProviderAccount`); the dump streams directly from the managed server to the bucket via the AWS CLI (adapted from Laravel Forge's own `backup.sh`), never passing through the Flitops app server
 
 *Why it matters: Bouclay's database is customers' billing history and subscription state. This is not recoverable data if lost.*
+
+**Not yet done, deliberately out of scope for this pass:** alerting/monitoring beyond a single failure email notification (that's item 11), cross-server/cross-database restore (v1 restores in place only), incremental/differential backups (full dumps only).
 
 ---
 
@@ -131,4 +131,4 @@ Confirmed 2026-09-14: no backup/restore action exists anywhere in the codebase, 
 ---
 
 ## How to use this
-Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. Items 5, 9, and 10 (audit trail, log access, backups) are the largest remaining real gaps. Item 12 stays last; it's the most deferrable by a wide margin.
+Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. Items 5 and 9 (audit trail, log access) are the largest remaining real gaps now that backups (item 10) are done. Item 12 stays last; it's the most deferrable by a wide margin.
