@@ -1,6 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
 import {
-    ClockIcon,
     FileTextIcon,
     Loader2Icon,
     MoreVerticalIcon,
@@ -445,10 +444,7 @@ export function ProcessesPanel({
                             {workers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={showSiteColumn ? 7 : 6}>
-                                        <EmptyState
-                                            icon={PowerIcon}
-                                            title="No workers yet"
-                                        />
+                                        <EmptyState title="No workers yet" />
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -636,10 +632,7 @@ export function ProcessesPanel({
                             {cronJobs.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={showSiteColumn ? 6 : 5}>
-                                        <EmptyState
-                                            icon={ClockIcon}
-                                            title="No cron jobs yet"
-                                        />
+                                        <EmptyState title="No cron jobs yet" />
                                     </TableCell>
                                 </TableRow>
                             ) : (

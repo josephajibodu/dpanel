@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    CodeIcon,
     ExternalLinkIcon,
     MoreVerticalIcon,
     PlusIcon,
@@ -161,7 +160,6 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
 
                 {accounts.data.length === 0 ? (
                     <EmptyState
-                        icon={CodeIcon}
                         title="No source control providers connected"
                         description="Connect a source control provider to enable deployments from your repositories."
                         action={

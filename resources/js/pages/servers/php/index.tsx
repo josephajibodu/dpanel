@@ -1,5 +1,4 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { CodeIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -389,7 +388,6 @@ export default function ServerPhpIndex({
                                     <TableRow>
                                         <TableCell colSpan={4}>
                                             <EmptyState
-                                                icon={CodeIcon}
                                                 title="No PHP versions detected"
                                                 description="Install one below or ensure the server is connected."
                                             />

@@ -21,12 +21,6 @@ class StorageProviderController extends Controller
 
         return Inertia::render('storage-providers/index', [
             'storageProviders' => StorageProviderResource::collection($storageProviders),
-        ]);
-    }
-
-    public function create(Team $team): Response
-    {
-        return Inertia::render('storage-providers/create', [
             'types' => collect(StorageProviderType::cases())->map(fn ($type) => [
                 'value' => $type->value,
                 'label' => $type->label(),

@@ -32,15 +32,6 @@ describe('index', function () {
     });
 });
 
-describe('create', function () {
-    it('shows the create storage provider page', function () {
-        $response = $this->actingAs($this->user)
-            ->get("/{$this->team->slug}/storage-providers/create");
-
-        $response->assertOk();
-    });
-});
-
 describe('store', function () {
     it('connects a Cloudflare R2 provider with valid credentials', function () {
         $mock = Mockery::mock(CloudflareR2Driver::class);

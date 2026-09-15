@@ -212,7 +212,6 @@ export default function SiteCommandsIndex({
                 <div className="space-y-4">
                     {runs.length === 0 ? (
                         <EmptyState
-                            icon={TerminalIcon}
                             title="No command runs yet"
                             description="Run a command to see output and history here."
                         />

@@ -1,5 +1,4 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { KeyIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -92,7 +91,6 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
 
                 {sshKeysData.data.length === 0 ? (
                     <EmptyState
-                        icon={KeyIcon}
                         title="No SSH keys added"
                         description="Add an SSH key to sync it to your servers for secure access."
                         action={<AddKeyDialog />}

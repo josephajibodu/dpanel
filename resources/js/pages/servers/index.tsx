@@ -5,7 +5,6 @@ import {
     EyeIcon,
     MoreVerticalIcon,
     PlusIcon,
-    ServerIcon,
     Trash2Icon,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -135,7 +134,6 @@ export default function ServersIndex({ servers }: Props) {
 
                 {servers.data.length === 0 ? (
                     <EmptyState
-                        icon={ServerIcon}
                         title="No servers yet"
                         description="Create your first server to get started with deploying applications."
                         action={

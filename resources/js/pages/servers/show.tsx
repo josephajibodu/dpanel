@@ -2,8 +2,6 @@ import { Deferred, Head, Link, useForm, usePage } from '@inertiajs/react';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
-    DatabaseIcon,
-    HardDriveIcon,
     Loader2Icon,
     PlusIcon,
     RefreshCwIcon,
@@ -210,8 +208,6 @@ export default function ServersShow({
                                     </CardDescription>
                                     {sites.length === 0 ? (
                                         <EmptyState
-                                            bordered
-                                            icon={HardDriveIcon}
                                             title="No sites on this server yet"
                                             description="Get started by creating your first site."
                                             action={
@@ -312,11 +308,7 @@ export default function ServersShow({
                                         this server.
                                     </CardDescription>
                                     {databases.length === 0 ? (
-                                        <EmptyState
-                                            bordered
-                                            icon={DatabaseIcon}
-                                            title="No databases on this server yet"
-                                        />
+                                        <EmptyState title="No databases on this server yet" />
                                     ) : (
                                         <div className="overflow-x-auto">
                                             <Table>

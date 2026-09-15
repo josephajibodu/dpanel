@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BackupScheduleController;
 use App\Http\Controllers\CronJobController;
 use App\Http\Controllers\CurrentTeamController;
 use App\Http\Controllers\DashboardController;
@@ -111,7 +113,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Storage Providers
             Route::resource('storage-providers', StorageProviderController::class)
-                ->only(['index', 'create', 'store', 'destroy']);
+                ->only(['index', 'store', 'destroy']);
             Route::post('storage-providers/{storageProvider}/validate', [StorageProviderController::class, 'validate'])
                 ->name('storage-providers.validate');
 
@@ -236,6 +238,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.database-users.destroy');
                 Route::post('servers/{server}/database-users/{database_user}/reveal-password', [DatabaseUserController::class, 'revealPassword'])
                     ->name('servers.database-users.reveal-password');
+
+                // Database backups
+                Route::put('servers/{server}/databases/{server_database}/backup-schedule', [BackupScheduleController::class, 'update'])
+                    ->name('servers.databases.backup-schedule.update');
+                Route::get('servers/{server}/databases/{server_database}/backups', [BackupController::class, 'index'])
+                    ->name('servers.databases.backups.index');
+                Route::post('servers/{server}/databases/{server_database}/backups', [BackupController::class, 'store'])
+                    ->name('servers.databases.backups.store');
+                Route::delete('servers/{server}/databases/{server_database}/backups/{backup}', [BackupController::class, 'destroy'])
+                    ->name('servers.databases.backups.destroy');
+                Route::post('servers/{server}/databases/{server_database}/backups/{backup}/restore', [BackupController::class, 'restore'])
+                    ->name('servers.databases.backups.restore');
+                Route::get('servers/{server}/databases/{server_database}/backups/{backup}/download', [BackupController::class, 'download'])
+                    ->name('servers.databases.backups.download');
 
                 // PHP
                 Route::get('servers/{server}/php', [ServerPhpController::class, 'index'])

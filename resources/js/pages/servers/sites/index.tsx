@@ -1,11 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import {
-    GlobeIcon,
-    MoreVerticalIcon,
-    PlusIcon,
-    Trash2Icon,
-} from 'lucide-react';
+import { MoreVerticalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -135,7 +130,6 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
 
                 {sites.data.length === 0 ? (
                     <EmptyState
-                        icon={GlobeIcon}
                         title="No sites yet"
                         description="Create your first site on this server."
                         action={

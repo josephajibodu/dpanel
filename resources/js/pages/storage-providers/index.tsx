@@ -1,17 +1,12 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import {
-    CloudIcon,
-    MoreVerticalIcon,
-    PlusIcon,
-    RefreshCwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+import { MoreVerticalIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
+import { ConnectStorageDrawer } from '@/components/storage-providers/connect-storage-drawer';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -30,12 +25,16 @@ import {
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { StorageProvider } from '@/types/storage-provider';
+import {
+    StorageProvider,
+    StorageProviderTypeOption,
+} from '@/types/storage-provider';
 
 interface Props {
     storageProviders: {
         data: StorageProvider[];
     };
+    types: StorageProviderTypeOption[];
 }
 
 const typeIcons: Record<string, string> = {
@@ -43,7 +42,10 @@ const typeIcons: Record<string, string> = {
     s3: '🪣',
 };
 
-export default function StorageProvidersIndex({ storageProviders }: Props) {
+export default function StorageProvidersIndex({
+    storageProviders,
+    types,
+}: Props) {
     const teamPath = useTeamPath();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [providerToDelete, setProviderToDelete] =
@@ -91,29 +93,14 @@ export default function StorageProvidersIndex({ storageProviders }: Props) {
                             other file storage.
                         </p>
                     </div>
-                    <Button asChild>
-                        <Link href={teamPath('/storage-providers/create')}>
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            Connect Storage
-                        </Link>
-                    </Button>
+                    <ConnectStorageDrawer types={types} />
                 </div>
 
                 {storageProviders.data.length === 0 ? (
                     <EmptyState
-                        icon={CloudIcon}
                         title="No storage providers connected"
-                        description="Connect a Cloudflare R2 or S3 account to store backups off-server."
-                        action={
-                            <Button asChild>
-                                <Link
-                                    href={teamPath('/storage-providers/create')}
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Connect Storage
-                                </Link>
-                            </Button>
-                        }
+                        description="Connect an object storage account to store backups off-server."
+                        action={<ConnectStorageDrawer types={types} />}
                     />
                 ) : (
                     <Table>

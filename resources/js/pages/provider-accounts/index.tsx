@@ -1,7 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    CloudIcon,
     MoreVerticalIcon,
     PlusIcon,
     RefreshCwIcon,
@@ -102,7 +101,6 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
 
                 {accounts.data.length === 0 ? (
                     <EmptyState
-                        icon={CloudIcon}
                         title="No provider accounts connected"
                         description="Connect a cloud provider account to start provisioning servers."
                         action={

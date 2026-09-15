@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    DatabaseIcon,
     EyeIcon,
     EyeOffIcon,
     LinkIcon,
@@ -9,7 +8,6 @@ import {
     PlusIcon,
     RefreshCwIcon,
     Trash2Icon,
-    UsersIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -368,10 +366,7 @@ export default function ServerDatabasesIndex({
                                 {dbList.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5}>
-                                            <EmptyState
-                                                icon={DatabaseIcon}
-                                                title="No databases yet"
-                                            />
+                                            <EmptyState title="No databases yet" />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -467,10 +462,7 @@ export default function ServerDatabasesIndex({
                                 {userList.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6}>
-                                            <EmptyState
-                                                icon={UsersIcon}
-                                                title="No database users yet"
-                                            />
+                                            <EmptyState title="No database users yet" />
                                         </TableCell>
                                     </TableRow>
                                 ) : (

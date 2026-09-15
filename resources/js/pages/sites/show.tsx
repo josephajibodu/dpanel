@@ -1,13 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    CalendarIcon,
     ExternalLinkIcon,
     GitBranchIcon,
     Loader2Icon,
     MoreVerticalIcon,
-    PlayIcon,
-    RocketIcon,
     Trash2Icon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -300,8 +297,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                 </CardDescription>
                                 {deployments.length === 0 ? (
                                     <EmptyState
-                                        bordered
-                                        icon={RocketIcon}
                                         title="No deployments yet"
                                         description="Deployments will appear here once you trigger your first deployment."
                                         action={
@@ -423,8 +418,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                     Process managers and workers for this site.
                                 </CardDescription>
                                 <EmptyState
-                                    bordered
-                                    icon={PlayIcon}
                                     title="No background processes yet"
                                     description="Add process managers or workers when ready."
                                 />
@@ -437,8 +430,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                     Cron jobs and scheduled tasks for this site.
                                 </CardDescription>
                                 <EmptyState
-                                    bordered
-                                    icon={CalendarIcon}
                                     title="No scheduled jobs yet"
                                     description="Add cron jobs or scheduled tasks when ready."
                                 />

@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { formatDistanceToNow } from 'date-fns';
-import { PlusIcon, ServerIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
@@ -92,7 +92,6 @@ export default function Dashboard({
 
                 {stats.servers === 0 ? (
                     <EmptyState
-                        icon={ServerIcon}
                         title="No servers yet"
                         description="Create your first server to start deploying sites with FlitOps."
                         action={

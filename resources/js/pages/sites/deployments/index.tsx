@@ -149,7 +149,6 @@ export default function SiteDeploymentsIndex({
 
                 {deploymentList.length === 0 ? (
                     <EmptyState
-                        icon={RocketIcon}
                         title="No deployments yet"
                         description="Deployments will appear here once you trigger your first deployment."
                     />

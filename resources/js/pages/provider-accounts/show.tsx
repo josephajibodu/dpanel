@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ArrowLeftIcon, RefreshCwIcon, ServerIcon } from 'lucide-react';
+import { ArrowLeftIcon, RefreshCwIcon } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
@@ -165,8 +165,6 @@ export default function ProviderAccountShow({ account }: Props) {
                         </div>
                     ) : (
                         <EmptyState
-                            bordered
-                            icon={ServerIcon}
                             title="No servers yet"
                             description="Servers provisioned with this account will appear here."
                         />
