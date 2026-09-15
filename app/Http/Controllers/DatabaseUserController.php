@@ -10,7 +10,9 @@ use App\Http\Requests\UpdateDatabaseUserRequest;
 use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 
 class DatabaseUserController extends Controller
 {
@@ -55,5 +57,18 @@ class DatabaseUserController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Database user is being removed.');
+    }
+
+    public function revealPassword(Team $team, Server $server, DatabaseUser $database_user): JsonResponse
+    {
+        $this->authorize('view', $server);
+
+        Log::info('Database user password revealed', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'database_user_id' => $database_user->id,
+        ]);
+
+        return response()->json(['password' => $database_user->password]);
     }
 }

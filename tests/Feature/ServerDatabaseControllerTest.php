@@ -37,6 +37,8 @@ it('shows databases index for the server', function () {
             ->has('databases.data')
             ->has('databaseUsers.data')
             ->where('databases.data', fn ($data) => count($data) === 2)
+            ->where('sshUser', config('server.user'))
+            ->where('hasSshKey', false)
         );
 });
 

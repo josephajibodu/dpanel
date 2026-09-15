@@ -227,6 +227,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.database-users.update');
                 Route::delete('servers/{server}/database-users/{database_user}', [DatabaseUserController::class, 'destroy'])
                     ->name('servers.database-users.destroy');
+                Route::post('servers/{server}/database-users/{database_user}/reveal-password', [DatabaseUserController::class, 'revealPassword'])
+                    ->name('servers.database-users.reveal-password');
 
                 // PHP
                 Route::get('servers/{server}/php', [ServerPhpController::class, 'index'])

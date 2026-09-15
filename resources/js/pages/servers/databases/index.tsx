@@ -3,6 +3,7 @@ import {
     DatabaseIcon,
     EyeIcon,
     EyeOffIcon,
+    LinkIcon,
     MoreVerticalIcon,
     PencilIcon,
     PlusIcon,
@@ -12,6 +13,7 @@ import {
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,8 @@ interface Props {
     serverIsReady: boolean;
     databases: { data: ServerDatabase[] };
     databaseUsers: { data: DatabaseUser[] };
+    sshUser: string;
+    hasSshKey: boolean;
 }
 
 export default function ServerDatabasesIndex({
@@ -67,6 +71,8 @@ export default function ServerDatabasesIndex({
     serverIsReady,
     databases,
     databaseUsers,
+    sshUser,
+    hasSshKey,
 }: Props) {
     const server =
         serverProp && 'data' in serverProp ? serverProp.data : serverProp;
@@ -82,6 +88,7 @@ export default function ServerDatabasesIndex({
     const [createUserOpen, setCreateUserOpen] = useState(false);
     const [editUserOpen, setEditUserOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<DatabaseUser | null>(null);
+    const [connectUser, setConnectUser] = useState<DatabaseUser | null>(null);
     const [deleteDbOpen, setDeleteDbOpen] = useState(false);
     const [deleteUserOpen, setDeleteUserOpen] = useState(false);
     const [dbToDelete, setDbToDelete] = useState<ServerDatabase | null>(null);
@@ -501,6 +508,16 @@ export default function ServerDatabasesIndex({
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    setConnectUser(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <LinkIcon className="mr-2 h-4 w-4" />
+                                                                Connect
+                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 onClick={() =>
                                                                     openEditUser(
@@ -988,6 +1005,22 @@ export default function ServerDatabasesIndex({
                 variant="destructive"
                 onConfirm={confirmDeleteUser}
             />
+
+            {connectUser && (
+                <ConnectionInfoDialog
+                    key={connectUser.id}
+                    server={server}
+                    sshUser={sshUser}
+                    hasSshKey={hasSshKey}
+                    databaseUser={connectUser}
+                    teamPath={teamPath}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setConnectUser(null);
+                        }
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

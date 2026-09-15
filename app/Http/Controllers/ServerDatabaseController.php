@@ -28,6 +28,8 @@ class ServerDatabaseController extends Controller
             'serverIsReady' => $server->isReady(),
             'databases' => ServerDatabaseResource::collection($server->databases),
             'databaseUsers' => DatabaseUserResource::collection($server->databaseUsers),
+            'sshUser' => config('server.user'),
+            'hasSshKey' => $server->sshKeys()->where('user_id', auth()->id())->exists(),
         ]);
     }
 
