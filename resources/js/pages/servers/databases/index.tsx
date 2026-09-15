@@ -973,7 +973,7 @@ export default function ServerDatabasesIndex({
                 open={deleteDbOpen}
                 onOpenChange={setDeleteDbOpen}
                 title="Delete database"
-                description={`Are you sure you want to remove the database "${dbToDelete?.name}"? This only removes it from the app; the database on the server is not dropped.`}
+                description={`Are you sure you want to delete the database "${dbToDelete?.name}"? This permanently drops it on the server — all data in it will be lost.`}
                 confirmLabel="Delete"
                 variant="destructive"
                 onConfirm={confirmDeleteDb}
