@@ -8,7 +8,6 @@ import { AddKeyDialog } from '@/components/ssh-keys/add-key-dialog';
 import { SshKeyDetailsDialog } from '@/components/ssh-keys/ssh-key-details-dialog';
 import { SshKeyTableRow } from '@/components/ssh-keys/ssh-key-table-row';
 import { SyncServersDialog } from '@/components/ssh-keys/sync-servers-dialog';
-import { Card } from '@/components/ui/card';
 import {
     Table,
     TableBody,
@@ -81,8 +80,12 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">SSH Keys</h1>
-                        <p className="text-muted-foreground text-sm">Manage SSH keys that can be synced to your servers.</p>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            SSH Keys
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Manage SSH keys that can be synced to your servers.
+                        </p>
                     </div>
                     <AddKeyDialog />
                 </div>
@@ -95,29 +98,29 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
                         action={<AddKeyDialog />}
                     />
                 ) : (
-                    <Card>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Servers</TableHead>
-                                    <TableHead>Added</TableHead>
-                                    <TableHead className="w-[70px]" />
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sshKeysData.data.map((sshKey) => (
-                                    <SshKeyTableRow
-                                        key={sshKey.id}
-                                        sshKey={sshKey}
-                                        onOpenDetails={() => handleOpenDetails(sshKey)}
-                                        onSync={() => handleSync(sshKey)}
-                                        onDelete={() => handleDelete(sshKey)}
-                                    />
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Servers</TableHead>
+                                <TableHead>Added</TableHead>
+                                <TableHead className="w-[70px]" />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {sshKeysData.data.map((sshKey) => (
+                                <SshKeyTableRow
+                                    key={sshKey.id}
+                                    sshKey={sshKey}
+                                    onOpenDetails={() =>
+                                        handleOpenDetails(sshKey)
+                                    }
+                                    onSync={() => handleSync(sshKey)}
+                                    onDelete={() => handleDelete(sshKey)}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
                 )}
             </div>
 

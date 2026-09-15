@@ -353,8 +353,8 @@ export default function ServerPhpIndex({
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
+                    <div className="flex flex-col gap-4">
+                        <div>
                             <CardTitle className="flex items-center gap-2">
                                 <CodeIcon className="h-5 w-5" />
                                 Installed versions
@@ -363,109 +363,62 @@ export default function ServerPhpIndex({
                                 PHP versions installed on this server. Set which
                                 one is used by default.
                             </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            <div className="flex items-center gap-2">
-                                <Checkbox
-                                    id="upgrade-sites"
-                                    checked={upgradeSites}
-                                    onCheckedChange={(checked) =>
-                                        setUpgradeSites(!!checked)
-                                    }
-                                    disabled={!serverIsReady}
-                                />
-                                <Label
-                                    htmlFor="upgrade-sites"
-                                    className="font-normal"
-                                >
-                                    Also update all sites to the new default
-                                    version
-                                </Label>
-                            </div>
-                            <Table>
-                                <TableHeader>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Checkbox
+                                id="upgrade-sites"
+                                checked={upgradeSites}
+                                onCheckedChange={(checked) =>
+                                    setUpgradeSites(!!checked)
+                                }
+                                disabled={!serverIsReady}
+                            />
+                            <Label
+                                htmlFor="upgrade-sites"
+                                className="font-normal"
+                            >
+                                Also update all sites to the new default version
+                            </Label>
+                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Version</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Default</TableHead>
+                                    <TableHead className="w-[140px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {phpServices.length === 0 &&
+                                installedVersions.length === 0 ? (
                                     <TableRow>
-                                        <TableHead>Version</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Default</TableHead>
-                                        <TableHead className="w-[140px]" />
+                                        <TableCell colSpan={4}>
+                                            <EmptyState
+                                                icon={CodeIcon}
+                                                title="No PHP versions detected"
+                                                description="Install one below or ensure the server is connected."
+                                            />
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {phpServices.length === 0 &&
-                                    installedVersions.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={4}>
-                                                <EmptyState
-                                                    icon={CodeIcon}
-                                                    title="No PHP versions detected"
-                                                    description="Install one below or ensure the server is connected."
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : phpServices.length > 0 ? (
-                                        phpServices.map((s) => {
-                                            const v =
-                                                s.installed_version ??
-                                                s.version ??
-                                                '';
-                                            return (
-                                                <TableRow key={s.id}>
-                                                    <TableCell className="font-mono font-medium">
-                                                        {v || '—'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <AutoStatusBadge
-                                                            status={s.status}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {s.is_default ? (
-                                                            <AutoStatusBadge
-                                                                status="default"
-                                                                label="Default"
-                                                            />
-                                                        ) : (
-                                                            '—'
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {!s.is_default && v && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                disabled={
-                                                                    !serverIsReady ||
-                                                                    isSubmittingDefault ===
-                                                                        v ||
-                                                                    s.status ===
-                                                                        'installing'
-                                                                }
-                                                                onClick={() =>
-                                                                    handleSetDefault(
-                                                                        v,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {isSubmittingDefault ===
-                                                                v
-                                                                    ? 'Setting…'
-                                                                    : 'Set as default'}
-                                                            </Button>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    ) : (
-                                        installedVersions.map((v) => (
-                                            <TableRow key={v}>
+                                ) : phpServices.length > 0 ? (
+                                    phpServices.map((s) => {
+                                        const v =
+                                            s.installed_version ??
+                                            s.version ??
+                                            '';
+                                        return (
+                                            <TableRow key={s.id}>
                                                 <TableCell className="font-mono font-medium">
-                                                    {v}
+                                                    {v || '—'}
                                                 </TableCell>
-                                                <TableCell>—</TableCell>
                                                 <TableCell>
-                                                    {v === defaultVersion ? (
+                                                    <AutoStatusBadge
+                                                        status={s.status}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    {s.is_default ? (
                                                         <AutoStatusBadge
                                                             status="default"
                                                             label="Default"
@@ -475,14 +428,16 @@ export default function ServerPhpIndex({
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {v !== defaultVersion && (
+                                                    {!s.is_default && v && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
                                                             disabled={
                                                                 !serverIsReady ||
                                                                 isSubmittingDefault ===
-                                                                    v
+                                                                    v ||
+                                                                s.status ===
+                                                                    'installing'
                                                             }
                                                             onClick={() =>
                                                                 handleSetDefault(
@@ -498,12 +453,52 @@ export default function ServerPhpIndex({
                                                     )}
                                                 </TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                                        );
+                                    })
+                                ) : (
+                                    installedVersions.map((v) => (
+                                        <TableRow key={v}>
+                                            <TableCell className="font-mono font-medium">
+                                                {v}
+                                            </TableCell>
+                                            <TableCell>—</TableCell>
+                                            <TableCell>
+                                                {v === defaultVersion ? (
+                                                    <AutoStatusBadge
+                                                        status="default"
+                                                        label="Default"
+                                                    />
+                                                ) : (
+                                                    '—'
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {v !== defaultVersion && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={
+                                                            !serverIsReady ||
+                                                            isSubmittingDefault ===
+                                                                v
+                                                        }
+                                                        onClick={() =>
+                                                            handleSetDefault(v)
+                                                        }
+                                                    >
+                                                        {isSubmittingDefault ===
+                                                        v
+                                                            ? 'Setting…'
+                                                            : 'Set as default'}
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
 
                     <Card>
                         <CardHeader>

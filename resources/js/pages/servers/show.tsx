@@ -165,119 +165,112 @@ export default function ServersShow({ server, provisioningLogs }: Props) {
                             {/* Left column: Sites & databases, SSH, events */}
                             <div className="space-y-6">
                                 {/* Sites */}
-                                <Card id="sites">
-                                    <CardHeader>
-                                        <div className="flex items-center justify-between">
-                                            <CardTitle className="flex items-center gap-2">
-                                                <HardDriveIcon className="h-5 w-5" />
-                                                Sites
-                                            </CardTitle>
-                                            {data.status === 'active' && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    asChild
+                                <div id="sites" className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2">
+                                            <HardDriveIcon className="h-5 w-5" />
+                                            Sites
+                                        </CardTitle>
+                                        {data.status === 'active' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${data.id}/sites/create`,
+                                                    )}
                                                 >
-                                                    <Link
-                                                        href={teamPath(
-                                                            `/servers/${data.id}/sites/create`,
-                                                        )}
-                                                    >
-                                                        <PlusIcon className="mr-2 h-4 w-4" />
-                                                        New site
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                        </div>
-                                        <CardDescription>
-                                            Websites deployed on this server.
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {sites.length === 0 ? (
-                                            <EmptyState
-                                                bordered
-                                                icon={HardDriveIcon}
-                                                title="No sites on this server yet"
-                                                description="Get started by creating your first site."
-                                                action={
-                                                    data.status ===
-                                                        'active' && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            asChild
-                                                        >
-                                                            <Link
-                                                                href={teamPath(
-                                                                    `/servers/${data.id}/sites/create`,
-                                                                )}
-                                                            >
-                                                                <PlusIcon className="mr-2 h-4 w-4" />
-                                                                New site
-                                                            </Link>
-                                                        </Button>
-                                                    )
-                                                }
-                                            />
-                                        ) : (
-                                            <div className="overflow-x-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>
-                                                                Domain
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Type
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Status
-                                                            </TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {sites.map((site) => (
-                                                            <TableRow
-                                                                key={site.id}
-                                                            >
-                                                                <TableCell>
-                                                                    <Link
-                                                                        href={teamPath(
-                                                                            `/servers/${data.id}/sites/${site.id}`,
-                                                                        )}
-                                                                        className="font-medium hover:underline"
-                                                                    >
-                                                                        {
-                                                                            site.domain
-                                                                        }
-                                                                    </Link>
-                                                                </TableCell>
-                                                                <TableCell className="text-sm text-muted-foreground">
-                                                                    {site.project_type_label ??
-                                                                        '—'}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <SiteStatusBadge
-                                                                        status={
-                                                                            site.status
-                                                                        }
-                                                                        statusLabel={
-                                                                            site.status_label
-                                                                        }
-                                                                        statusColor={
-                                                                            site.status_color
-                                                                        }
-                                                                    />
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
+                                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                                    New site
+                                                </Link>
+                                            </Button>
                                         )}
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                    <CardDescription>
+                                        Websites deployed on this server.
+                                    </CardDescription>
+                                    {sites.length === 0 ? (
+                                        <EmptyState
+                                            bordered
+                                            icon={HardDriveIcon}
+                                            title="No sites on this server yet"
+                                            description="Get started by creating your first site."
+                                            action={
+                                                data.status === 'active' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={teamPath(
+                                                                `/servers/${data.id}/sites/create`,
+                                                            )}
+                                                        >
+                                                            <PlusIcon className="mr-2 h-4 w-4" />
+                                                            New site
+                                                        </Link>
+                                                    </Button>
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Domain
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Type
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Status
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sites.map((site) => (
+                                                        <TableRow key={site.id}>
+                                                            <TableCell>
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${data.id}/sites/${site.id}`,
+                                                                    )}
+                                                                    className="font-medium hover:underline"
+                                                                >
+                                                                    {
+                                                                        site.domain
+                                                                    }
+                                                                </Link>
+                                                            </TableCell>
+                                                            <TableCell className="text-sm text-muted-foreground">
+                                                                {site.project_type_label ??
+                                                                    '—'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <SiteStatusBadge
+                                                                    status={
+                                                                        site.status
+                                                                    }
+                                                                    statusLabel={
+                                                                        site.status_label
+                                                                    }
+                                                                    statusColor={
+                                                                        site.status_color
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Databases */}
                                 <Card id="databases">

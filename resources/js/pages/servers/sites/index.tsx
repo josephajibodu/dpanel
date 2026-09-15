@@ -14,7 +14,6 @@ import { EmptyState } from '@/components/empty-state';
 import { SearchInput } from '@/components/search-input';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -162,7 +161,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                             aria-label="Search sites"
                         />
 
-                        <Card>
+                        <>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -326,7 +325,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                 nextUrl={nextUrl}
                                 resultsLabel="sites"
                             />
-                        </Card>
+                        </>
                     </>
                 )}
             </div>

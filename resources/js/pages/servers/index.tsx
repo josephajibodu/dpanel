@@ -15,7 +15,6 @@ import { EmptyState } from '@/components/empty-state';
 import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -156,7 +155,7 @@ export default function ServersIndex({ servers }: Props) {
                             aria-label="Search servers"
                         />
 
-                        <Card>
+                        <>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -311,7 +310,7 @@ export default function ServersIndex({ servers }: Props) {
                                 nextUrl={nextUrl}
                                 resultsLabel="results"
                             />
-                        </Card>
+                        </>
                     </>
                 )}
             </div>

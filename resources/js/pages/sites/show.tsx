@@ -274,150 +274,144 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         {/* Left column: Deployments, Background processes, Scheduled jobs */}
                         <div className="space-y-6">
                             {/* Deployments */}
-                            <Card id="deployments">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle>Deployments</CardTitle>
-                                        <Button
-                                            size="sm"
-                                            onClick={handleDeploy}
-                                            disabled={
-                                                isDeploying ||
-                                                siteData.status === 'installing'
-                                            }
-                                        >
-                                            {isDeploying ? (
-                                                <>
-                                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                    Deploying...
-                                                </>
-                                            ) : (
-                                                'Deploy'
-                                            )}
-                                        </Button>
-                                    </div>
-                                    <CardDescription>
-                                        Recent deployments for this site.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {deployments.length === 0 ? (
-                                        <EmptyState
-                                            bordered
-                                            icon={RocketIcon}
-                                            title="No deployments yet"
-                                            description="Deployments will appear here once you trigger your first deployment."
-                                            action={
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    asChild
+                            <div id="deployments" className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle>Deployments</CardTitle>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleDeploy}
+                                        disabled={
+                                            isDeploying ||
+                                            siteData.status === 'installing'
+                                        }
+                                    >
+                                        {isDeploying ? (
+                                            <>
+                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                Deploying...
+                                            </>
+                                        ) : (
+                                            'Deploy'
+                                        )}
+                                    </Button>
+                                </div>
+                                <CardDescription>
+                                    Recent deployments for this site.
+                                </CardDescription>
+                                {deployments.length === 0 ? (
+                                    <EmptyState
+                                        bordered
+                                        icon={RocketIcon}
+                                        title="No deployments yet"
+                                        description="Deployments will appear here once you trigger your first deployment."
+                                        action={
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${serverId}/sites/${siteData.id}/deployments`,
+                                                    )}
                                                 >
-                                                    <Link
-                                                        href={teamPath(
-                                                            `/servers/${serverId}/sites/${siteData.id}/deployments`,
-                                                        )}
-                                                    >
-                                                        Go to Deployments
-                                                    </Link>
-                                                </Button>
-                                            }
-                                        />
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>
-                                                            Status
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Commit
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Message
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Deployed
-                                                        </TableHead>
-                                                        <TableHead className="w-0" />
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {deployments.map((d) => (
-                                                        <TableRow key={d.id}>
-                                                            <TableCell>
-                                                                <StatusBadge
-                                                                    status={
-                                                                        d.status_label
+                                                    Go to Deployments
+                                                </Link>
+                                            </Button>
+                                        }
+                                    />
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Commit
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Message
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Deployed
+                                                    </TableHead>
+                                                    <TableHead className="w-0" />
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {deployments.map((d) => (
+                                                    <TableRow key={d.id}>
+                                                        <TableCell>
+                                                            <StatusBadge
+                                                                status={
+                                                                    d.status_label
+                                                                }
+                                                                color={
+                                                                    d.status_color
+                                                                }
+                                                                pulse={
+                                                                    d.status ===
+                                                                    'running'
+                                                                }
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-sm">
+                                                            {d.commit_hash
+                                                                ? d.commit_hash.slice(
+                                                                      0,
+                                                                      7,
+                                                                  )
+                                                                : '—'}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                                                            {d.commit_message ??
+                                                                '—'}
+                                                        </TableCell>
+                                                        <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                                                            {d.finished_at
+                                                                ? format(
+                                                                      new Date(
+                                                                          d.finished_at,
+                                                                      ),
+                                                                      'MMM d, HH:mm',
+                                                                  )
+                                                                : d.started_at
+                                                                  ? 'Running...'
+                                                                  : '—'}
+                                                            {d.user?.name && (
+                                                                <span className="ml-1">
+                                                                    by{' '}
+                                                                    {
+                                                                        d.user
+                                                                            .name
                                                                     }
-                                                                    color={
-                                                                        d.status_color
-                                                                    }
-                                                                    pulse={
-                                                                        d.status ===
-                                                                        'running'
-                                                                    }
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell className="font-mono text-sm">
-                                                                {d.commit_hash
-                                                                    ? d.commit_hash.slice(
-                                                                          0,
-                                                                          7,
-                                                                      )
-                                                                    : '—'}
-                                                            </TableCell>
-                                                            <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                                                                {d.commit_message ??
-                                                                    '—'}
-                                                            </TableCell>
-                                                            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                                                                {d.finished_at
-                                                                    ? format(
-                                                                          new Date(
-                                                                              d.finished_at,
-                                                                          ),
-                                                                          'MMM d, HH:mm',
-                                                                      )
-                                                                    : d.started_at
-                                                                      ? 'Running...'
-                                                                      : '—'}
-                                                                {d.user
-                                                                    ?.name && (
-                                                                    <span className="ml-1">
-                                                                        by{' '}
-                                                                        {
-                                                                            d
-                                                                                .user
-                                                                                .name
-                                                                        }
-                                                                    </span>
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    asChild
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
+                                                                    )}
                                                                 >
-                                                                    <Link
-                                                                        href={teamPath(
-                                                                            `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
-                                                                        )}
-                                                                    >
-                                                                        View
-                                                                    </Link>
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                                                    View
+                                                                </Link>
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Background processes */}
                             <Card>

@@ -15,13 +15,7 @@ import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
@@ -288,249 +282,235 @@ export default function ServerDatabasesIndex({
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-1">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <DatabaseIcon className="h-5 w-5" />
-                                        Databases
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Databases on this server.
-                                    </CardDescription>
-                                </div>
-                                {isServerReady && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCreateDbOpen(true)}
-                                    >
-                                        <PlusIcon className="mr-2 h-4 w-4" />
-                                        New database
-                                    </Button>
-                                )}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <DatabaseIcon className="h-5 w-5" />
+                                    Databases
+                                </CardTitle>
+                                <CardDescription>
+                                    Databases on this server.
+                                </CardDescription>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
+                            {isServerReady && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCreateDbOpen(true)}
+                                >
+                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    New database
+                                </Button>
+                            )}
+                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Charset</TableHead>
+                                    <TableHead>Collation</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="w-[70px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {dbList.length === 0 ? (
                                     <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Charset</TableHead>
-                                        <TableHead>Collation</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="w-[70px]" />
+                                        <TableCell colSpan={5}>
+                                            <EmptyState
+                                                icon={DatabaseIcon}
+                                                title="No databases yet"
+                                            />
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {dbList.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5}>
-                                                <EmptyState
-                                                    icon={DatabaseIcon}
-                                                    title="No databases yet"
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        dbList.map((db) => {
-                                            const isDeleting =
-                                                deletingDbIds.includes(db.id) ||
-                                                db.status === 'deleting';
-                                            return (
-                                                <TableRow key={db.id}>
-                                                    <TableCell className="font-mono font-medium">
-                                                        {db.name}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {db.charset ?? '—'}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {db.collation ?? '—'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <AutoStatusBadge
-                                                            status={
-                                                                isDeleting
-                                                                    ? 'deleting'
-                                                                    : db.status
+                                ) : (
+                                    dbList.map((db) => {
+                                        const isDeleting =
+                                            deletingDbIds.includes(db.id) ||
+                                            db.status === 'deleting';
+                                        return (
+                                            <TableRow key={db.id}>
+                                                <TableCell className="font-mono font-medium">
+                                                    {db.name}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {db.charset ?? '—'}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {db.collation ?? '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <AutoStatusBadge
+                                                        status={
+                                                            isDeleting
+                                                                ? 'deleting'
+                                                                : db.status
+                                                        }
+                                                        label={
+                                                            isDeleting
+                                                                ? 'Deleting...'
+                                                                : undefined
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={isDeleting}
+                                                        onClick={() => {
+                                                            if (!isDeleting) {
+                                                                setDbToDelete(
+                                                                    db,
+                                                                );
+                                                                setDeleteDbOpen(
+                                                                    true,
+                                                                );
                                                             }
-                                                            label={
-                                                                isDeleting
-                                                                    ? 'Deleting...'
-                                                                    : undefined
-                                                            }
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isDeleting
-                                                            }
-                                                            onClick={() => {
-                                                                if (
-                                                                    !isDeleting
-                                                                ) {
-                                                                    setDbToDelete(
-                                                                        db,
+                                                        }}
+                                                        aria-label="Delete database"
+                                                    >
+                                                        <Trash2Icon className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <UserPlusIcon className="h-5 w-5" />
+                                    Database users
+                                </CardTitle>
+                                <CardDescription>
+                                    Users with access to databases.
+                                </CardDescription>
+                            </div>
+                            {isServerReady && dbList.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCreateUserOpen(true)}
+                                >
+                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    New user
+                                </Button>
+                            )}
+                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Username</TableHead>
+                                    <TableHead>Host</TableHead>
+                                    <TableHead>Databases</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="w-[100px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {userList.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5}>
+                                            <EmptyState
+                                                icon={UsersIcon}
+                                                title="No database users yet"
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    userList.map((user) => {
+                                        const isDeleting =
+                                            deletingUserIds.includes(user.id) ||
+                                            user.status === 'deleting';
+                                        return (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="font-mono font-medium">
+                                                    {user.username}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm text-muted-foreground">
+                                                    {user.host ?? 'localhost'}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {(
+                                                        user.databases ?? []
+                                                    ).join(', ') || '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <AutoStatusBadge
+                                                        status={
+                                                            isDeleting
+                                                                ? 'deleting'
+                                                                : user.status
+                                                        }
+                                                        label={
+                                                            isDeleting
+                                                                ? 'Deleting...'
+                                                                : undefined
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                disabled={
+                                                                    isDeleting
+                                                                }
+                                                            >
+                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                                <span className="sr-only">
+                                                                    Actions
+                                                                </span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    openEditUser(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <PencilIcon className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={() => {
+                                                                    setUserToDelete(
+                                                                        user,
                                                                     );
-                                                                    setDeleteDbOpen(
+                                                                    setDeleteUserOpen(
                                                                         true,
                                                                     );
-                                                                }
-                                                            }}
-                                                            aria-label="Delete database"
-                                                        >
-                                                            <Trash2Icon className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <UserPlusIcon className="h-5 w-5" />
-                                        Database users
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Users with access to databases.
-                                    </CardDescription>
-                                </div>
-                                {isServerReady && dbList.length > 0 && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCreateUserOpen(true)}
-                                    >
-                                        <PlusIcon className="mr-2 h-4 w-4" />
-                                        New user
-                                    </Button>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Username</TableHead>
-                                        <TableHead>Host</TableHead>
-                                        <TableHead>Databases</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="w-[100px]" />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {userList.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5}>
-                                                <EmptyState
-                                                    icon={UsersIcon}
-                                                    title="No database users yet"
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        userList.map((user) => {
-                                            const isDeleting =
-                                                deletingUserIds.includes(
-                                                    user.id,
-                                                ) || user.status === 'deleting';
-                                            return (
-                                                <TableRow key={user.id}>
-                                                    <TableCell className="font-mono font-medium">
-                                                        {user.username}
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-sm text-muted-foreground">
-                                                        {user.host ??
-                                                            'localhost'}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {(
-                                                            user.databases ?? []
-                                                        ).join(', ') || '—'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <AutoStatusBadge
-                                                            status={
-                                                                isDeleting
-                                                                    ? 'deleting'
-                                                                    : user.status
-                                                            }
-                                                            label={
-                                                                isDeleting
-                                                                    ? 'Deleting...'
-                                                                    : undefined
-                                                            }
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger
-                                                                asChild
+                                                                }}
                                                             >
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    className="h-8 w-8"
-                                                                    disabled={
-                                                                        isDeleting
-                                                                    }
-                                                                >
-                                                                    <MoreVerticalIcon className="h-4 w-4" />
-                                                                    <span className="sr-only">
-                                                                        Actions
-                                                                    </span>
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        openEditUser(
-                                                                            user,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <PencilIcon className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onClick={() => {
-                                                                        setUserToDelete(
-                                                                            user,
-                                                                        );
-                                                                        setDeleteUserOpen(
-                                                                            true,
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </div>
 

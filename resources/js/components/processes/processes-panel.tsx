@@ -16,13 +16,7 @@ import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -382,406 +376,380 @@ export function ProcessesPanel({
             </div>
 
             <div className="grid gap-6 lg:grid-cols-1">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PowerIcon className="h-5 w-5" />
-                                    Workers
-                                </CardTitle>
-                                <CardDescription>
-                                    {workersDescription}
-                                </CardDescription>
-                            </div>
-                            {serverIsReady && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCreateWorkerOpen(true)}
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    New worker
-                                </Button>
-                            )}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <PowerIcon className="h-5 w-5" />
+                                Workers
+                            </CardTitle>
+                            <CardDescription>
+                                {workersDescription}
+                            </CardDescription>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
+                        {serverIsReady && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCreateWorkerOpen(true)}
+                            >
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                New worker
+                            </Button>
+                        )}
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Command</TableHead>
+                                <TableHead>User</TableHead>
+                                {showSiteColumn && <TableHead>Site</TableHead>}
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">
+                                    Numprocs
+                                </TableHead>
+                                <TableHead className="w-[220px]" />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {workers.length === 0 ? (
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Command</TableHead>
-                                    <TableHead>User</TableHead>
-                                    {showSiteColumn && (
-                                        <TableHead>Site</TableHead>
-                                    )}
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">
-                                        Numprocs
-                                    </TableHead>
-                                    <TableHead className="w-[220px]" />
+                                    <TableCell colSpan={showSiteColumn ? 7 : 6}>
+                                        <EmptyState
+                                            icon={PowerIcon}
+                                            title="No workers yet"
+                                        />
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {workers.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={showSiteColumn ? 7 : 6}
-                                        >
-                                            <EmptyState
-                                                icon={PowerIcon}
-                                                title="No workers yet"
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    workers.map((w) => {
-                                        const isWorkerDeleting =
-                                            deletingWorkerIds.includes(w.id) ||
-                                            w.status === 'deleting';
-                                        return (
-                                            <TableRow key={w.id}>
-                                                <TableCell className="font-medium">
-                                                    {w.name}
+                            ) : (
+                                workers.map((w) => {
+                                    const isWorkerDeleting =
+                                        deletingWorkerIds.includes(w.id) ||
+                                        w.status === 'deleting';
+                                    return (
+                                        <TableRow key={w.id}>
+                                            <TableCell className="font-medium">
+                                                {w.name}
+                                            </TableCell>
+                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                                {truncate(w.command, 40)}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm text-muted-foreground">
+                                                {w.user}
+                                            </TableCell>
+                                            {showSiteColumn && (
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {w.site?.domain ?? 'Server'}
                                                 </TableCell>
-                                                <TableCell className="max-w-[200px] truncate font-mono text-sm">
-                                                    {truncate(w.command, 40)}
+                                            )}
+                                            <TableCell>
+                                                <AutoStatusBadge
+                                                    status={
+                                                        isWorkerDeleting
+                                                            ? 'deleting'
+                                                            : w.status
+                                                    }
+                                                    label={
+                                                        isWorkerDeleting
+                                                            ? 'Deleting...'
+                                                            : undefined
+                                                    }
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                                                {w.numprocs}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-wrap items-center gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            openEditWorker(w)
+                                                        }
+                                                        aria-label="Edit worker"
+                                                    >
+                                                        <PencilIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            fetchLogs(w)
+                                                        }
+                                                        aria-label="View logs"
+                                                    >
+                                                        <FileTextIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            router.post(
+                                                                teamPath(
+                                                                    `/servers/${server.id}/workers/${w.id}/start`,
+                                                                ),
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                        aria-label="Start"
+                                                    >
+                                                        <PlayIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            router.post(
+                                                                teamPath(
+                                                                    `/servers/${server.id}/workers/${w.id}/stop`,
+                                                                ),
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                        aria-label="Stop"
+                                                    >
+                                                        <PowerOffIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            router.post(
+                                                                teamPath(
+                                                                    `/servers/${server.id}/workers/${w.id}/restart`,
+                                                                ),
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                        aria-label="Restart"
+                                                    >
+                                                        <RefreshCwIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isWorkerDeleting
+                                                        }
+                                                        onClick={() => {
+                                                            setWorkerToDelete(
+                                                                w,
+                                                            );
+                                                            setDeleteWorkerOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                        aria-label="Delete worker"
+                                                    >
+                                                        <Trash2Icon className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <ClockIcon className="h-5 w-5" />
+                                Cron jobs
+                            </CardTitle>
+                            <CardDescription>{cronDescription}</CardDescription>
+                        </div>
+                        {serverIsReady && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCreateCronOpen(true)}
+                            >
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                New cron job
+                            </Button>
+                        )}
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Command</TableHead>
+                                <TableHead>User</TableHead>
+                                <TableHead>Frequency</TableHead>
+                                {showSiteColumn && <TableHead>Site</TableHead>}
+                                <TableHead>Enabled</TableHead>
+                                <TableHead className="w-[120px]" />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {cronJobs.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={showSiteColumn ? 6 : 5}>
+                                        <EmptyState
+                                            icon={ClockIcon}
+                                            title="No cron jobs yet"
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                cronJobs.map((c) => {
+                                    const isCronDeleting =
+                                        deletingCronIds.includes(c.id) ||
+                                        c.status === 'deleting';
+                                    return (
+                                        <TableRow key={c.id}>
+                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                                {truncate(c.command, 40)}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm text-muted-foreground">
+                                                {c.user}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                {frequencyLabel(c.frequency)}
+                                            </TableCell>
+                                            {showSiteColumn && (
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {c.site?.domain ?? 'Server'}
                                                 </TableCell>
-                                                <TableCell className="font-mono text-sm text-muted-foreground">
-                                                    {w.user}
-                                                </TableCell>
-                                                {showSiteColumn && (
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {w.site?.domain ??
-                                                            'Server'}
-                                                    </TableCell>
-                                                )}
-                                                <TableCell>
+                                            )}
+                                            <TableCell>
+                                                {isCronDeleting ? (
+                                                    <AutoStatusBadge
+                                                        status="deleting"
+                                                        label="Deleting..."
+                                                    />
+                                                ) : (
                                                     <AutoStatusBadge
                                                         status={
-                                                            isWorkerDeleting
-                                                                ? 'deleting'
-                                                                : w.status
+                                                            c.hidden
+                                                                ? 'disabled'
+                                                                : 'enabled'
                                                         }
                                                         label={
-                                                            isWorkerDeleting
-                                                                ? 'Deleting...'
-                                                                : undefined
+                                                            c.hidden
+                                                                ? 'Disabled'
+                                                                : 'Enabled'
                                                         }
                                                     />
-                                                </TableCell>
-                                                <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                                                    {w.numprocs}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-wrap items-center gap-1">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                openEditWorker(
-                                                                    w,
-                                                                )
-                                                            }
-                                                            aria-label="Edit worker"
-                                                        >
-                                                            <PencilIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                fetchLogs(w)
-                                                            }
-                                                            aria-label="View logs"
-                                                        >
-                                                            <FileTextIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/start`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                            aria-label="Start"
-                                                        >
-                                                            <PlayIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/stop`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                            aria-label="Stop"
-                                                        >
-                                                            <PowerOffIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/restart`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                            aria-label="Restart"
-                                                        >
-                                                            <RefreshCwIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isWorkerDeleting
-                                                            }
-                                                            onClick={() => {
-                                                                setWorkerToDelete(
-                                                                    w,
-                                                                );
-                                                                setDeleteWorkerOpen(
-                                                                    true,
-                                                                );
-                                                            }}
-                                                            aria-label="Delete worker"
-                                                        >
-                                                            <Trash2Icon className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <ClockIcon className="h-5 w-5" />
-                                    Cron jobs
-                                </CardTitle>
-                                <CardDescription>
-                                    {cronDescription}
-                                </CardDescription>
-                            </div>
-                            {serverIsReady && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCreateCronOpen(true)}
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    New cron job
-                                </Button>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Command</TableHead>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Frequency</TableHead>
-                                    {showSiteColumn && (
-                                        <TableHead>Site</TableHead>
-                                    )}
-                                    <TableHead>Enabled</TableHead>
-                                    <TableHead className="w-[120px]" />
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {cronJobs.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={showSiteColumn ? 6 : 5}
-                                        >
-                                            <EmptyState
-                                                icon={ClockIcon}
-                                                title="No cron jobs yet"
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    cronJobs.map((c) => {
-                                        const isCronDeleting =
-                                            deletingCronIds.includes(c.id) ||
-                                            c.status === 'deleting';
-                                        return (
-                                            <TableRow key={c.id}>
-                                                <TableCell className="max-w-[200px] truncate font-mono text-sm">
-                                                    {truncate(c.command, 40)}
-                                                </TableCell>
-                                                <TableCell className="font-mono text-sm text-muted-foreground">
-                                                    {c.user}
-                                                </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
-                                                    {frequencyLabel(
-                                                        c.frequency,
-                                                    )}
-                                                </TableCell>
-                                                {showSiteColumn && (
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {c.site?.domain ??
-                                                            'Server'}
-                                                    </TableCell>
                                                 )}
-                                                <TableCell>
-                                                    {isCronDeleting ? (
-                                                        <AutoStatusBadge
-                                                            status="deleting"
-                                                            label="Deleting..."
-                                                        />
-                                                    ) : (
-                                                        <AutoStatusBadge
-                                                            status={
-                                                                c.hidden
-                                                                    ? 'disabled'
-                                                                    : 'enabled'
-                                                            }
-                                                            label={
-                                                                c.hidden
-                                                                    ? 'Disabled'
-                                                                    : 'Enabled'
-                                                            }
-                                                        />
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isCronDeleting
-                                                            }
-                                                            onClick={() =>
-                                                                openEditCron(c)
-                                                            }
-                                                            aria-label="Edit cron job"
-                                                        >
-                                                            <PencilIcon className="h-4 w-4" />
-                                                        </Button>
-                                                        {!isCronDeleting &&
-                                                            (c.hidden ? (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-8"
-                                                                    onClick={() =>
-                                                                        router.visit(
-                                                                            teamPath(
-                                                                                `/servers/${server.id}/cron-jobs/${c.id}/enable`,
-                                                                            ),
-                                                                            {
-                                                                                method: 'patch',
-                                                                                preserveScroll: true,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Enable
-                                                                </Button>
-                                                            ) : (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-8"
-                                                                    onClick={() =>
-                                                                        router.visit(
-                                                                            teamPath(
-                                                                                `/servers/${server.id}/cron-jobs/${c.id}/disable`,
-                                                                            ),
-                                                                            {
-                                                                                method: 'patch',
-                                                                                preserveScroll: true,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Disable
-                                                                </Button>
-                                                            ))}
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isCronDeleting
-                                                            }
-                                                            onClick={() => {
-                                                                setCronToDelete(
-                                                                    c,
-                                                                );
-                                                                setDeleteCronOpen(
-                                                                    true,
-                                                                );
-                                                            }}
-                                                            aria-label="Delete cron job"
-                                                        >
-                                                            <Trash2Icon className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isCronDeleting
+                                                        }
+                                                        onClick={() =>
+                                                            openEditCron(c)
+                                                        }
+                                                        aria-label="Edit cron job"
+                                                    >
+                                                        <PencilIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    {!isCronDeleting &&
+                                                        (c.hidden ? (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8"
+                                                                onClick={() =>
+                                                                    router.visit(
+                                                                        teamPath(
+                                                                            `/servers/${server.id}/cron-jobs/${c.id}/enable`,
+                                                                        ),
+                                                                        {
+                                                                            method: 'patch',
+                                                                            preserveScroll: true,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                Enable
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8"
+                                                                onClick={() =>
+                                                                    router.visit(
+                                                                        teamPath(
+                                                                            `/servers/${server.id}/cron-jobs/${c.id}/disable`,
+                                                                        ),
+                                                                        {
+                                                                            method: 'patch',
+                                                                            preserveScroll: true,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                Disable
+                                                            </Button>
+                                                        ))}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        disabled={
+                                                            isCronDeleting
+                                                        }
+                                                        onClick={() => {
+                                                            setCronToDelete(c);
+                                                            setDeleteCronOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                        aria-label="Delete cron job"
+                                                    >
+                                                        <Trash2Icon className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             {/* Create worker drawer */}
