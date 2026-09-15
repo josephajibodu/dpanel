@@ -1,5 +1,14 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, CloudIcon, CodeIcon, Folder, KeyIcon, LayoutGrid, ServerIcon } from 'lucide-react';
+import {
+    BookOpen,
+    CloudIcon,
+    CodeIcon,
+    Folder,
+    HardDriveIcon,
+    KeyIcon,
+    LayoutGrid,
+    ServerIcon,
+} from 'lucide-react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
 import { NavFooter } from '@/components/nav-footer';
@@ -53,6 +62,11 @@ export function AppSidebar() {
             icon: CloudIcon,
         },
         {
+            title: 'Storage Providers',
+            href: teamPath('/storage-providers'),
+            icon: HardDriveIcon,
+        },
+        {
             title: 'Source Control',
             href: teamPath('/source-control'),
             icon: CodeIcon,
@@ -70,7 +84,7 @@ export function AppSidebar() {
                     <Link
                         href={teamPath('/dashboard')}
                         prefetch
-                        className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-80"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground transition-opacity hover:opacity-80"
                     >
                         <AppLogoIcon className="size-4 fill-current text-white dark:text-black" />
                     </Link>

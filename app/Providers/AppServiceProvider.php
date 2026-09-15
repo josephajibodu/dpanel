@@ -7,6 +7,7 @@ use App\Models\SiteDomain;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Deployment\ZeroDowntimeDeploymentStrategy;
 use App\Services\Providers\ProviderManager;
+use App\Services\Storage\StorageProviderManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
@@ -26,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ProviderManager::class);
+        $this->app->singleton(StorageProviderManager::class);
         $this->app->bind(DeploymentStrategy::class, ZeroDowntimeDeploymentStrategy::class);
     }
 

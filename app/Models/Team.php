@@ -55,6 +55,11 @@ class Team extends Model
         return $this->hasMany(ProviderAccount::class);
     }
 
+    public function storageProviders(): HasMany
+    {
+        return $this->hasMany(StorageProvider::class);
+    }
+
     public function invitations(): HasMany
     {
         return $this->hasMany(TeamInvitation::class);

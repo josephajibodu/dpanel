@@ -18,6 +18,7 @@ use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SshKeyController;
+use App\Http\Controllers\StorageProviderController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TeamInvitationController;
 use App\Http\Controllers\TeamMemberController;
@@ -107,6 +108,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->except(['edit', 'update']);
             Route::post('provider-accounts/{providerAccount}/validate', [ProviderAccountController::class, 'validate'])
                 ->name('provider-accounts.validate');
+
+            // Storage Providers
+            Route::resource('storage-providers', StorageProviderController::class)
+                ->only(['index', 'create', 'store', 'destroy']);
+            Route::post('storage-providers/{storageProvider}/validate', [StorageProviderController::class, 'validate'])
+                ->name('storage-providers.validate');
 
             // Servers
             Route::get('servers/generate-name', [ServerController::class, 'generateName'])
