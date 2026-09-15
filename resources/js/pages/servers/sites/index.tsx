@@ -1,7 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
-    EyeIcon,
     GlobeIcon,
     MoreVerticalIcon,
     PlusIcon,
@@ -240,21 +239,6 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center justify-end gap-1">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                className="h-8 w-8"
-                                                                asChild
-                                                            >
-                                                                <Link
-                                                                    href={teamPath(
-                                                                        `/servers/${server.id}/sites/${site.id}`,
-                                                                    )}
-                                                                    aria-label="View site"
-                                                                >
-                                                                    <EyeIcon className="h-4 w-4" />
-                                                                </Link>
-                                                            </Button>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger
                                                                     asChild
@@ -280,17 +264,6 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                                             )}
                                                                         >
                                                                             View
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        asChild
-                                                                    >
-                                                                        <Link
-                                                                            href={teamPath(
-                                                                                `/servers/${server.id}/sites/${site.id}/edit`,
-                                                                            )}
-                                                                        >
-                                                                            Edit
                                                                         </Link>
                                                                     </DropdownMenuItem>
                                                                     {!isDeleting &&

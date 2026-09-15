@@ -414,42 +414,35 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             </div>
 
                             {/* Background processes */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Background processes</CardTitle>
-                                    <CardDescription>
-                                        Process managers and workers for this
-                                        site.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EmptyState
-                                        bordered
-                                        icon={PlayIcon}
-                                        title="No background processes yet"
-                                        description="Add process managers or workers when ready."
-                                    />
-                                </CardContent>
-                            </Card>
+                            <div
+                                id="background-processes"
+                                className="space-y-4"
+                            >
+                                <CardTitle>Background processes</CardTitle>
+                                <CardDescription>
+                                    Process managers and workers for this site.
+                                </CardDescription>
+                                <EmptyState
+                                    bordered
+                                    icon={PlayIcon}
+                                    title="No background processes yet"
+                                    description="Add process managers or workers when ready."
+                                />
+                            </div>
 
                             {/* Scheduled jobs */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Scheduled jobs</CardTitle>
-                                    <CardDescription>
-                                        Cron jobs and scheduled tasks for this
-                                        site.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EmptyState
-                                        bordered
-                                        icon={CalendarIcon}
-                                        title="No scheduled jobs yet"
-                                        description="Add cron jobs or scheduled tasks when ready."
-                                    />
-                                </CardContent>
-                            </Card>
+                            <div id="scheduled-jobs" className="space-y-4">
+                                <CardTitle>Scheduled jobs</CardTitle>
+                                <CardDescription>
+                                    Cron jobs and scheduled tasks for this site.
+                                </CardDescription>
+                                <EmptyState
+                                    bordered
+                                    icon={CalendarIcon}
+                                    title="No scheduled jobs yet"
+                                    description="Add cron jobs or scheduled tasks when ready."
+                                />
+                            </div>
                         </div>
 
                         {/* Right column: Details sidebar */}
