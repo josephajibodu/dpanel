@@ -13,6 +13,7 @@ import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +25,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -94,11 +102,13 @@ export default function ServerDatabasesIndex({
         username: '',
         password: '',
         databases: [] as string[],
+        permission: 'readwrite',
         host: 'localhost',
     });
     const [editUserForm, setEditUserForm] = useState({
         password: '',
         databases: [] as string[],
+        permission: 'readwrite',
         host: 'localhost',
     });
 
@@ -166,6 +176,7 @@ export default function ServerDatabasesIndex({
                 username: userForm.username,
                 password: userForm.password,
                 databases: userForm.databases,
+                permission: userForm.permission,
                 host: userForm.host || 'localhost',
             },
             {
@@ -176,6 +187,7 @@ export default function ServerDatabasesIndex({
                         username: '',
                         password: '',
                         databases: [],
+                        permission: 'readwrite',
                         host: 'localhost',
                     });
                 },
@@ -194,6 +206,7 @@ export default function ServerDatabasesIndex({
             {
                 password: editUserForm.password || undefined,
                 databases: editUserForm.databases,
+                permission: editUserForm.permission,
                 host: editUserForm.host || 'localhost',
             },
             {
@@ -204,6 +217,7 @@ export default function ServerDatabasesIndex({
                     setEditUserForm({
                         password: '',
                         databases: [],
+                        permission: 'readwrite',
                         host: 'localhost',
                     });
                 },
@@ -222,6 +236,7 @@ export default function ServerDatabasesIndex({
         setEditUserForm({
             password: '',
             databases: user.databases ?? [],
+            permission: user.permission ?? 'readwrite',
             host: user.host ?? 'localhost',
         });
         setEditUserOpen(true);
@@ -404,6 +419,7 @@ export default function ServerDatabasesIndex({
                                     <TableHead>Username</TableHead>
                                     <TableHead>Host</TableHead>
                                     <TableHead>Databases</TableHead>
+                                    <TableHead>Permission</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="w-[100px]" />
                                 </TableRow>
@@ -411,7 +427,7 @@ export default function ServerDatabasesIndex({
                             <TableBody>
                                 {userList.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5}>
+                                        <TableCell colSpan={6}>
                                             <EmptyState
                                                 icon={UsersIcon}
                                                 title="No database users yet"
@@ -435,6 +451,21 @@ export default function ServerDatabasesIndex({
                                                     {(
                                                         user.databases ?? []
                                                     ).join(', ') || '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant={
+                                                            user.permission ===
+                                                            'readonly'
+                                                                ? 'outline'
+                                                                : 'secondary'
+                                                        }
+                                                    >
+                                                        {user.permission ===
+                                                        'readonly'
+                                                            ? 'Read-only'
+                                                            : 'Read-write'}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell>
                                                     <AutoStatusBadge
@@ -748,6 +779,35 @@ export default function ServerDatabasesIndex({
                             )}
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="user-permission">Permission</Label>
+                            <Select
+                                value={userForm.permission}
+                                onValueChange={(value) =>
+                                    setUserForm((p) => ({
+                                        ...p,
+                                        permission: value,
+                                    }))
+                                }
+                            >
+                                <SelectTrigger id="user-permission">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="readwrite">
+                                        Read-write
+                                    </SelectItem>
+                                    <SelectItem value="readonly">
+                                        Read-only
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors?.permission && (
+                                <p className="text-sm text-destructive">
+                                    {errors.permission}
+                                </p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="user-host">Host (optional)</Label>
                             <Input
                                 id="user-host"
@@ -823,6 +883,37 @@ export default function ServerDatabasesIndex({
                                     </label>
                                 ))}
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-user-permission">
+                                Permission
+                            </Label>
+                            <Select
+                                value={editUserForm.permission}
+                                onValueChange={(value) =>
+                                    setEditUserForm((p) => ({
+                                        ...p,
+                                        permission: value,
+                                    }))
+                                }
+                            >
+                                <SelectTrigger id="edit-user-permission">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="readwrite">
+                                        Read-write
+                                    </SelectItem>
+                                    <SelectItem value="readonly">
+                                        Read-only
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors?.permission && (
+                                <p className="text-sm text-destructive">
+                                    {errors.permission}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-user-password">

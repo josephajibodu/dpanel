@@ -10,7 +10,7 @@ use RuntimeException;
 
 class UpdateDatabaseUser
 {
-    use EscapesShell;
+    use EscapesShell, GrantsPostgresPrivileges;
 
     public function __construct(
         private SshService $sshService
@@ -96,9 +96,11 @@ class UpdateDatabaseUser
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($revokeSql);
         $connection->exec($cmd, 60);
 
+        $privilege = $databaseUser->permission === 'readonly' ? 'SELECT' : 'ALL PRIVILEGES';
+
         foreach ($databaseUser->databases as $dbName) {
             $dbEsc = str_replace('`', '\\`', $dbName);
-            $grantSql = "GRANT ALL PRIVILEGES ON `{$dbEsc}`.* TO '{$userEsc}'@'{$hostEsc}'";
+            $grantSql = "GRANT {$privilege} ON `{$dbEsc}`.* TO '{$userEsc}'@'{$hostEsc}'";
             $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($grantSql);
             $connection->exec($cmd, 60);
         }
@@ -119,11 +121,19 @@ class UpdateDatabaseUser
         $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($alterSql);
         $connection->exec($cmd, 60);
 
+        // Revoke everything first so switching between readonly and readwrite
+        // doesn't leave stale broader privileges from the previous grant.
         foreach ($databaseUser->databases as $dbName) {
             $dbIdent = '"'.str_replace('"', '""', $dbName).'"';
-            $grantSql = 'GRANT ALL PRIVILEGES ON DATABASE '.$dbIdent.' TO '.$userIdent;
-            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($grantSql);
+            $revokeSql = 'REVOKE ALL PRIVILEGES ON DATABASE '.$dbIdent.' FROM '.$userIdent;
+            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($revokeSql);
+            $connection->exec($cmd, 60);
+
+            $revokeTablesSql = 'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM '.$userIdent;
+            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -d '.$this->escapeForShell($dbName).' -c '.$this->escapeForShell($revokeTablesSql);
             $connection->exec($cmd, 60);
         }
+
+        $this->grantPostgresPrivileges($connection, $databaseUser, $postgresPassword, $userIdent);
     }
 }

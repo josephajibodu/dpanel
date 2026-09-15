@@ -11,7 +11,7 @@ use RuntimeException;
 
 class CreateDatabaseUser
 {
-    use EscapesShell;
+    use EscapesShell, GrantsPostgresPrivileges;
 
     public function __construct(
         private SshService $sshService
@@ -90,9 +90,11 @@ class CreateDatabaseUser
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($createSql);
         $connection->exec($cmd, 60);
 
+        $privilege = $databaseUser->permission === 'readonly' ? 'SELECT' : 'ALL PRIVILEGES';
+
         foreach ($databaseUser->databases as $dbName) {
             $dbEsc = str_replace('`', '\\`', $dbName);
-            $grantSql = "GRANT ALL PRIVILEGES ON `{$dbEsc}`.* TO '{$userEsc}'@'{$hostEsc}'";
+            $grantSql = "GRANT {$privilege} ON `{$dbEsc}`.* TO '{$userEsc}'@'{$hostEsc}'";
             $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($grantSql);
             $connection->exec($cmd, 60);
         }
@@ -113,11 +115,6 @@ class CreateDatabaseUser
         $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($createSql);
         $connection->exec($cmd, 60);
 
-        foreach ($databaseUser->databases as $dbName) {
-            $dbIdent = '"'.str_replace('"', '""', $dbName).'"';
-            $grantSql = 'GRANT ALL PRIVILEGES ON DATABASE '.$dbIdent.' TO '.$userIdent;
-            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($grantSql);
-            $connection->exec($cmd, 60);
-        }
+        $this->grantPostgresPrivileges($connection, $databaseUser, $postgresPassword, $userIdent);
     }
 }
