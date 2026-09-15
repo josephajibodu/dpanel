@@ -133,7 +133,7 @@ it('dispatches job to destroy a worker', function () {
     $this->assertDatabaseHas('workers', ['id' => $worker->id]);
 });
 
-it('starts a worker', function () {
+it('starts a worker and marks it starting immediately', function () {
     Queue::fake();
 
     $worker = Worker::factory()->create([
@@ -146,9 +146,13 @@ it('starts a worker', function () {
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
+    $this->assertDatabaseHas('workers', [
+        'id' => $worker->id,
+        'status' => 'starting',
+    ]);
 });
 
-it('stops a worker', function () {
+it('stops a worker and marks it stopping immediately', function () {
     Queue::fake();
 
     $worker = Worker::factory()->create([
@@ -161,9 +165,13 @@ it('stops a worker', function () {
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
+    $this->assertDatabaseHas('workers', [
+        'id' => $worker->id,
+        'status' => 'stopping',
+    ]);
 });
 
-it('restarts a worker', function () {
+it('restarts a worker and marks it restarting immediately', function () {
     Queue::fake();
 
     $worker = Worker::factory()->create([
@@ -176,6 +184,10 @@ it('restarts a worker', function () {
 
     $response->assertRedirect();
     Queue::assertPushed(ControlWorkerJob::class);
+    $this->assertDatabaseHas('workers', [
+        'id' => $worker->id,
+        'status' => 'restarting',
+    ]);
 });
 
 it('returns worker logs when log file is not configured', function () {

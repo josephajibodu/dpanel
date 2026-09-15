@@ -3,6 +3,7 @@ import {
     ClockIcon,
     FileTextIcon,
     Loader2Icon,
+    MoreVerticalIcon,
     PencilIcon,
     PlayIcon,
     PlusIcon,
@@ -11,7 +12,8 @@ import {
     RefreshCwIcon,
     Trash2Icon,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
@@ -24,6 +26,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -52,6 +61,12 @@ import {
 import { useTeamPath } from '@/hooks/use-team-path';
 import type { SharedData } from '@/types';
 import type { CronJob, ProcessSite, Server, Worker } from '@/types/server';
+
+const WORKER_PENDING_ACTION_LABELS: Record<string, string> = {
+    starting: 'start',
+    stopping: 'stop',
+    restarting: 'restart',
+};
 
 const CRON_FREQUENCIES: { value: string; label: string }[] = [
     { value: '* * * * *', label: 'Every minute' },
@@ -119,6 +134,23 @@ export function ProcessesPanel({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deletingWorkerIds, setDeletingWorkerIds] = useState<number[]>([]);
     const [deletingCronIds, setDeletingCronIds] = useState<number[]>([]);
+
+    const previousWorkerStatuses = useRef<Record<number, string>>({});
+    useEffect(() => {
+        workers.forEach((w) => {
+            const previousStatus = previousWorkerStatuses.current[w.id];
+            if (
+                previousStatus &&
+                previousStatus !== 'failed' &&
+                w.status === 'failed'
+            ) {
+                const action =
+                    WORKER_PENDING_ACTION_LABELS[previousStatus] ?? 'update';
+                toast.error(`Failed to ${action} worker "${w.name}".`);
+            }
+            previousWorkerStatuses.current[w.id] = w.status;
+        });
+    }, [workers]);
 
     const defaultSiteId: number | '' = site ? site.id : '';
 
@@ -379,10 +411,7 @@ export function ProcessesPanel({
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <PowerIcon className="h-5 w-5" />
-                                Workers
-                            </CardTitle>
+                            <CardTitle>Workers</CardTitle>
                             <CardDescription>
                                 {workersDescription}
                             </CardDescription>
@@ -409,7 +438,7 @@ export function ProcessesPanel({
                                 <TableHead className="text-right">
                                     Numprocs
                                 </TableHead>
-                                <TableHead className="w-[220px]" />
+                                <TableHead className="w-0" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -427,6 +456,9 @@ export function ProcessesPanel({
                                     const isWorkerDeleting =
                                         deletingWorkerIds.includes(w.id) ||
                                         w.status === 'deleting';
+                                    const isWorkerPending =
+                                        w.status in
+                                        WORKER_PENDING_ACTION_LABELS;
                                     return (
                                         <TableRow key={w.id}>
                                             <TableCell className="font-medium">
@@ -461,121 +493,108 @@ export function ProcessesPanel({
                                                 {w.numprocs}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-wrap items-center gap-1">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            openEditWorker(w)
-                                                        }
-                                                        aria-label="Edit worker"
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <PencilIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            fetchLogs(w)
-                                                        }
-                                                        aria-label="View logs"
-                                                    >
-                                                        <FileTextIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(
-                                                                    `/servers/${server.id}/workers/${w.id}/start`,
-                                                                ),
-                                                                {},
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                        aria-label="Start"
-                                                    >
-                                                        <PlayIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(
-                                                                    `/servers/${server.id}/workers/${w.id}/stop`,
-                                                                ),
-                                                                {},
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                        aria-label="Stop"
-                                                    >
-                                                        <PowerOffIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            router.post(
-                                                                teamPath(
-                                                                    `/servers/${server.id}/workers/${w.id}/restart`,
-                                                                ),
-                                                                {},
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            )
-                                                        }
-                                                        aria-label="Restart"
-                                                    >
-                                                        <RefreshCwIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isWorkerDeleting
-                                                        }
-                                                        onClick={() => {
-                                                            setWorkerToDelete(
-                                                                w,
-                                                            );
-                                                            setDeleteWorkerOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                        aria-label="Delete worker"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isWorkerDeleting ||
+                                                                isWorkerPending
+                                                            }
+                                                            aria-label="Actions"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                openEditWorker(
+                                                                    w,
+                                                                )
+                                                            }
+                                                        >
+                                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                fetchLogs(w)
+                                                            }
+                                                        >
+                                                            <FileTextIcon className="mr-2 h-4 w-4" />
+                                                            View logs
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/start`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            <PlayIcon className="mr-2 h-4 w-4" />
+                                                            Start
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/stop`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            <PowerOffIcon className="mr-2 h-4 w-4" />
+                                                            Stop
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    teamPath(
+                                                                        `/servers/${server.id}/workers/${w.id}/restart`,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                            Restart
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setWorkerToDelete(
+                                                                    w,
+                                                                );
+                                                                setDeleteWorkerOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -588,10 +607,7 @@ export function ProcessesPanel({
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <ClockIcon className="h-5 w-5" />
-                                Cron jobs
-                            </CardTitle>
+                            <CardTitle>Cron jobs</CardTitle>
                             <CardDescription>{cronDescription}</CardDescription>
                         </div>
                         {serverIsReady && (
@@ -613,7 +629,7 @@ export function ProcessesPanel({
                                 <TableHead>Frequency</TableHead>
                                 {showSiteColumn && <TableHead>Site</TableHead>}
                                 <TableHead>Enabled</TableHead>
-                                <TableHead className="w-[120px]" />
+                                <TableHead className="w-0" />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -669,27 +685,34 @@ export function ProcessesPanel({
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isCronDeleting
-                                                        }
-                                                        onClick={() =>
-                                                            openEditCron(c)
-                                                        }
-                                                        aria-label="Edit cron job"
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <PencilIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    {!isCronDeleting &&
-                                                        (c.hidden ? (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8"
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isCronDeleting
+                                                            }
+                                                            aria-label="Actions"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                openEditCron(c)
+                                                            }
+                                                        >
+                                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        {c.hidden ? (
+                                                            <DropdownMenuItem
                                                                 onClick={() =>
                                                                     router.visit(
                                                                         teamPath(
@@ -702,13 +725,11 @@ export function ProcessesPanel({
                                                                     )
                                                                 }
                                                             >
+                                                                <PowerIcon className="mr-2 h-4 w-4" />
                                                                 Enable
-                                                            </Button>
+                                                            </DropdownMenuItem>
                                                         ) : (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8"
+                                                            <DropdownMenuItem
                                                                 onClick={() =>
                                                                     router.visit(
                                                                         teamPath(
@@ -721,27 +742,27 @@ export function ProcessesPanel({
                                                                     )
                                                                 }
                                                             >
+                                                                <PowerOffIcon className="mr-2 h-4 w-4" />
                                                                 Disable
-                                                            </Button>
-                                                        ))}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        disabled={
-                                                            isCronDeleting
-                                                        }
-                                                        onClick={() => {
-                                                            setCronToDelete(c);
-                                                            setDeleteCronOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                        aria-label="Delete cron job"
-                                                    >
-                                                        <Trash2Icon className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setCronToDelete(
+                                                                    c,
+                                                                );
+                                                                setDeleteCronOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     );

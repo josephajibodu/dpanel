@@ -3,6 +3,8 @@
 namespace App\Actions\Worker;
 
 use App\Enums\WorkerControlAction;
+use App\Events\ServerProcessesUpdated;
+use App\Jobs\ControlWorkerJob;
 use App\Models\Worker;
 use App\Services\Ssh\SshService;
 use RuntimeException;
@@ -12,6 +14,13 @@ class ControlWorker
     public function __construct(
         private SshService $sshService,
     ) {}
+
+    public function request(Worker $worker, WorkerControlAction $action): void
+    {
+        $worker->update(['status' => $action->pendingStatus()]);
+        event(new ServerProcessesUpdated($worker->server_id));
+        ControlWorkerJob::dispatch($worker, $action);
+    }
 
     public function execute(Worker $worker, WorkerControlAction $action): void
     {

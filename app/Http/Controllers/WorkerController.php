@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Worker\ControlWorker;
 use App\Actions\Worker\CreateWorker;
 use App\Actions\Worker\DestroyWorker;
 use App\Actions\Worker\UpdateWorker;
 use App\Enums\WorkerControlAction;
 use App\Http\Requests\StoreWorkerRequest;
 use App\Http\Requests\UpdateWorkerRequest;
-use App\Jobs\ControlWorkerJob;
 use App\Models\Server;
 use App\Models\Team;
 use App\Models\Worker;
@@ -68,7 +68,7 @@ class WorkerController extends Controller
     {
         $this->authorize('view', $server);
 
-        ControlWorkerJob::dispatch($worker, WorkerControlAction::Start);
+        app(ControlWorker::class)->request($worker, WorkerControlAction::Start);
 
         return redirect()
             ->back()
@@ -79,7 +79,7 @@ class WorkerController extends Controller
     {
         $this->authorize('view', $server);
 
-        ControlWorkerJob::dispatch($worker, WorkerControlAction::Stop);
+        app(ControlWorker::class)->request($worker, WorkerControlAction::Stop);
 
         return redirect()
             ->back()
@@ -90,7 +90,7 @@ class WorkerController extends Controller
     {
         $this->authorize('view', $server);
 
-        ControlWorkerJob::dispatch($worker, WorkerControlAction::Restart);
+        app(ControlWorker::class)->request($worker, WorkerControlAction::Restart);
 
         return redirect()
             ->back()

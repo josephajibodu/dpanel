@@ -10,6 +10,9 @@ const STATUS_COLORS: Record<string, StatusColor> = {
     installing: 'blue',
     creating: 'blue',
     syncing: 'blue',
+    starting: 'blue',
+    stopping: 'blue',
+    restarting: 'blue',
     pending: 'gray',
     stopped: 'gray',
     disabled: 'gray',
@@ -18,7 +21,16 @@ const STATUS_COLORS: Record<string, StatusColor> = {
     deleting: 'orange',
 };
 
-const PULSING_STATUSES = new Set(['installing', 'creating', 'pending', 'deleting', 'syncing']);
+const PULSING_STATUSES = new Set([
+    'installing',
+    'creating',
+    'syncing',
+    'starting',
+    'stopping',
+    'restarting',
+    'pending',
+    'deleting',
+]);
 
 interface AutoStatusBadgeProps {
     status: string;

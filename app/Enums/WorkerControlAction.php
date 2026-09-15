@@ -15,4 +15,13 @@ enum WorkerControlAction: string
             self::Stop => 'stopped',
         };
     }
+
+    public function pendingStatus(): string
+    {
+        return match ($this) {
+            self::Start => 'starting',
+            self::Stop => 'stopping',
+            self::Restart => 'restarting',
+        };
+    }
 }
