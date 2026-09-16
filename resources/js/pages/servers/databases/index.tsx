@@ -336,7 +336,7 @@ export default function ServerDatabasesIndex({
                 <div className="grid gap-6 lg:grid-cols-1">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <div>
+                            <div className="space-y-1">
                                 <CardTitle>Databases</CardTitle>
                                 <CardDescription>
                                     Databases on this server.
@@ -459,7 +459,7 @@ export default function ServerDatabasesIndex({
 
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <div>
+                            <div className="space-y-1">
                                 <CardTitle>Database users</CardTitle>
                                 <CardDescription>
                                     Users with access to databases.
