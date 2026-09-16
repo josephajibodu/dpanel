@@ -273,7 +273,12 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             {/* Deployments */}
                             <div id="deployments" className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle>Deployments</CardTitle>
+                                    <div className="space-y-1">
+                                        <CardTitle>Deployments</CardTitle>
+                                        <CardDescription>
+                                            Recent deployments for this site.
+                                        </CardDescription>
+                                    </div>
                                     <Button
                                         size="sm"
                                         onClick={handleDeploy}
@@ -292,9 +297,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         )}
                                     </Button>
                                 </div>
-                                <CardDescription>
-                                    Recent deployments for this site.
-                                </CardDescription>
                                 {deployments.length === 0 ? (
                                     <EmptyState
                                         title="No deployments yet"
@@ -413,10 +415,13 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                 id="background-processes"
                                 className="space-y-4"
                             >
-                                <CardTitle>Background processes</CardTitle>
-                                <CardDescription>
-                                    Process managers and workers for this site.
-                                </CardDescription>
+                                <div className="space-y-1">
+                                    <CardTitle>Background processes</CardTitle>
+                                    <CardDescription>
+                                        Process managers and workers for this
+                                        site.
+                                    </CardDescription>
+                                </div>
                                 <EmptyState
                                     title="No background processes yet"
                                     description="Add process managers or workers when ready."
@@ -425,10 +430,13 @@ export default function SitesShow({ server: serverProp, site }: Props) {
 
                             {/* Scheduled jobs */}
                             <div id="scheduled-jobs" className="space-y-4">
-                                <CardTitle>Scheduled jobs</CardTitle>
-                                <CardDescription>
-                                    Cron jobs and scheduled tasks for this site.
-                                </CardDescription>
+                                <div className="space-y-1">
+                                    <CardTitle>Scheduled jobs</CardTitle>
+                                    <CardDescription>
+                                        Cron jobs and scheduled tasks for this
+                                        site.
+                                    </CardDescription>
+                                </div>
                                 <EmptyState
                                     title="No scheduled jobs yet"
                                     description="Add cron jobs or scheduled tasks when ready."

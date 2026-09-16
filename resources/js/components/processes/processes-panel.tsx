@@ -409,7 +409,7 @@ export function ProcessesPanel({
             <div className="grid gap-6 lg:grid-cols-1">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div>
+                        <div className="space-y-1">
                             <CardTitle>Workers</CardTitle>
                             <CardDescription>
                                 {workersDescription}
@@ -602,7 +602,7 @@ export function ProcessesPanel({
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div>
+                        <div className="space-y-1">
                             <CardTitle>Cron jobs</CardTitle>
                             <CardDescription>{cronDescription}</CardDescription>
                         </div>

@@ -350,7 +350,7 @@ export default function ServerPhpIndex({
                     </Card>
 
                     <div className="flex flex-col gap-4">
-                        <div>
+                        <div className="space-y-1">
                             <CardTitle>Installed versions</CardTitle>
                             <CardDescription>
                                 PHP versions installed on this server. Set which

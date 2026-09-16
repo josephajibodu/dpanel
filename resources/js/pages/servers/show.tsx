@@ -185,7 +185,13 @@ export default function ServersShow({
                                 {/* Sites */}
                                 <div id="sites" className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle>Sites</CardTitle>
+                                        <div className="space-y-1">
+                                            <CardTitle>Sites</CardTitle>
+                                            <CardDescription>
+                                                Websites deployed on this
+                                                server.
+                                            </CardDescription>
+                                        </div>
                                         {data.status === 'active' && (
                                             <Button
                                                 variant="outline"
@@ -203,9 +209,6 @@ export default function ServersShow({
                                             </Button>
                                         )}
                                     </div>
-                                    <CardDescription>
-                                        Websites deployed on this server.
-                                    </CardDescription>
                                     {sites.length === 0 ? (
                                         <EmptyState
                                             title="No sites on this server yet"
@@ -288,7 +291,13 @@ export default function ServersShow({
                                 {/* Databases */}
                                 <div id="databases" className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle>Databases</CardTitle>
+                                        <div className="space-y-1">
+                                            <CardTitle>Databases</CardTitle>
+                                            <CardDescription>
+                                                Manage databases and database
+                                                users on this server.
+                                            </CardDescription>
+                                        </div>
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -303,10 +312,6 @@ export default function ServersShow({
                                             </Link>
                                         </Button>
                                     </div>
-                                    <CardDescription>
-                                        Manage databases and database users on
-                                        this server.
-                                    </CardDescription>
                                     {databases.length === 0 ? (
                                         <EmptyState title="No databases on this server yet" />
                                     ) : (
@@ -353,7 +358,7 @@ export default function ServersShow({
                                 {/* Recent events (optional) */}
                                 {data.actions && data.actions.length > 0 && (
                                     <div className="space-y-4">
-                                        <div>
+                                        <div className="space-y-1">
                                             <CardTitle>Recent events</CardTitle>
                                             <CardDescription>
                                                 Latest provisioning and
@@ -560,7 +565,7 @@ function formatBytes(bytes: number): string {
 function ServerMetricsOverviewSkeleton() {
     return (
         <section className="space-y-3">
-            <div>
+            <div className="space-y-1">
                 <h2 className="text-base font-semibold">Overview</h2>
                 <p className="text-sm text-muted-foreground">
                     Here you can see an overview of your server.
@@ -635,7 +640,7 @@ function ServerMetricsOverview({
     return (
         <section className="space-y-3">
             <div className="flex items-center justify-between gap-2">
-                <div>
+                <div className="space-y-1">
                     <h2 className="text-base font-semibold">Overview</h2>
                     <p className="text-sm text-muted-foreground">
                         Here you can see an overview of your server.

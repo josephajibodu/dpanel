@@ -110,10 +110,12 @@ export default function ProviderAccountShow({ account }: Props) {
                 </StatGroup>
 
                 <div className="space-y-4">
-                    <CardTitle>Servers</CardTitle>
-                    <CardDescription>
-                        Servers provisioned using this provider account.
-                    </CardDescription>
+                    <div className="space-y-1">
+                        <CardTitle>Servers</CardTitle>
+                        <CardDescription>
+                            Servers provisioned using this provider account.
+                        </CardDescription>
+                    </div>
                     {data.servers && data.servers.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
