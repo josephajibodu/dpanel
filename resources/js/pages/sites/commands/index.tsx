@@ -324,7 +324,7 @@ export default function SiteCommandsIndex({
                         <SheetHeader>
                             <SheetTitle>Run command</SheetTitle>
                         </SheetHeader>
-                        <div className="py-6">
+                        <div className="px-4 py-6">
                             <label
                                 htmlFor="command-input"
                                 className="mb-2 block text-sm font-medium text-muted-foreground"
