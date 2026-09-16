@@ -15,21 +15,10 @@ import {
     ShieldCheckIcon,
     ShieldXIcon,
 } from 'lucide-react';
-import { FormEvent, useState, type Dispatch, type SetStateAction } from 'react';
+import { FormEvent, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -106,8 +95,12 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
         { title: 'Domains', href: teamPath(`/servers/${serverId}/sites/${site.id}/domains`) },
     ];
 
-    const systemDomains = domainList.filter((d) => d.type === 'system');
-    const customDomains = domainList.filter((d) => d.type === 'custom');
+    const sortedDomains = [...domainList].sort((a, b) => {
+        if (a.type !== b.type) {
+            return a.type === 'system' ? 1 : -1;
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
     async function handleValidateAndOpenSheet(e: FormEvent) {
         e.preventDefault();
@@ -170,10 +163,10 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
         <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}>
             <Head title={`Domains — ${site.domain}`} />
 
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-4 md:p-8">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-foreground text-2xl font-semibold tracking-tight">Domains</h1>
-                    <p className="text-muted-foreground text-sm">Manage your site&apos;s hostnames and DNS instructions.</p>
+            <div className="flex h-full flex-1 flex-col gap-6 p-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">Domains</h1>
+                    <p className="text-muted-foreground mt-1 text-sm">Manage your site&apos;s hostnames and DNS instructions.</p>
                 </div>
 
                 {flash?.success && (
@@ -185,21 +178,39 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                     </div>
                 )}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Flitops domain</CardTitle>
-                        <CardDescription>Every site includes one free {freeDomain} hostname.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {systemDomains.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">No system domain.</p>
-                        ) : (
-                            systemDomains.map((d) => (
+                <div className="flex flex-col gap-6">
+                    <form onSubmit={handleValidateAndOpenSheet} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                        <div className="flex-1 space-y-2">
+                            <Input
+                                placeholder="your-domain.com"
+                                value={newHostname}
+                                onChange={(e) => {
+                                    setNewHostname(e.target.value);
+                                    setHostnameError(null);
+                                }}
+                                className={cn(hostnameError && 'border-destructive')}
+                            />
+                            {hostnameError && <p className="text-destructive text-sm">{hostnameError}</p>}
+                        </div>
+                        <Button type="submit" disabled={validating} className="shrink-0 sm:mt-0">
+                            {validating ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
+                        </Button>
+                    </form>
+
+                    {sortedDomains.length === 0 ? (
+                        <div className="border-muted-foreground/25 text-muted-foreground rounded-lg border border-dashed px-6 py-10 text-center">
+                            <p className="text-foreground font-medium">No domains yet</p>
+                            <p className="mt-1 text-sm">Add your first custom domain above.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {sortedDomains.map((d) => (
                                 <DomainRow
                                     key={d.ulid}
                                     domain={d}
                                     serverId={Number(serverId)}
                                     siteId={site.id}
+                                    freeDomain={freeDomain}
                                     expandedDns={expandedDns}
                                     setExpandedDns={setExpandedDns}
                                     onCopy={copyText}
@@ -207,60 +218,10 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                     onDelete={setDomainToDelete}
                                     teamPath={teamPath}
                                 />
-                            ))
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Custom domains</CardTitle>
-                        <CardDescription>Add domains and aliases that you control at your DNS provider.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <form onSubmit={handleValidateAndOpenSheet} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                            <div className="flex-1 space-y-2">
-                                <Input
-                                    placeholder="your-domain.com"
-                                    value={newHostname}
-                                    onChange={(e) => {
-                                        setNewHostname(e.target.value);
-                                        setHostnameError(null);
-                                    }}
-                                    className={cn(hostnameError && 'border-destructive')}
-                                />
-                                {hostnameError && <p className="text-destructive text-sm">{hostnameError}</p>}
-                            </div>
-                            <Button type="submit" disabled={validating} className="shrink-0 sm:mt-0">
-                                {validating ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
-                            </Button>
-                        </form>
-
-                        {customDomains.length === 0 ? (
-                            <div className="border-muted-foreground/25 text-muted-foreground rounded-lg border border-dashed px-6 py-10 text-center">
-                                <p className="text-foreground font-medium">No custom domains yet</p>
-                                <p className="mt-1 text-sm">Add your first custom domain above.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {customDomains.map((d) => (
-                                    <DomainRow
-                                        key={d.ulid}
-                                        domain={d}
-                                        serverId={Number(serverId)}
-                                        siteId={site.id}
-                                        expandedDns={expandedDns}
-                                        setExpandedDns={setExpandedDns}
-                                        onCopy={copyText}
-                                        onVisit={visitDomain}
-                                        onDelete={setDomainToDelete}
-                                        teamPath={teamPath}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -380,6 +341,7 @@ function DomainRow({
     domain,
     serverId,
     siteId,
+    freeDomain,
     expandedDns,
     setExpandedDns,
     onCopy,
@@ -390,6 +352,7 @@ function DomainRow({
     domain: SiteDomain;
     serverId: number;
     siteId: number | string;
+    freeDomain: string;
     expandedDns: Record<string, boolean>;
     setExpandedDns: Dispatch<SetStateAction<Record<string, boolean>>>;
     onCopy: (s: string) => void;
@@ -397,24 +360,64 @@ function DomainRow({
     onDelete: (domain: SiteDomain) => void;
     teamPath: (path: string) => string;
 }) {
-    const open = expandedDns[domain.ulid] ?? false;
     const hasDns = domain.dns_records.length > 0;
     const isDeleting = domain.status === 'deleting';
 
     const isCustomUnverified = domain.type === 'custom' && !domain.is_verified;
+    const open = expandedDns[domain.ulid] ?? (isCustomUnverified && hasDns);
+
+    const [verifying, setVerifying] = useState(false);
+    const [lastUpdatedAt, setLastUpdatedAt] = useState(domain.updated_at);
+
+    if (domain.updated_at !== lastUpdatedAt) {
+        setLastUpdatedAt(domain.updated_at);
+        setVerifying(false);
+    }
+
+    useEffect(() => {
+        if (!verifying) {
+            return;
+        }
+        const timeout = setTimeout(() => setVerifying(false), 20000);
+        return () => clearTimeout(timeout);
+    }, [verifying]);
+
+    function handleVerify() {
+        setVerifying(true);
+        router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/verify`), {}, { preserveScroll: true });
+    }
 
     return (
         <div className={cn('border-border bg-card rounded-lg border', isDeleting && 'opacity-60')}>
             <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
-                    <span className="truncate font-medium">{domain.hostname}</span>
-                    {domain.type === 'system' && <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />}
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
+                        <span className="truncate font-medium">{domain.hostname}</span>
+                    </div>
+                    {hasDns && (
+                        <button
+                            type="button"
+                            onClick={() => setExpandedDns((prev) => ({ ...prev, [domain.ulid]: !open }))}
+                            className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
+                        >
+                            {open ? 'Hide DNS records' : 'View DNS records'}
+                            {open ? <ChevronUpIcon className="size-3" /> : <ChevronDownIcon className="size-3" />}
+                        </button>
+                    )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                     {isDeleting && (
                         <span className="border-destructive/40 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
                             <Loader2Icon className="size-3 animate-spin" /> Deleting
+                        </span>
+                    )}
+                    {!isDeleting && domain.type === 'system' && (
+                        <span
+                            className="border-muted-foreground/40 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                            title={`Free hostname included with every site (${freeDomain})`}
+                        >
+                            <LockIcon className="size-3" /> Free domain
                         </span>
                     )}
                     {!isDeleting && domain.type === 'custom' && (
@@ -475,6 +478,23 @@ function DomainRow({
                         </span>
                     )}
                 </div>
+                {isCustomUnverified && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        disabled={verifying}
+                        onClick={handleVerify}
+                    >
+                        {verifying ? (
+                            <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                            <ShieldCheckIcon className="size-3.5" />
+                        )}
+                        {verifying ? 'Verifying' : 'Verify'}
+                    </Button>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild disabled={isDeleting}>
                         <Button variant="ghost" size="icon" className="size-8 shrink-0" disabled={isDeleting}>
@@ -492,27 +512,6 @@ function DomainRow({
                         <DropdownMenuItem onClick={() => onCopy(domain.ulid)}>
                             <CopyIcon className="mr-2 size-4" /> Copy ID
                         </DropdownMenuItem>
-                        {hasDns && (
-                            <DropdownMenuItem
-                                onClick={() =>
-                                    setExpandedDns((prev) => ({
-                                        ...prev,
-                                        [domain.ulid]: !prev[domain.ulid],
-                                    }))
-                                }
-                            >
-                                <GlobeIcon className="mr-2 size-4" /> View DNS records
-                            </DropdownMenuItem>
-                        )}
-                        {domain.type === 'custom' && !domain.is_verified && (
-                            <DropdownMenuItem
-                                onClick={() =>
-                                    router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/verify`))
-                                }
-                            >
-                                <ShieldCheckIcon className="mr-2 size-4" /> Verify domain
-                            </DropdownMenuItem>
-                        )}
                         {domain.type === 'custom' && domain.is_verified && (
                             <DropdownMenuItem
                                 onClick={() =>
@@ -522,7 +521,7 @@ function DomainRow({
                                 <LockIcon className="mr-2 size-4" /> Renew SSL
                             </DropdownMenuItem>
                         )}
-                        {domain.type === 'custom' && !domain.is_primary && domain.is_enabled && (
+                        {!domain.is_primary && domain.is_enabled && (
                             <DropdownMenuItem
                                 onClick={() =>
                                     router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/primary`))
@@ -555,34 +554,28 @@ function DomainRow({
                 </DropdownMenu>
             </div>
 
-            {isCustomUnverified && (
-                <div className="border-t px-4 py-3">
-                    <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
-                        <ShieldXIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <p className="text-sm text-amber-800 dark:text-amber-200">
-                            Point your DNS A record to this server&apos;s IP, then use{' '}
-                            <span className="font-medium">Verify domain</span> in the menu. Once verified, SSL will be issued automatically.
-                        </p>
-                    </div>
-                </div>
-            )}
-
             {hasDns && (
-                <Collapsible open={open} onOpenChange={(v) => setExpandedDns((prev) => ({ ...prev, [domain.ulid]: v }))}>
-                    <CollapsibleTrigger asChild>
-                        <button
-                            type="button"
-                            className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 border-t px-4 py-2 text-sm"
-                        >
-                            DNS records
-                            {open ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
-                        </button>
-                    </CollapsibleTrigger>
+                <Collapsible open={open}>
                     <CollapsibleContent>
-                        <div className="border-t px-4 pb-4 pt-2">
-                            <p className="text-muted-foreground mb-3 text-sm">
-                                Add these records at your DNS provider so traffic reaches this server.
-                            </p>
+                        <div
+                            className={cn(
+                                'border-t px-4 py-4',
+                                isCustomUnverified && 'bg-amber-50/60 dark:bg-amber-950/20',
+                            )}
+                        >
+                            {isCustomUnverified ? (
+                                <div className="mb-3 flex items-start gap-2">
+                                    <ShieldXIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                                        Add these records at your DNS provider, then click <span className="font-medium">Verify</span>.
+                                        SSL is issued automatically once verified.
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground mb-3 text-sm">
+                                    Add these records at your DNS provider so traffic reaches this server.
+                                </p>
+                            )}
                             <Table>
                                 <TableHeader>
                                     <TableRow>
