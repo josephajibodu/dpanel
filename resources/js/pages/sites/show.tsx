@@ -334,7 +334,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                                     <TableHead>
                                                         Deployed
                                                     </TableHead>
-                                                    <TableHead className="w-0" />
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -354,19 +353,26 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                                                 }
                                                             />
                                                         </TableCell>
-                                                        <TableCell className="font-mono text-sm">
-                                                            {d.commit_hash
-                                                                ? d.commit_hash.slice(
-                                                                      0,
-                                                                      7,
-                                                                  )
-                                                                : '—'}
+                                                        <TableCell className="font-mono">
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
+                                                                )}
+                                                                className="hover:underline"
+                                                            >
+                                                                {d.commit_hash
+                                                                    ? d.commit_hash.slice(
+                                                                          0,
+                                                                          7,
+                                                                      )
+                                                                    : '—'}
+                                                            </Link>
                                                         </TableCell>
-                                                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                                                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
                                                             {d.commit_message ??
                                                                 '—'}
                                                         </TableCell>
-                                                        <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                                                        <TableCell className="whitespace-nowrap text-muted-foreground">
                                                             {d.finished_at
                                                                 ? format(
                                                                       new Date(
@@ -386,21 +392,6 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                                                     }
                                                                 </span>
                                                             )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                asChild
-                                                            >
-                                                                <Link
-                                                                    href={teamPath(
-                                                                        `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
-                                                                    )}
-                                                                >
-                                                                    View
-                                                                </Link>
-                                                            </Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
