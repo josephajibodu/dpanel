@@ -28,7 +28,7 @@ class ProvisionSiteAction
         Log::info("Creating site {$site->domain} on server {$server->name}");
 
         try {
-            $site->update(['status' => SiteStatus::Installing]);
+            $site->update(['status' => SiteStatus::Installing, 'error_message' => null]);
             $this->broadcastServerSitesUpdated($server);
 
             $connection = $this->sshService->connect($server);
@@ -62,7 +62,7 @@ class ProvisionSiteAction
         } catch (\Throwable $e) {
             Log::error("Failed to create site {$site->domain}: {$e->getMessage()}");
 
-            $site->update(['status' => SiteStatus::Failed]);
+            $site->update(['status' => SiteStatus::Failed, 'error_message' => $e->getMessage()]);
 
             $this->broadcastServerSitesUpdated($server);
 

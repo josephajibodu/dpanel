@@ -22,6 +22,7 @@ export interface Site {
     status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed' | 'deleting';
     status_label: string;
     status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red' | 'orange';
+    error_message: string | null;
     provisioning_step?: { value: number; label: string; description: string } | null;
     provisioning_steps?: Array<{ value: number; label: string; description: string }>;
     auto_deploy: boolean;

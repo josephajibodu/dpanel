@@ -36,6 +36,7 @@ class Site extends Model
         'package_manager',
         'build_command',
         'status',
+        'error_message',
         'provisioning_step',
         'deploy_key_id',
         'webhook_secret',

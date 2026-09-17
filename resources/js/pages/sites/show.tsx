@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
+    AlertCircleIcon,
     ExternalLinkIcon,
     GitBranchIcon,
     Loader2Icon,
@@ -224,6 +225,21 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                     </div>
                 ) : (
                     <div className="space-y-6">
+                        {siteData.status === 'failed' && (
+                            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
+                                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                                <div className="flex-1 space-y-1">
+                                    <p className="font-medium text-red-800 dark:text-red-200">
+                                        Site creation failed
+                                    </p>
+                                    <p className="text-red-700 dark:text-red-300">
+                                        {siteData.error_message ??
+                                            'An unexpected error occurred while creating this site.'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Overview */}
                         <StatGroup>
                             <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">

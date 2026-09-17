@@ -132,6 +132,7 @@ it('sets site status to failed when a step throws', function () {
 
     $site->refresh();
     expect($site->status)->toBe(SiteStatus::Failed);
+    expect($site->error_message)->toBe('SSH connection lost');
 });
 
 // --------------------------------------------------------------------------
@@ -361,6 +362,7 @@ it('marks the site as failed and skips auto-deploy when an infra step throws', f
 
     $site->refresh();
     expect($site->status)->toBe(SiteStatus::Failed);
+    expect($site->error_message)->toBe('git clone failed');
     expect($site->deployments()->count())->toBe(0);
 
     Queue::assertNotPushed(DeploySiteJob::class);

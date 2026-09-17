@@ -42,6 +42,7 @@ class SiteResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),
+            'error_message' => $this->error_message,
             'provisioning_step' => $this->provisioning_step ? [
                 'value' => $this->provisioning_step->value,
                 'label' => $this->provisioning_step->label(),
