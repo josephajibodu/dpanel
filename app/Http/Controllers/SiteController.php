@@ -7,6 +7,7 @@ use App\Actions\Sites\DeleteSiteAction;
 use App\Data\SiteData;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Http\Requests\CheckSiteNameRequest;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
 use App\Http\Resources\ServerDatabaseResource;
@@ -16,8 +17,10 @@ use App\Http\Resources\SourceControlAccountResource;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -84,6 +87,24 @@ class SiteController extends Controller
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],
         ]);
+    }
+
+    public function checkSiteName(CheckSiteNameRequest $request, Team $team, Server $server): JsonResponse
+    {
+        $this->authorize('create', [Site::class, $server]);
+
+        $siteName = strtolower($request->validated('site_name'));
+        $freeDomain = config('server.free_domain');
+        $hostname = "{$siteName}.{$freeDomain}";
+
+        if (SiteDomain::query()->where('hostname', $hostname)->exists()) {
+            return response()->json([
+                'available' => false,
+                'message' => 'That subdomain is already taken.',
+            ]);
+        }
+
+        return response()->json(['available' => true]);
     }
 
     public function store(

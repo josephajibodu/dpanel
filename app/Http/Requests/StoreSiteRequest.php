@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Models\Server;
+use App\Models\SiteDomain;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -76,6 +78,32 @@ class StoreSiteRequest extends FormRequest
             'build_command' => ['nullable', 'string', 'max:500'],
             'auto_deploy' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $domain = $this->input('domain');
+            $siteName = $this->input('site_name');
+
+            $hostname = $domain
+                ? strtolower($domain)
+                : ($siteName ? strtolower($siteName).'.'.config('server.free_domain') : null);
+
+            if (! $hostname) {
+                return;
+            }
+
+            if (SiteDomain::query()->where('hostname', $hostname)->exists()) {
+                $validator->errors()->add(
+                    $domain ? 'domain' : 'site_name',
+                    $domain ? 'That domain is already in use.' : 'That subdomain is already taken.',
+                );
+            }
+        });
     }
 
     /**

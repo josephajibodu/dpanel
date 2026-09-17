@@ -6,6 +6,7 @@ use App\Enums\ServiceType;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
 use App\Models\User;
@@ -123,4 +124,39 @@ it('shows site create page with source control accounts but without prefetched r
             ->where('sourceControl.accounts.data', fn ($accounts) => count($accounts) === 2)
             ->missing('sourceControl.repositories')
         );
+});
+
+it('reports a free subdomain as available when the hostname is unused', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/check-site-name", [
+            'site_name' => 'brand-new-app',
+        ]);
+
+    $response->assertOk()
+        ->assertJson(['available' => true]);
+});
+
+it('reports a free subdomain as taken when the hostname is already in use', function () {
+    $site = Site::factory()->forServer($this->server)->create();
+    SiteDomain::factory()->for($site)->create([
+        'hostname' => 'taken-app.'.config('server.free_domain'),
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/check-site-name", [
+            'site_name' => 'taken-app',
+        ]);
+
+    $response->assertOk()
+        ->assertJson(['available' => false]);
+});
+
+it('rejects an invalid free subdomain name', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/check-site-name", [
+            'site_name' => 'not valid!',
+        ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors('site_name');
 });

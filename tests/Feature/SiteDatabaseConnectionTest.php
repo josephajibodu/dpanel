@@ -9,6 +9,7 @@ use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\Ssh\SshConnection;
@@ -113,6 +114,50 @@ describe('StoreSiteRequest validation', function () {
             'domain' => 'no-db.com',
             'server_database_id' => null,
         ]);
+    });
+});
+
+describe('StoreSiteRequest uniqueness validation', function () {
+    it('rejects a site_name whose free-domain hostname is already taken', function () {
+        $existingSite = Site::factory()->forServer($this->server)->create();
+        SiteDomain::factory()->for($existingSite)->create([
+            'hostname' => 'taken-app.'.config('server.free_domain'),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'site_name' => 'taken-app',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertSessionHasErrors('site_name');
+        $this->assertDatabaseMissing('sites', ['site_name' => 'taken-app']);
+    });
+
+    it('rejects a custom domain that is already in use', function () {
+        $existingSite = Site::factory()->forServer($this->server)->create();
+        SiteDomain::factory()->for($existingSite)->create([
+            'hostname' => 'already-used.example.com',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'domain' => 'already-used.example.com',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+            ]);
+
+        $response->assertSessionHasErrors('domain');
+        $this->assertDatabaseMissing('sites', ['domain' => 'already-used.example.com']);
     });
 });
 

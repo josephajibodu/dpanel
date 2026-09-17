@@ -144,6 +144,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.create');
                 Route::post('servers/{server}/sites', [SiteController::class, 'store'])
                     ->name('servers.sites.store');
+                Route::post('servers/{server}/sites/check-site-name', [SiteController::class, 'checkSiteName'])
+                    ->name('servers.sites.check-site-name');
                 Route::get('servers/{server}/sites/{site}', [SiteController::class, 'show'])
                     ->name('servers.sites.show');
                 Route::get('servers/{server}/sites/{site}/edit', [SiteController::class, 'edit'])

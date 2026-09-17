@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { ArrowLeftIcon, EyeIcon, EyeOffIcon, Loader2Icon, PlusIcon } from 'lucide-react';
+import { ArrowLeftIcon, CheckIcon, EyeIcon, EyeOffIcon, Loader2Icon, PlusIcon, XCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
 import { PhpVersion, ProjectType } from '@/types/site';
@@ -105,6 +106,9 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
     const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
     const [providerPickerOpen, setProviderPickerOpen] = useState(false);
     const pendingDbNameRef = useRef<string | null>(null);
+    const [siteNameStatus, setSiteNameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+    const [siteNameMessage, setSiteNameMessage] = useState<string | null>(null);
+    const siteNameCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const sourceControlAccounts = sourceControl?.accounts.data ?? [];
 
@@ -363,6 +367,71 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         }
     }, [form.data.package_manager]);
 
+    // Debounce free-subdomain availability check as the site name changes
+    useEffect(() => {
+        if (useCustomDomain) {
+            return;
+        }
+
+        if (siteNameCheckRef.current) {
+            clearTimeout(siteNameCheckRef.current);
+        }
+
+        const siteName = form.data.site_name.trim();
+
+        if (!siteName) {
+            setSiteNameStatus('idle');
+            setSiteNameMessage(null);
+            return;
+        }
+
+        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(siteName)) {
+            setSiteNameStatus('invalid');
+            setSiteNameMessage('Only lowercase letters, numbers, and hyphens are allowed.');
+            return;
+        }
+
+        setSiteNameStatus('checking');
+        setSiteNameMessage(null);
+
+        siteNameCheckRef.current = setTimeout(() => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            fetch(teamPath(`/servers/${serverData.id}/sites/check-site-name`), {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ site_name: siteName }),
+            })
+                .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        setSiteNameStatus('invalid');
+                        setSiteNameMessage(data.message ?? data.errors?.site_name?.[0] ?? 'Invalid site name.');
+                        return;
+                    }
+                    setSiteNameStatus(data.available ? 'available' : 'taken');
+                    setSiteNameMessage(data.available ? null : data.message);
+                })
+                .catch(() => {
+                    setSiteNameStatus('idle');
+                    setSiteNameMessage(null);
+                });
+        }, 400);
+
+        return () => {
+            if (siteNameCheckRef.current) {
+                clearTimeout(siteNameCheckRef.current);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.data.site_name, useCustomDomain]);
+
     function handleProjectTypeChange(value: string) {
         const projectType = projectTypes.find((pt) => pt.value === value);
         form.setData({
@@ -443,6 +512,11 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
+        if (!useCustomDomain && (siteNameStatus === 'taken' || siteNameStatus === 'invalid' || siteNameStatus === 'checking')) {
+            toast.error(siteNameMessage ?? 'Choose an available free subdomain before continuing.');
+            return;
+        }
 
         // Send only the field relevant to the chosen mode so the backend's
         // required_without rule resolves cleanly (site_name is always derived
@@ -658,21 +732,45 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        <Label>Free domain</Label>
-                                        <div className="border-input bg-muted/40 flex items-center rounded-md border px-3 py-2 text-sm">
-                                            {form.data.site_name ? (
-                                                <span>{form.data.site_name}</span>
-                                            ) : (
-                                                <span className="text-muted-foreground italic">
-                                                    Select a repository to generate a domain
+                                        <Label htmlFor="site_name">Free domain</Label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative flex-1">
+                                                <Input
+                                                    id="site_name"
+                                                    placeholder="my-app"
+                                                    value={form.data.site_name}
+                                                    onChange={(e) => form.setData('site_name', e.target.value.toLowerCase())}
+                                                    className={cn(
+                                                        'pr-8',
+                                                        (form.errors.site_name || siteNameStatus === 'taken' || siteNameStatus === 'invalid') &&
+                                                            'border-destructive',
+                                                    )}
+                                                />
+                                                <span className="absolute top-1/2 right-2 -translate-y-1/2">
+                                                    {siteNameStatus === 'checking' && (
+                                                        <Loader2Icon className="text-muted-foreground size-4 animate-spin" />
+                                                    )}
+                                                    {siteNameStatus === 'available' && <CheckIcon className="size-4 text-emerald-600" />}
+                                                    {(siteNameStatus === 'taken' || siteNameStatus === 'invalid') && (
+                                                        <XCircleIcon className="text-destructive size-4" />
+                                                    )}
                                                 </span>
-                                            )}
-                                            <span className="text-muted-foreground ml-auto whitespace-nowrap">.{freeDomain}</span>
+                                            </div>
+                                            <span className="text-muted-foreground whitespace-nowrap text-sm">.{freeDomain}</span>
                                         </div>
-                                        {form.errors.site_name && <p className="text-destructive text-sm">{form.errors.site_name}</p>}
-                                        <p className="text-muted-foreground text-xs">
-                                            Generated from your repository name. Use a custom domain to set your own.
-                                        </p>
+                                        {form.errors.site_name ? (
+                                            <p className="text-destructive text-sm">{form.errors.site_name}</p>
+                                        ) : siteNameMessage ? (
+                                            <p className={cn('text-sm', siteNameStatus === 'available' ? 'text-emerald-600' : 'text-destructive')}>
+                                                {siteNameMessage}
+                                            </p>
+                                        ) : siteNameStatus === 'available' ? (
+                                            <p className="text-sm text-emerald-600">That subdomain is available.</p>
+                                        ) : (
+                                            <p className="text-muted-foreground text-xs">
+                                                Generated from your repository name. Change it to use a different free subdomain.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 
@@ -855,7 +953,13 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={form.processing || (useCustomDomain ? !form.data.domain : !form.data.site_name) || (connectDatabase && !form.data.server_database_id)}
+                                disabled={
+                                    form.processing ||
+                                    (useCustomDomain
+                                        ? !form.data.domain
+                                        : !form.data.site_name || siteNameStatus === 'taken' || siteNameStatus === 'invalid' || siteNameStatus === 'checking') ||
+                                    (connectDatabase && !form.data.server_database_id)
+                                }
                             >
                                 {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
                                 Create Site
