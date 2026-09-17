@@ -2,7 +2,6 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -19,10 +18,15 @@ interface Props {
     has_ssh_key: boolean;
 }
 
-export default function ServerSettings({ server: serverProp, ssh_command, has_ssh_key }: Props) {
+export default function ServerSettings({
+    server: serverProp,
+    ssh_command,
+    has_ssh_key,
+}: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
-    const server = (serverProp as { data?: Server })?.data ?? (serverProp as Server);
+    const server =
+        (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const [destroyDialogOpen, setDestroyDialogOpen] = useState(false);
     const [isDestroying, setIsDestroying] = useState(false);
 
@@ -45,7 +49,10 @@ export default function ServerSettings({ server: serverProp, ssh_command, has_ss
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server.id)}
+            subNavItems={getServerSubNavItems(
+                currentTeam?.slug ?? '',
+                server.id,
+            )}
         >
             <Head title={`Settings - ${server.name}`} />
 
@@ -54,48 +61,47 @@ export default function ServerSettings({ server: serverProp, ssh_command, has_ss
                     <h1 className="text-2xl font-semibold tracking-tight">
                         Server Settings
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Manage SSH access and server configuration.
                     </p>
                 </div>
 
                 <div className="space-y-6">
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="space-y-4">
-                                <HeadingSmall
-                                    title="SSH command"
-                                    description="Copy and paste this command into your terminal to connect to the server."
+                    <div className="space-y-4">
+                        <HeadingSmall
+                            title="SSH command"
+                            description="Copy and paste this command into your terminal to connect to the server."
+                        />
+                        {has_ssh_key && ssh_command ? (
+                            <div className="flex gap-2">
+                                <Input
+                                    readOnly
+                                    value={ssh_command}
+                                    className="font-mono"
                                 />
-                                {has_ssh_key && ssh_command ? (
-                                    <div className="flex gap-2">
-                                        <Input
-                                            readOnly
-                                            value={ssh_command}
-                                            className="font-mono"
-                                        />
-                                        <CopyButton value={ssh_command} />
-                                    </div>
-                                ) : !server.ip_address ? (
-                                    <p className="text-muted-foreground text-sm">
-                                        Server IP not yet assigned. The server may still be provisioning.
-                                    </p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <p className="text-muted-foreground text-sm">
-                                            You need to add and sync an SSH key to connect. Add an SSH key and sync it to this server.
-                                        </p>
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={teamPath('/ssh-keys')}>
-                                                <KeyIcon className="mr-2 h-4 w-4" />
-                                                Add SSH key
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                )}
+                                <CopyButton value={ssh_command} />
                             </div>
-                        </CardContent>
-                    </Card>
+                        ) : !server.ip_address ? (
+                            <p className="text-sm text-muted-foreground">
+                                Server IP not yet assigned. The server may still
+                                be provisioning.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                    You need to add and sync an SSH key to
+                                    connect. Add an SSH key and sync it to this
+                                    server.
+                                </p>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={teamPath('/ssh-keys')}>
+                                        <KeyIcon className="mr-2 h-4 w-4" />
+                                        Add SSH key
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="space-y-6">
                         <HeadingSmall
@@ -106,7 +112,8 @@ export default function ServerSettings({ server: serverProp, ssh_command, has_ss
                             <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
                                 <p className="font-medium">Warning</p>
                                 <p className="text-sm">
-                                    Please proceed with caution, this cannot be undone.
+                                    Please proceed with caution, this cannot be
+                                    undone.
                                 </p>
                             </div>
                             <Button

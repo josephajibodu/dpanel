@@ -1,10 +1,9 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { EyeIcon, LockIcon, Loader2Icon } from 'lucide-react';
+import { EyeIcon, Loader2Icon, LockIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
@@ -25,7 +24,12 @@ interface Props {
     env_content?: string;
 }
 
-export default function SiteEnvironmentShow({ server: serverProp, site: siteProp, has_workers = false, env_content }: Props) {
+export default function SiteEnvironmentShow({
+    server: serverProp,
+    site: siteProp,
+    has_workers = false,
+    env_content,
+}: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
@@ -56,15 +60,29 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
-        { title: server?.name || site.server?.name || 'Server', href: teamPath(`/servers/${serverId}`) },
-        { title: site.domain, href: teamPath(`/servers/${serverId}/sites/${site.id}`) },
-        { title: 'Environment', href: teamPath(`/servers/${serverId}/sites/${site.id}/environment`) },
+        {
+            title: server?.name || site.server?.name || 'Server',
+            href: teamPath(`/servers/${serverId}`),
+        },
+        {
+            title: site.domain,
+            href: teamPath(`/servers/${serverId}/sites/${site.id}`),
+        },
+        {
+            title: 'Environment',
+            href: teamPath(`/servers/${serverId}/sites/${site.id}/environment`),
+        },
     ];
 
-    const editorTheme = resolvedAppearance === 'dark' ? 'env-dark' : 'env-light';
+    const editorTheme =
+        resolvedAppearance === 'dark' ? 'env-dark' : 'env-light';
 
     const handleEditorBeforeMount = (monaco: Monaco) => {
-        if (! monaco.languages.getLanguages().some((language: { id: string }) => language.id === 'dotenv')) {
+        if (
+            !monaco.languages
+                .getLanguages()
+                .some((language: { id: string }) => language.id === 'dotenv')
+        ) {
             monaco.languages.register({ id: 'dotenv' });
             monaco.languages.setMonarchTokensProvider('dotenv', {
                 tokenizer: {
@@ -105,7 +123,11 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getSiteSubNavItems(currentTeam?.slug ?? '', String(serverId ?? ''), site.id)}
+            subNavItems={getSiteSubNavItems(
+                currentTeam?.slug ?? '',
+                String(serverId ?? ''),
+                site.id,
+            )}
         >
             <Head title={`Environment - ${site.domain}`} />
 
@@ -114,100 +136,120 @@ export default function SiteEnvironmentShow({ server: serverProp, site: siteProp
                     <h1 className="text-2xl font-semibold tracking-tight">
                         Environment Variables
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                        Manage environment variables for your application. These will be synced to the .env file on your server.
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Manage environment variables for your application. These
+                        will be synced to the .env file on your server.
                     </p>
                 </div>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="relative overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
-                                    <Editor
-                                        height="420px"
-                                        language="dotenv"
-                                        value={form.data.env_content}
-                                        beforeMount={handleEditorBeforeMount}
-                                        theme={editorTheme}
-                                        onChange={(value) => form.setData('env_content', value ?? '')}
-                                        options={{
-                                            minimap: { enabled: false },
-                                            lineNumbers: 'on',
-                                            scrollBeyondLastLine: false,
-                                            wordWrap: 'off',
-                                            automaticLayout: true,
-                                            fontSize: 13,
-                                            lineHeight: 20,
-                                            tabSize: 2,
-                                            padding: { top: 8, bottom: 8 },
-                                            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                                            readOnly: !revealed || env_content === undefined,
-                                        }}
-                                    />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <div className="relative overflow-hidden rounded-md border shadow-xs [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
+                            <Editor
+                                height="420px"
+                                language="dotenv"
+                                value={form.data.env_content}
+                                beforeMount={handleEditorBeforeMount}
+                                theme={editorTheme}
+                                onChange={(value) =>
+                                    form.setData('env_content', value ?? '')
+                                }
+                                options={{
+                                    minimap: { enabled: false },
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    wordWrap: 'off',
+                                    automaticLayout: true,
+                                    fontSize: 13,
+                                    lineHeight: 20,
+                                    tabSize: 2,
+                                    padding: { top: 24, bottom: 24 },
+                                    fontFamily:
+                                        'Menlo, Monaco, "Courier New", monospace',
+                                    readOnly:
+                                        !revealed || env_content === undefined,
+                                }}
+                            />
 
-                                    {!revealed && (
-                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/90 backdrop-blur-xs">
-                                            <LockIcon className="text-muted-foreground h-8 w-8" />
-                                            <p className="text-muted-foreground text-sm">Environment variables are hidden for security.</p>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setRevealed(true)}
-                                            >
-                                                <EyeIcon className="mr-2 h-4 w-4" />
-                                                Reveal secrets
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {isLoading && (
-                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-background/70 backdrop-blur-xs">
-                                            <Loader2Icon className="text-muted-foreground h-6 w-6 animate-spin" />
-                                            <p className="text-muted-foreground text-xs">Loading environment...</p>
-                                        </div>
-                                    )}
+                            {!revealed && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/90 backdrop-blur-xs">
+                                    <LockIcon className="h-8 w-8 text-muted-foreground" />
+                                    <p className="text-sm text-muted-foreground">
+                                        Environment variables are hidden for
+                                        security.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setRevealed(true)}
+                                    >
+                                        <EyeIcon className="mr-2 h-4 w-4" />
+                                        Reveal secrets
+                                    </Button>
                                 </div>
-                                {form.errors.env_content && (
-                                    <p className="text-destructive text-sm">{form.errors.env_content}</p>
-                                )}
-                            </div>
+                            )}
 
-                            <div className="flex flex-col gap-2">
-                                <label className="flex items-center gap-2 text-sm">
-                                    <Checkbox
-                                        checked={form.data.clear_config_cache}
-                                        onCheckedChange={(checked) =>
-                                            form.setData('clear_config_cache', !!checked)
-                                        }
-                                    />
-                                    Clear config cache
-                                </label>
-                                {has_workers && (
-                                    <label className="flex items-center gap-2 text-sm">
-                                        <Checkbox
-                                            checked={form.data.restart_queue}
-                                            onCheckedChange={(checked) =>
-                                                form.setData('restart_queue', !!checked)
-                                            }
-                                        />
-                                        Restart queue workers
-                                    </label>
-                                )}
-                            </div>
+                            {isLoading && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-background/70 backdrop-blur-xs">
+                                    <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    <p className="text-xs text-muted-foreground">
+                                        Loading environment...
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        {form.errors.env_content && (
+                            <p className="text-sm text-destructive">
+                                {form.errors.env_content}
+                            </p>
+                        )}
+                    </div>
 
-                            <Separator />
+                    <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                                checked={form.data.clear_config_cache}
+                                onCheckedChange={(checked) =>
+                                    form.setData(
+                                        'clear_config_cache',
+                                        !!checked,
+                                    )
+                                }
+                            />
+                            Clear config cache
+                        </label>
+                        {has_workers && (
+                            <label className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                    checked={form.data.restart_queue}
+                                    onCheckedChange={(checked) =>
+                                        form.setData('restart_queue', !!checked)
+                                    }
+                                />
+                                Restart queue workers
+                            </label>
+                        )}
+                    </div>
 
-                            <div className="flex justify-end">
-                                <Button type="submit" disabled={form.processing || !revealed || env_content === undefined}>
-                                    {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save & Sync
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                    <Separator />
+
+                    <div className="flex justify-end">
+                        <Button
+                            type="submit"
+                            disabled={
+                                form.processing ||
+                                !revealed ||
+                                env_content === undefined
+                            }
+                        >
+                            {form.processing && (
+                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Save & Sync
+                        </Button>
+                    </div>
+                </form>
             </div>
         </AppLayout>
     );

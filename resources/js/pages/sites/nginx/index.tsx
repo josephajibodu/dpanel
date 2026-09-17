@@ -33,6 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
@@ -352,9 +353,9 @@ export default function SiteNginxIndex({
                     </div>
                 </div>
 
-                <div className="flex flex-1 gap-4 overflow-hidden">
+                <StatGroup className="flex flex-1 gap-4 overflow-hidden">
                     {/* File explorer — domain → section → files */}
-                    <div className="w-64 shrink-0 overflow-y-auto rounded-lg border">
+                    <div className="w-64 shrink-0 overflow-y-auto rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
                         {domains.length === 0 && (
                             <p className="px-4 py-3 text-xs text-muted-foreground italic">
                                 No domains configured yet.
@@ -548,7 +549,7 @@ export default function SiteNginxIndex({
                     </div>
 
                     {/* Editor pane */}
-                    <div className="flex flex-1 flex-col overflow-hidden rounded-lg border">
+                    <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
                         {selectedFile ? (
                             <>
                                 <div className="flex items-center justify-between border-b px-4 py-2.5">
@@ -647,7 +648,7 @@ export default function SiteNginxIndex({
 
                     {/* History panel */}
                     {showHistoryPanel && (
-                        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border">
+                        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
                             <div className="flex items-center justify-between border-b px-3 py-2.5">
                                 <span className="text-sm font-medium">
                                     History
@@ -717,7 +718,7 @@ export default function SiteNginxIndex({
                             </div>
                         </div>
                     )}
-                </div>
+                </StatGroup>
             </div>
 
             {/* Create file dialog */}

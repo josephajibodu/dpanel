@@ -648,7 +648,7 @@ export function ProcessesPanel({
                                         c.status === 'deleting';
                                     return (
                                         <TableRow key={c.id}>
-                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                            <TableCell className="max-w-[200px] truncate font-mono font-medium">
                                                 {truncate(c.command, 40)}
                                             </TableCell>
                                             <TableCell className="font-mono text-sm text-muted-foreground">

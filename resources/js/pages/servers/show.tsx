@@ -12,13 +12,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Stat } from '@/components/ui/stat';
 import { StatGroup } from '@/components/ui/stat-group';
@@ -408,124 +402,134 @@ export default function ServersShow({
 
                             {/* Right column: unified sidebar */}
                             <div>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Server details</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-5 text-sm">
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase">
-                                                Server
-                                            </p>
-                                            <DetailRow
-                                                label="Name"
-                                                value={data.name}
-                                            />
-                                            <DetailRow
-                                                label="Provider account"
-                                                value={
-                                                    data.provider_account
-                                                        ?.name ??
-                                                    data.provider_label
-                                                }
-                                            />
-                                            <DetailRow
-                                                label="Size"
-                                                value={data.size || '—'}
-                                            />
-                                            <DetailRow
-                                                label="Region"
-                                                value={data.region || '—'}
-                                            />
-                                            <DetailRow
-                                                label="SSH port"
-                                                value={String(data.ssh_port)}
-                                                valueClassName="font-mono"
-                                            />
+                                <StatGroup>
+                                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                        <div className="border-b px-6 py-4">
+                                            <CardTitle>
+                                                Server details
+                                            </CardTitle>
                                         </div>
+                                        <div className="space-y-5 p-6 text-sm">
+                                            <div className="space-y-2">
+                                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                                    Server
+                                                </p>
+                                                <DetailRow
+                                                    label="Name"
+                                                    value={data.name}
+                                                />
+                                                <DetailRow
+                                                    label="Provider account"
+                                                    value={
+                                                        data.provider_account
+                                                            ?.name ??
+                                                        data.provider_label
+                                                    }
+                                                />
+                                                <DetailRow
+                                                    label="Size"
+                                                    value={data.size || '—'}
+                                                />
+                                                <DetailRow
+                                                    label="Region"
+                                                    value={data.region || '—'}
+                                                />
+                                                <DetailRow
+                                                    label="SSH port"
+                                                    value={String(
+                                                        data.ssh_port,
+                                                    )}
+                                                    valueClassName="font-mono"
+                                                />
+                                            </div>
 
-                                        <div className="space-y-2 border-t pt-4">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase">
-                                                IP addresses
-                                            </p>
-                                            <DetailRow
-                                                label="Public"
-                                                value={
-                                                    data.ip_address ||
-                                                    'Pending...'
-                                                }
-                                                valueClassName="font-mono"
-                                            />
-                                            <DetailRow
-                                                label="Private"
-                                                value={
-                                                    data.private_ip_address ??
-                                                    '—'
-                                                }
-                                                valueClassName="font-mono"
-                                            />
-                                        </div>
+                                            <div className="space-y-2 border-t pt-4">
+                                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                                    IP addresses
+                                                </p>
+                                                <DetailRow
+                                                    label="Public"
+                                                    value={
+                                                        data.ip_address ||
+                                                        'Pending...'
+                                                    }
+                                                    valueClassName="font-mono"
+                                                />
+                                                <DetailRow
+                                                    label="Private"
+                                                    value={
+                                                        data.private_ip_address ??
+                                                        '—'
+                                                    }
+                                                    valueClassName="font-mono"
+                                                />
+                                            </div>
 
-                                        <div className="space-y-2 border-t pt-4">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase">
-                                                Runtime
-                                            </p>
-                                            <p className="text-sm font-medium">
-                                                PHP {data.php_version} ·{' '}
-                                                {data.database_type === 'mysql'
-                                                    ? 'MySQL'
-                                                    : data.database_type ===
-                                                        'postgresql'
-                                                      ? 'PostgreSQL'
-                                                      : 'MariaDB'}
-                                            </p>
-                                        </div>
+                                            <div className="space-y-2 border-t pt-4">
+                                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                                    Runtime
+                                                </p>
+                                                <p className="text-sm font-medium">
+                                                    PHP {data.php_version} ·{' '}
+                                                    {data.database_type ===
+                                                    'mysql'
+                                                        ? 'MySQL'
+                                                        : data.database_type ===
+                                                            'postgresql'
+                                                          ? 'PostgreSQL'
+                                                          : 'MariaDB'}
+                                                </p>
+                                            </div>
 
-                                        <div className="space-y-2 border-t pt-4">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase">
-                                                Status
-                                            </p>
-                                            <p className="text-sm font-medium">
-                                                {data.status_label}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Realtime{' '}
-                                                {connectionState === 'connected'
-                                                    ? 'connected'
-                                                    : 'fallback mode'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Created{' '}
-                                                {format(
-                                                    new Date(data.created_at),
-                                                    'MMM d, yyyy',
+                                            <div className="space-y-2 border-t pt-4">
+                                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                                    Status
+                                                </p>
+                                                <p className="text-sm font-medium">
+                                                    {data.status_label}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Realtime{' '}
+                                                    {connectionState ===
+                                                    'connected'
+                                                        ? 'connected'
+                                                        : 'fallback mode'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Created{' '}
+                                                    {format(
+                                                        new Date(
+                                                            data.created_at,
+                                                        ),
+                                                        'MMM d, yyyy',
+                                                    )}
+                                                </p>
+                                                {data.provisioned_at && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Provisioned{' '}
+                                                        {format(
+                                                            new Date(
+                                                                data.provisioned_at,
+                                                            ),
+                                                            'MMM d, yyyy',
+                                                        )}
+                                                    </p>
                                                 )}
-                                            </p>
-                                            {data.provisioned_at && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Provisioned{' '}
-                                                    {format(
-                                                        new Date(
-                                                            data.provisioned_at,
-                                                        ),
-                                                        'MMM d, yyyy',
-                                                    )}
-                                                </p>
-                                            )}
-                                            {data.last_ssh_connection_at && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Last SSH connection{' '}
-                                                    {format(
-                                                        new Date(
-                                                            data.last_ssh_connection_at,
-                                                        ),
-                                                        'MMM d, yyyy',
-                                                    )}
-                                                </p>
-                                            )}
+                                                {data.last_ssh_connection_at && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Last SSH connection{' '}
+                                                        {format(
+                                                            new Date(
+                                                                data.last_ssh_connection_at,
+                                                            ),
+                                                            'MMM d, yyyy',
+                                                        )}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                </StatGroup>
                             </div>
                         </div>
                     </>
