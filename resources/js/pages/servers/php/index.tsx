@@ -3,13 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
@@ -199,155 +194,162 @@ export default function ServerPhpIndex({
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-1">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>PHP settings</CardTitle>
-                                {settingsSyncStatus && (
-                                    <AutoStatusBadge
-                                        status={settingsSyncStatus}
-                                        label={
-                                            SYNC_STATUS_LABELS[
-                                                settingsSyncStatus
-                                            ] ?? settingsSyncStatus
-                                        }
-                                    />
-                                )}
-                            </div>
-                            <CardDescription>
-                                Configure php.ini for the default PHP version (
-                                {defaultVersion || '—'}).
-                                {settingsSyncStatus === 'failed' &&
-                                    settingsSyncError && (
-                                        <span className="ml-1 text-destructive">
-                                            Error: {settingsSyncError}
-                                        </span>
+                    <StatGroup>
+                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                            <div className="border-b px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle>PHP settings</CardTitle>
+                                    {settingsSyncStatus && (
+                                        <AutoStatusBadge
+                                            status={settingsSyncStatus}
+                                            label={
+                                                SYNC_STATUS_LABELS[
+                                                    settingsSyncStatus
+                                                ] ?? settingsSyncStatus
+                                            }
+                                        />
                                     )}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form
-                                onSubmit={handleUpdateSettings}
-                                className="flex flex-col gap-4"
-                            >
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="upload_max_filesize">
-                                            Upload max filesize
-                                        </Label>
-                                        <Input
-                                            id="upload_max_filesize"
-                                            value={
-                                                settingsForm.upload_max_filesize
-                                            }
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    upload_max_filesize:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 64M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.upload_max_filesize && (
-                                            <p className="text-sm text-destructive">
-                                                {errors.upload_max_filesize}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="post_max_size">
-                                            Post max size
-                                        </Label>
-                                        <Input
-                                            id="post_max_size"
-                                            value={settingsForm.post_max_size}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    post_max_size:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 64M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.post_max_size && (
-                                            <p className="text-sm text-destructive">
-                                                {errors.post_max_size}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="max_execution_time">
-                                            Max execution time (seconds)
-                                        </Label>
-                                        <Input
-                                            id="max_execution_time"
-                                            type="number"
-                                            min={1}
-                                            max={86400}
-                                            value={
-                                                settingsForm.max_execution_time
-                                            }
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    max_execution_time:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 30"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.max_execution_time && (
-                                            <p className="text-sm text-destructive">
-                                                {errors.max_execution_time}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="memory_limit">
-                                            Memory limit
-                                        </Label>
-                                        <Input
-                                            id="memory_limit"
-                                            value={settingsForm.memory_limit}
-                                            onChange={(e) =>
-                                                setSettingsForm((p) => ({
-                                                    ...p,
-                                                    memory_limit:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                            placeholder="e.g. 256M"
-                                            className="font-mono"
-                                            disabled={!serverIsReady}
-                                        />
-                                        {errors?.memory_limit && (
-                                            <p className="text-sm text-destructive">
-                                                {errors.memory_limit}
-                                            </p>
-                                        )}
-                                    </div>
                                 </div>
-                                <Button
-                                    type="submit"
-                                    disabled={
-                                        !serverIsReady || isSubmittingSettings
-                                    }
+                                <CardDescription className="mt-1">
+                                    Configure php.ini for the default PHP
+                                    version ({defaultVersion || '—'}).
+                                    {settingsSyncStatus === 'failed' &&
+                                        settingsSyncError && (
+                                            <span className="ml-1 text-destructive">
+                                                Error: {settingsSyncError}
+                                            </span>
+                                        )}
+                                </CardDescription>
+                            </div>
+                            <div className="p-6">
+                                <form
+                                    onSubmit={handleUpdateSettings}
+                                    className="flex flex-col gap-4"
                                 >
-                                    {isSubmittingSettings
-                                        ? 'Saving…'
-                                        : 'Save settings'}
-                                </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="upload_max_filesize">
+                                                Upload max filesize
+                                            </Label>
+                                            <Input
+                                                id="upload_max_filesize"
+                                                value={
+                                                    settingsForm.upload_max_filesize
+                                                }
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        upload_max_filesize:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 64M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.upload_max_filesize && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.upload_max_filesize}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="post_max_size">
+                                                Post max size
+                                            </Label>
+                                            <Input
+                                                id="post_max_size"
+                                                value={
+                                                    settingsForm.post_max_size
+                                                }
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        post_max_size:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 64M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.post_max_size && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.post_max_size}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="max_execution_time">
+                                                Max execution time (seconds)
+                                            </Label>
+                                            <Input
+                                                id="max_execution_time"
+                                                type="number"
+                                                min={1}
+                                                max={86400}
+                                                value={
+                                                    settingsForm.max_execution_time
+                                                }
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        max_execution_time:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 30"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.max_execution_time && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.max_execution_time}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="memory_limit">
+                                                Memory limit
+                                            </Label>
+                                            <Input
+                                                id="memory_limit"
+                                                value={
+                                                    settingsForm.memory_limit
+                                                }
+                                                onChange={(e) =>
+                                                    setSettingsForm((p) => ({
+                                                        ...p,
+                                                        memory_limit:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="e.g. 256M"
+                                                className="font-mono"
+                                                disabled={!serverIsReady}
+                                            />
+                                            {errors?.memory_limit && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.memory_limit}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={
+                                            !serverIsReady ||
+                                            isSubmittingSettings
+                                        }
+                                    >
+                                        {isSubmittingSettings
+                                            ? 'Saving…'
+                                            : 'Save settings'}
+                                    </Button>
+                                </form>
+                            </div>
+                        </div>
+                    </StatGroup>
 
                     <div className="flex flex-col gap-4">
                         <div className="space-y-1">
@@ -492,68 +494,80 @@ export default function ServerPhpIndex({
                         </Table>
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Install PHP version</CardTitle>
-                            <CardDescription>
-                                Install an additional PHP version from the
-                                ondrej/php PPA.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form
-                                onSubmit={handleInstallVersion}
-                                className="space-y-2"
-                            >
-                                <Label htmlFor="install-version">Version</Label>
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                    <Select
-                                        value={installVersion}
-                                        onValueChange={setInstallVersion}
-                                        disabled={!serverIsReady}
-                                    >
-                                        <SelectTrigger
-                                            id="install-version"
-                                            className="w-full sm:w-[200px]"
+                    <StatGroup>
+                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                            <div className="border-b px-6 py-4">
+                                <CardTitle>Install PHP version</CardTitle>
+                                <CardDescription className="mt-1">
+                                    Install an additional PHP version from the
+                                    ondrej/php PPA.
+                                </CardDescription>
+                            </div>
+                            <div className="p-6">
+                                <form
+                                    onSubmit={handleInstallVersion}
+                                    className="space-y-2"
+                                >
+                                    <Label htmlFor="install-version">
+                                        Version
+                                    </Label>
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                        <Select
+                                            value={installVersion}
+                                            onValueChange={setInstallVersion}
+                                            disabled={!serverIsReady}
                                         >
-                                            <SelectValue placeholder="Select version" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {versionsToInstall.map((v) => (
-                                                <SelectItem key={v} value={v}>
-                                                    PHP {v}
-                                                </SelectItem>
-                                            ))}
-                                            {versionsToInstall.length === 0 && (
-                                                <SelectItem value="" disabled>
-                                                    All versions installed
-                                                </SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    <Button
-                                        type="submit"
-                                        className="shrink-0"
-                                        disabled={
-                                            !serverIsReady ||
-                                            !installVersion ||
-                                            versionsToInstall.length === 0 ||
-                                            isSubmittingInstall
-                                        }
-                                    >
-                                        {isSubmittingInstall
-                                            ? 'Installing…'
-                                            : 'Install'}
-                                    </Button>
-                                </div>
-                                {errors?.version && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.version}
-                                    </p>
-                                )}
-                            </form>
-                        </CardContent>
-                    </Card>
+                                            <SelectTrigger
+                                                id="install-version"
+                                                className="w-full sm:w-[200px]"
+                                            >
+                                                <SelectValue placeholder="Select version" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {versionsToInstall.map((v) => (
+                                                    <SelectItem
+                                                        key={v}
+                                                        value={v}
+                                                    >
+                                                        PHP {v}
+                                                    </SelectItem>
+                                                ))}
+                                                {versionsToInstall.length ===
+                                                    0 && (
+                                                    <SelectItem
+                                                        value=""
+                                                        disabled
+                                                    >
+                                                        All versions installed
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button
+                                            type="submit"
+                                            className="shrink-0"
+                                            disabled={
+                                                !serverIsReady ||
+                                                !installVersion ||
+                                                versionsToInstall.length ===
+                                                    0 ||
+                                                isSubmittingInstall
+                                            }
+                                        >
+                                            {isSubmittingInstall
+                                                ? 'Installing…'
+                                                : 'Install'}
+                                        </Button>
+                                    </div>
+                                    {errors?.version && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.version}
+                                        </p>
+                                    )}
+                                </form>
+                            </div>
+                        </div>
+                    </StatGroup>
                 </div>
             </div>
         </AppLayout>
