@@ -1,12 +1,23 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { HistoryIcon, Loader2Icon, RocketIcon } from 'lucide-react';
+import {
+    HistoryIcon,
+    Loader2Icon,
+    MoreVerticalIcon,
+    RocketIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     getPaginationUrls,
     Pagination,
@@ -162,7 +173,7 @@ export default function SiteDeploymentsIndex({
                                     <TableHead>Triggered by</TableHead>
                                     <TableHead>Author</TableHead>
                                     <TableHead>Date</TableHead>
-                                    <TableHead className="w-[140px]" />
+                                    <TableHead className="w-[70px]" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -178,19 +189,21 @@ export default function SiteDeploymentsIndex({
                                                 }
                                             />
                                         </TableCell>
-                                        <TableCell className="max-w-[240px]">
-                                            {deployment.commit_hash && (
-                                                <span className="mr-2 font-mono text-xs text-muted-foreground">
-                                                    {deployment.commit_hash.slice(
-                                                        0,
-                                                        7,
-                                                    )}
+                                        <TableCell className="max-w-[280px]">
+                                            <div className="flex items-center gap-2">
+                                                {deployment.commit_hash && (
+                                                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                                                        {deployment.commit_hash.slice(
+                                                            0,
+                                                            7,
+                                                        )}
+                                                    </span>
+                                                )}
+                                                <span className="min-w-0 truncate text-muted-foreground">
+                                                    {deployment.commit_message ??
+                                                        '—'}
                                                 </span>
-                                            )}
-                                            <span className="truncate text-muted-foreground">
-                                                {deployment.commit_message ??
-                                                    '—'}
-                                            </span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
                                             {deployment.triggered_by ===
@@ -224,34 +237,48 @@ export default function SiteDeploymentsIndex({
                                                     )}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end gap-1">
-                                                {deployment.rollback_available && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            setRollbackTarget(
-                                                                deployment,
-                                                            )
-                                                        }
+                                            <div className="flex justify-end">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <HistoryIcon className="h-3.5 w-3.5" />
-                                                        Rollback
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={teamPath(
-                                                            `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}`,
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${serverId}/sites/${site.id}/deployments/${deployment.id}`,
+                                                                )}
+                                                            >
+                                                                View
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        {deployment.rollback_available && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    setRollbackTarget(
+                                                                        deployment,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <HistoryIcon className="mr-2 h-4 w-4" />
+                                                                Rollback
+                                                            </DropdownMenuItem>
                                                         )}
-                                                    >
-                                                        View
-                                                    </Link>
-                                                </Button>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </TableCell>
                                     </TableRow>

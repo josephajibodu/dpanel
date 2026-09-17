@@ -217,94 +217,85 @@ export default function SiteCommandsIndex({
                         />
                     ) : (
                         <>
-                            <div className="overflow-x-auto rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Command</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">
-                                                Exit
-                                            </TableHead>
-                                            <TableHead>Finished</TableHead>
-                                            <TableHead className="w-0" />
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {runs.map((run) => (
-                                            <TableRow key={run.id}>
-                                                <TableCell className="max-w-[320px] truncate font-mono text-sm">
-                                                    {truncateCommand(
-                                                        run.command,
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <StatusBadge
-                                                        status={
-                                                            run.status_label
-                                                        }
-                                                        color={run.status_color}
-                                                        pulse={
-                                                            run.status ===
-                                                            'running'
-                                                        }
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                                                    {run.exit_code ?? '—'}
-                                                </TableCell>
-                                                <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                                                    {run.finished_at
-                                                        ? new Date(
-                                                              run.finished_at,
-                                                          ).toLocaleString()
-                                                        : run.started_at
-                                                          ? 'Running…'
-                                                          : '—'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Command</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">
+                                            Exit
+                                        </TableHead>
+                                        <TableHead>Finished</TableHead>
+                                        <TableHead className="w-0" />
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {runs.map((run) => (
+                                        <TableRow key={run.id}>
+                                            <TableCell className="max-w-[320px] truncate font-mono text-sm">
+                                                {truncateCommand(run.command)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge
+                                                    status={run.status_label}
+                                                    color={run.status_color}
+                                                    pulse={
+                                                        run.status === 'running'
+                                                    }
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                                                {run.exit_code ?? '—'}
+                                            </TableCell>
+                                            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                                                {run.finished_at
+                                                    ? new Date(
+                                                          run.finished_at,
+                                                      ).toLocaleString()
+                                                    : run.started_at
+                                                      ? 'Running…'
+                                                      : '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            aria-label="Actions"
                                                         >
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                className="h-8 w-8"
-                                                                aria-label="Actions"
-                                                            >
-                                                                <MoreVerticalIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    openLogs(
-                                                                        run,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <FileTextIcon className="mr-2 h-4 w-4" />
-                                                                View logs
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleRunAgain(
-                                                                        run,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <PlayIcon className="mr-2 h-4 w-4" />
-                                                                Run again
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                openLogs(run)
+                                                            }
+                                                        >
+                                                            <FileTextIcon className="mr-2 h-4 w-4" />
+                                                            View logs
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleRunAgain(
+                                                                    run,
+                                                                )
+                                                            }
+                                                        >
+                                                            <PlayIcon className="mr-2 h-4 w-4" />
+                                                            Run again
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                             {(prevUrl || nextUrl) && (
                                 <Pagination
                                     prevUrl={prevUrl}

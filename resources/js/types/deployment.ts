@@ -2,6 +2,7 @@ export interface Deployment {
     id: number;
     ulid: string;
     commit_hash: string | null;
+    commit_hash_short: string | null;
     commit_message: string | null;
     commit_author: string | null;
     status: 'pending' | 'running' | 'finished' | 'failed' | 'cancelled';

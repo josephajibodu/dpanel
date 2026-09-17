@@ -29,6 +29,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Stat } from '@/components/ui/stat';
+import { StatGroup } from '@/components/ui/stat-group';
 import {
     Table,
     TableBody,
@@ -105,6 +107,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const deployments = (siteData.deployments ?? []) as (Deployment & {
         user?: { id: number; name: string };
     })[];
+    const latestDeployment = siteData.latest_deployment;
 
     const handleDelete = () => {
         setDeleteDialogOpen(true);
@@ -267,271 +270,328 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                         </Card>
                     </div>
                 ) : (
-                    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
-                        {/* Left column: Deployments, Background processes, Scheduled jobs */}
-                        <div className="space-y-6">
-                            {/* Deployments */}
-                            <div id="deployments" className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                        <CardTitle>Deployments</CardTitle>
-                                        <CardDescription>
-                                            Recent deployments for this site.
-                                        </CardDescription>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={handleDeploy}
-                                        disabled={
-                                            isDeploying ||
-                                            siteData.status === 'installing'
-                                        }
-                                    >
-                                        {isDeploying ? (
-                                            <>
-                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                Deploying...
-                                            </>
-                                        ) : (
-                                            'Deploy'
-                                        )}
-                                    </Button>
-                                </div>
-                                {deployments.length === 0 ? (
-                                    <EmptyState
-                                        title="No deployments yet"
-                                        description="Deployments will appear here once you trigger your first deployment."
-                                        action={
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
+                    <div className="space-y-6">
+                        {/* Overview */}
+                        <div className="space-y-3">
+                            <div className="rounded-xl border bg-card">
+                                <div className="grid gap-8 p-6 sm:grid-cols-2">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">
+                                            Domains
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                            <a
+                                                href={`https://${siteData.domain}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
                                             >
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${serverId}/sites/${siteData.id}/deployments`,
-                                                    )}
-                                                >
-                                                    Go to Deployments
-                                                </Link>
-                                            </Button>
-                                        }
-                                    />
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>
-                                                        Status
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Commit
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Message
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Deployed
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {deployments.map((d) => (
-                                                    <TableRow key={d.id}>
-                                                        <TableCell>
-                                                            <StatusBadge
-                                                                status={
-                                                                    d.status_label
-                                                                }
-                                                                color={
-                                                                    d.status_color
-                                                                }
-                                                                pulse={
-                                                                    d.status ===
-                                                                    'running'
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="font-mono">
-                                                            <Link
-                                                                href={teamPath(
-                                                                    `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
-                                                                )}
-                                                                className="hover:underline"
-                                                            >
-                                                                {d.commit_hash
-                                                                    ? d.commit_hash.slice(
-                                                                          0,
-                                                                          7,
-                                                                      )
-                                                                    : '—'}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                                                            {d.commit_message ??
-                                                                '—'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                                                            {d.finished_at
-                                                                ? format(
-                                                                      new Date(
-                                                                          d.finished_at,
-                                                                      ),
-                                                                      'MMM d, HH:mm',
-                                                                  )
-                                                                : d.started_at
-                                                                  ? 'Running...'
-                                                                  : '—'}
-                                                            {d.user?.name && (
-                                                                <span className="ml-1">
-                                                                    by{' '}
-                                                                    {
-                                                                        d.user
-                                                                            .name
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Background processes */}
-                            <div
-                                id="background-processes"
-                                className="space-y-4"
-                            >
-                                <div className="space-y-1">
-                                    <CardTitle>Background processes</CardTitle>
-                                    <CardDescription>
-                                        Process managers and workers for this
-                                        site.
-                                    </CardDescription>
-                                </div>
-                                <EmptyState
-                                    title="No background processes yet"
-                                    description="Add process managers or workers when ready."
-                                />
-                            </div>
-
-                            {/* Scheduled jobs */}
-                            <div id="scheduled-jobs" className="space-y-4">
-                                <div className="space-y-1">
-                                    <CardTitle>Scheduled jobs</CardTitle>
-                                    <CardDescription>
-                                        Cron jobs and scheduled tasks for this
-                                        site.
-                                    </CardDescription>
-                                </div>
-                                <EmptyState
-                                    title="No scheduled jobs yet"
-                                    description="Add cron jobs or scheduled tasks when ready."
-                                />
-                            </div>
-                        </div>
-
-                        {/* Right column: Details sidebar */}
-                        <div>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-5 text-sm">
-                                    <div className="space-y-2">
-                                        <p className="text-xs font-medium text-muted-foreground uppercase">
-                                            Server
-                                        </p>
-                                        <DetailRow
-                                            label="Server"
-                                            value={
-                                                siteData.server?.name
-                                                    ? `#${siteData.server.id} ${siteData.server.name}`
-                                                    : `#${siteData.server?.id ?? '—'}`
-                                            }
-                                        />
-                                        <DetailRow
-                                            label="Site ID"
-                                            value={String(siteData.id)}
-                                            valueClassName="font-mono"
-                                        />
-                                        <DetailRow
-                                            label="Framework"
-                                            value={
-                                                siteData.project_type_label ??
-                                                '—'
-                                            }
-                                        />
-                                        <DetailRow
-                                            label="PHP"
-                                            value={`PHP ${siteData.php_version}`}
-                                        />
-                                        <DetailRow
-                                            label="Public IP"
-                                            value={
-                                                siteData.server?.ip_address ??
-                                                '—'
-                                            }
-                                            valueClassName="font-mono"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2 border-t pt-4">
-                                        <p className="text-xs font-medium text-muted-foreground uppercase">
-                                            Repository
-                                        </p>
-                                        {siteData.repository ? (
-                                            <>
-                                                <DetailRow
-                                                    label="Branch"
-                                                    value={siteData.branch}
-                                                    valueClassName="font-mono"
-                                                />
-                                                <DetailRow
-                                                    label="Auto deploy"
-                                                    value={
-                                                        siteData.auto_deploy
-                                                            ? 'Enabled'
-                                                            : 'Disabled'
-                                                    }
-                                                />
-                                            </>
-                                        ) : (
-                                            <p className="text-xs text-muted-foreground">
-                                                No repository connected.
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2 border-t pt-4">
-                                        <p className="text-xs font-medium text-muted-foreground uppercase">
-                                            Status
-                                        </p>
-                                        <p className="text-sm font-medium">
-                                            {siteData.status_label}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Created{' '}
-                                            {format(
-                                                new Date(siteData.created_at),
-                                                'MMM d, yyyy',
+                                                {siteData.domain}
+                                                <ExternalLinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                            </a>
+                                            {(siteData.aliases ?? []).map(
+                                                (alias) => (
+                                                    <a
+                                                        key={alias}
+                                                        href={`https://${alias}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+                                                    >
+                                                        {alias}
+                                                        <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                                    </a>
+                                                ),
                                             )}
-                                        </p>
+                                        </div>
                                         <Link
                                             href={teamPath(
-                                                `/servers/${serverId}`,
+                                                `/servers/${serverId}/sites/${siteData.id}/domains`,
                                             )}
-                                            className="mt-2 block text-xs font-medium text-muted-foreground hover:text-foreground"
+                                            className="mt-3 inline-block text-xs font-medium text-muted-foreground hover:text-foreground"
                                         >
-                                            View server →
+                                            Manage domains →
                                         </Link>
                                     </div>
-                                </CardContent>
-                            </Card>
+
+                                    <div className="space-y-5">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Status
+                                                </p>
+                                                <div className="mt-2">
+                                                    <SiteStatusBadge
+                                                        status={siteData.status}
+                                                        statusLabel={
+                                                            siteData.status_label
+                                                        }
+                                                        statusColor={
+                                                            siteData.status_color
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Created
+                                                </p>
+                                                <p className="mt-2 text-sm font-medium">
+                                                    {format(
+                                                        new Date(
+                                                            siteData.created_at,
+                                                        ),
+                                                        'MMM d, yyyy',
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Source
+                                            </p>
+                                            {siteData.repository ? (
+                                                <>
+                                                    <div className="mt-2 flex items-center gap-1.5 text-sm">
+                                                        <GitBranchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                        <span className="truncate font-mono">
+                                                            {
+                                                                siteData.short_repository
+                                                            }
+                                                            :{siteData.branch}
+                                                        </span>
+                                                    </div>
+                                                    {latestDeployment?.commit_hash && (
+                                                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                                                            <span className="font-mono">
+                                                                {latestDeployment.commit_hash_short ??
+                                                                    latestDeployment.commit_hash.slice(
+                                                                        0,
+                                                                        7,
+                                                                    )}
+                                                            </span>
+                                                            {latestDeployment.commit_message && (
+                                                                <>
+                                                                    {' '}
+                                                                    ·{' '}
+                                                                    {
+                                                                        latestDeployment.commit_message
+                                                                    }
+                                                                </>
+                                                            )}
+                                                        </p>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <p className="mt-2 text-sm text-muted-foreground">
+                                                    No repository connected.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <StatGroup>
+                                <div
+                                    className={`grid gap-2 sm:grid-cols-2 ${siteData.repository ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
+                                >
+                                    <Stat
+                                        bordered
+                                        label="Framework"
+                                        value={
+                                            siteData.project_type_label ?? '—'
+                                        }
+                                    />
+                                    <Stat
+                                        bordered
+                                        label="PHP version"
+                                        value={`PHP ${siteData.php_version}`}
+                                    />
+                                    {siteData.repository && (
+                                        <Stat
+                                            bordered
+                                            label="Auto deploy"
+                                            value={
+                                                siteData.auto_deploy
+                                                    ? 'Enabled'
+                                                    : 'Disabled'
+                                            }
+                                        />
+                                    )}
+                                    <Stat
+                                        bordered
+                                        label="Server"
+                                        value={
+                                            siteData.server?.name ??
+                                            server?.name ??
+                                            '—'
+                                        }
+                                        hint={
+                                            siteData.server?.ip_address ??
+                                            undefined
+                                        }
+                                        action={
+                                            <Link
+                                                href={teamPath(
+                                                    `/servers/${serverId}`,
+                                                )}
+                                                className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                            >
+                                                View
+                                            </Link>
+                                        }
+                                    />
+                                </div>
+                            </StatGroup>
+                        </div>
+
+                        {/* Deployments */}
+                        <div id="deployments" className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <CardTitle>Deployments</CardTitle>
+                                    <CardDescription>
+                                        Recent deployments for this site.
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={handleDeploy}
+                                    disabled={
+                                        isDeploying ||
+                                        siteData.status === 'installing'
+                                    }
+                                >
+                                    {isDeploying ? (
+                                        <>
+                                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                            Deploying...
+                                        </>
+                                    ) : (
+                                        'Deploy'
+                                    )}
+                                </Button>
+                            </div>
+                            {deployments.length === 0 ? (
+                                <EmptyState
+                                    title="No deployments yet"
+                                    description="Deployments will appear here once you trigger your first deployment."
+                                    action={
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link
+                                                href={teamPath(
+                                                    `/servers/${serverId}/sites/${siteData.id}/deployments`,
+                                                )}
+                                            >
+                                                Go to Deployments
+                                            </Link>
+                                        </Button>
+                                    }
+                                />
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Commit</TableHead>
+                                                <TableHead>Message</TableHead>
+                                                <TableHead>Deployed</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {deployments.map((d) => (
+                                                <TableRow key={d.id}>
+                                                    <TableCell>
+                                                        <StatusBadge
+                                                            status={
+                                                                d.status_label
+                                                            }
+                                                            color={
+                                                                d.status_color
+                                                            }
+                                                            pulse={
+                                                                d.status ===
+                                                                'running'
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="font-mono">
+                                                        <Link
+                                                            href={teamPath(
+                                                                `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
+                                                            )}
+                                                            className="hover:underline"
+                                                        >
+                                                            {d.commit_hash
+                                                                ? d.commit_hash.slice(
+                                                                      0,
+                                                                      7,
+                                                                  )
+                                                                : '—'}
+                                                        </Link>
+                                                    </TableCell>
+                                                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                                        {d.commit_message ??
+                                                            '—'}
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                                                        {d.finished_at
+                                                            ? format(
+                                                                  new Date(
+                                                                      d.finished_at,
+                                                                  ),
+                                                                  'MMM d, HH:mm',
+                                                              )
+                                                            : d.started_at
+                                                              ? 'Running...'
+                                                              : '—'}
+                                                        {d.user?.name && (
+                                                            <span className="ml-1">
+                                                                by {d.user.name}
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Background processes */}
+                        <div id="background-processes" className="space-y-4">
+                            <div className="space-y-1">
+                                <CardTitle>Background processes</CardTitle>
+                                <CardDescription>
+                                    Process managers and workers for this site.
+                                </CardDescription>
+                            </div>
+                            <EmptyState
+                                title="No background processes yet"
+                                description="Add process managers or workers when ready."
+                            />
+                        </div>
+
+                        {/* Scheduled jobs */}
+                        <div id="scheduled-jobs" className="space-y-4">
+                            <div className="space-y-1">
+                                <CardTitle>Scheduled jobs</CardTitle>
+                                <CardDescription>
+                                    Cron jobs and scheduled tasks for this site.
+                                </CardDescription>
+                            </div>
+                            <EmptyState
+                                title="No scheduled jobs yet"
+                                description="Add cron jobs or scheduled tasks when ready."
+                            />
                         </div>
                     </div>
                 )}

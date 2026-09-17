@@ -443,7 +443,10 @@ export function ProcessesPanel({
                         <TableBody>
                             {workers.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={showSiteColumn ? 7 : 6}>
+                                    <TableCell
+                                        colSpan={showSiteColumn ? 7 : 6}
+                                        className="border-0 bg-transparent p-0"
+                                    >
                                         <EmptyState title="No workers yet" />
                                     </TableCell>
                                 </TableRow>
@@ -631,7 +634,10 @@ export function ProcessesPanel({
                         <TableBody>
                             {cronJobs.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={showSiteColumn ? 6 : 5}>
+                                    <TableCell
+                                        colSpan={showSiteColumn ? 6 : 5}
+                                        className="border-0 bg-transparent p-0"
+                                    >
                                         <EmptyState title="No cron jobs yet" />
                                     </TableCell>
                                 </TableRow>
