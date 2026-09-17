@@ -13,6 +13,7 @@ class NginxService
     public function install(ProvisioningContext $context): void
     {
         $context->packages->ensureInstalled('nginx');
+        $context->packages->ensureInstalled('ssl-cert');
         $context->services->enable('nginx');
 
         $context->files->ensureDirectory('/etc/nginx/sites-available');
@@ -38,10 +39,38 @@ class NginxService
 
     public function installServerConfig(ProvisioningContext $context): void
     {
-        $serverUser = $context->serverUser;
-        $phpVersion = $context->server->php_version;
+        $config = self::buildServerConfig($context->serverUser, $context->server->php_version);
 
-        $config = <<<NGINX
+        $context->files->put($this->sitesAvailable, $config);
+
+        // Remove default site if present.
+        if ($context->files->exists('/etc/nginx/sites-enabled/default')) {
+            $context->files->delete('/etc/nginx/sites-enabled/default');
+        }
+
+        $context->files->symlink($this->sitesAvailable, $this->sitesEnabled);
+    }
+
+    /**
+     * Build the catch-all vhost config: a plain-HTTP `default_server` for the
+     * placeholder landing page, plus an HTTPS `default_server` that rejects
+     * the TLS handshake outright.
+     *
+     * Every site vhost is a separate file included via `sites-enabled/*`, and
+     * nginx silently falls back to whichever 443 server block loaded first
+     * (alphabetically) for any SNI/Host it can't match to a site — e.g. a
+     * site whose own vhost hasn't synced yet, or ever failed to. Without an
+     * explicit 443 default_server, that fallback ends up being an arbitrary
+     * *other* customer's site: their certificate gets presented for a
+     * hostname it doesn't cover, and if that site redirects to a canonical
+     * domain, the visitor is bounced there. This file is named "app.conf" so
+     * it keeps sorting first; the block below ensures unmatched HTTPS
+     * requests are rejected instead of silently landing on someone else's
+     * site.
+     */
+    public static function buildServerConfig(string $serverUser, string $phpVersion): string
+    {
+        return <<<NGINX
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -64,16 +93,19 @@ server {
         deny all;
     }
 }
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+
+    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+
+    server_name _;
+
+    return 444;
+}
 NGINX;
-
-        $context->files->put($this->sitesAvailable, $config);
-
-        // Remove default site if present.
-        if ($context->files->exists('/etc/nginx/sites-enabled/default')) {
-            $context->files->delete('/etc/nginx/sites-enabled/default');
-        }
-
-        $context->files->symlink($this->sitesAvailable, $this->sitesEnabled);
     }
 
     public function updatePort(ProvisioningContext $context, string $port): void
