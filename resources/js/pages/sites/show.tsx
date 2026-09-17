@@ -29,7 +29,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Stat } from '@/components/ui/stat';
 import { StatGroup } from '@/components/ui/stat-group';
 import {
     Table,
@@ -153,8 +152,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
             <Head title={siteData.domain} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4">
+                {isProvisioning && (
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
                             <h1 className="text-2xl font-semibold tracking-tight">
@@ -176,52 +174,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             </p>
                         )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        {!isProvisioning && (
-                            <Button variant="outline" asChild>
-                                <a
-                                    href={`https://${siteData.domain}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                                    Visit Site
-                                </a>
-                            </Button>
-                        )}
-                        {!isProvisioning && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="icon">
-                                        <MoreVerticalIcon className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
-                                        <Link
-                                            href={teamPath(
-                                                `/servers/${serverId}/sites/${siteData.id}/edit`,
-                                            )}
-                                        >
-                                            Edit Site
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onClick={handleDelete}
-                                        className="text-destructive focus:text-destructive"
-                                        disabled={
-                                            siteData.status === 'installing'
-                                        }
-                                    >
-                                        <Trash2Icon className="mr-2 h-4 w-4" />
-                                        Delete Site
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </div>
-                </div>
+                )}
 
                 {isProvisioning ? (
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
@@ -272,9 +225,52 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                 ) : (
                     <div className="space-y-6">
                         {/* Overview */}
-                        <div className="space-y-3">
-                            <div className="rounded-xl border bg-card">
-                                <div className="grid gap-8 p-6 sm:grid-cols-2">
+                        <StatGroup>
+                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-base font-semibold">
+                                            {siteData.domain}
+                                        </span>
+                                        <SiteStatusBadge
+                                            status={siteData.status}
+                                            statusLabel={siteData.status_label}
+                                            statusColor={siteData.status_color}
+                                        />
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <MoreVerticalIcon className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem asChild>
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${serverId}/sites/${siteData.id}/edit`,
+                                                    )}
+                                                >
+                                                    Edit Site
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={handleDelete}
+                                                className="text-destructive focus:text-destructive"
+                                                disabled={
+                                                    siteData.status ===
+                                                    'installing'
+                                                }
+                                            >
+                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                Delete Site
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+
+                                <div className="space-y-5 p-6">
                                     <div>
                                         <p className="text-sm text-muted-foreground">
                                             Domains
@@ -314,138 +310,137 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         </Link>
                                     </div>
 
-                                    <div className="space-y-5">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Status
-                                                </p>
-                                                <div className="mt-2">
-                                                    <SiteStatusBadge
-                                                        status={siteData.status}
-                                                        statusLabel={
-                                                            siteData.status_label
-                                                        }
-                                                        statusColor={
-                                                            siteData.status_color
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Created
-                                                </p>
-                                                <p className="mt-2 text-sm font-medium">
-                                                    {format(
-                                                        new Date(
-                                                            siteData.created_at,
-                                                        ),
-                                                        'MMM d, yyyy',
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-
+                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
                                         <div>
                                             <p className="text-sm text-muted-foreground">
-                                                Source
+                                                Status
                                             </p>
-                                            {siteData.repository ? (
-                                                <>
-                                                    <div className="mt-2 flex items-center gap-1.5 text-sm">
-                                                        <GitBranchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                                        <span className="truncate font-mono">
-                                                            {
-                                                                siteData.short_repository
-                                                            }
-                                                            :{siteData.branch}
+                                            <p className="mt-2 text-sm font-medium">
+                                                {siteData.status_label}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Created
+                                            </p>
+                                            <p className="mt-2 text-sm font-medium">
+                                                {format(
+                                                    new Date(
+                                                        siteData.created_at,
+                                                    ),
+                                                    'MMM d, yyyy',
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t pt-5">
+                                        <p className="text-sm text-muted-foreground">
+                                            Source
+                                        </p>
+                                        {siteData.repository ? (
+                                            <>
+                                                <div className="mt-2 flex items-center gap-1.5 text-sm">
+                                                    <GitBranchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    <span className="truncate font-mono">
+                                                        {
+                                                            siteData.short_repository
+                                                        }
+                                                        :{siteData.branch}
+                                                    </span>
+                                                </div>
+                                                {latestDeployment?.commit_hash && (
+                                                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                                                        <span className="font-mono">
+                                                            {latestDeployment.commit_hash_short ??
+                                                                latestDeployment.commit_hash.slice(
+                                                                    0,
+                                                                    7,
+                                                                )}
                                                         </span>
-                                                    </div>
-                                                    {latestDeployment?.commit_hash && (
-                                                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                                                            <span className="font-mono">
-                                                                {latestDeployment.commit_hash_short ??
-                                                                    latestDeployment.commit_hash.slice(
-                                                                        0,
-                                                                        7,
-                                                                    )}
-                                                            </span>
-                                                            {latestDeployment.commit_message && (
-                                                                <>
-                                                                    {' '}
-                                                                    ·{' '}
-                                                                    {
-                                                                        latestDeployment.commit_message
-                                                                    }
-                                                                </>
-                                                            )}
-                                                        </p>
+                                                        {latestDeployment.commit_message && (
+                                                            <>
+                                                                {' '}
+                                                                ·{' '}
+                                                                {
+                                                                    latestDeployment.commit_message
+                                                                }
+                                                            </>
+                                                        )}
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="mt-2 text-sm text-muted-foreground">
+                                                No repository connected.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Framework
+                                            </p>
+                                            <p className="mt-2 text-sm font-medium">
+                                                {siteData.project_type_label ??
+                                                    '—'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                PHP version
+                                            </p>
+                                            <p className="mt-2 text-sm font-medium">
+                                                PHP {siteData.php_version}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        className={`grid gap-4 border-t pt-5 ${siteData.repository ? 'grid-cols-2' : 'grid-cols-1'}`}
+                                    >
+                                        {siteData.repository && (
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Auto deploy
+                                                </p>
+                                                <p className="mt-2 text-sm font-medium">
+                                                    {siteData.auto_deploy
+                                                        ? 'Enabled'
+                                                        : 'Disabled'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Server
+                                            </p>
+                                            <div className="mt-2 flex items-center justify-between gap-2">
+                                                <span className="text-sm font-medium">
+                                                    {siteData.server?.name ??
+                                                        server?.name ??
+                                                        '—'}
+                                                </span>
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${serverId}`,
                                                     )}
-                                                </>
-                                            ) : (
-                                                <p className="mt-2 text-sm text-muted-foreground">
-                                                    No repository connected.
+                                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                                >
+                                                    View →
+                                                </Link>
+                                            </div>
+                                            {siteData.server?.ip_address && (
+                                                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                                                    {siteData.server.ip_address}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <StatGroup>
-                                <div
-                                    className={`grid gap-2 sm:grid-cols-2 ${siteData.repository ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
-                                >
-                                    <Stat
-                                        bordered
-                                        label="Framework"
-                                        value={
-                                            siteData.project_type_label ?? '—'
-                                        }
-                                    />
-                                    <Stat
-                                        bordered
-                                        label="PHP version"
-                                        value={`PHP ${siteData.php_version}`}
-                                    />
-                                    {siteData.repository && (
-                                        <Stat
-                                            bordered
-                                            label="Auto deploy"
-                                            value={
-                                                siteData.auto_deploy
-                                                    ? 'Enabled'
-                                                    : 'Disabled'
-                                            }
-                                        />
-                                    )}
-                                    <Stat
-                                        bordered
-                                        label="Server"
-                                        value={
-                                            siteData.server?.name ??
-                                            server?.name ??
-                                            '—'
-                                        }
-                                        hint={
-                                            siteData.server?.ip_address ??
-                                            undefined
-                                        }
-                                        action={
-                                            <Link
-                                                href={teamPath(
-                                                    `/servers/${serverId}`,
-                                                )}
-                                                className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                            >
-                                                View
-                                            </Link>
-                                        }
-                                    />
-                                </div>
-                            </StatGroup>
-                        </div>
+                        </StatGroup>
 
                         {/* Deployments */}
                         <div id="deployments" className="space-y-4">
