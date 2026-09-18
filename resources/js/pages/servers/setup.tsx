@@ -79,7 +79,7 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
                 <div className="mx-auto w-full max-w-2xl space-y-6">
                     <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                         <TriangleAlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                        <p>Your server must have a fresh, unused installation of Ubuntu 22.04, 24.04, or 26.04 with root SSH access enabled.</p>
+                        <p>Your server must have a fresh, unused installation of Ubuntu 22.04 or 24.04 with root SSH access enabled.</p>
                     </div>
 
                     {/* Step 1 — Add key */}

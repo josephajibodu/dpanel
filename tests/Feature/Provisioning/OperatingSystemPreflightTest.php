@@ -58,14 +58,14 @@ it('rejects an unsupported operating system before doing any real work', functio
         OS_RELEASE);
 
     expect(fn () => app(StackInstaller::class)->install($server, $connection))
-        ->toThrow(RuntimeException::class, 'Unsupported server: detected debian 12. FlitOps currently supports Ubuntu (22.04, 24.04, 26.04) only.');
+        ->toThrow(RuntimeException::class, 'Unsupported server: detected debian 12. FlitOps currently supports Ubuntu (22.04, 24.04) only.');
 
     $server->refresh();
 
     // Provisioning never got past the OS check.
     expect($server->provisioning_step)->toBe(ProvisioningStep::WaitingForServer)
         ->and($server->provisioningLogs()->where('type', 'error')->pluck('message')->all())
-        ->toContain('Unsupported server: detected debian 12. FlitOps currently supports Ubuntu (22.04, 24.04, 26.04) only.');
+        ->toContain('Unsupported server: detected debian 12. FlitOps currently supports Ubuntu (22.04, 24.04) only.');
 });
 
 it('proceeds when the server reports a supported Ubuntu version', function () {
