@@ -388,7 +388,10 @@ export default function ServerPhpIndex({
                                 {phpServices.length === 0 &&
                                 installedVersions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={4}>
+                                        <TableCell
+                                            colSpan={4}
+                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                        >
                                             <EmptyState
                                                 title="No PHP versions detected"
                                                 description="Install one below or ensure the server is connected."

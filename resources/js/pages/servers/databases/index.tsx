@@ -366,7 +366,10 @@ export default function ServerDatabasesIndex({
                             <TableBody>
                                 {dbList.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5}>
+                                        <TableCell
+                                            colSpan={5}
+                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                        >
                                             <EmptyState title="No databases yet" />
                                         </TableCell>
                                     </TableRow>
@@ -490,7 +493,10 @@ export default function ServerDatabasesIndex({
                             <TableBody>
                                 {userList.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6}>
+                                        <TableCell
+                                            colSpan={6}
+                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                        >
                                             <EmptyState title="No database users yet" />
                                         </TableCell>
                                     </TableRow>
