@@ -16,13 +16,7 @@ import { ProvisioningStepTimeline } from '@/components/provisioning-step-timelin
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { CardDescription, CardTitle } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -185,43 +179,51 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             currentStep={siteData.provisioning_step ?? null}
                             steps={siteData.provisioning_steps ?? []}
                         />
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Details</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-5 text-sm">
-                                <DetailRow
-                                    label="Server ID"
-                                    value={String(siteData.server?.id ?? '—')}
-                                    valueClassName="font-mono"
-                                />
-                                <DetailRow
-                                    label="Site ID"
-                                    value={String(siteData.id)}
-                                    valueClassName="font-mono"
-                                />
-                                <DetailRow
-                                    label="Framework"
-                                    value={siteData.project_type_label ?? '—'}
-                                />
-                                <DetailRow
-                                    label="PHP"
-                                    value={`PHP ${siteData.php_version}`}
-                                />
-                                <DetailRow
-                                    label="Public IP"
-                                    value={siteData.server?.ip_address ?? '—'}
-                                    valueClassName="font-mono"
-                                />
-                                <p className="border-t pt-4 text-xs text-muted-foreground">
-                                    Created{' '}
-                                    {format(
-                                        new Date(siteData.created_at),
-                                        'MMM d, yyyy',
-                                    )}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        <StatGroup>
+                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                <div className="border-b px-6 py-4">
+                                    <CardTitle>Details</CardTitle>
+                                </div>
+                                <div className="space-y-5 p-6 text-sm">
+                                    <DetailRow
+                                        label="Server ID"
+                                        value={String(
+                                            siteData.server?.id ?? '—',
+                                        )}
+                                        valueClassName="font-mono"
+                                    />
+                                    <DetailRow
+                                        label="Site ID"
+                                        value={String(siteData.id)}
+                                        valueClassName="font-mono"
+                                    />
+                                    <DetailRow
+                                        label="Framework"
+                                        value={
+                                            siteData.project_type_label ?? '—'
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="PHP"
+                                        value={`PHP ${siteData.php_version}`}
+                                    />
+                                    <DetailRow
+                                        label="Public IP"
+                                        value={
+                                            siteData.server?.ip_address ?? '—'
+                                        }
+                                        valueClassName="font-mono"
+                                    />
+                                    <p className="border-t pt-4 text-xs text-muted-foreground">
+                                        Created{' '}
+                                        {format(
+                                            new Date(siteData.created_at),
+                                            'MMM d, yyyy',
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </StatGroup>
                     </div>
                 ) : (
                     <div className="space-y-6">

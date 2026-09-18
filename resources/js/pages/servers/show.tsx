@@ -112,15 +112,17 @@ export default function ServersShow({
                             steps={data.provisioning_steps ?? []}
                         />
 
-                        <div className="rounded-lg border bg-card">
-                            <div className="flex items-center gap-2 border-b px-4 py-3">
-                                <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
-                                <h2 className="font-medium">
-                                    Provisioning log
-                                </h2>
+                        <StatGroup>
+                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                <div className="flex items-center gap-2 border-b px-4 py-3">
+                                    <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                                    <h2 className="font-medium">
+                                        Provisioning log
+                                    </h2>
+                                </div>
+                                <DeploymentLog logs={logs} isDeploying />
                             </div>
-                            <DeploymentLog logs={logs} isDeploying />
-                        </div>
+                        </StatGroup>
                     </div>
                 ) : (
                     <>
@@ -151,14 +153,16 @@ export default function ServersShow({
                                 </div>
 
                                 {logs.length > 0 && (
-                                    <div className="rounded-lg border bg-card">
-                                        <div className="border-b px-4 py-3">
-                                            <h2 className="font-medium">
-                                                Provisioning log
-                                            </h2>
+                                    <StatGroup>
+                                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                            <div className="border-b px-4 py-3">
+                                                <h2 className="font-medium">
+                                                    Provisioning log
+                                                </h2>
+                                            </div>
+                                            <DeploymentLog logs={logs} />
                                         </div>
-                                        <DeploymentLog logs={logs} />
-                                    </div>
+                                    </StatGroup>
                                 )}
                             </div>
                         )}
