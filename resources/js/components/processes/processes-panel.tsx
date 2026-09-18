@@ -463,14 +463,14 @@ export function ProcessesPanel({
                                             <TableCell className="font-medium">
                                                 {w.name}
                                             </TableCell>
-                                            <TableCell className="max-w-[200px] truncate font-mono text-sm">
+                                            <TableCell className="max-w-[200px] truncate font-mono text-xs">
                                                 {truncate(w.command, 40)}
                                             </TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {w.user}
                                             </TableCell>
                                             {showSiteColumn && (
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {w.site?.domain ?? 'Server'}
                                                 </TableCell>
                                             )}
@@ -488,7 +488,7 @@ export function ProcessesPanel({
                                                     }
                                                 />
                                             </TableCell>
-                                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
                                                 {w.numprocs}
                                             </TableCell>
                                             <TableCell>
@@ -651,14 +651,14 @@ export function ProcessesPanel({
                                             <TableCell className="max-w-[200px] truncate font-mono font-medium">
                                                 {truncate(c.command, 40)}
                                             </TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {c.user}
                                             </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {frequencyLabel(c.frequency)}
                                             </TableCell>
                                             {showSiteColumn && (
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {c.site?.domain ?? 'Server'}
                                                 </TableCell>
                                             )}

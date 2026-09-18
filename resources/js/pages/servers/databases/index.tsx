@@ -380,10 +380,10 @@ export default function ServerDatabasesIndex({
                                                 <TableCell className="font-mono font-medium">
                                                     {db.name}
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {db.charset ?? '—'}
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {db.collation ?? '—'}
                                                 </TableCell>
                                                 <TableCell>
@@ -504,10 +504,10 @@ export default function ServerDatabasesIndex({
                                                 <TableCell className="font-mono font-medium">
                                                     {user.username}
                                                 </TableCell>
-                                                <TableCell className="font-mono text-sm text-muted-foreground">
+                                                <TableCell className="font-mono text-xs text-muted-foreground">
                                                     {user.host ?? 'localhost'}
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {(
                                                         user.databases ?? []
                                                     ).join(', ') || '—'}

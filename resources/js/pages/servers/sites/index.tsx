@@ -200,11 +200,11 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                             {site.domain}
                                                         </Link>
                                                     </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
+                                                    <TableCell className="text-xs text-muted-foreground">
                                                         {site.project_type_label ??
                                                             '—'}
                                                     </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
+                                                    <TableCell className="text-xs text-muted-foreground">
                                                         {format(
                                                             new Date(
                                                                 site.created_at,

@@ -257,7 +257,7 @@ export default function ServersShow({
                                                                     }
                                                                 </Link>
                                                             </TableCell>
-                                                            <TableCell className="text-sm text-muted-foreground">
+                                                            <TableCell className="text-xs text-muted-foreground">
                                                                 {site.project_type_label ??
                                                                     '—'}
                                                             </TableCell>
@@ -330,7 +330,7 @@ export default function ServersShow({
                                                             <TableCell className="font-mono font-medium">
                                                                 {db.name}
                                                             </TableCell>
-                                                            <TableCell className="text-sm text-muted-foreground">
+                                                            <TableCell className="text-xs text-muted-foreground">
                                                                 {db.charset ??
                                                                     '—'}
                                                             </TableCell>
