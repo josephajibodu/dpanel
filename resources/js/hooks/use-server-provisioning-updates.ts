@@ -58,19 +58,14 @@ export function useServerProvisioningUpdates(initialServer: Server) {
         [initialServer.id],
     );
 
-    useEcho<{ server?: Server }>(
+    useEcho(
         `server.${initialServer.id}`,
         '.server.sites.updated',
-        (event) => {
-            const incomingServer = extractServer(event.server);
-            if (!incomingServer || incomingServer.id !== initialServer.id) {
-                return;
-            }
-
-            setServer((previousServer) => ({
-                ...previousServer,
-                ...incomingServer,
-            }));
+        () => {
+            router.reload({
+                only: ['server'],
+                preserveScroll: true,
+            });
         },
         [initialServer.id],
     );

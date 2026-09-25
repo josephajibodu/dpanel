@@ -3,7 +3,6 @@
 namespace App\Events;
 
 use App\Concerns\QueuesBroadcasts;
-use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -32,14 +31,16 @@ class ServerSitesUpdated implements ShouldBroadcast
     }
 
     /**
-     * Get the data to broadcast.
+     * Broadcast only a change signal; listeners reload the data they need, so
+     * the payload stays under Reverb's request size limit however many sites
+     * the server has.
      *
-     * @return array<string, mixed>
+     * @return array{server_id: int}
      */
     public function broadcastWith(): array
     {
         return [
-            'server' => new ServerResource($this->server),
+            'server_id' => $this->server->id,
         ];
     }
 

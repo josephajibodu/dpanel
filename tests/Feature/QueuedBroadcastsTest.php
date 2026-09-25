@@ -3,6 +3,7 @@
 use App\Events\RealtimeDiagnosticMessage;
 use App\Events\ServerSitesUpdated;
 use App\Models\Server;
+use App\Models\Site;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -47,4 +48,14 @@ it('does not contact the broadcaster inline when the event is fired', function (
     event(new ServerSitesUpdated($server));
 
     Queue::assertPushedOn('broadcasts', BroadcastEvent::class, fn (BroadcastEvent $job) => $job->event instanceof ServerSitesUpdated);
+});
+
+it('broadcasts only the server id for site list changes so the payload stays under Reverb limits', function () {
+    $server = Server::factory()->create();
+    Site::factory()->count(10)->for($server)->create();
+    $server->load(['sites' => fn ($q) => $q->with('latestDeployment')->latest()]);
+
+    $payload = (new ServerSitesUpdated($server))->broadcastWith();
+
+    expect($payload)->toBe(['server_id' => $server->id]);
 });
