@@ -2,19 +2,20 @@
 
 namespace App\Events;
 
+use App\Concerns\QueuesBroadcasts;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServerStatusChanged implements ShouldBroadcastNow
+class ServerStatusChanged implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, InteractsWithSockets, QueuesBroadcasts, SerializesModels;
 
     /**
      * Create a new event instance.

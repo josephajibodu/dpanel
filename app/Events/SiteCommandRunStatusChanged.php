@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Concerns\QueuesBroadcasts;
 use App\Models\SiteCommandRun;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SiteCommandRunStatusChanged implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, InteractsWithSockets, QueuesBroadcasts, SerializesModels;
 
     /**
      * Create a new event instance.

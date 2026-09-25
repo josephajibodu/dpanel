@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Concerns\QueuesBroadcasts;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -10,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 
 class ServerDeleted implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, InteractsWithSockets, QueuesBroadcasts, SerializesModels;
 
     /**
      * Create a new event instance.

@@ -2,15 +2,16 @@
 
 namespace App\Events;
 
+use App\Concerns\QueuesBroadcasts;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServerProcessesUpdated implements ShouldBroadcastNow
+class ServerProcessesUpdated implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, InteractsWithSockets, QueuesBroadcasts, SerializesModels;
 
     public function __construct(
         public int $serverId,

@@ -229,6 +229,13 @@ return [
 
     'environments' => [
         'production' => [
+            'supervisor-broadcasts' => [
+                'connection' => 'redis',
+                'queue' => ['broadcasts'],
+                'balance' => 'simple',
+                'processes' => 2,
+                'timeout' => 30,
+            ],
             'supervisor-provisioning' => [
                 'connection' => 'redis',
                 'queue' => ['provisioning', 'backups'],
@@ -261,7 +268,7 @@ return [
         'local' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue' => ['provisioning', 'deploy', 'ssh', 'default', 'backups'],
+                'queue' => ['broadcasts', 'provisioning', 'deploy', 'ssh', 'default', 'backups'],
                 'balance' => 'auto',
                 'autoScalingStrategy' => 'time',
                 'maxProcesses' => 5,
