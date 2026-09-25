@@ -35,7 +35,7 @@ class RestoreBackupJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
-        $server = $this->backup->serverDatabase->server;
+        $server = $this->backup->targetServer();
 
         Log::error("RestoreBackupJob failed for backup {$this->backup->id}", [
             'backup_id' => $this->backup->id,

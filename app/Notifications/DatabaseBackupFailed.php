@@ -23,15 +23,14 @@ class DatabaseBackupFailed extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $serverDatabase = $this->backup->serverDatabase;
-        $server = $serverDatabase->server;
-        $backupsUrl = route('servers.databases.backups.index', [$server->team, $server, $serverDatabase]);
+        $server = $this->backup->targetServer();
+        $targetName = $this->backup->targetName();
 
         return (new MailMessage)
-            ->subject("Database backup failed: {$serverDatabase->name}")
-            ->line("A backup of **{$serverDatabase->name}** on **{$server->name}** failed.")
+            ->subject("Database backup failed: {$targetName}")
+            ->line("A backup of **{$targetName}** on **{$server->name}** failed.")
             ->line("**Error:** {$this->backup->error_message}")
-            ->action('View Backups', $backupsUrl)
+            ->action('View Backups', $this->backup->indexUrl())
             ->line('Check the database and try running the backup again.');
     }
 }

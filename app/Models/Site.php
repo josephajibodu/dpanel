@@ -105,6 +105,24 @@ class Site extends Model
     }
 
     /**
+     * Absolute path of the SQLite database file sites without a server
+     * database fall back to. Lives in shared/ so it persists across releases.
+     */
+    public function sqliteDatabasePath(): string
+    {
+        return $this->sharedPath().'/database/database.sqlite';
+    }
+
+    /**
+     * Whether this site stores its data in the shared SQLite file rather
+     * than a server database.
+     */
+    public function usesSqlite(): bool
+    {
+        return $this->project_type === ProjectType::Laravel && $this->server_database_id === null;
+    }
+
+    /**
      * Path to the `current` symlink, which points at the active release.
      */
     public function currentPath(): string
@@ -174,6 +192,16 @@ class Site extends Model
     public function serverDatabase(): BelongsTo
     {
         return $this->belongsTo(ServerDatabase::class);
+    }
+
+    public function backupSchedule(): HasOne
+    {
+        return $this->hasOne(BackupSchedule::class);
+    }
+
+    public function backups(): HasMany
+    {
+        return $this->hasMany(Backup::class);
     }
 
     public function deployments(): HasMany

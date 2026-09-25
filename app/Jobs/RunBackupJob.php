@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Actions\Backups\RunSqliteBackup;
 use App\Models\Backup;
 use App\Notifications\DatabaseBackupFailed;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,14 +30,18 @@ class RunBackupJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(RunDatabaseBackup $action): void
+    public function handle(): void
     {
+        $action = $this->backup->isSqlite()
+            ? app(RunSqliteBackup::class)
+            : app(RunDatabaseBackup::class);
+
         $action->execute($this->backup);
     }
 
     public function failed(\Throwable $exception): void
     {
-        $server = $this->backup->serverDatabase->server;
+        $server = $this->backup->targetServer();
 
         Log::error("RunBackupJob failed for backup {$this->backup->id}", [
             'backup_id' => $this->backup->id,

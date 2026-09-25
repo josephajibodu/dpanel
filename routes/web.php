@@ -203,6 +203,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('servers/{server}/sites/{site}/command-runs/{command_run}', [SiteCommandRunController::class, 'show'])
                     ->name('servers.sites.command-runs.show');
 
+                // SQLite backups (sites without a server database)
+                Route::put('servers/{server}/sites/{site}/backup-schedule', [\App\Http\Controllers\SiteBackupScheduleController::class, 'update'])
+                    ->name('servers.sites.backup-schedule.update');
+                Route::get('servers/{server}/sites/{site}/backups', [\App\Http\Controllers\SiteBackupController::class, 'index'])
+                    ->name('servers.sites.backups.index');
+                Route::post('servers/{server}/sites/{site}/backups', [\App\Http\Controllers\SiteBackupController::class, 'store'])
+                    ->name('servers.sites.backups.store');
+                Route::delete('servers/{server}/sites/{site}/backups/{backup}', [\App\Http\Controllers\SiteBackupController::class, 'destroy'])
+                    ->name('servers.sites.backups.destroy');
+                Route::get('servers/{server}/sites/{site}/backups/{backup}/download', [\App\Http\Controllers\SiteBackupController::class, 'download'])
+                    ->name('servers.sites.backups.download');
+
                 // Processes (site-scoped view; CUD reuses server-scoped routes below since workers/cron rows are server-unique)
                 Route::get('servers/{server}/sites/{site}/processes', [\App\Http\Controllers\SiteProcessController::class, 'index'])
                     ->name('servers.sites.processes.index');

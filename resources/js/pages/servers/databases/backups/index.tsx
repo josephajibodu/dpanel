@@ -1,20 +1,10 @@
-import { Transition } from '@headlessui/react';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
-import {
-    CheckCircle2Icon,
-    DownloadIcon,
-    MoreVerticalIcon,
-    PlusIcon,
-    RotateCcwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { EmptyState } from '@/components/empty-state';
+import { BackupHistory } from '@/components/backups/backup-history';
+import { BackupScheduleCard } from '@/components/backups/backup-schedule-card';
 import { Button } from '@/components/ui/button';
-import { CardDescription, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -23,37 +13,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    getPaginationUrls,
-    Pagination,
-    type PaginationMeta,
-} from '@/components/ui/pagination';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { StatGroup } from '@/components/ui/stat-group';
-import { AutoStatusBadge } from '@/components/ui/status-badge';
-import { Switch } from '@/components/ui/switch';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { useServerBackupsUpdates } from '@/hooks/use-server-backups-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -77,14 +39,6 @@ interface Props {
     };
 }
 
-function formatBytes(bytes: number | null): string {
-    if (bytes === null) return '—';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-    return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
-}
-
 export default function ServerDatabaseBackupsIndex({
     server: serverProp,
     serverDatabase: serverDatabaseProp,
@@ -106,19 +60,10 @@ export default function ServerDatabaseBackupsIndex({
     const basePath = `/servers/${server.id}/databases/${serverDatabase.id}/backups`;
     const schedulePath = `/servers/${server.id}/databases/${serverDatabase.id}/backup-schedule`;
 
-    const [deleteOpen, setDeleteOpen] = useState(false);
-    const [backupToDelete, setBackupToDelete] = useState<Backup | null>(null);
     const [restoreOpen, setRestoreOpen] = useState(false);
     const [backupToRestore, setBackupToRestore] = useState<Backup | null>(null);
     const [restoreConfirmText, setRestoreConfirmText] = useState('');
     const [isBackingUp, setIsBackingUp] = useState(false);
-
-    const scheduleForm = useForm({
-        storage_provider_id: schedule?.storage_provider_id ?? '',
-        frequency: schedule?.frequency ?? 'daily',
-        retention_count: schedule?.retention_count ?? 7,
-        enabled: schedule?.enabled ?? false,
-    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -130,13 +75,6 @@ export default function ServerDatabaseBackupsIndex({
         { title: `${serverDatabase.name} Backups`, href: teamPath(basePath) },
     ];
 
-    const handleSaveSchedule = (e: React.FormEvent) => {
-        e.preventDefault();
-        scheduleForm.put(teamPath(schedulePath), {
-            preserveScroll: true,
-        });
-    };
-
     const handleBackupNow = () => {
         setIsBackingUp(true);
         router.post(
@@ -147,22 +85,6 @@ export default function ServerDatabaseBackupsIndex({
                 onFinish: () => setIsBackingUp(false),
             },
         );
-    };
-
-    const handleDelete = (backup: Backup) => {
-        setBackupToDelete(backup);
-        setDeleteOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (!backupToDelete) return;
-        router.delete(teamPath(`${basePath}/${backupToDelete.id}`), {
-            preserveScroll: true,
-            onFinish: () => {
-                setDeleteOpen(false);
-                setBackupToDelete(null);
-            },
-        });
     };
 
     const handleRestore = (backup: Backup) => {
@@ -186,8 +108,6 @@ export default function ServerDatabaseBackupsIndex({
             },
         );
     };
-
-    const { prevUrl, nextUrl } = getPaginationUrls(backups.links);
 
     return (
         <AppLayout
@@ -222,327 +142,20 @@ export default function ServerDatabaseBackupsIndex({
                     </Button>
                 </div>
 
-                <StatGroup>
-                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
-                        <div className="border-b px-6 py-4">
-                            <CardTitle>Schedule</CardTitle>
-                            <CardDescription className="mt-1">
-                                Automatically back up this database on a
-                                recurring schedule.
-                            </CardDescription>
-                        </div>
-                        <div className="p-6">
-                            {storageProviders.data.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                    Connect a storage provider first, then come
-                                    back to set up a schedule.
-                                </p>
-                            ) : (
-                                <form
-                                    onSubmit={handleSaveSchedule}
-                                    className="space-y-5"
-                                >
-                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="storage_provider_id">
-                                                Storage provider
-                                            </Label>
-                                            <Select
-                                                value={String(
-                                                    scheduleForm.data
-                                                        .storage_provider_id,
-                                                )}
-                                                onValueChange={(value) =>
-                                                    scheduleForm.setData(
-                                                        'storage_provider_id',
-                                                        Number(value),
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger id="storage_provider_id">
-                                                    <SelectValue placeholder="Select storage" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {storageProviders.data.map(
-                                                        (provider) => (
-                                                            <SelectItem
-                                                                key={
-                                                                    provider.id
-                                                                }
-                                                                value={String(
-                                                                    provider.id,
-                                                                )}
-                                                            >
-                                                                {provider.name}
-                                                            </SelectItem>
-                                                        ),
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                <BackupScheduleCard
+                    schedule={schedule}
+                    storageProviders={storageProviders.data}
+                    scheduleUrl={teamPath(schedulePath)}
+                    description="Automatically back up this database on a recurring schedule."
+                />
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="frequency">
-                                                Frequency
-                                            </Label>
-                                            <Select
-                                                value={
-                                                    scheduleForm.data.frequency
-                                                }
-                                                onValueChange={(value) =>
-                                                    scheduleForm.setData(
-                                                        'frequency',
-                                                        value as
-                                                            | 'hourly'
-                                                            | 'daily'
-                                                            | 'weekly',
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger id="frequency">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="hourly">
-                                                        Hourly
-                                                    </SelectItem>
-                                                    <SelectItem value="daily">
-                                                        Daily
-                                                    </SelectItem>
-                                                    <SelectItem value="weekly">
-                                                        Weekly
-                                                    </SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="retention_count">
-                                                Keep last
-                                            </Label>
-                                            <Input
-                                                id="retention_count"
-                                                type="number"
-                                                min={1}
-                                                max={365}
-                                                value={
-                                                    scheduleForm.data
-                                                        .retention_count
-                                                }
-                                                onChange={(e) =>
-                                                    scheduleForm.setData(
-                                                        'retention_count',
-                                                        Number(e.target.value),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="enabled">
-                                                Enabled
-                                            </Label>
-                                            <div className="flex h-9 items-center">
-                                                <Switch
-                                                    id="enabled"
-                                                    checked={
-                                                        scheduleForm.data
-                                                            .enabled
-                                                    }
-                                                    onCheckedChange={(
-                                                        checked,
-                                                    ) =>
-                                                        scheduleForm.setData(
-                                                            'enabled',
-                                                            checked,
-                                                        )
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-3">
-                                        <Transition
-                                            show={
-                                                scheduleForm.recentlySuccessful
-                                            }
-                                            enter="transition ease-in-out"
-                                            enterFrom="opacity-0"
-                                            leave="transition ease-in-out"
-                                            leaveTo="opacity-0"
-                                        >
-                                            <p className="text-sm text-muted-foreground">
-                                                Saved
-                                            </p>
-                                        </Transition>
-                                        <Button
-                                            type="submit"
-                                            disabled={
-                                                scheduleForm.processing ||
-                                                !scheduleForm.data
-                                                    .storage_provider_id
-                                            }
-                                        >
-                                            {scheduleForm.processing
-                                                ? 'Saving…'
-                                                : 'Save'}
-                                        </Button>
-                                    </div>
-                                </form>
-                            )}
-                        </div>
-                    </div>
-                </StatGroup>
-
-                <div className="space-y-4">
-                    <div>
-                        <CardTitle>History</CardTitle>
-                        <CardDescription className="mt-1">
-                            All backups for this database.
-                        </CardDescription>
-                    </div>
-
-                    {backups.data.length === 0 ? (
-                        <EmptyState
-                            title="No backups yet"
-                            description="Backups will appear here once one runs."
-                        />
-                    ) : (
-                        <>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Triggered by</TableHead>
-                                        <TableHead>Size</TableHead>
-                                        <TableHead>Verified</TableHead>
-                                        <TableHead>Created</TableHead>
-                                        <TableHead className="w-[70px]" />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {backups.data.map((backup) => (
-                                        <TableRow key={backup.id}>
-                                            <TableCell>
-                                                <AutoStatusBadge
-                                                    status={backup.status}
-                                                />
-                                                {backup.error_message && (
-                                                    <p className="mt-1 max-w-xs truncate text-xs text-destructive">
-                                                        {backup.error_message}
-                                                    </p>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                {backup.triggered_by ===
-                                                'manual'
-                                                    ? (backup.triggered_by_user ??
-                                                      'Manual')
-                                                    : 'Scheduled'}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                {formatBytes(backup.size_bytes)}
-                                            </TableCell>
-                                            <TableCell>
-                                                {backup.verified_at ? (
-                                                    <CheckCircle2Icon className="h-4 w-4 text-green-600" />
-                                                ) : (
-                                                    <span className="text-sm text-muted-foreground">
-                                                        —
-                                                    </span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                {format(
-                                                    new Date(backup.created_at),
-                                                    'MMM d, yyyy HH:mm',
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                        >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
-                                                            <span className="sr-only">
-                                                                Actions
-                                                            </span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        {backup.status ===
-                                                            'completed' && (
-                                                            <DropdownMenuItem
-                                                                asChild
-                                                            >
-                                                                <a
-                                                                    href={teamPath(
-                                                                        `${basePath}/${backup.id}/download`,
-                                                                    )}
-                                                                >
-                                                                    <DownloadIcon className="mr-2 h-4 w-4" />
-                                                                    Download
-                                                                </a>
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        {backup.status ===
-                                                            'completed' && (
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleRestore(
-                                                                        backup,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <RotateCcwIcon className="mr-2 h-4 w-4" />
-                                                                Restore
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        <DropdownMenuItem
-                                                            className="text-destructive focus:text-destructive"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    backup,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-
-                            <Pagination
-                                meta={backups.meta}
-                                prevUrl={prevUrl}
-                                nextUrl={nextUrl}
-                                resultsLabel="backups"
-                            />
-                        </>
-                    )}
-                </div>
+                <BackupHistory
+                    backups={backups}
+                    backupsUrl={teamPath(basePath)}
+                    description="All backups for this database."
+                    onRestore={handleRestore}
+                />
             </div>
-
-            <ConfirmDialog
-                open={deleteOpen}
-                onOpenChange={setDeleteOpen}
-                title="Delete backup"
-                description="This permanently removes the backup file from storage. This cannot be undone."
-                confirmLabel="Delete"
-                variant="destructive"
-                onConfirm={confirmDelete}
-            />
 
             <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
                 <DialogContent>

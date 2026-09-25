@@ -83,7 +83,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
      */
     private function ensureSqliteDatabaseFile(): string
     {
-        $sqlitePath = "{$this->site->sharedPath()}/database/database.sqlite";
+        $sqlitePath = $this->site->sqliteDatabasePath();
 
         $this->connection->exec('mkdir -p '.dirname($sqlitePath)." && touch {$sqlitePath}");
 

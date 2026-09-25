@@ -31,6 +31,7 @@ export function getSiteSubNavItems(
         { title: 'Commands', href: `${base}/command-runs` },
         { title: 'Processes', href: `${base}/processes` },
         { title: 'Environment', href: `${base}/environment` },
+        { title: 'Backups', href: `${base}/backups` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },
         { title: 'Nginx', href: `${base}/nginx` },
         { title: 'Domains', href: `${base}/domains` },

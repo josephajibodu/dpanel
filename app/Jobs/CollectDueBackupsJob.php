@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Actions\Backups\RunSqliteBackup;
 use App\Models\BackupSchedule;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -21,13 +22,13 @@ class CollectDueBackupsJob implements ShouldQueue
      * as its own queued job so one slow or unreachable server can't delay
      * the rest, matching CollectAllServerMetricsJob's fan-out pattern.
      */
-    public function handle(RunDatabaseBackup $action): void
+    public function handle(RunDatabaseBackup $databaseBackup, RunSqliteBackup $sqliteBackup): void
     {
         BackupSchedule::query()
             ->where('enabled', true)
             ->where('next_run_at', '<=', now())
-            ->with('serverDatabase.server', 'storageProvider')
-            ->each(function (BackupSchedule $schedule) use ($action) {
+            ->with('serverDatabase.server', 'site.server', 'storageProvider')
+            ->each(function (BackupSchedule $schedule) use ($databaseBackup, $sqliteBackup) {
                 // Advance next_run_at inside a transaction before dispatching
                 // so a slow tick can't dispatch the same schedule twice.
                 $dueNow = DB::transaction(function () use ($schedule) {
@@ -50,12 +51,16 @@ class CollectDueBackupsJob implements ShouldQueue
                     return;
                 }
 
-                $server = $schedule->serverDatabase->server;
+                $server = $schedule->site?->server ?? $schedule->serverDatabase->server;
                 if (! $server->isReady()) {
                     return;
                 }
 
-                $action->trigger($schedule->serverDatabase, $schedule->storageProvider, 'scheduled');
+                if ($schedule->site) {
+                    $sqliteBackup->trigger($schedule->site, $schedule->storageProvider, 'scheduled');
+                } else {
+                    $databaseBackup->trigger($schedule->serverDatabase, $schedule->storageProvider, 'scheduled');
+                }
             });
     }
 }

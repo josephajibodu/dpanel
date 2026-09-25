@@ -18,7 +18,7 @@ use RuntimeException;
 
 class RunDatabaseBackup
 {
-    use EscapesShell;
+    use EscapesShell, ManagesBackupLifecycle;
 
     public function __construct(
         private SshService $sshService,
@@ -84,7 +84,7 @@ class RunDatabaseBackup
             ]);
             event(new BackupStatusChanged($server));
 
-            $this->pruneOldBackups($serverDatabase, $driver);
+            $this->pruneOldBackups($backup, $driver);
         } catch (\Throwable $e) {
             try {
                 $driver->delete($path);
@@ -105,29 +105,11 @@ class RunDatabaseBackup
         }
     }
 
-    private function updateStatus(Backup $backup, string $status, array $extra = []): void
-    {
-        $backup->update(['status' => $status, ...$extra]);
-        event(new BackupStatusChanged($backup->serverDatabase->server));
-    }
-
     private function buildStoragePath(ServerDatabase $serverDatabase, Backup $backup): string
     {
         $timestamp = now()->format('Ymd_His');
 
         return "backups/{$serverDatabase->id}/{$timestamp}_{$backup->id}_{$serverDatabase->name}.sql.gz";
-    }
-
-    /**
-     * The AWS CLI isn't part of provisioning yet — install it lazily so this
-     * feature works on already-provisioned servers too, not just new ones.
-     */
-    private function ensureAwsCliInstalled(SshConnection $connection): void
-    {
-        $connection->exec(
-            'command -v aws >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq awscli)',
-            180,
-        );
     }
 
     /**
@@ -255,31 +237,6 @@ class RunDatabaseBackup
             $connection->exec($cmd, 60);
         } catch (\Throwable) {
             // Best effort cleanup — don't let a failed drop mask the real error.
-        }
-    }
-
-    private function pruneOldBackups(ServerDatabase $serverDatabase, StorageProviderContract $driver): void
-    {
-        $schedule = $serverDatabase->backupSchedule;
-        $retentionCount = $schedule?->retention_count ?? 7;
-
-        $completed = $serverDatabase->backups()
-            ->where('status', 'completed')
-            ->orderByDesc('finished_at')
-            ->get();
-
-        $stale = $completed->slice($retentionCount);
-
-        foreach ($stale as $old) {
-            if ($old->storage_path) {
-                try {
-                    $driver->delete($old->storage_path);
-                } catch (\Throwable) {
-                    // Best effort — the row is removed either way below.
-                }
-            }
-
-            $old->delete();
         }
     }
 }

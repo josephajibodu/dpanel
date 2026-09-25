@@ -13,6 +13,7 @@ class BackupSchedule extends Model
 
     protected $fillable = [
         'server_database_id',
+        'site_id',
         'storage_provider_id',
         'frequency',
         'retention_count',
@@ -35,6 +36,11 @@ class BackupSchedule extends Model
     public function serverDatabase(): BelongsTo
     {
         return $this->belongsTo(ServerDatabase::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function storageProvider(): BelongsTo

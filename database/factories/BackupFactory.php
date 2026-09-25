@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ServerDatabase;
+use App\Models\Site;
 use App\Models\StorageProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -52,6 +53,17 @@ class BackupFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'triggered_by' => 'scheduled',
+        ]);
+    }
+
+    /**
+     * Target a site's SQLite database instead of a server database.
+     */
+    public function forSite(Site $site): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'server_database_id' => null,
+            'site_id' => $site->id,
         ]);
     }
 }

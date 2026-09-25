@@ -1,10 +1,12 @@
 <?php
 
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Actions\Backups\RunSqliteBackup;
 use App\Jobs\CollectDueBackupsJob;
 use App\Models\BackupSchedule;
 use App\Models\Server;
 use App\Models\ServerDatabase;
+use App\Models\Site;
 use App\Models\StorageProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -42,7 +44,7 @@ it('dispatches a backup only for enabled, due schedules', function () {
         );
     app()->instance(RunDatabaseBackup::class, $actionMock);
 
-    app(CollectDueBackupsJob::class)->handle(app(RunDatabaseBackup::class));
+    app(CollectDueBackupsJob::class)->handle(app(RunDatabaseBackup::class), app(RunSqliteBackup::class));
 
     $dueSchedule->refresh();
     expect($dueSchedule->next_run_at->isFuture())->toBeTrue();
@@ -63,7 +65,30 @@ it('does not dispatch twice for the same due schedule', function () {
     app()->instance(RunDatabaseBackup::class, $actionMock);
 
     $job = app(CollectDueBackupsJob::class);
-    $job->handle(app(RunDatabaseBackup::class));
+    $job->handle(app(RunDatabaseBackup::class), app(RunSqliteBackup::class));
     // A second tick right after should find nothing due anymore.
-    $job->handle(app(RunDatabaseBackup::class));
+    $job->handle(app(RunDatabaseBackup::class), app(RunSqliteBackup::class));
+});
+
+it('dispatches a sqlite backup for a due site schedule', function () {
+    $server = Server::factory()->create();
+    $site = Site::factory()->forServer($server)->create();
+    $storageProvider = StorageProvider::factory()->create();
+
+    BackupSchedule::factory()->forSite($site)->due()->create([
+        'storage_provider_id' => $storageProvider->id,
+    ]);
+
+    $databaseMock = Mockery::mock(RunDatabaseBackup::class);
+    $databaseMock->shouldNotReceive('trigger');
+    $sqliteMock = Mockery::mock(RunSqliteBackup::class);
+    $sqliteMock->shouldReceive('trigger')
+        ->once()
+        ->with(
+            Mockery::on(fn ($s) => $s->id === $site->id),
+            Mockery::on(fn ($sp) => $sp->id === $storageProvider->id),
+            'scheduled',
+        );
+
+    app(CollectDueBackupsJob::class)->handle($databaseMock, $sqliteMock);
 });
