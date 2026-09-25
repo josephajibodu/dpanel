@@ -321,7 +321,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_PORT=5432')))->toBeTrue();
     });
 
-    it('only injects APP_* values when no database is linked', function () {
+    it('injects sqlite DB_* values when no database is linked', function () {
         Event::fake([ServerSitesUpdated::class]);
 
         $site = Site::factory()->forServer($this->server)->pending()->create([
@@ -355,9 +355,11 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'APP_DEBUG=false')))->toBeTrue();
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'APP_URL=https://nodb.example.com')))->toBeTrue();
 
-        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_CONNECTION')))->toBeFalse();
-        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_DATABASE')))->toBeFalse();
+        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_CONNECTION=sqlite')))->toBeTrue();
+        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_DATABASE='.$site->sharedPath().'/database/database.sqlite')))->toBeTrue();
+        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_HOST')))->toBeFalse();
         expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_USERNAME')))->toBeFalse();
+        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_PASSWORD')))->toBeFalse();
 
         $sqliteCalls = collect($execCalls)->filter(
             fn ($c) => str_contains($c, 'database/database.sqlite') && str_contains($c, 'touch')
