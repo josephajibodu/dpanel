@@ -8,8 +8,8 @@ use App\Models\Site;
  * Every deploy clones into a fresh releases/{ulid} directory and atomically
  * swaps the `current` symlink onto it once the build succeeds, instead of
  * mutating the site's live checkout in place. This is what makes deploys
- * zero-downtime and rollback possible (RollbackSiteJob reuses swapAndReload()
- * to point `current` back at an older release without rebuilding anything).
+ * zero-downtime and rollback possible (RollbackSiteJob reuses activate() to
+ * point `current` back at an older release without rebuilding anything).
  */
 class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
 {
@@ -31,7 +31,17 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then sudo chmod -R 775 "$RELEASE_PATH/storage"; fi';
         $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then sudo chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
 
-        $script = "\n{$chown}\n{$storageChmod}\n{$cacheChmod}\n".$this->swapAndReload($site, '"$RELEASE_PATH"');
+        return "\n{$chown}\n{$storageChmod}\n{$cacheChmod}\n".$this->activate($site);
+    }
+
+    public function activate(Site $site): string
+    {
+        $currentPath = $site->currentPath();
+
+        $swap = "ln -sfn \"\$RELEASE_PATH\" {$currentPath}";
+        $reload = "( flock -w 10 9 || exit 1\n    echo 'Restarting FPM...'; sudo -S service \$PHP_FPM reload ) 9>/tmp/fpmlock";
+
+        $script = "{$swap}\n{$reload}";
 
         $postActivation = $site->project_type->postActivationScript();
 
@@ -40,16 +50,6 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         }
 
         return $script;
-    }
-
-    public function swapAndReload(Site $site, string $releasePathExpr): string
-    {
-        $currentPath = $site->currentPath();
-
-        $swap = "ln -sfn {$releasePathExpr} {$currentPath}";
-        $reload = "( flock -w 10 9 || exit 1\n    echo 'Restarting FPM...'; sudo -S service \$PHP_FPM reload ) 9>/tmp/fpmlock";
-
-        return "{$swap}\n{$reload}";
     }
 
     private function cloneCommand(Site $site): string

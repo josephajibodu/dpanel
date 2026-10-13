@@ -7,16 +7,41 @@ use App\Enums\SiteStatus;
 use App\Events\DeploymentOutput as DeploymentOutputEvent;
 use App\Events\DeploymentStatusChanged;
 use App\Models\Site;
+use App\Services\PhpRuntimeResolver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
  * Shared status/log/broadcast plumbing for jobs that carry a Deployment
- * through its lifecycle (DeploySiteJob, RollbackSiteJob). Requires a public
+ * through its lifecycle (DeploySiteJob, RollbackSiteJob), plus the shell
+ * variable preamble their remote scripts run with. Requires a public
  * `Deployment $deployment` property on the using class.
  */
 trait ManagesDeploymentLifecycle
 {
+    /**
+     * Shell variables the deploy script and the strategy's fragments rely on
+     * ($SITE_ROOT is the persistent base dir; $RELEASE_PATH is the release
+     * being built or rolled back to).
+     */
+    private function scriptPreamble(Site $site, string $releasePath): string
+    {
+        $runtime = app(PhpRuntimeResolver::class)->forSite($site);
+        $serverUser = config('server.user');
+        $webUser = config('server.web_user');
+
+        $preamble = "SITE_ROOT='{$site->rootPath()}'\n";
+        $preamble .= "RELEASE_PATH='{$releasePath}'\n";
+        $preamble .= "BRANCH='{$site->branch}'\n";
+        $preamble .= "PHP='{$runtime['binary']}'\n";
+        $preamble .= "COMPOSER='{$runtime['composer']}'\n";
+        $preamble .= "PHP_FPM='{$runtime['fpm_service']}'\n";
+        $preamble .= "SERVER_USER='{$serverUser}'\n";
+        $preamble .= "WEB_USER='{$webUser}'\n\n";
+
+        return $preamble;
+    }
+
     /**
      * Log output line to database and broadcast.
      */

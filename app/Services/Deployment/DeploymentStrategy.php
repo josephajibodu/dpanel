@@ -11,11 +11,11 @@ interface DeploymentStrategy
     public function append(Site $site): string;
 
     /**
-     * Atomically point `current` at the given release and reload PHP-FPM.
-     * Embeddable as its own script fragment so RollbackSiteJob can run just
-     * the swap without a clone/build (that's the entire point of a rollback).
-     *
-     * @param  string  $releasePathExpr  A shell expression for the release path (e.g. "$RELEASE_PATH" or a literal path).
+     * Atomically point `current` at $RELEASE_PATH, reload PHP-FPM, then restart
+     * the project type's long-running processes from that release. Relies on
+     * the deploy script preamble's variables ($RELEASE_PATH, $PHP_FPM, $PHP).
+     * Embeddable as its own script fragment so RollbackSiteJob can activate an
+     * already-built release without a clone/build (that's the entire point of a rollback).
      */
-    public function swapAndReload(Site $site, string $releasePathExpr): string;
+    public function activate(Site $site): string;
 }

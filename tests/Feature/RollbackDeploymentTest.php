@@ -2,6 +2,7 @@
 
 use App\Actions\Sites\RollbackDeploymentAction;
 use App\Enums\DeploymentStatus;
+use App\Enums\ProjectType;
 use App\Enums\SiteStatus;
 use App\Exceptions\DeploymentFailedException;
 use App\Jobs\RollbackSiteJob;
@@ -160,6 +161,80 @@ it('swaps current to the target release and marks the rollback finished', functi
 
     expect($rollback->status)->toBe(DeploymentStatus::Finished)
         ->and($this->site->status)->toBe(SiteStatus::Deployed);
+});
+
+/**
+ * Roll the given site back to a finished release and return the script that was executed.
+ */
+function executedRollbackScriptFor(Site $site): string
+{
+    $target = Deployment::factory()->finished()->forSite($site)->create();
+    $rollback = Deployment::factory()->pending()->forSite($site)->create([
+        'triggered_by' => 'rollback',
+        'rollback_of_deployment_id' => $target->id,
+        'release_path' => $target->ulid,
+    ]);
+
+    $script = '';
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('directoryExists')->once()->andReturnTrue();
+    $connection->shouldReceive('exec')->once()->andReturnUsing(function (string $command) use (&$script) {
+        $script = $command;
+
+        return '';
+    });
+    $connection->shouldReceive('disconnect')->once();
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+
+    (new RollbackSiteJob($rollback))->handle($sshService, app(DeploymentStrategy::class));
+
+    expect($rollback->fresh()->status)->toBe(DeploymentStatus::Finished);
+
+    return $script;
+}
+
+it('defines the deploy variables before swapping and reloading php-fpm on rollback', function () {
+    $this->site->update(['php_version' => '8.3']);
+
+    $script = executedRollbackScriptFor($this->site);
+    $releasePath = $this->site->releasesPath().'/'.$this->site->deployments()->where('triggered_by', 'rollback')->sole()->releaseFolderName();
+
+    $swapPosition = strpos($script, 'ln -sfn "$RELEASE_PATH" '.$this->site->currentPath());
+    $reloadPosition = strpos($script, 'sudo -S service $PHP_FPM reload');
+
+    expect($script)->toStartWith("set -e\n")
+        ->and($swapPosition)->not->toBeFalse()
+        ->and($reloadPosition)->toBeGreaterThan($swapPosition)
+        ->and(strpos($script, "RELEASE_PATH='{$releasePath}'"))->toBeLessThan($swapPosition)
+        ->and(strpos($script, "PHP_FPM='php8.3-fpm'"))->toBeLessThan($swapPosition)
+        ->and(strpos($script, "PHP='php8.3'"))->toBeLessThan($swapPosition);
+});
+
+it('restarts queue workers, Horizon and Reverb from the rolled-back release after the swap', function () {
+    $script = executedRollbackScriptFor($this->site);
+
+    $swapPosition = strpos($script, 'ln -sfn "$RELEASE_PATH"');
+    $cdPosition = strpos($script, 'cd "$RELEASE_PATH"');
+
+    expect($swapPosition)->not->toBeFalse()
+        ->and($cdPosition)->toBeGreaterThan($swapPosition)
+        ->and(strpos($script, '$PHP artisan queue:restart'))->toBeGreaterThan($cdPosition)
+        ->and(strpos($script, '$PHP artisan horizon:terminate'))->toBeGreaterThan($cdPosition)
+        ->and(strpos($script, '$PHP artisan reverb:restart'))->toBeGreaterThan($cdPosition);
+});
+
+it('does not run artisan restarts when rolling back a non-laravel site', function () {
+    $this->site->update(['project_type' => ProjectType::StaticHtml]);
+
+    $script = executedRollbackScriptFor($this->site);
+
+    expect($script)->toContain('ln -sfn "$RELEASE_PATH"')
+        ->and($script)->toContain("PHP_FPM='")
+        ->and($script)->not->toContain('queue:restart')
+        ->and($script)->not->toContain('horizon:terminate')
+        ->and($script)->not->toContain('reverb:restart');
 });
 
 it('fails the rollback when the target release no longer exists on disk', function () {

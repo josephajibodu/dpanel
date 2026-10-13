@@ -9,7 +9,6 @@ use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Deployment\ReleaseManager;
-use App\Services\PhpRuntimeResolver;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -197,26 +196,7 @@ class DeploySiteJob implements ShouldQueue
      */
     private function prepareScript($connection, string $script, Site $site, string $releasePath): string
     {
-        $siteRoot = $site->rootPath();
-        $runtime = app(PhpRuntimeResolver::class)->forSite($site);
-        $phpBinary = $runtime['binary'];
-        $phpFpm = $runtime['fpm_service'];
-        $composerBin = $runtime['composer'];
         $phpVersion = $site->php_version ?? '8.4';
-
-        // Preamble: set shell variables that default scripts use ($SITE_ROOT is the
-        // persistent base dir; $RELEASE_PATH is this deploy's fresh release, and is
-        // also where the strategy `cd`s to before the user script runs).
-        $serverUser = config('server.user');
-        $webUser = config('server.web_user');
-        $preamble = "SITE_ROOT='{$siteRoot}'\n";
-        $preamble .= "RELEASE_PATH='{$releasePath}'\n";
-        $preamble .= "BRANCH='{$site->branch}'\n";
-        $preamble .= "PHP='{$phpBinary}'\n";
-        $preamble .= "COMPOSER='{$composerBin}'\n";
-        $preamble .= "PHP_FPM='{$phpFpm}'\n";
-        $preamble .= "SERVER_USER='{$serverUser}'\n";
-        $preamble .= "WEB_USER='{$webUser}'\n\n";
 
         // Replace placeholder variables in script ({{SITE_PATH}}, {{BRANCH}}, etc.)
         // {{WEB_ROOT}} points at the release being built, not $site->webRoot()
@@ -235,7 +215,7 @@ class DeploySiteJob implements ShouldQueue
 
         $strategy = app(DeploymentStrategy::class);
         $userScript = str_replace(array_keys($replacements), array_values($replacements), $script);
-        $prepared = $preamble.$strategy->prepend($site).$userScript.$strategy->append($site);
+        $prepared = $this->scriptPreamble($site, $releasePath).$strategy->prepend($site).$userScript.$strategy->append($site);
 
         $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
 

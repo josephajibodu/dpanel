@@ -19,7 +19,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Rolls back to an already-built release by swapping the `current` symlink —
  * no clone, no build, no migrations. That's the entire point: rollback is
- * fast and doesn't repeat whatever the original deploy did.
+ * fast and doesn't repeat whatever the original deploy did. Long-running
+ * processes (queue workers, Horizon, Reverb) are restarted the same way a
+ * deploy does, so they stop running the rolled-back-from release's code.
  */
 class RollbackSiteJob implements ShouldQueue
 {
@@ -70,7 +72,10 @@ class RollbackSiteJob implements ShouldQueue
                 }
 
                 $this->logOutput("Rolling back to release {$this->deployment->releaseFolderName()}...", 'info');
-                $connection->exec($strategy->swapAndReload($site, escapeshellarg($releasePath)), timeout: $this->timeout);
+                $connection->exec(
+                    "set -e\n".$this->scriptPreamble($site, $releasePath).$strategy->activate($site),
+                    timeout: $this->timeout,
+                );
                 $this->logOutput('Rollback complete.', 'info');
             } finally {
                 $connection->disconnect();

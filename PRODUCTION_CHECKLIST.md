@@ -44,7 +44,7 @@ Verified against the code on 2026-10-13. `flitops.example.com`, user `artisan` a
    7. Laptop: rename the old database (e.g. `flitops_pre_cutover`) and point the laptop `.env` at a fresh dev DB, so a stray `composer run dev` can't run a second scheduler/queue against real servers. Delete both dump files once confident (they hold encrypted secrets).
    8. Update each OAuth app's callback to `https://flitops.example.com/auth/{provider}/callback` and any repo webhooks pointing at the old URL.
 10. **Verify**: `/up` 200 and login works; `horizon:status` running and both workers RUNNING in `supervisorctl status`; exactly one `schedule:run` cron; heartbeat monitor goes green; websocket to `wss://…/app/` returns 101; server "Test connection" updates live; an on-demand backup completes; a throwaway free-domain site gets the wildcard cert; a self-deploy ends with the three restart lines; a team invite email arrives.
-11. **If a self-deploy breaks Flitops** (don't rely on rollback yet — see item 3): `cd ~/flitops.example.com && ln -sfn releases/<previous> current && sudo service php8.4-fpm reload && cd current && php8.4 artisan horizon:terminate && php8.4 artisan reverb:restart`.
+11. **If a self-deploy breaks Flitops**: open the last good deployment and "Rollback to this" — it swaps `current`, reloads FPM and restarts queue workers, Horizon and Reverb from that release. If Flitops is too broken to run the rollback (web UI or Horizon down), do the same by hand: `cd ~/flitops.example.com && ln -sfn releases/<previous> current && sudo service php8.4-fpm reload && cd current && php8.4 artisan horizon:terminate && php8.4 artisan reverb:restart`.
 
 ---
 
@@ -69,7 +69,7 @@ Verified against the code on 2026-10-13. `flitops.example.com`, user `artisan` a
 - [x] One-click rollback to the previous release if a deploy breaks something
 - [x] Deploy history/log (what was deployed, when, by whom)
 - [x] Ability to run pre/post-deploy hooks (migrations, cache clear, worker restarts — see item 1)
-- [ ] Rollback is broken (found 2026-10-13): `RollbackSiteJob` runs the swap without the deploy script's variables, so `$PHP_FPM` is empty, the FPM reload fails and every rollback is reported failed (although the swap happened); it also never restarts workers. Fix: give it the same preamble and run `postActivationScript()` after.
+- [x] Rollback is broken (found and fixed 2026-10-13): `RollbackSiteJob` ran the swap without the deploy script's variables, so `$PHP_FPM` was empty, the FPM reload failed and every rollback was reported failed (although the swap happened); it also never restarted workers. It now runs with the same preamble as a deploy and the shared `activate()` fragment (swap, FPM reload, then `postActivationScript()` from the rolled-back release).
 
 ---
 
