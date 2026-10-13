@@ -59,8 +59,27 @@ $PHP artisan config:cache
 $PHP artisan route:cache
 $PHP artisan view:cache
 $PHP artisan event:cache
-$PHP artisan queue:restart
 SCRIPT;
+    }
+
+    /**
+     * Commands run from the new release right after `current` is swapped onto
+     * it, so long-running daemons restart into the new code. They can't live
+     * in the editable deploy script: that runs before the swap, so a daemon
+     * restarted there comes straight back up on the old release — and Horizon
+     * always respawns its workers from the release its master booted from,
+     * which `queue:restart` alone never changes.
+     */
+    public function postActivationScript(): string
+    {
+        return match ($this) {
+            self::Laravel => <<<'SCRIPT'
+$PHP artisan queue:restart
+if [ -d vendor/laravel/horizon ]; then $PHP artisan horizon:terminate; fi
+if [ -d vendor/laravel/reverb ]; then $PHP artisan reverb:restart; fi
+SCRIPT,
+            self::Symfony, self::PhpGeneric, self::StaticHtml, self::WordPress => '',
+        };
     }
 
     private function symfonyDeployScript(): string

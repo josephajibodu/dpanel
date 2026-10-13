@@ -31,7 +31,15 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then sudo chmod -R 775 "$RELEASE_PATH/storage"; fi';
         $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then sudo chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
 
-        return "\n{$chown}\n{$storageChmod}\n{$cacheChmod}\n".$this->swapAndReload($site, '"$RELEASE_PATH"');
+        $script = "\n{$chown}\n{$storageChmod}\n{$cacheChmod}\n".$this->swapAndReload($site, '"$RELEASE_PATH"');
+
+        $postActivation = $site->project_type->postActivationScript();
+
+        if ($postActivation !== '') {
+            $script .= "\ncd \"\$RELEASE_PATH\"\n{$postActivation}";
+        }
+
+        return $script;
     }
 
     public function swapAndReload(Site $site, string $releasePathExpr): string

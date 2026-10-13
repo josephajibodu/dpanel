@@ -27,16 +27,28 @@ describe('ProjectType::defaultDeployScript', function () {
         expect($script)->toContain('artisan config:cache');
     });
 
-    it('restarts queue workers after a laravel deploy so they pick up new code', function () {
-        $script = ProjectType::Laravel->defaultDeployScript();
-
-        expect($script)->toContain('artisan queue:restart');
-
-        // It must run after the code/config are in place, not before —
-        // otherwise a worker could restart into a half-deployed release.
-        $restartPosition = strpos($script, 'artisan queue:restart');
-        $configCachePosition = strpos($script, 'artisan config:cache');
-
-        expect($restartPosition)->toBeGreaterThan($configCachePosition);
+    it('leaves worker restarts out of the editable laravel script, which runs before current is swapped', function () {
+        // A worker restarted from here would come straight back up on the
+        // old release — see ProjectType::postActivationScript().
+        expect(ProjectType::Laravel->defaultDeployScript())->not->toContain('queue:restart');
     });
+});
+
+describe('ProjectType::postActivationScript', function () {
+    it('restarts queue workers, Horizon and Reverb for laravel sites', function () {
+        $script = ProjectType::Laravel->postActivationScript();
+
+        expect($script)->toContain('$PHP artisan queue:restart')
+            ->and($script)->toContain('if [ -d vendor/laravel/horizon ]; then $PHP artisan horizon:terminate; fi')
+            ->and($script)->toContain('if [ -d vendor/laravel/reverb ]; then $PHP artisan reverb:restart; fi');
+    });
+
+    it('has nothing to restart for other project types', function (ProjectType $type) {
+        expect($type->postActivationScript())->toBe('');
+    })->with([
+        [ProjectType::Symfony],
+        [ProjectType::PhpGeneric],
+        [ProjectType::StaticHtml],
+        [ProjectType::WordPress],
+    ]);
 });

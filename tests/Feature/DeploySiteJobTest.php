@@ -189,6 +189,62 @@ it('clones into a fresh release directory and symlinks shared paths', function (
         ->and($uploaded)->toContain('ln -sfn "$RELEASE_PATH"');
 });
 
+/**
+ * Run a deploy for the given site and return the script that was uploaded.
+ */
+function uploadedDeployScriptFor(Site $site): string
+{
+    $deployment = Deployment::factory()->pending()->forSite($site)->create();
+
+    $uploaded = '';
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
+        $uploaded = $content;
+    });
+    $connection->shouldReceive('execWithOutput')->once()->andReturn(0);
+    $connection->shouldReceive('disconnect')->andReturnNull();
+
+    (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
+
+    return $uploaded;
+}
+
+it('restarts queue workers, Horizon and Reverb only after current is swapped onto the new release', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    // A site with its own saved script (every site created before this change)
+    // still gets the restarts, since they're appended by the deploy strategy.
+    DeployScript::create([
+        'site_id' => $this->site->id,
+        'script' => 'echo "CUSTOM_DEPLOY_MARKER"',
+    ]);
+
+    $uploaded = uploadedDeployScriptFor($this->site);
+
+    $swapPosition = strpos($uploaded, 'ln -sfn "$RELEASE_PATH" /home/');
+
+    expect($swapPosition)->not->toBeFalse()
+        ->and(strpos($uploaded, '$PHP artisan queue:restart'))->toBeGreaterThan($swapPosition)
+        ->and(strpos($uploaded, '$PHP artisan horizon:terminate'))->toBeGreaterThan($swapPosition)
+        ->and(strpos($uploaded, '$PHP artisan reverb:restart'))->toBeGreaterThan($swapPosition)
+        ->and(strpos($uploaded, 'CUSTOM_DEPLOY_MARKER'))->toBeLessThan($swapPosition);
+});
+
+it('does not run artisan restarts after activating a non-laravel release', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $this->site->update(['project_type' => ProjectType::StaticHtml]);
+
+    $uploaded = uploadedDeployScriptFor($this->site);
+
+    expect($uploaded)->toContain('ln -sfn "$RELEASE_PATH"')
+        ->and($uploaded)->not->toContain('queue:restart')
+        ->and($uploaded)->not->toContain('horizon:terminate')
+        ->and($uploaded)->not->toContain('reverb:restart');
+});
+
 it('prunes old releases after a successful deploy', function () {
     Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
 
