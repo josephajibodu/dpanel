@@ -2,16 +2,19 @@
 
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Exceptions\SshCommandException;
+use App\Jobs\RunBackupJob;
 use App\Models\Backup;
 use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
 use App\Models\StorageProvider;
+use App\Notifications\DatabaseBackupFailed;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use App\Services\Storage\CloudflareR2Driver;
 use App\Services\Storage\StorageProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 
 uses(RefreshDatabase::class);
 
@@ -176,4 +179,22 @@ it('prunes completed backups beyond the schedule retention count', function () {
     // (the new one plus the newest of the 3 pre-existing ones); the 2
     // oldest pre-existing ones are pruned.
     expect($this->serverDatabase->backups()->count())->toBe(2);
+});
+
+it('notifies the team owner when a scheduled backup without a user fails', function () {
+    Notification::fake();
+
+    $backup = Backup::factory()->scheduled()->create([
+        'server_database_id' => $this->serverDatabase->id,
+        'storage_provider_id' => $this->storageProvider->id,
+    ]);
+
+    (new RunBackupJob($backup))->failed(new RuntimeException('Dump failed.'));
+
+    $owner = $this->server->team->owner;
+    expect($backup->user_id)->toBeNull()
+        ->and($owner->is($this->server->user))->toBeFalse();
+
+    Notification::assertSentTo($owner, DatabaseBackupFailed::class, fn (DatabaseBackupFailed $notification) => $notification->backup->is($backup));
+    Notification::assertNotSentTo($this->server->user, DatabaseBackupFailed::class);
 });

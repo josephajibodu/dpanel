@@ -50,7 +50,7 @@ class RunBackupJob implements ShouldQueue
             'message' => $server->redactSecrets($exception->getMessage()),
         ]);
 
-        $notifiable = $this->backup->user ?? $server->team->user;
+        $notifiable = $this->backup->user ?? $server->team?->owner ?? $server->user;
         $notifiable?->notify(new DatabaseBackupFailed($this->backup));
     }
 }
