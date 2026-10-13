@@ -3,6 +3,7 @@ import {
     FileTextIcon,
     Loader2Icon,
     MoreVerticalIcon,
+    PencilIcon,
     PlayIcon,
     TerminalIcon,
 } from 'lucide-react';
@@ -163,7 +164,7 @@ export default function SiteCommandsIndex({
                 .catch(() => setLogsContent('Failed to load output.'))
                 .finally(() => setLogsLoading(false));
         },
-        [serverId, siteId],
+        [serverId, siteId, teamPath],
     );
 
     const handleRunAgain = (run: CommandRun) => {
@@ -173,6 +174,11 @@ export default function SiteCommandsIndex({
             { command: run.command },
             { preserveScroll: true },
         );
+    };
+
+    const handleEditAndRun = (run: CommandRun) => {
+        setCommandInput(run.command);
+        setRunSheetOpen(true);
     };
 
     const runs = commandRuns?.data ?? [];
@@ -288,6 +294,16 @@ export default function SiteCommandsIndex({
                                                         >
                                                             <PlayIcon className="mr-2 h-4 w-4" />
                                                             Run again
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleEditAndRun(
+                                                                    run,
+                                                                )
+                                                            }
+                                                        >
+                                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                                            Edit and run
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
