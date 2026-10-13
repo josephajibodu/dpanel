@@ -228,12 +228,17 @@ return [
     ],
 
     'environments' => [
+        // `defaults` above only merges into supervisors with the same name, so
+        // every production supervisor sets `tries` itself — left unset, Horizon
+        // retries a failing job forever (e.g. every queued broadcast while
+        // Reverb is down) and never calls its failed() hook.
         'production' => [
             'supervisor-broadcasts' => [
                 'connection' => 'redis',
                 'queue' => ['broadcasts'],
                 'balance' => 'simple',
                 'processes' => 2,
+                'tries' => 1,
                 'timeout' => 30,
             ],
             'supervisor-provisioning' => [
@@ -241,6 +246,7 @@ return [
                 'queue' => ['provisioning', 'backups'],
                 'balance' => 'simple',
                 'processes' => 2,
+                'tries' => 1,
                 // 3600s to cover RunBackupJob/RestoreBackupJob's own timeout,
                 // which is longer than a typical provisioning step.
                 'timeout' => 3600,
@@ -250,6 +256,7 @@ return [
                 'queue' => ['deploy'],
                 'balance' => 'simple',
                 'processes' => 2,
+                'tries' => 1,
                 'timeout' => 600,
             ],
             'supervisor-ssh' => [
@@ -261,7 +268,11 @@ return [
                 'maxProcesses' => 10,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
-                'timeout' => 120,
+                'tries' => 1,
+                // Auto-balancing force-kills a busy worker this long after
+                // scaling it down, so it must outlast every job-level timeout
+                // on the default queue (IssueSslForDomainJob: 420s).
+                'timeout' => 600,
             ],
         ],
 

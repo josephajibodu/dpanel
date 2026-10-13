@@ -145,3 +145,29 @@ it('refuses to invoke acme.sh when the Cloudflare API token is missing', functio
 
     Process::assertNothingRan();
 });
+
+it('stores certificate paths under shared storage, not the release storage symlink that pruning removes', function () {
+    $sharedStorage = "{$this->tmpDir}/shared/storage";
+    $releaseDirectory = "{$this->tmpDir}/releases/01RELEASE";
+    mkdir($sharedStorage, 0700, true);
+    mkdir($releaseDirectory, 0700, true);
+    symlink($sharedStorage, "{$releaseDirectory}/storage");
+
+    $originalStoragePath = storage_path();
+    app()->useStoragePath("{$releaseDirectory}/storage");
+
+    try {
+        $paths = (new WildcardCertificateIssuer)->pathsFor('*.example.test');
+    } finally {
+        app()->useStoragePath($originalStoragePath);
+        unlink("{$releaseDirectory}/storage");
+    }
+
+    $certificateDirectory = realpath($sharedStorage).'/app/certificates/_.example.test';
+
+    expect($paths)->toBe([
+        'certificate' => "{$certificateDirectory}/server.crt",
+        'private_key' => "{$certificateDirectory}/server.key",
+        'chain' => "{$certificateDirectory}/chain.pem",
+    ]);
+});

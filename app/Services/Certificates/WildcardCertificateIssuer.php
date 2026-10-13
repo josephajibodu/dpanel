@@ -19,7 +19,7 @@ class WildcardCertificateIssuer
 {
     /**
      * @param  string|null  $storageDirectory  Override the base directory cert files are written to
-     *                                         (defaults to storage_path('app/certificates')).
+     *                                         (defaults to storage_path('app/certificates'), symlinks resolved).
      * @param  string|null  $acmeBinary  Override the acme.sh binary path
      *                                   (defaults to config('server.acme_binary') or 'acme.sh').
      */
@@ -57,11 +57,17 @@ class WildcardCertificateIssuer
     }
 
     /**
+     * The storage directory is resolved through symlinks before it's used,
+     * because these paths are persisted on the Certificate row: under a
+     * zero-downtime deploy storage_path() runs through
+     * releases/{ulid}/storage, a path that disappears once that release is
+     * pruned, while its target (the site's shared/storage) never moves.
+     *
      * @return array{certificate: string, private_key: string, chain: string}
      */
     public function pathsFor(string $domain): array
     {
-        $base = $this->storageDirectory ?? storage_path('app/certificates');
+        $base = $this->storageDirectory ?? (realpath(storage_path()) ?: storage_path()).'/app/certificates';
         $safeDomain = str_replace(['*', '/'], '_', $domain);
         $directory = "{$base}/{$safeDomain}";
 
