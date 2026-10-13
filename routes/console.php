@@ -3,6 +3,7 @@
 use App\Jobs\CollectAllServerMetricsJob;
 use App\Jobs\CollectDueBackupsJob;
 use App\Jobs\IssueWildcardCertificateJob;
+use App\Jobs\SendSchedulerHeartbeatJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -22,3 +23,7 @@ Schedule::job(new CollectAllServerMetricsJob)->everyTenMinutes();
 
 // Run any database backups that are due.
 Schedule::job(new CollectDueBackupsJob)->hourly();
+
+// Ping the external heartbeat monitor via the queue, proving both the
+// scheduler and the workers are alive. Silence means one of them is down.
+Schedule::job(new SendSchedulerHeartbeatJob)->everyFiveMinutes();

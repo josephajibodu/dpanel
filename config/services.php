@@ -54,4 +54,8 @@ return [
         'redirect' => env('BITBUCKET_REDIRECT_URI', '/auth/bitbucket/callback'),
     ],
 
+    'heartbeat' => [
+        'url' => env('SCHEDULER_HEARTBEAT_URL'),
+    ],
+
 ];
