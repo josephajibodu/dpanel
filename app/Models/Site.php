@@ -7,6 +7,7 @@ use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
+use App\Enums\UptimeStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,9 @@ class Site extends Model
         'build_command',
         'status',
         'error_message',
+        'uptime_status',
+        'uptime_checked_at',
+        'uptime_consecutive_failures',
         'provisioning_step',
         'deploy_key_id',
         'webhook_secret',
@@ -61,6 +65,8 @@ class Site extends Model
             'deployment_started_at' => 'datetime',
             'deployment_finished_at' => 'datetime',
             'env_content' => 'encrypted',
+            'uptime_status' => UptimeStatus::class,
+            'uptime_checked_at' => 'datetime',
         ];
     }
 
@@ -243,6 +249,24 @@ class Site extends Model
     public function primaryDomain(): HasOne
     {
         return $this->hasOne(SiteDomain::class)->where('is_primary', true);
+    }
+
+    /**
+     * @return HasMany<SiteIncident, $this>
+     */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(SiteIncident::class);
+    }
+
+    /**
+     * The incident for the site's current downtime, if it's down.
+     *
+     * @return HasOne<SiteIncident, $this>
+     */
+    public function openIncident(): HasOne
+    {
+        return $this->hasOne(SiteIncident::class)->whereNull('resolved_at');
     }
 
     public function nginxFiles(): HasMany

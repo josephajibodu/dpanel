@@ -132,6 +132,7 @@ class SiteController extends Controller
         $site->load([
             'server.providerAccount',
             'latestDeployment',
+            'openIncident',
             'deployScript',
             'deployments' => fn ($q) => $q->with('user')->latest()->limit(10),
         ]);

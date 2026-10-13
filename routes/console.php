@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CheckAllSitesUptimeJob;
 use App\Jobs\CollectAllServerMetricsJob;
 use App\Jobs\CollectDueBackupsJob;
 use App\Jobs\IssueWildcardCertificateJob;
@@ -27,3 +28,6 @@ Schedule::job(new CollectDueBackupsJob)->hourly();
 // Ping the external heartbeat monitor via the queue, proving both the
 // scheduler and the workers are alive. Silence means one of them is down.
 Schedule::job(new SendSchedulerHeartbeatJob)->everyFiveMinutes();
+
+// HTTP-check every live site and email the owner when one goes down or recovers.
+Schedule::job(new CheckAllSitesUptimeJob)->everyFiveMinutes();

@@ -23,6 +23,11 @@ export interface Site {
     status_label: string;
     status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red' | 'orange';
     error_message: string | null;
+    uptime_status: 'up' | 'down' | null;
+    uptime_status_label: string | null;
+    uptime_status_color: 'green' | 'red' | null;
+    uptime_checked_at: string | null;
+    open_incident?: { reason: string; started_at: string } | null;
     provisioning_step?: { value: number; label: string; description: string } | null;
     provisioning_steps?: Array<{ value: number; label: string; description: string }>;
     auto_deploy: boolean;
