@@ -29,6 +29,7 @@ class SiteDomain extends Model
         'verified_at',
         'ssl_enabled_at',
         'ssl_expires_at',
+        'ssl_expiry_alert_threshold',
     ];
 
     /**
@@ -46,6 +47,7 @@ class SiteDomain extends Model
             'verified_at' => 'datetime',
             'ssl_enabled_at' => 'datetime',
             'ssl_expires_at' => 'datetime',
+            'ssl_expiry_alert_threshold' => 'integer',
         ];
     }
 

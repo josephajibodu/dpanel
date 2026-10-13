@@ -21,6 +21,7 @@ class Certificate extends Model
         'private_key_path',
         'chain_path',
         'expires_at',
+        'expiry_alert_threshold',
         'last_renewed_at',
         'last_distribution_at',
     ];
@@ -32,6 +33,7 @@ class Certificate extends Model
     {
         return [
             'expires_at' => 'datetime',
+            'expiry_alert_threshold' => 'integer',
             'last_renewed_at' => 'datetime',
             'last_distribution_at' => 'datetime',
         ];

@@ -97,6 +97,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Operator Alert Email
+    |--------------------------------------------------------------------------
+    |
+    | Where platform-level alerts go — currently the free-domain wildcard
+    | certificate expiring or failing to renew, which no team owns (site
+    | certificate alerts go to the server's owner instead). When unset these
+    | alerts are only logged, so set it on any real install.
+    |
+    */
+
+    'alert_email' => env('ALERT_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Releases To Keep
     |--------------------------------------------------------------------------
     |

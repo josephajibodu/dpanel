@@ -5,9 +5,13 @@ use App\Jobs\IssueSslForDomainJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\Team;
+use App\Models\User;
+use App\Notifications\SslCertificateRequestFailed;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
@@ -97,4 +101,21 @@ it('leaves ssl_expires_at unchanged when the certificate cannot be parsed', func
 
     expect($domain->ssl_enabled_at)->not->toBeNull()
         ->and($domain->ssl_expires_at->toDateTimeString())->toBe($existingExpiry->toDateTimeString());
+});
+
+it('notifies the server owner when the certificate request fails for good', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $server = Server::factory()->forTeam(Team::factory()->forUser($owner)->create())->create();
+    $site = Site::factory()->forServer($server)->create(['domain' => 'example.com']);
+    $domain = SiteDomain::query()->where('site_id', $site->id)->sole();
+
+    (new IssueSslForDomainJob($domain, $site))->failed(new RuntimeException('Certbot failed for example.com: DNS problem'));
+
+    Notification::assertSentTo($owner, SslCertificateRequestFailed::class, function (SslCertificateRequestFailed $notification) use ($domain, $owner) {
+        return $notification->siteDomain->is($domain)
+            && str_contains($notification->errorMessage, 'DNS problem')
+            && $notification->toMail($owner)->subject === 'SSL certificate request failed: example.com';
+    });
 });
