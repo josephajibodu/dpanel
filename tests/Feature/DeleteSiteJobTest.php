@@ -36,7 +36,7 @@ function fakeSshForDeleteSiteJob(Server $server, array &$execCalls): SshService
     return $sshService;
 }
 
-it('removes the SSL certificate directory for every domain on the site, at the correct per-domain path', function () {
+it('removes the SSL certificate directory and certbot deploy hook for every domain on the site, at the correct per-domain path', function () {
     $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
     $site = Site::factory()->create([
         'server_id' => $server->id,
@@ -60,6 +60,12 @@ it('removes the SSL certificate directory for every domain on the site, at the c
     expect($removals)->toHaveCount(2)
         ->and($removals->contains(fn ($c) => $c === "sudo rm -rf /etc/nginx/ssl/domains/{$site->id}/{$primaryDomain->id}"))->toBeTrue()
         ->and($removals->contains(fn ($c) => $c === "sudo rm -rf /etc/nginx/ssl/domains/{$site->id}/{$extraDomain->id}"))->toBeTrue();
+
+    $hookRemovals = collect($execCalls)->filter(fn ($c) => str_starts_with($c, 'sudo rm -f /etc/letsencrypt/renewal-hooks/deploy/'));
+
+    expect($hookRemovals)->toHaveCount(2)
+        ->and($hookRemovals)->toContain("sudo rm -f /etc/letsencrypt/renewal-hooks/deploy/flitops-domain-{$primaryDomain->id}.sh")
+        ->and($hookRemovals)->toContain("sudo rm -f /etc/letsencrypt/renewal-hooks/deploy/flitops-domain-{$extraDomain->id}.sh");
 
     // The old (wrong) hostname-keyed path must never be used.
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/{$site->domain}")

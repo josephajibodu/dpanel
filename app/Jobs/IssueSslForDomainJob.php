@@ -83,6 +83,12 @@ class IssueSslForDomainJob implements ShouldQueue
             $connection->exec("sudo chmod 644 {$certDir}/server.crt");
             $connection->exec("sudo chmod 600 {$certDir}/server.key");
 
+            $deployHookPath = self::deployHookPath($this->siteDomain->id);
+            $escapedHook = str_replace("'", "'\\''", $this->deployHookScript($letsencryptBase, $certDir));
+            $connection->exec('sudo mkdir -p '.dirname($deployHookPath));
+            $connection->exec("echo '{$escapedHook}' | sudo tee {$deployHookPath} > /dev/null");
+            $connection->exec("sudo chmod 755 {$deployHookPath}");
+
             $expiresAt = $this->readExpiry($connection->exec("sudo cat {$certDir}/server.crt"), $hostname);
 
             $this->siteDomain->update([
@@ -103,6 +109,15 @@ class IssueSslForDomainJob implements ShouldQueue
         }
     }
 
+    /**
+     * Certbot runs every script in this directory after each successful renewal,
+     * which is what keeps the copy nginx serves from expiring.
+     */
+    public static function deployHookPath(int $siteDomainId): string
+    {
+        return "/etc/letsencrypt/renewal-hooks/deploy/flitops-domain-{$siteDomainId}.sh";
+    }
+
     public function failed(\Throwable $exception): void
     {
         $server = $this->site->server;
@@ -110,6 +125,21 @@ class IssueSslForDomainJob implements ShouldQueue
         ($server->team?->owner ?? $server->user)?->notify(
             new SslCertificateRequestFailed($this->siteDomain, $server->redactSecrets($exception->getMessage())),
         );
+    }
+
+    private function deployHookScript(string $lineage, string $certDir): string
+    {
+        return <<<SH
+        #!/bin/sh
+        [ "\$RENEWED_LINEAGE" = "{$lineage}" ] || exit 0
+        [ -d {$certDir} ] || exit 0
+        set -e
+        cp "\$RENEWED_LINEAGE/fullchain.pem" {$certDir}/server.crt
+        cp "\$RENEWED_LINEAGE/privkey.pem" {$certDir}/server.key
+        chmod 644 {$certDir}/server.crt
+        chmod 600 {$certDir}/server.key
+        nginx -t && systemctl reload nginx
+        SH;
     }
 
     private function readExpiry(string $certContents, string $hostname): ?DateTimeImmutable

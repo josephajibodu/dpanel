@@ -152,6 +152,7 @@ class DeleteSiteJob implements ShouldQueue
             foreach ($this->siteDomainIds as $domainId) {
                 $certDir = "/etc/nginx/ssl/domains/{$this->siteId}/{$domainId}";
                 $connection->exec("sudo rm -rf {$certDir}");
+                $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
             }
 
             $connection->exec('sudo systemctl reload nginx');

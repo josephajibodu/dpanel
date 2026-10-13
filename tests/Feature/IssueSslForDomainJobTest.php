@@ -26,19 +26,27 @@ function generateSelfSignedTestCertificate(int $daysValid = 30): string
     return $certPem;
 }
 
-function fakeSshForIssueSslJob(Server $server, string $certPem): SshService
-{
+function fakeSshForIssueSslJob(
+    Server $server,
+    string $certPem,
+    array &$execCalls = [],
+    string $certbotOutput = 'Congratulations! Your certificate has been saved.',
+): SshService {
     $connection = \Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('exec')
         ->with('which certbot 2>/dev/null || true')
         ->andReturn('/usr/bin/certbot');
     $connection->shouldReceive('exec')
         ->with(\Mockery::on(fn ($cmd) => str_contains($cmd, 'certbot certonly')))
-        ->andReturn('Congratulations! Your certificate has been saved.');
+        ->andReturn($certbotOutput);
     $connection->shouldReceive('exec')
         ->with(\Mockery::on(fn ($cmd) => str_contains($cmd, 'sudo cat') && str_contains($cmd, 'server.crt')))
         ->andReturn($certPem);
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
+        $execCalls[] = $cmd;
+
+        return '';
+    });
     $connection->shouldReceive('disconnect')->andReturn(null);
 
     $sshService = \Mockery::mock(SshService::class);
@@ -102,6 +110,39 @@ it('leaves ssl_expires_at unchanged when the certificate cannot be parsed', func
     expect($domain->ssl_enabled_at)->not->toBeNull()
         ->and($domain->ssl_expires_at->toDateTimeString())->toBe($existingExpiry->toDateTimeString());
 });
+
+it('installs a certbot deploy hook that copies renewals into the nginx path and reloads nginx', function (string $certbotOutput) {
+    Queue::fake();
+
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'verified_at' => now(),
+    ]);
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForIssueSslJob($server, generateSelfSignedTestCertificate(), $execCalls, $certbotOutput));
+
+    (new IssueSslForDomainJob($domain, $site))->handle(app(SshService::class));
+
+    $hookPath = "/etc/letsencrypt/renewal-hooks/deploy/flitops-domain-{$domain->id}.sh";
+    $certDir = "/etc/nginx/ssl/domains/{$site->id}/{$domain->id}";
+    $hookWrite = collect($execCalls)->first(fn ($c) => str_ends_with($c, "| sudo tee {$hookPath} > /dev/null"));
+
+    expect(IssueSslForDomainJob::deployHookPath($domain->id))->toBe($hookPath)
+        ->and($hookWrite)->not->toBeNull()
+        ->and($hookWrite)->toContain('[ "$RENEWED_LINEAGE" = "/etc/letsencrypt/live/example.com" ] || exit 0')
+        ->and($hookWrite)->toContain("[ -d {$certDir} ] || exit 0")
+        ->and($hookWrite)->toContain("cp \"\$RENEWED_LINEAGE/fullchain.pem\" {$certDir}/server.crt")
+        ->and($hookWrite)->toContain("cp \"\$RENEWED_LINEAGE/privkey.pem\" {$certDir}/server.key")
+        ->and($hookWrite)->toContain('nginx -t && systemctl reload nginx')
+        ->and($execCalls)->toContain("sudo chmod 755 {$hookPath}");
+})->with([
+    'newly issued' => 'Congratulations! Your certificate has been saved.',
+    'renew clicked before the certificate is due' => 'Certificate not yet due for renewal; no action taken.',
+]);
 
 it('notifies the server owner when the certificate request fails for good', function () {
     Notification::fake();

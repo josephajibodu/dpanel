@@ -81,6 +81,8 @@ class DeleteSiteDomainJob implements ShouldQueue
                 $connection->exec("sudo rm -rf {$certDir}");
             }
 
+            $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($this->domainId));
+
             $testResult = $connection->exec('sudo nginx -t 2>&1');
 
             if (str_contains($testResult, 'syntax is ok')) {
