@@ -75,7 +75,7 @@ class CheckCertificateExpiryJob implements ShouldQueue
                 ]);
 
                 if ($shouldAlert) {
-                    ($server->user ?? $server->team?->owner)?->notify(new SslCertificateExpiring($domain));
+                    ($server->team?->owner ?? $server->user)?->notify(new SslCertificateExpiring($domain));
                 }
 
                 // Saved after notifying, so an alert that fails to send is retried on the next run.

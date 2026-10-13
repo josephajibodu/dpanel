@@ -107,7 +107,7 @@ class IssueSslForDomainJob implements ShouldQueue
     {
         $server = $this->site->server;
 
-        ($server->user ?? $server->team?->owner)?->notify(
+        ($server->team?->owner ?? $server->user)?->notify(
             new SslCertificateRequestFailed($this->siteDomain, $server->redactSecrets($exception->getMessage())),
         );
     }
