@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\SiteProvisioningStep;
+use App\Models\SiteIncident;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -43,6 +44,14 @@ class SiteResource extends JsonResource
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),
             'error_message' => $this->error_message,
+            'uptime_status' => $this->uptime_status?->value,
+            'uptime_status_label' => $this->uptime_status?->label(),
+            'uptime_status_color' => $this->uptime_status?->color(),
+            'uptime_checked_at' => $this->uptime_checked_at?->toIso8601String(),
+            'open_incident' => $this->whenLoaded('openIncident', fn (SiteIncident $incident) => [
+                'reason' => $incident->reason,
+                'started_at' => $incident->started_at->toIso8601String(),
+            ]),
             'provisioning_step' => $this->provisioning_step ? [
                 'value' => $this->provisioning_step->value,
                 'label' => $this->provisioning_step->label(),

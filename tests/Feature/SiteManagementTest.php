@@ -3,6 +3,7 @@
 use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
 use App\Enums\SiteStatus;
+use App\Enums\UptimeStatus;
 use App\Events\ServerSitesUpdated;
 use App\Jobs\CreateSiteJob;
 use App\Jobs\DeleteSiteJob;
@@ -10,6 +11,7 @@ use App\Jobs\DeploySiteJob;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteIncident;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\Cloudflare\CloudflareDnsService;
@@ -322,6 +324,31 @@ describe('site viewing', function () {
                 ->has('server.data')
                 ->has('site.data')
                 ->where('site.data.domain', $site->domain)
+                ->where('site.data.uptime_status', null)
+                ->where('site.data.open_incident', null)
+            );
+    });
+
+    it('shows the site uptime status and the open incident when it is down', function () {
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+            'uptime_status' => UptimeStatus::Down,
+            'uptime_checked_at' => now(),
+        ]);
+        SiteIncident::factory()->forSite($site)->resolved()->create(['reason' => 'HTTP 500 response']);
+        SiteIncident::factory()->forSite($site)->create(['reason' => 'HTTP 502 response']);
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('site.data.uptime_status', 'down')
+                ->where('site.data.uptime_status_label', 'Down')
+                ->where('site.data.uptime_status_color', 'red')
+                ->where('site.data.uptime_checked_at', fn (string $checkedAt) => $checkedAt !== '')
+                ->where('site.data.open_incident.reason', 'HTTP 502 response')
+                ->has('site.data.open_incident.started_at')
             );
     });
 

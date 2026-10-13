@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
     ExternalLinkIcon,
@@ -350,6 +350,61 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                                 )}
                                             </p>
                                         </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Uptime
+                                            </p>
+                                            <div className="mt-2">
+                                                {siteData.uptime_status ? (
+                                                    <StatusBadge
+                                                        status={
+                                                            siteData.uptime_status_label ??
+                                                            ''
+                                                        }
+                                                        color={
+                                                            siteData.uptime_status_color ??
+                                                            'gray'
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Not checked yet
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Last checked
+                                            </p>
+                                            <p className="mt-2 text-sm font-medium">
+                                                {siteData.uptime_checked_at
+                                                    ? formatDistanceToNow(
+                                                          new Date(
+                                                              siteData.uptime_checked_at,
+                                                          ),
+                                                          { addSuffix: true },
+                                                      )
+                                                    : '—'}
+                                            </p>
+                                        </div>
+                                        {siteData.open_incident && (
+                                            <p className="col-span-2 text-sm break-words text-red-700 dark:text-red-300">
+                                                Down since{' '}
+                                                {format(
+                                                    new Date(
+                                                        siteData.open_incident
+                                                            .started_at,
+                                                    ),
+                                                    'MMM d, h:mm a',
+                                                )}
+                                                :{' '}
+                                                {siteData.open_incident.reason}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="border-t pt-5">

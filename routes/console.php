@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CheckAllSitesUptimeJob;
 use App\Jobs\CollectAllServerMetricsJob;
 use App\Jobs\CollectDueBackupsJob;
 use App\Jobs\IssueWildcardCertificateJob;
@@ -22,3 +23,6 @@ Schedule::job(new CollectAllServerMetricsJob)->everyTenMinutes();
 
 // Run any database backups that are due.
 Schedule::job(new CollectDueBackupsJob)->hourly();
+
+// HTTP-check every live site and email the owner when one goes down or recovers.
+Schedule::job(new CheckAllSitesUptimeJob)->everyFiveMinutes();
