@@ -6,6 +6,7 @@ use App\Enums\NginxFileSection;
 use App\Events\SiteDomainsUpdated;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Notifications\SslCertificateRequestFailed;
 use App\Services\Ssh\SshService;
 use DateTimeImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -100,6 +101,15 @@ class IssueSslForDomainJob implements ShouldQueue
         } finally {
             $connection->disconnect();
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $server = $this->site->server;
+
+        ($server->user ?? $server->team?->owner)?->notify(
+            new SslCertificateRequestFailed($this->siteDomain, $server->redactSecrets($exception->getMessage())),
+        );
     }
 
     private function readExpiry(string $certContents, string $hostname): ?DateTimeImmutable
