@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\SiteDomainType;
 use App\Events\SiteDomainsUpdated;
 use App\Models\Server;
 use App\Models\Site;
@@ -31,6 +32,8 @@ class DeleteSiteDomainJob implements ShouldQueue
 
     protected bool $hasSsl;
 
+    protected bool $isCustom;
+
     protected int $siteId;
 
     protected int $domainId;
@@ -46,6 +49,7 @@ class DeleteSiteDomainJob implements ShouldQueue
         $this->configFileName = NginxConfigService::configFileName($site, $siteDomain);
         $this->snippetsBasePath = $siteDomain->nginxSnippetsBasePath();
         $this->hasSsl = $siteDomain->hasSsl();
+        $this->isCustom = $siteDomain->type === SiteDomainType::Custom;
         $this->siteId = $site->id;
         $this->domainId = $siteDomain->id;
         $this->serverId = $site->server_id;
@@ -82,6 +86,10 @@ class DeleteSiteDomainJob implements ShouldQueue
             }
 
             $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($this->domainId));
+
+            if ($this->isCustom) {
+                $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($this->hostname).' 2>&1 || true');
+            }
 
             $testResult = $connection->exec('sudo nginx -t 2>&1');
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
+use App\Enums\SiteDomainType;
 use App\Events\ServerSitesUpdated;
 use App\Models\CronJob;
 use App\Models\Site;
@@ -56,6 +57,11 @@ class DeleteSiteJob implements ShouldQueue
      */
     protected array $nginxSnippetBasePaths;
 
+    /**
+     * @var array<int, string>
+     */
+    protected array $customHostnames;
+
     public function __construct(Site $site)
     {
         $site->loadMissing('domains');
@@ -83,6 +89,11 @@ class DeleteSiteJob implements ShouldQueue
         // relation, since the site row may be gone by the time the job runs.
         $this->nginxSnippetBasePaths = $site->domains
             ->map(fn ($d) => "/etc/nginx/flitops-conf/{$site->ulid}/{$d->hostname}")
+            ->values()
+            ->all();
+        $this->customHostnames = $site->domains
+            ->filter(fn ($d) => $d->type === SiteDomainType::Custom)
+            ->pluck('hostname')
             ->values()
             ->all();
     }
@@ -153,6 +164,10 @@ class DeleteSiteJob implements ShouldQueue
                 $certDir = "/etc/nginx/ssl/domains/{$this->siteId}/{$domainId}";
                 $connection->exec("sudo rm -rf {$certDir}");
                 $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
+            }
+
+            foreach ($this->customHostnames as $hostname) {
+                $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($hostname).' 2>&1 || true');
             }
 
             $connection->exec('sudo systemctl reload nginx');

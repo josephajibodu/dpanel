@@ -85,6 +85,39 @@ it('removes the certbot deploy hook so renewals stop touching the deleted domain
     expect($execCalls)->toContain("sudo rm -f /etc/letsencrypt/renewal-hooks/deploy/flitops-domain-{$domain->id}.sh");
 });
 
+it('deletes the certbot certificate for a custom domain', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'ssl-domain.com',
+        'is_primary' => false,
+    ]);
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForDeleteJob($server, $execCalls));
+
+    (new DeleteSiteDomainJob($domain, $site))->handle(app(SshService::class));
+
+    expect($execCalls)->toContain("sudo certbot delete --non-interactive --cert-name 'ssl-domain.com' 2>&1 || true");
+});
+
+it('leaves certbot alone for a system domain', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->system()->create([
+        'hostname' => 'system-delete.flitops.xyz',
+        'is_primary' => false,
+    ]);
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForDeleteJob($server, $execCalls));
+
+    (new DeleteSiteDomainJob($domain, $site))->handle(app(SshService::class));
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'certbot')))->toBeFalse();
+});
+
 it('deletes the domain even when the server is missing', function () {
     $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
     $site = Site::factory()->create(['server_id' => $server->id]);
