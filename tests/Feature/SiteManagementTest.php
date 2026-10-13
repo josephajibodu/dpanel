@@ -428,6 +428,7 @@ describe('site sub-pages', function () {
         $sshConnectionMock->shouldReceive('download')
             ->once()
             ->andReturn("APP_NAME=FlitOps\nAPP_ENV=production");
+        $sshConnectionMock->shouldReceive('disconnect')->once();
 
         $sshServiceMock = \Mockery::mock(SshService::class);
         $sshServiceMock->shouldReceive('connect')
@@ -444,7 +445,10 @@ describe('site sub-pages', function () {
                 ->component('sites/environment/show')
                 ->has('server.data')
                 ->has('site.data')
-                ->where('env_content', "APP_NAME=FlitOps\nAPP_ENV=production")
+                ->missing('env_content')
+                ->loadDeferredProps(fn (AssertableInertia $reload) => $reload
+                    ->where('env_content', "APP_NAME=FlitOps\nAPP_ENV=production")
+                )
             );
     });
 

@@ -1,6 +1,9 @@
 <?php
 
 use App\Services\Ssh\KeyGenerator;
+use Tests\TestCase;
+
+uses(TestCase::class);
 
 describe('KeyGenerator', function () {
     it('generates an Ed25519 keypair', function () {

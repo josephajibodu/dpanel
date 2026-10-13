@@ -169,7 +169,7 @@ describe('NginxConfigService', function () {
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$query_string')
                 ->toContain('error_page 404 /index.php')
-                ->toContain('fastcgi_pass unix:/var/run/php/php')
+                ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;')
                 ->toContain('index index.php index.html index.htm');
         });
 
@@ -191,7 +191,7 @@ describe('NginxConfigService', function () {
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$query_string')
                 ->toContain('error_page 404 /index.php')
-                ->toContain('fastcgi_pass unix:/var/run/php/php');
+                ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;');
         });
 
         it('generates PHP generic config without framework routing', function () {
@@ -212,7 +212,7 @@ describe('NginxConfigService', function () {
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php /index.html =404')
                 ->toContain('try_files $uri =404')
-                ->toContain('fastcgi_pass unix:/var/run/php/php')
+                ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;')
                 ->not->toContain('error_page 404 /index.php')
                 ->not->toContain('/index.php?$query_string');
         });
@@ -260,7 +260,7 @@ describe('NginxConfigService', function () {
                 ->toContain('location ~ ^/wp-admin/')
                 ->toContain('location ~ /wp-config.php')
                 ->toContain('deny all')
-                ->toContain('fastcgi_pass unix:/var/run/php/php');
+                ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;');
         });
     });
 

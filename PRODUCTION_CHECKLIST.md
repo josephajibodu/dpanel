@@ -178,7 +178,7 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 - [ ] `horizon:terminate` waits for the longest running job (up to an hour for a backup) with `fast_termination` off — consider enabling it.
 - [ ] Editing a site's environment only runs `queue:restart`; Horizon's master and Reverb keep old values — reuse `postActivationScript()`.
 - [ ] `failed_jobs` and the single `laravel.log` grow forever — schedule `queue:prune-failed` and use `LOG_STACK=daily`.
-- [ ] 10 tests were already failing before 2026-10-13: `NginxConfigServiceTest` (×4, PHP-FPM socket path), `SiteManagementTest` env page (deferred prop), `PhpRuntimeResolverTest` and `KeyGeneratorTest` (unit tests not booting the app). The full suite also needs `memory_limit` above 128M.
+- [x] 10 tests were already failing before 2026-10-13 (fixed 2026-10-13): `NginxConfigServiceTest` (×4, PHP-FPM socket path), `SiteManagementTest` env page (deferred prop), `PhpRuntimeResolverTest` and `KeyGeneratorTest` (unit tests not booting the app). The full suite still needs `memory_limit` above 128M: run `php -d memory_limit=1G vendor/bin/pest` (`artisan test` doesn't pass `-d` on to Pest).
 
 ## How to use this
 Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-10-13 the code side of item 0 is ready; what's left is carrying out the cutover steps. The custom-domain renewal gap (item 8) and broken rollback (item 3) are the most important code gaps left before relying on Flitops for Bouclay. After those, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.
