@@ -10,6 +10,7 @@ use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeploymentWebhookController;
 use App\Http\Controllers\DeployScriptController;
 use App\Http\Controllers\EnvironmentController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\RealtimeDiagnosticsController;
 use App\Http\Controllers\ServerController;
@@ -40,6 +41,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => redirect()->route('dashboard', auth()->user()->currentTeamOrFail()));
     Route::get('ssh-keys', fn () => redirect()->route('ssh-keys.index', auth()->user()->currentTeamOrFail()));
     Route::get('source-control', fn () => redirect()->route('source-control.index', auth()->user()->currentTeamOrFail()));
+
+    Route::post('notifications/{notification}/dismiss', [NotificationController::class, 'dismiss'])
+        ->name('notifications.dismiss');
 
     Route::get('realtime/test', [RealtimeDiagnosticsController::class, 'index'])
         ->name('realtime.test');

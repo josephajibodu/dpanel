@@ -42,6 +42,14 @@ export interface SiteSummary {
     domain: string;
 }
 
+export interface AppAlert {
+    id: string;
+    title: string;
+    message: string | null;
+    url: string | null;
+    created_at: string;
+}
+
 export interface SharedData {
     name: string;
     auth: Auth;
@@ -50,6 +58,7 @@ export interface SharedData {
     sites: SiteSummary[];
     teams: Pick<Team, 'id' | 'name' | 'personal_team' | 'slug'>[];
     sidebarOpen: boolean;
+    alerts: AppAlert[];
     flash?: {
         success?: string;
         error?: string;

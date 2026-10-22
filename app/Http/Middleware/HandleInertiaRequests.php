@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\Server;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -55,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'personal_team' => $t->personal_team,
                 'slug' => $t->slug,
             ]) : [],
+            'alerts' => fn () => $user ? $this->alertsFor($user) : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -79,6 +82,28 @@ class HandleInertiaRequests extends Middleware
             ->select(['id', 'domain'])
             ->orderBy('domain')
             ->get()
+            ->all();
+    }
+
+    /**
+     * Unread failure alerts, shown in a banner on every page until dismissed.
+     *
+     * @return list<array{id: string, title: string, message: ?string, url: ?string, created_at: string}>
+     */
+    protected function alertsFor(User $user): array
+    {
+        return $user->unreadNotifications()
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (DatabaseNotification $notification): array => [
+                'id' => $notification->id,
+                'title' => $notification->data['title'] ?? 'Something needs your attention',
+                'message' => $notification->data['message'] ?? null,
+                'url' => $notification->data['url'] ?? null,
+                'created_at' => $notification->created_at->toIso8601String(),
+            ])
+            ->values()
             ->all();
     }
 }

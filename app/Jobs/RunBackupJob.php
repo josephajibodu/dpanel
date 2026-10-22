@@ -6,9 +6,11 @@ use App\Actions\Backups\EnsureBackupStorageIsReachable;
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Actions\Backups\RunSqliteBackup;
 use App\Models\Backup;
+use App\Models\User;
 use App\Notifications\DatabaseBackupFailed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
 
 class RunBackupJob implements ShouldQueue
@@ -40,6 +42,8 @@ class RunBackupJob implements ShouldQueue
             : app(RunDatabaseBackup::class);
 
         $action->execute($this->backup);
+
+        $this->clearEarlierFailureAlerts();
     }
 
     /**
@@ -70,7 +74,28 @@ class RunBackupJob implements ShouldQueue
             $backup->markAsFailed($exception);
         }
 
-        $notifiable = $backup->user ?? $server->team?->owner ?? $server->user;
-        $notifiable?->notify(new DatabaseBackupFailed($backup));
+        $this->notifiable()?->notify(new DatabaseBackupFailed($backup));
+    }
+
+    /**
+     * A successful run means earlier failures of the same target are fixed,
+     * so their alerts no longer need to sit in the banner.
+     */
+    private function clearEarlierFailureAlerts(): void
+    {
+        $target = DatabaseBackupFailed::targetKey($this->backup);
+
+        $this->notifiable()?->unreadNotifications()
+            ->where('type', DatabaseBackupFailed::class)
+            ->get()
+            ->filter(fn (DatabaseNotification $notification): bool => ($notification->data['target'] ?? null) === $target)
+            ->markAsRead();
+    }
+
+    private function notifiable(): ?User
+    {
+        $server = $this->backup->targetServer();
+
+        return $this->backup->user ?? $server->team?->owner ?? $server->user;
     }
 }
