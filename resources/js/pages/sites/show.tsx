@@ -34,6 +34,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -57,6 +58,7 @@ interface Props {
 export default function SitesShow({ server: serverProp, site }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = serverProp?.data ?? serverProp;
     const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
     const serverId = server?.id ?? siteData?.server?.id;
@@ -256,36 +258,41 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                             statusColor={siteData.status_color}
                                         />
                                     </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <MoreVerticalIcon className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem asChild>
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${serverId}/sites/${siteData.id}/edit`,
-                                                    )}
+                                    {can('manage_sites') && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
                                                 >
-                                                    Edit Site
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                onClick={handleDelete}
-                                                className="text-destructive focus:text-destructive"
-                                                disabled={
-                                                    siteData.status ===
-                                                    'installing'
-                                                }
-                                            >
-                                                <Trash2Icon className="mr-2 h-4 w-4" />
-                                                Delete Site
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={teamPath(
+                                                            `/servers/${serverId}/sites/${siteData.id}/edit`,
+                                                        )}
+                                                    >
+                                                        Edit Site
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={handleDelete}
+                                                    className="text-destructive focus:text-destructive"
+                                                    disabled={
+                                                        siteData.status ===
+                                                        'installing'
+                                                    }
+                                                >
+                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                    Delete Site
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </div>
 
                                 <div className="space-y-5 p-6">
@@ -524,28 +531,34 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         Recent deployments for this site.
                                     </CardDescription>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    onClick={handleDeploy}
-                                    disabled={
-                                        isDeploying ||
-                                        siteData.status === 'installing'
-                                    }
-                                >
-                                    {isDeploying ? (
-                                        <>
-                                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                            Deploying...
-                                        </>
-                                    ) : (
-                                        'Deploy'
-                                    )}
-                                </Button>
+                                {can('deploy') && (
+                                    <Button
+                                        size="sm"
+                                        onClick={handleDeploy}
+                                        disabled={
+                                            isDeploying ||
+                                            siteData.status === 'installing'
+                                        }
+                                    >
+                                        {isDeploying ? (
+                                            <>
+                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                Deploying...
+                                            </>
+                                        ) : (
+                                            'Deploy'
+                                        )}
+                                    </Button>
+                                )}
                             </div>
                             {deployments.length === 0 ? (
                                 <EmptyState
                                     title="No deployments yet"
-                                    description="Deployments will appear here once you trigger your first deployment."
+                                    description={
+                                        can('deploy')
+                                            ? 'Deployments will appear here once you trigger your first deployment.'
+                                            : 'Deployments will appear here once the site is deployed.'
+                                    }
                                     action={
                                         <Button
                                             variant="outline"
@@ -644,7 +657,11 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             </div>
                             <EmptyState
                                 title="No background processes yet"
-                                description="Add process managers or workers when ready."
+                                description={
+                                    can('manage_processes')
+                                        ? 'Add process managers or workers when ready.'
+                                        : 'Background processes for this site will appear here.'
+                                }
                             />
                         </div>
 
@@ -658,7 +675,11 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             </div>
                             <EmptyState
                                 title="No scheduled jobs yet"
-                                description="Add cron jobs or scheduled tasks when ready."
+                                description={
+                                    can('manage_processes')
+                                        ? 'Add cron jobs or scheduled tasks when ready.'
+                                        : 'Scheduled jobs for this site will appear here.'
+                                }
                             />
                         </div>
                     </div>

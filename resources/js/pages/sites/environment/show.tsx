@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -32,6 +33,7 @@ export default function SiteEnvironmentShow({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -167,7 +169,9 @@ export default function SiteEnvironmentShow({
                                     fontFamily:
                                         'Menlo, Monaco, "Courier New", monospace',
                                     readOnly:
-                                        !revealed || env_content === undefined,
+                                        !revealed ||
+                                        env_content === undefined ||
+                                        !can('deploy'),
                                 }}
                             />
 
@@ -206,49 +210,56 @@ export default function SiteEnvironmentShow({
                         )}
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={form.data.clear_config_cache}
-                                onCheckedChange={(checked) =>
-                                    form.setData(
-                                        'clear_config_cache',
-                                        !!checked,
-                                    )
-                                }
-                            />
-                            Clear config cache
-                        </label>
-                        {has_workers && (
-                            <label className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                    checked={form.data.restart_queue}
-                                    onCheckedChange={(checked) =>
-                                        form.setData('restart_queue', !!checked)
+                    {can('deploy') && (
+                        <>
+                            <div className="flex flex-col gap-2">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        checked={form.data.clear_config_cache}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'clear_config_cache',
+                                                !!checked,
+                                            )
+                                        }
+                                    />
+                                    Clear config cache
+                                </label>
+                                {has_workers && (
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <Checkbox
+                                            checked={form.data.restart_queue}
+                                            onCheckedChange={(checked) =>
+                                                form.setData(
+                                                    'restart_queue',
+                                                    !!checked,
+                                                )
+                                            }
+                                        />
+                                        Restart queue workers
+                                    </label>
+                                )}
+                            </div>
+
+                            <Separator />
+
+                            <div className="flex justify-end">
+                                <Button
+                                    type="submit"
+                                    disabled={
+                                        form.processing ||
+                                        !revealed ||
+                                        env_content === undefined
                                     }
-                                />
-                                Restart queue workers
-                            </label>
-                        )}
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex justify-end">
-                        <Button
-                            type="submit"
-                            disabled={
-                                form.processing ||
-                                !revealed ||
-                                env_content === undefined
-                            }
-                        >
-                            {form.processing && (
-                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Save & Sync
-                        </Button>
-                    </div>
+                                >
+                                    {form.processing && (
+                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Save & Sync
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </form>
             </div>
         </AppLayout>

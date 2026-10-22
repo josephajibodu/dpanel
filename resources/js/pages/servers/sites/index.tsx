@@ -28,6 +28,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerSitesListUpdates } from '@/hooks/use-server-sites-list-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -47,6 +48,7 @@ interface Props {
 export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const canManageSites = usePermission()('manage_sites');
     const server = serverProp?.data ?? serverProp;
     useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -114,25 +116,8 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                             Sites on {server.name}.
                         </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        <Button asChild>
-                            <Link
-                                href={teamPath(
-                                    `/servers/${server.id}/sites/create`,
-                                )}
-                            >
-                                <PlusIcon className="mr-2 h-4 w-4" />
-                                Add site
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-
-                {sites.data.length === 0 ? (
-                    <EmptyState
-                        title="No sites yet"
-                        description="Create your first site on this server."
-                        action={
+                    {canManageSites && (
+                        <div className="flex shrink-0 items-center gap-2">
                             <Button asChild>
                                 <Link
                                     href={teamPath(
@@ -140,9 +125,34 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                     )}
                                 >
                                     <PlusIcon className="mr-2 h-4 w-4" />
-                                    Add Site
+                                    Add site
                                 </Link>
                             </Button>
+                        </div>
+                    )}
+                </div>
+
+                {sites.data.length === 0 ? (
+                    <EmptyState
+                        title="No sites yet"
+                        description={
+                            canManageSites
+                                ? 'Create your first site on this server.'
+                                : 'Sites added to this server will appear here.'
+                        }
+                        action={
+                            canManageSites && (
+                                <Button asChild>
+                                    <Link
+                                        href={teamPath(
+                                            `/servers/${server.id}/sites/create`,
+                                        )}
+                                    >
+                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        Add Site
+                                    </Link>
+                                </Button>
+                            )
                         }
                     />
                 ) : (
@@ -260,7 +270,8 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                                             View
                                                                         </Link>
                                                                     </DropdownMenuItem>
-                                                                    {!isDeleting &&
+                                                                    {canManageSites &&
+                                                                        !isDeleting &&
                                                                         site.status !==
                                                                             'installing' && (
                                                                             <DropdownMenuItem

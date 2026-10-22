@@ -20,7 +20,8 @@ import { type SshKey } from '@/types/ssh-key';
 interface SshKeyTableRowProps {
     sshKey: SshKey;
     onOpenDetails: () => void;
-    onSync: () => void;
+    /** Omit to hide "Sync to Servers" (e.g. when the user has no server access). */
+    onSync?: () => void;
     onDelete: () => void;
 }
 
@@ -75,10 +76,12 @@ export function SshKeyTableRow({
                             <InfoIcon className="mr-2 h-4 w-4" />
                             View details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={onSync}>
-                            <UploadIcon className="mr-2 h-4 w-4" />
-                            Sync to Servers
-                        </DropdownMenuItem>
+                        {onSync && (
+                            <DropdownMenuItem onClick={onSync}>
+                                <UploadIcon className="mr-2 h-4 w-4" />
+                                Sync to Servers
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                             onClick={onDelete}
                             className="text-destructive"

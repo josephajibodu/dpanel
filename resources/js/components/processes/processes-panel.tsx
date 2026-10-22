@@ -57,6 +57,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import type { SharedData } from '@/types';
 import type { CronJob, ProcessSite, Server, Worker } from '@/types/server';
@@ -113,6 +114,7 @@ export function ProcessesPanel({
 }: ProcessesPanelProps) {
     const scope: 'server' | 'site' = site ? 'site' : 'server';
     const teamPath = useTeamPath();
+    const canManageProcesses = usePermission()('manage_processes');
     const pageProps = usePage<SharedData>().props;
     const { errors } = pageProps as { errors?: Record<string, string> };
 
@@ -410,7 +412,7 @@ export function ProcessesPanel({
                                 {workersDescription}
                             </CardDescription>
                         </div>
-                        {serverIsReady && (
+                        {serverIsReady && canManageProcesses && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -505,16 +507,18 @@ export function ProcessesPanel({
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                openEditWorker(
-                                                                    w,
-                                                                )
-                                                            }
-                                                        >
-                                                            <PencilIcon className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
+                                                        {canManageProcesses && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    openEditWorker(
+                                                                        w,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <PencilIcon className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem
                                                             onClick={() =>
                                                                 fetchLogs(w)
@@ -523,70 +527,74 @@ export function ProcessesPanel({
                                                             <FileTextIcon className="mr-2 h-4 w-4" />
                                                             View logs
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/start`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                        >
-                                                            <PlayIcon className="mr-2 h-4 w-4" />
-                                                            Start
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/stop`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                        >
-                                                            <PowerOffIcon className="mr-2 h-4 w-4" />
-                                                            Stop
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                router.post(
-                                                                    teamPath(
-                                                                        `/servers/${server.id}/workers/${w.id}/restart`,
-                                                                    ),
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                        >
-                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
-                                                            Restart
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setWorkerToDelete(
-                                                                    w,
-                                                                );
-                                                                setDeleteWorkerOpen(
-                                                                    true,
-                                                                );
-                                                            }}
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
-                                                            Delete
-                                                        </DropdownMenuItem>
+                                                        {canManageProcesses && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        router.post(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/workers/${w.id}/start`,
+                                                                            ),
+                                                                            {},
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PlayIcon className="mr-2 h-4 w-4" />
+                                                                    Start
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        router.post(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/workers/${w.id}/stop`,
+                                                                            ),
+                                                                            {},
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PowerOffIcon className="mr-2 h-4 w-4" />
+                                                                    Stop
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        router.post(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/workers/${w.id}/restart`,
+                                                                            ),
+                                                                            {},
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                                    Restart
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setWorkerToDelete(
+                                                                            w,
+                                                                        );
+                                                                        setDeleteWorkerOpen(
+                                                                            true,
+                                                                        );
+                                                                    }}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                >
+                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                    Delete
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -604,7 +612,7 @@ export function ProcessesPanel({
                             <CardTitle>Cron jobs</CardTitle>
                             <CardDescription>{cronDescription}</CardDescription>
                         </div>
-                        {serverIsReady && (
+                        {serverIsReady && canManageProcesses && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -679,84 +687,88 @@ export function ProcessesPanel({
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            disabled={
-                                                                isCronDeleting
-                                                            }
-                                                            aria-label="Actions"
+                                                {canManageProcesses && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                openEditCron(c)
-                                                            }
-                                                        >
-                                                            <PencilIcon className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        {c.hidden ? (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                disabled={
+                                                                    isCronDeleting
+                                                                }
+                                                                aria-label="Actions"
+                                                            >
+                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
                                                             <DropdownMenuItem
                                                                 onClick={() =>
-                                                                    router.visit(
-                                                                        teamPath(
-                                                                            `/servers/${server.id}/cron-jobs/${c.id}/enable`,
-                                                                        ),
-                                                                        {
-                                                                            method: 'patch',
-                                                                            preserveScroll: true,
-                                                                        },
+                                                                    openEditCron(
+                                                                        c,
                                                                     )
                                                                 }
                                                             >
-                                                                <PowerIcon className="mr-2 h-4 w-4" />
-                                                                Enable
+                                                                <PencilIcon className="mr-2 h-4 w-4" />
+                                                                Edit
                                                             </DropdownMenuItem>
-                                                        ) : (
+                                                            <DropdownMenuSeparator />
+                                                            {c.hidden ? (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        router.visit(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/cron-jobs/${c.id}/enable`,
+                                                                            ),
+                                                                            {
+                                                                                method: 'patch',
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PowerIcon className="mr-2 h-4 w-4" />
+                                                                    Enable
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        router.visit(
+                                                                            teamPath(
+                                                                                `/servers/${server.id}/cron-jobs/${c.id}/disable`,
+                                                                            ),
+                                                                            {
+                                                                                method: 'patch',
+                                                                                preserveScroll: true,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PowerOffIcon className="mr-2 h-4 w-4" />
+                                                                    Disable
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator />
                                                             <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    router.visit(
-                                                                        teamPath(
-                                                                            `/servers/${server.id}/cron-jobs/${c.id}/disable`,
-                                                                        ),
-                                                                        {
-                                                                            method: 'patch',
-                                                                            preserveScroll: true,
-                                                                        },
-                                                                    )
-                                                                }
+                                                                onClick={() => {
+                                                                    setCronToDelete(
+                                                                        c,
+                                                                    );
+                                                                    setDeleteCronOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                                className="text-destructive focus:text-destructive"
                                                             >
-                                                                <PowerOffIcon className="mr-2 h-4 w-4" />
-                                                                Disable
+                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                Delete
                                                             </DropdownMenuItem>
-                                                        )}
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setCronToDelete(
-                                                                    c,
-                                                                );
-                                                                setDeleteCronOpen(
-                                                                    true,
-                                                                );
-                                                            }}
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     );

@@ -16,6 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -44,6 +45,7 @@ interface Props {
 export default function ProviderAccountShow({ account }: Props) {
     const { data } = account;
     const teamPath = useTeamPath();
+    const canManageProviders = usePermission()('manage_providers');
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Provider Accounts', href: teamPath('/provider-accounts') },
@@ -74,10 +76,12 @@ export default function ProviderAccountShow({ account }: Props) {
                             color={data.is_valid ? 'green' : 'red'}
                         />
                     </div>
-                    <Button variant="outline" onClick={handleValidate}>
-                        <RefreshCwIcon className="mr-2 h-4 w-4" />
-                        Re-validate
-                    </Button>
+                    {canManageProviders && (
+                        <Button variant="outline" onClick={handleValidate}>
+                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                            Re-validate
+                        </Button>
+                    )}
                 </div>
 
                 <StatGroup>

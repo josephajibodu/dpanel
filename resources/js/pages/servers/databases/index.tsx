@@ -59,6 +59,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -89,6 +90,7 @@ export default function ServerDatabasesIndex({
     const pageProps = usePage<SharedData>().props;
     const { errors } = pageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
+    const canManageDatabases = usePermission()('manage_databases');
 
     useServerDatabasesUpdates(server.id);
 
@@ -342,7 +344,7 @@ export default function ServerDatabasesIndex({
                                     Databases on this server.
                                 </CardDescription>
                             </div>
-                            {isServerReady && (
+                            {isServerReady && canManageDatabases && (
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -435,20 +437,22 @@ export default function ServerDatabasesIndex({
                                                                     Backups
                                                                 </Link>
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive"
-                                                                onClick={() => {
-                                                                    setDbToDelete(
-                                                                        db,
-                                                                    );
-                                                                    setDeleteDbOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
+                                                            {canManageDatabases && (
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onClick={() => {
+                                                                        setDbToDelete(
+                                                                            db,
+                                                                        );
+                                                                        setDeleteDbOpen(
+                                                                            true,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                    Delete
+                                                                </DropdownMenuItem>
+                                                            )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -468,16 +472,18 @@ export default function ServerDatabasesIndex({
                                     Users with access to databases.
                                 </CardDescription>
                             </div>
-                            {isServerReady && dbList.length > 0 && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCreateUserOpen(true)}
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    New user
-                                </Button>
-                            )}
+                            {isServerReady &&
+                                canManageDatabases &&
+                                dbList.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCreateUserOpen(true)}
+                                    >
+                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        New user
+                                    </Button>
+                                )}
                         </div>
                         <Table>
                             <TableHeader>
@@ -577,40 +583,45 @@ export default function ServerDatabasesIndex({
                                                                 <LinkIcon className="mr-2 h-4 w-4" />
                                                                 Connect
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    openEditUser(
-                                                                        user,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <PencilIcon className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    setResetPasswordUser(
-                                                                        user,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <RefreshCwIcon className="mr-2 h-4 w-4" />
-                                                                Reset password
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive"
-                                                                onClick={() => {
-                                                                    setUserToDelete(
-                                                                        user,
-                                                                    );
-                                                                    setDeleteUserOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
+                                                            {canManageDatabases && (
+                                                                <>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openEditUser(
+                                                                                user,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            setResetPasswordUser(
+                                                                                user,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                                        Reset
+                                                                        password
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive focus:text-destructive"
+                                                                        onClick={() => {
+                                                                            setUserToDelete(
+                                                                                user,
+                                                                            );
+                                                                            setDeleteUserOpen(
+                                                                                true,
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>

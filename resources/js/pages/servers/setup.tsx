@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -25,6 +26,7 @@ interface ConnectionTestResult {
 export default function ServerSetup({ server: serverProp, authorized_keys_command }: Props) {
     const server = (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const teamPath = useTeamPath();
+    const canProvision = usePermission()('manage_servers');
     const [copied, setCopied] = useState(false);
     const [testState, setTestState] = useState<ConnectionTestState>('idle');
     const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
@@ -164,10 +166,14 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center gap-3">
-                                <Button onClick={handleProvision} disabled={provisionForm.processing}>
-                                    {provisionForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                    Start Provisioning
-                                </Button>
+                                {canProvision ? (
+                                    <Button onClick={handleProvision} disabled={provisionForm.processing}>
+                                        {provisionForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                                        Start Provisioning
+                                    </Button>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Ask an Owner or Admin to start provisioning.</p>
+                                )}
                                 <Button variant="outline" asChild>
                                     <Link href={teamPath('/servers')}>Cancel</Link>
                                 </Button>

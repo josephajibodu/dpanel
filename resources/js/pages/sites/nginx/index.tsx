@@ -37,6 +37,7 @@ import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
+import { usePermission } from '@/hooks/use-permission';
 import { useSiteNginxUpdates } from '@/hooks/use-site-nginx-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -110,6 +111,7 @@ export default function SiteNginxIndex({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const canManageNginx = usePermission()('manage_sites');
     const { resolvedAppearance } = useAppearance();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
@@ -326,18 +328,20 @@ export default function SiteNginxIndex({
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRefresh}
-                            disabled={isRefreshing}
-                            title="Sync file contents from server"
-                        >
-                            <RefreshCwIcon
-                                className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                            />
-                            Refresh
-                        </Button>
+                        {canManageNginx && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                title="Sync file contents from server"
+                            >
+                                <RefreshCwIcon
+                                    className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                                />
+                                Refresh
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             size="sm"
@@ -346,10 +350,15 @@ export default function SiteNginxIndex({
                             <ClockIcon className="mr-1.5 h-4 w-4" />
                             History
                         </Button>
-                        <Button size="sm" onClick={() => setCreateDialog(true)}>
-                            <FilePlusIcon className="mr-1.5 h-4 w-4" />
-                            New file
-                        </Button>
+                        {canManageNginx && (
+                            <Button
+                                size="sm"
+                                onClick={() => setCreateDialog(true)}
+                            >
+                                <FilePlusIcon className="mr-1.5 h-4 w-4" />
+                                New file
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -496,43 +505,44 @@ export default function SiteNginxIndex({
                                                                                     />
                                                                                 </span>
                                                                             )}
-                                                                            {!section.read_only && (
-                                                                                <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e,
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            setRenameDialog(
-                                                                                                file,
-                                                                                            );
-                                                                                            setRenameName(
-                                                                                                basename(
-                                                                                                    file.path,
-                                                                                                ),
-                                                                                            );
-                                                                                        }}
-                                                                                        className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                                                                                        title="Rename"
-                                                                                    >
-                                                                                        <PencilIcon className="h-3 w-3" />
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e,
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            setDeleteDialog(
-                                                                                                file,
-                                                                                            );
-                                                                                        }}
-                                                                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
-                                                                                        title="Delete"
-                                                                                    >
-                                                                                        <Trash2Icon className="h-3 w-3" />
-                                                                                    </button>
-                                                                                </div>
-                                                                            )}
+                                                                            {canManageNginx &&
+                                                                                !section.read_only && (
+                                                                                    <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                                                                                        <button
+                                                                                            onClick={(
+                                                                                                e,
+                                                                                            ) => {
+                                                                                                e.stopPropagation();
+                                                                                                setRenameDialog(
+                                                                                                    file,
+                                                                                                );
+                                                                                                setRenameName(
+                                                                                                    basename(
+                                                                                                        file.path,
+                                                                                                    ),
+                                                                                                );
+                                                                                            }}
+                                                                                            className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                                                                                            title="Rename"
+                                                                                        >
+                                                                                            <PencilIcon className="h-3 w-3" />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={(
+                                                                                                e,
+                                                                                            ) => {
+                                                                                                e.stopPropagation();
+                                                                                                setDeleteDialog(
+                                                                                                    file,
+                                                                                                );
+                                                                                            }}
+                                                                                            className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                                                                            title="Delete"
+                                                                                        >
+                                                                                            <Trash2Icon className="h-3 w-3" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
                                                                         </div>
                                                                     ),
                                                                 )}
@@ -574,13 +584,15 @@ export default function SiteNginxIndex({
                                                 />
                                             )}
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSave}
-                                        disabled={isSaving}
-                                    >
-                                        {isSaving ? 'Saving…' : 'Save'}
-                                    </Button>
+                                    {canManageNginx && (
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                        >
+                                            {isSaving ? 'Saving…' : 'Save'}
+                                        </Button>
+                                    )}
                                 </div>
 
                                 {selectedFile.sync_status === 'failed' &&
@@ -632,6 +644,7 @@ export default function SiteNginxIndex({
                                             padding: { top: 8, bottom: 8 },
                                             fontFamily:
                                                 'Menlo, Monaco, "Courier New", monospace',
+                                            readOnly: !canManageNginx,
                                         }}
                                     />
                                 </div>
@@ -695,7 +708,8 @@ export default function SiteNginxIndex({
                                                         entry.created_at,
                                                     ).toLocaleString()}
                                                 </span>
-                                                {entry.has_content &&
+                                                {canManageNginx &&
+                                                    entry.has_content &&
                                                     entry.event !==
                                                         'deleted' && (
                                                         <button

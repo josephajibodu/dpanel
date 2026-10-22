@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -59,6 +60,7 @@ export default function Dashboard({
     recentDeployments,
 }: Props) {
     const teamPath = useTeamPath();
+    const canManageServers = usePermission()('manage_servers');
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',
@@ -82,25 +84,33 @@ export default function Dashboard({
                             An overview of your servers, sites, and deployments.
                         </p>
                     </div>
-                    <Button asChild>
-                        <Link href={teamPath('/servers/create')}>
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            Create server
-                        </Link>
-                    </Button>
+                    {canManageServers && (
+                        <Button asChild>
+                            <Link href={teamPath('/servers/create')}>
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                Create server
+                            </Link>
+                        </Button>
+                    )}
                 </div>
 
                 {stats.servers === 0 ? (
                     <EmptyState
                         title="No servers yet"
-                        description="Create your first server to start deploying sites with FlitOps."
+                        description={
+                            canManageServers
+                                ? 'Create your first server to start deploying sites with FlitOps.'
+                                : 'Servers added to this team will appear here.'
+                        }
                         action={
-                            <Button asChild>
-                                <Link href={teamPath('/servers/create')}>
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Create Server
-                                </Link>
-                            </Button>
+                            canManageServers && (
+                                <Button asChild>
+                                    <Link href={teamPath('/servers/create')}>
+                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        Create Server
+                                    </Link>
+                                </Button>
+                            )
                         }
                     />
                 ) : (

@@ -22,6 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -47,6 +48,7 @@ export default function StorageProvidersIndex({
     types,
 }: Props) {
     const teamPath = useTeamPath();
+    const canManageProviders = usePermission()('manage_providers');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [providerToDelete, setProviderToDelete] =
         useState<StorageProvider | null>(null);
@@ -93,14 +95,24 @@ export default function StorageProvidersIndex({
                             other file storage.
                         </p>
                     </div>
-                    <ConnectStorageDrawer types={types} />
+                    {canManageProviders && (
+                        <ConnectStorageDrawer types={types} />
+                    )}
                 </div>
 
                 {storageProviders.data.length === 0 ? (
                     <EmptyState
                         title="No storage providers connected"
-                        description="Connect an object storage account to store backups off-server."
-                        action={<ConnectStorageDrawer types={types} />}
+                        description={
+                            canManageProviders
+                                ? 'Connect an object storage account to store backups off-server.'
+                                : 'Storage providers connected to this team will appear here.'
+                        }
+                        action={
+                            canManageProviders && (
+                                <ConnectStorageDrawer types={types} />
+                            )
+                        }
                     />
                 ) : (
                     <Table>
@@ -155,43 +167,48 @@ export default function StorageProvidersIndex({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-end gap-1">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
+                                            {canManageProviders && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <MoreVerticalIcon className="h-4 w-4" />
-                                                        <span className="sr-only">
-                                                            Actions
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleValidate(
-                                                                provider,
-                                                            )
-                                                        }
-                                                    >
-                                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
-                                                        Re-validate Credentials
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                provider,
-                                                            )
-                                                        }
-                                                        className="text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2Icon className="mr-2 h-4 w-4" />
-                                                        Disconnect
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleValidate(
+                                                                    provider,
+                                                                )
+                                                            }
+                                                        >
+                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                            Re-validate
+                                                            Credentials
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    provider,
+                                                                )
+                                                            }
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Disconnect
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>

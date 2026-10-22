@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { StatGroup } from '@/components/ui/stat-group';
 import { Switch } from '@/components/ui/switch';
+import { usePermission } from '@/hooks/use-permission';
 import { type BackupSchedule } from '@/types/backup';
 import { type StorageProvider } from '@/types/storage-provider';
 
@@ -31,6 +32,7 @@ export function BackupScheduleCard({
     scheduleUrl,
     description,
 }: Props) {
+    const canManageSchedule = usePermission()('run_backups');
     const scheduleForm = useForm({
         storage_provider_id: schedule?.storage_provider_id ?? '',
         frequency: schedule?.frequency ?? 'daily',
@@ -57,15 +59,19 @@ export function BackupScheduleCard({
                 <div className="p-6">
                     {storageProviders.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                            Connect a storage provider first, then come back to
-                            set up a schedule.
+                            {canManageSchedule
+                                ? 'Connect a storage provider first, then come back to set up a schedule.'
+                                : 'No backup schedule has been set up yet.'}
                         </p>
                     ) : (
                         <form
                             onSubmit={handleSaveSchedule}
                             className="space-y-5"
                         >
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <fieldset
+                                disabled={!canManageSchedule}
+                                className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            >
                                 <div className="space-y-2">
                                     <Label htmlFor="storage_provider_id">
                                         Storage provider
@@ -169,32 +175,35 @@ export function BackupScheduleCard({
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </fieldset>
 
-                            <div className="flex items-center justify-end gap-3">
-                                <Transition
-                                    show={scheduleForm.recentlySuccessful}
-                                    enter="transition ease-in-out"
-                                    enterFrom="opacity-0"
-                                    leave="transition ease-in-out"
-                                    leaveTo="opacity-0"
-                                >
-                                    <p className="text-sm text-muted-foreground">
-                                        Saved
-                                    </p>
-                                </Transition>
-                                <Button
-                                    type="submit"
-                                    disabled={
-                                        scheduleForm.processing ||
-                                        !scheduleForm.data.storage_provider_id
-                                    }
-                                >
-                                    {scheduleForm.processing
-                                        ? 'Saving…'
-                                        : 'Save'}
-                                </Button>
-                            </div>
+                            {canManageSchedule && (
+                                <div className="flex items-center justify-end gap-3">
+                                    <Transition
+                                        show={scheduleForm.recentlySuccessful}
+                                        enter="transition ease-in-out"
+                                        enterFrom="opacity-0"
+                                        leave="transition ease-in-out"
+                                        leaveTo="opacity-0"
+                                    >
+                                        <p className="text-sm text-muted-foreground">
+                                            Saved
+                                        </p>
+                                    </Transition>
+                                    <Button
+                                        type="submit"
+                                        disabled={
+                                            scheduleForm.processing ||
+                                            !scheduleForm.data
+                                                .storage_provider_id
+                                        }
+                                    >
+                                        {scheduleForm.processing
+                                            ? 'Saving…'
+                                            : 'Save'}
+                                    </Button>
+                                </div>
+                            )}
                         </form>
                     )}
                 </div>

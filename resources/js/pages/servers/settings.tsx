@@ -4,6 +4,7 @@ import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -25,6 +26,7 @@ export default function ServerSettings({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server =
         (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const [destroyDialogOpen, setDestroyDialogOpen] = useState(false);
@@ -86,6 +88,11 @@ export default function ServerSettings({
                                 Server IP not yet assigned. The server may still
                                 be provisioning.
                             </p>
+                        ) : !can('access_servers') ? (
+                            <p className="text-sm text-muted-foreground">
+                                Your role doesn&apos;t include SSH access to
+                                this team&apos;s servers.
+                            </p>
                         ) : (
                             <div className="space-y-2">
                                 <p className="text-sm text-muted-foreground">
@@ -103,28 +110,30 @@ export default function ServerSettings({
                         )}
                     </div>
 
-                    <div className="space-y-6">
-                        <HeadingSmall
-                            title="Destroy server"
-                            description="Permanently delete this server and all its data. This cannot be undone."
-                        />
-                        <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                            <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
-                                <p className="font-medium">Warning</p>
-                                <p className="text-sm">
-                                    Please proceed with caution, this cannot be
-                                    undone.
-                                </p>
+                    {can('manage_servers') && (
+                        <div className="space-y-6">
+                            <HeadingSmall
+                                title="Destroy server"
+                                description="Permanently delete this server and all its data. This cannot be undone."
+                            />
+                            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
+                                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
+                                    <p className="font-medium">Warning</p>
+                                    <p className="text-sm">
+                                        Please proceed with caution, this cannot
+                                        be undone.
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => setDestroyDialogOpen(true)}
+                                >
+                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                    Destroy server
+                                </Button>
                             </div>
-                            <Button
-                                variant="destructive"
-                                onClick={() => setDestroyDialogOpen(true)}
-                            >
-                                <Trash2Icon className="mr-2 h-4 w-4" />
-                                Destroy server
-                            </Button>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <ConfirmDialog

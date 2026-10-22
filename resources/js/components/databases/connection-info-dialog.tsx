@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { usePermission } from '@/hooks/use-permission';
 import { type DatabaseUser, type Server } from '@/types/server';
 
 interface ConnectionInfoDialogProps {
@@ -46,6 +47,8 @@ export function ConnectionInfoDialog({
     teamPath,
     onOpenChange,
 }: ConnectionInfoDialogProps) {
+    const can = usePermission();
+    const canRevealPassword = can('view_secrets');
     const [revealed, setRevealed] = useState(false);
     const [password, setPassword] = useState<string | null>(null);
     const [revealing, setRevealing] = useState(false);
@@ -115,15 +118,18 @@ export function ConnectionInfoDialog({
                     {!hasSshKey && (
                         <div className="space-y-2 rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950">
                             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                You need to add and sync an SSH key to this
-                                server before you can connect.
+                                {can('access_servers')
+                                    ? 'You need to add and sync an SSH key to this server before you can connect.'
+                                    : "Your role doesn't include SSH access to this team's servers."}
                             </p>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={teamPath('/ssh-keys')}>
-                                    <KeyIcon className="mr-2 h-4 w-4" />
-                                    Add SSH key
-                                </Link>
-                            </Button>
+                            {can('access_servers') && (
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={teamPath('/ssh-keys')}>
+                                        <KeyIcon className="mr-2 h-4 w-4" />
+                                        Add SSH key
+                                    </Link>
+                                </Button>
+                            )}
                         </div>
                     )}
 
@@ -168,48 +174,50 @@ export function ConnectionInfoDialog({
                                 value={databaseUser.username}
                             />
 
-                            <div className="space-y-1.5">
-                                <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    Password
-                                </div>
-                                <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
-                                    <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
-                                        {revealed && password !== null
-                                            ? password
-                                            : '••••••••••••'}
-                                    </code>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 shrink-0"
-                                        disabled={revealing}
-                                        onClick={() =>
-                                            revealed
-                                                ? setRevealed(false)
-                                                : handleReveal()
-                                        }
-                                        aria-label={
-                                            revealed
-                                                ? 'Hide password'
-                                                : 'Reveal password'
-                                        }
-                                    >
-                                        {revealing ? (
-                                            <Loader2Icon className="h-4 w-4 animate-spin" />
-                                        ) : revealed ? (
-                                            <EyeOffIcon className="h-4 w-4" />
-                                        ) : (
-                                            <EyeIcon className="h-4 w-4" />
+                            {canRevealPassword && (
+                                <div className="space-y-1.5">
+                                    <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        Password
+                                    </div>
+                                    <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                                        <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
+                                            {revealed && password !== null
+                                                ? password
+                                                : '••••••••••••'}
+                                        </code>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0"
+                                            disabled={revealing}
+                                            onClick={() =>
+                                                revealed
+                                                    ? setRevealed(false)
+                                                    : handleReveal()
+                                            }
+                                            aria-label={
+                                                revealed
+                                                    ? 'Hide password'
+                                                    : 'Reveal password'
+                                            }
+                                        >
+                                            {revealing ? (
+                                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                                            ) : revealed ? (
+                                                <EyeOffIcon className="h-4 w-4" />
+                                            ) : (
+                                                <EyeIcon className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                        {revealed && password !== null && (
+                                            <CopyButton
+                                                value={password}
+                                                className="shrink-0"
+                                            />
                                         )}
-                                    </Button>
-                                    {revealed && password !== null && (
-                                        <CopyButton
-                                            value={password}
-                                            className="shrink-0"
-                                        />
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 

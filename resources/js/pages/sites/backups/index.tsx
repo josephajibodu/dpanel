@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerBackupsUpdates } from '@/hooks/use-server-backups-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -43,6 +44,7 @@ export default function SiteBackupsIndex({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = serverProp.data;
     const site = siteProp.data;
     const schedule = scheduleProp?.data ?? null;
@@ -95,7 +97,7 @@ export default function SiteBackupsIndex({
                             SQLite database.
                         </p>
                     </div>
-                    {usesSqlite && (
+                    {usesSqlite && can('run_backups') && (
                         <Button
                             onClick={handleBackupNow}
                             disabled={!schedule || isBackingUp}

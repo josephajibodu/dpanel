@@ -45,6 +45,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     const domainList = domains?.data ?? [];
     const { flash, currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const canManageDomains = usePermission()('manage_sites');
 
     useSiteDomainsUpdates(site.id);
 
@@ -179,28 +181,32 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                 )}
 
                 <div className="flex flex-col gap-6">
-                    <form onSubmit={handleValidateAndOpenSheet} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                        <div className="flex-1 space-y-2">
-                            <Input
-                                placeholder="your-domain.com"
-                                value={newHostname}
-                                onChange={(e) => {
-                                    setNewHostname(e.target.value);
-                                    setHostnameError(null);
-                                }}
-                                className={cn(hostnameError && 'border-destructive')}
-                            />
-                            {hostnameError && <p className="text-destructive text-sm">{hostnameError}</p>}
-                        </div>
-                        <Button type="submit" disabled={validating} className="shrink-0 sm:mt-0">
-                            {validating ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
-                        </Button>
-                    </form>
+                    {canManageDomains && (
+                        <form onSubmit={handleValidateAndOpenSheet} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                            <div className="flex-1 space-y-2">
+                                <Input
+                                    placeholder="your-domain.com"
+                                    value={newHostname}
+                                    onChange={(e) => {
+                                        setNewHostname(e.target.value);
+                                        setHostnameError(null);
+                                    }}
+                                    className={cn(hostnameError && 'border-destructive')}
+                                />
+                                {hostnameError && <p className="text-destructive text-sm">{hostnameError}</p>}
+                            </div>
+                            <Button type="submit" disabled={validating} className="shrink-0 sm:mt-0">
+                                {validating ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
+                            </Button>
+                        </form>
+                    )}
 
                     {sortedDomains.length === 0 ? (
                         <div className="border-muted-foreground/25 text-muted-foreground rounded-lg border border-dashed px-6 py-10 text-center">
                             <p className="text-foreground font-medium">No domains yet</p>
-                            <p className="mt-1 text-sm">Add your first custom domain above.</p>
+                            <p className="mt-1 text-sm">
+                                {canManageDomains ? 'Add your first custom domain above.' : 'Domains added to this site will appear here.'}
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -217,6 +223,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                     onVisit={visitDomain}
                                     onDelete={setDomainToDelete}
                                     teamPath={teamPath}
+                                    canManage={canManageDomains}
                                 />
                             ))}
                         </div>
@@ -348,6 +355,7 @@ function DomainRow({
     onVisit,
     onDelete,
     teamPath,
+    canManage,
 }: {
     domain: SiteDomain;
     serverId: number;
@@ -359,6 +367,7 @@ function DomainRow({
     onVisit: (hostname: string) => void;
     onDelete: (domain: SiteDomain) => void;
     teamPath: (path: string) => string;
+    canManage: boolean;
 }) {
     const hasDns = domain.dns_records.length > 0;
     const isDeleting = domain.status === 'deleting';
@@ -478,7 +487,7 @@ function DomainRow({
                         </span>
                     )}
                 </div>
-                {isCustomUnverified && (
+                {isCustomUnverified && canManage && (
                     <Button
                         type="button"
                         variant="outline"
@@ -512,7 +521,7 @@ function DomainRow({
                         <DropdownMenuItem onClick={() => onCopy(domain.ulid)}>
                             <CopyIcon className="mr-2 size-4" /> Copy ID
                         </DropdownMenuItem>
-                        {domain.type === 'custom' && domain.is_verified && (
+                        {canManage && domain.type === 'custom' && domain.is_verified && (
                             <DropdownMenuItem
                                 onClick={() =>
                                     router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/ssl/renew`))
@@ -521,7 +530,7 @@ function DomainRow({
                                 <LockIcon className="mr-2 size-4" /> Renew SSL
                             </DropdownMenuItem>
                         )}
-                        {!domain.is_primary && domain.is_enabled && (
+                        {canManage && !domain.is_primary && domain.is_enabled && (
                             <DropdownMenuItem
                                 onClick={() =>
                                     router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/primary`))
@@ -530,16 +539,18 @@ function DomainRow({
                                 Set as primary
                             </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem
-                            onClick={() =>
-                                router.patch(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`), {
-                                    is_enabled: !domain.is_enabled,
-                                })
-                            }
-                        >
-                            {domain.is_enabled ? 'Disable' : 'Enable'}
-                        </DropdownMenuItem>
-                        {domain.type === 'custom' && (
+                        {canManage && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    router.patch(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}`), {
+                                        is_enabled: !domain.is_enabled,
+                                    })
+                                }
+                            >
+                                {domain.is_enabled ? 'Disable' : 'Enable'}
+                            </DropdownMenuItem>
+                        )}
+                        {canManage && domain.type === 'custom' && (
                             <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
