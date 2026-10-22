@@ -2,6 +2,7 @@
 
 use App\Enums\ServerStatus;
 use App\Enums\SiteDomainType;
+use App\Models\Certificate;
 use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
@@ -37,6 +38,7 @@ it('shows real stats and recent activity for a team with servers and deployments
     $site = Site::factory()->create(['server_id' => $server->id]);
     SiteDomain::factory()->for($site)->create([
         'type' => SiteDomainType::Custom,
+        'hostname' => 'shop.example.com',
         'verified_at' => now(),
         'ssl_expires_at' => now()->addDays(5),
     ]);
@@ -53,8 +55,65 @@ it('shows real stats and recent activity for a team with servers and deployments
             ->where('stats.sites', 1)
             ->where('stats.deployments_this_week', 2)
             ->where('stats.ssl_alerts', 1)
+            ->has('sslAlerts', 1)
+            ->where('sslAlerts.0.hostname', 'shop.example.com')
+            ->where('sslAlerts.0.ssl_status', 'expiring_soon')
+            ->where('sslAlerts.0.site.id', $site->id)
+            ->where('sslAlerts.0.site.server_id', $server->id)
             ->has('recentServers.data', 1)
             ->has('recentDeployments', 2));
+});
+
+it('lists which domains need ssl attention and leaves healthy ones out', function () {
+    $server = Server::factory()->forTeam($this->team)->create();
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'expired.example.com',
+        'ssl_expires_at' => now()->subDay(),
+    ]);
+    SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'healthy.example.com',
+        'ssl_expires_at' => now()->addDays(60),
+    ]);
+
+    $otherTeam = Team::factory()->forUser(User::factory()->create())->create();
+    $otherSite = Site::factory()->create(['server_id' => Server::factory()->forTeam($otherTeam)->create()->id]);
+    SiteDomain::factory()->for($otherSite)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'not-mine.example.com',
+        'ssl_expires_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/dashboard")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stats.ssl_alerts', 1)
+            ->has('sslAlerts', 1)
+            ->where('sslAlerts.0.hostname', 'expired.example.com')
+            ->where('sslAlerts.0.ssl_status', 'expired'));
+});
+
+it('leaves the shared free-domain certificate out of the team\'s ssl alerts', function () {
+    $server = Server::factory()->forTeam($this->team)->create();
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::System,
+        'hostname' => 'app.'.config('server.free_domain'),
+    ]);
+    Certificate::factory()->create([
+        'domain' => '*.'.config('server.free_domain'),
+        'expires_at' => now()->addDays(3),
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/dashboard")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stats.ssl_alerts', 0)
+            ->where('sslAlerts', []));
 });
 
 it('requires authentication', function () {

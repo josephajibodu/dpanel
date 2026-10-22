@@ -6,12 +6,10 @@ use App\Enums\ServerStatus;
 use App\Enums\SiteDomainType;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteDomainResource;
-use App\Models\Certificate;
 use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\Team;
-use Carbon\CarbonInterface;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +30,8 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $sslAlerts = $this->sslAlerts($team);
+
         return Inertia::render('dashboard', [
             'stats' => [
                 'servers' => $team->servers()->count(),
@@ -41,8 +41,9 @@ class DashboardController extends Controller
                     ->whereHas('site.server', fn ($query) => $query->where('team_id', $team->id))
                     ->where('created_at', '>=', now()->subDays(7))
                     ->count(),
-                'ssl_alerts' => $this->sslAlertsCount($team),
+                'ssl_alerts' => count($sslAlerts),
             ],
+            'sslAlerts' => $sslAlerts,
             'recentServers' => ServerResource::collection($recentServers),
             'recentDeployments' => $recentDeployments->map(fn (Deployment $deployment) => [
                 'id' => $deployment->id,
@@ -63,32 +64,37 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function sslAlertsCount(Team $team): int
+    /**
+     * Custom-domain certificates on the team's sites that are expired or inside the renewal window,
+     * so the dashboard can say which domain needs attention instead of just how many. The shared
+     * free-domain wildcard is left out: FlitOps renews it, and CheckCertificateExpiryJob alerts the operator.
+     *
+     * @return list<array{hostname: string, ssl_status: string, ssl_expires_at: ?string, site: array{id: int, domain: string, server_id: int}}>
+     */
+    private function sslAlerts(Team $team): array
     {
-        $needsAttention = fn (?CarbonInterface $expiresAt) => in_array(
-            SiteDomainResource::sslStatusFor($expiresAt),
-            ['expiring_soon', 'expired'],
-            true,
-        );
-
-        $customAlerts = SiteDomain::query()
+        return SiteDomain::query()
+            ->with('site:id,domain,server_id')
             ->whereHas('site.server', fn ($query) => $query->where('team_id', $team->id))
             ->where('type', SiteDomainType::Custom)
-            ->get(['ssl_expires_at'])
-            ->filter(fn (SiteDomain $domain) => $needsAttention($domain->ssl_expires_at))
-            ->count();
-
-        $hasSystemDomains = SiteDomain::query()
-            ->whereHas('site.server', fn ($query) => $query->where('team_id', $team->id))
-            ->where('type', SiteDomainType::System)
-            ->exists();
-
-        if (! $hasSystemDomains) {
-            return $customAlerts;
-        }
-
-        $wildcard = Certificate::firstWhere('domain', '*.'.config('server.free_domain'));
-
-        return $needsAttention($wildcard?->expires_at) ? $customAlerts + 1 : $customAlerts;
+            ->get(['id', 'site_id', 'hostname', 'ssl_expires_at'])
+            ->filter(fn (SiteDomain $domain) => in_array(
+                SiteDomainResource::sslStatusFor($domain->ssl_expires_at),
+                ['expiring_soon', 'expired'],
+                true,
+            ))
+            ->sortBy('ssl_expires_at')
+            ->map(fn (SiteDomain $domain) => [
+                'hostname' => $domain->hostname,
+                'ssl_status' => SiteDomainResource::sslStatusFor($domain->ssl_expires_at),
+                'ssl_expires_at' => $domain->ssl_expires_at?->toIso8601String(),
+                'site' => [
+                    'id' => $domain->site->id,
+                    'domain' => $domain->site->domain,
+                    'server_id' => $domain->site->server_id,
+                ],
+            ])
+            ->values()
+            ->all();
     }
 }
