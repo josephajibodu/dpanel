@@ -12,7 +12,7 @@ use RuntimeException;
 
 class CreateServerDatabase
 {
-    use EscapesShell;
+    use EscapesShell, QuotesMysql;
 
     public function __construct(
         private SshService $sshService,
@@ -116,8 +116,7 @@ class CreateServerDatabase
         string $collation,
         string $rootPassword,
     ): void {
-        $escapedName = str_replace('`', '\\`', $name);
-        $sql = "CREATE DATABASE IF NOT EXISTS `{$escapedName}` CHARACTER SET {$charset} COLLATE {$collation}";
+        $sql = "CREATE DATABASE IF NOT EXISTS {$this->mysqlIdentifier($name)} CHARACTER SET {$charset} COLLATE {$collation}";
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($sql);
         $connection->exec($cmd, 60);
     }

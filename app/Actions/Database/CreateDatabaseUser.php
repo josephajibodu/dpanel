@@ -11,7 +11,7 @@ use RuntimeException;
 
 class CreateDatabaseUser
 {
-    use EscapesShell, GrantsPostgresPrivileges;
+    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql;
 
     public function __construct(
         private SshService $sshService
@@ -82,19 +82,16 @@ class CreateDatabaseUser
         $pass = $databaseUser->password;
         $host = $databaseUser->host ?? 'localhost';
 
-        $userEsc = str_replace("'", "''", $user);
-        $hostEsc = str_replace("'", "''", $host);
-        $passEsc = str_replace("'", "''", $pass);
+        $account = $this->mysqlString($user).'@'.$this->mysqlString($host);
 
-        $createSql = "CREATE USER IF NOT EXISTS '{$userEsc}'@'{$hostEsc}' IDENTIFIED BY '{$passEsc}'";
+        $createSql = "CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY {$this->mysqlString($pass)}";
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($createSql);
         $connection->exec($cmd, 60);
 
         $privilege = $databaseUser->permission === 'readonly' ? 'SELECT' : 'ALL PRIVILEGES';
 
         foreach ($databaseUser->databases as $dbName) {
-            $dbEsc = str_replace('`', '\\`', $dbName);
-            $grantSql = "GRANT {$privilege} ON `{$dbEsc}`.* TO '{$userEsc}'@'{$hostEsc}'";
+            $grantSql = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
             $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($grantSql);
             $connection->exec($cmd, 60);
         }

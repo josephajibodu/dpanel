@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DestroyDatabaseUser
 {
-    use EscapesShell;
+    use EscapesShell, QuotesMysql;
 
     public function __construct(
         private SshService $sshService
@@ -63,10 +63,7 @@ class DestroyDatabaseUser
         $user = $databaseUser->username;
         $host = $databaseUser->host ?? 'localhost';
 
-        $userEsc = str_replace("'", "''", $user);
-        $hostEsc = str_replace("'", "''", $host);
-
-        $dropSql = "DROP USER IF EXISTS '{$userEsc}'@'{$hostEsc}'";
+        $dropSql = "DROP USER IF EXISTS {$this->mysqlString($user)}@{$this->mysqlString($host)}";
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($dropSql);
         $connection->exec($cmd, 60);
 

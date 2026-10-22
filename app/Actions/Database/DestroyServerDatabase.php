@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DestroyServerDatabase
 {
-    use EscapesShell;
+    use EscapesShell, QuotesMysql;
 
     public function __construct(
         private SshService $sshService
@@ -61,8 +61,7 @@ class DestroyServerDatabase
 
     private function dropMysqlDatabase(SshConnection $connection, string $name, string $rootPassword): void
     {
-        $escapedName = str_replace('`', '\\`', $name);
-        $sql = "DROP DATABASE IF EXISTS `{$escapedName}`";
+        $sql = "DROP DATABASE IF EXISTS {$this->mysqlIdentifier($name)}";
         $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($sql);
         $connection->exec($cmd, 60);
     }

@@ -33,7 +33,7 @@ class UpdateDatabaseUserRequest extends FormRequest
             'databases' => ['sometimes', 'array', 'min:1'],
             'databases.*' => ['string', 'max:64', Rule::in($validDatabaseNames)],
             'permission' => ['nullable', 'string', 'max:50', Rule::in(['readonly', 'readwrite'])],
-            'host' => ['nullable', 'string', 'max:255'],
+            'host' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9.%_:\/-]+$/D'],
         ];
     }
 
@@ -44,6 +44,7 @@ class UpdateDatabaseUserRequest extends FormRequest
     {
         return [
             'databases.*.in' => 'One or more selected databases are invalid.',
+            'host.regex' => 'Host can only contain letters, numbers, dots, hyphens, colons, slashes and the % or _ wildcards.',
         ];
     }
 }
