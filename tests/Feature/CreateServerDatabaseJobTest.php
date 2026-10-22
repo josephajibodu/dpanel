@@ -6,7 +6,6 @@ use App\Jobs\CreateServerDatabaseJob;
 use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
-use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -32,9 +31,7 @@ it('creates database on server and sets status to ready', function () {
         'status' => 'pending',
     ]);
 
-    $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
-    $mockConnection->shouldReceive('exec')->andReturn('');
-    $mockConnection->shouldReceive('disconnect')->andReturn(null);
+    $mockConnection = mockDatabaseConnection();
 
     $sshService = \Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')

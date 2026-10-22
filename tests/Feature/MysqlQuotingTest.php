@@ -23,20 +23,19 @@ uses(RefreshDatabase::class);
 const SQL_INJECTION_PASSWORD = "p\\'; DROP USER 'root'@'localhost'; -- ";
 
 /**
- * Record every SQL statement the action sends through `mysql -e`, with the
- * shell quoting undone, so tests can assert on exactly what MySQL would parse.
+ * Record every SQL statement the action sends to the server. The statements
+ * are uploaded as a script, so they're read back from the uploaded file.
  *
  * @param  array<int, string>  $statements
  */
 function recordMysqlStatements(array &$statements): void
 {
     $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$statements) {
-        if (preg_match("/ -e ('(?:[^']|'\\\\'')*')$/", $command, $matches)) {
-            $statements[] = str_replace("'\\''", "'", substr($matches[1], 1, -1));
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
+    $connection->shouldReceive('upload')->andReturnUsing(function (string $content, string $remotePath) use (&$statements) {
+        if (str_ends_with($remotePath, 'statements.sql')) {
+            array_push($statements, ...array_values(array_filter(explode(";\n", $content))));
         }
-
-        return '';
     });
     $connection->shouldReceive('disconnect')->andReturn(null);
 
@@ -106,6 +105,7 @@ it('keeps an injection attempt inside the password literal when creating a user'
     expect($statements)->toBe([
         "CREATE USER IF NOT EXISTS 'app'@'%' IDENTIFIED BY 'p\\\\\\'; DROP USER \\'root\\'@\\'localhost\\'; -- '",
         "GRANT ALL PRIVILEGES ON `app_db`.* TO 'app'@'%'",
+        'FLUSH PRIVILEGES',
     ]);
 });
 
@@ -129,6 +129,7 @@ it('keeps a trailing backslash inside the password literal when updating a user'
         "ALTER USER 'app'@'localhost' IDENTIFIED BY 'new-secret\\\\'",
         "REVOKE ALL PRIVILEGES ON *.* FROM 'app'@'localhost'",
         "GRANT SELECT ON `app_db`.* TO 'app'@'localhost'",
+        'FLUSH PRIVILEGES',
     ]);
 });
 
@@ -145,7 +146,7 @@ it('quotes the account when dropping a user', function () {
 
     app(DestroyDatabaseUser::class)->execute($user);
 
-    expect($statements)->toBe(["DROP USER IF EXISTS 'app'@'10.0.0.%'"]);
+    expect($statements)->toBe(["DROP USER IF EXISTS 'app'@'10.0.0.%'", 'FLUSH PRIVILEGES']);
 });
 
 it('quotes the database name when dropping a database', function () {

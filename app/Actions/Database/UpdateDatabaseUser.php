@@ -10,7 +10,7 @@ use RuntimeException;
 
 class UpdateDatabaseUser
 {
-    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql;
+    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -69,7 +69,7 @@ class UpdateDatabaseUser
             if ($databaseType === 'mysql' || $databaseType === 'mariadb') {
                 $this->updateMysqlUser($connection, $databaseUser, $rootPassword);
             } elseif ($databaseType === 'postgresql') {
-                $this->updatePostgresUser($connection, $databaseUser, $rootPassword);
+                $this->updatePostgresUser($connection, $databaseUser);
             } else {
                 throw new RuntimeException("Unsupported database type: {$databaseType}");
             }
@@ -86,27 +86,23 @@ class UpdateDatabaseUser
 
         $account = $this->mysqlString($user).'@'.$this->mysqlString($host);
 
-        $alterSql = "ALTER USER {$account} IDENTIFIED BY {$this->mysqlString($pass)}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($alterSql);
-        $connection->exec($cmd, 60);
-
-        $revokeSql = "REVOKE ALL PRIVILEGES ON *.* FROM {$account}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($revokeSql);
-        $connection->exec($cmd, 60);
+        $statements = [
+            "ALTER USER {$account} IDENTIFIED BY {$this->mysqlString($pass)}",
+            "REVOKE ALL PRIVILEGES ON *.* FROM {$account}",
+        ];
 
         $privilege = $databaseUser->permission === 'readonly' ? 'SELECT' : 'ALL PRIVILEGES';
 
         foreach ($databaseUser->databases as $dbName) {
-            $grantSql = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
-            $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($grantSql);
-            $connection->exec($cmd, 60);
+            $statements[] = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
         }
 
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e "FLUSH PRIVILEGES;"';
-        $connection->exec($cmd, 60);
+        $statements[] = 'FLUSH PRIVILEGES';
+
+        $this->runMysqlAsRoot($connection, $rootPassword, $statements);
     }
 
-    private function updatePostgresUser(SshConnection $connection, DatabaseUser $databaseUser, string $postgresPassword): void
+    private function updatePostgresUser(SshConnection $connection, DatabaseUser $databaseUser): void
     {
         $user = $databaseUser->username;
         $pass = $databaseUser->password;
@@ -114,23 +110,16 @@ class UpdateDatabaseUser
         $userIdent = '"'.str_replace('"', '""', $user).'"';
         $passEsc = str_replace("'", "''", $pass);
 
-        $alterSql = 'ALTER USER '.$userIdent.' WITH PASSWORD '."'{$passEsc}'";
-        $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($alterSql);
-        $connection->exec($cmd, 60);
+        $this->runPostgresAsSuperuser($connection, ['ALTER USER '.$userIdent.' WITH PASSWORD '."'{$passEsc}'"]);
 
         // Revoke everything first so switching between readonly and readwrite
         // doesn't leave stale broader privileges from the previous grant.
         foreach ($databaseUser->databases as $dbName) {
             $dbIdent = '"'.str_replace('"', '""', $dbName).'"';
-            $revokeSql = 'REVOKE ALL PRIVILEGES ON DATABASE '.$dbIdent.' FROM '.$userIdent;
-            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($revokeSql);
-            $connection->exec($cmd, 60);
-
-            $revokeTablesSql = 'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM '.$userIdent;
-            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -d '.$this->escapeForShell($dbName).' -c '.$this->escapeForShell($revokeTablesSql);
-            $connection->exec($cmd, 60);
+            $this->runPostgresAsSuperuser($connection, ['REVOKE ALL PRIVILEGES ON DATABASE '.$dbIdent.' FROM '.$userIdent]);
+            $this->runPostgresAsSuperuser($connection, ['REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM '.$userIdent], $dbName);
         }
 
-        $this->grantPostgresPrivileges($connection, $databaseUser, $postgresPassword, $userIdent);
+        $this->grantPostgresPrivileges($connection, $databaseUser, $userIdent);
     }
 }

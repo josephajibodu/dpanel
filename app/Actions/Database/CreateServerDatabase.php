@@ -12,7 +12,7 @@ use RuntimeException;
 
 class CreateServerDatabase
 {
-    use EscapesShell, QuotesMysql;
+    use EscapesShell, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService,
@@ -100,7 +100,7 @@ class CreateServerDatabase
             if ($databaseType === 'mysql' || $databaseType === 'mariadb') {
                 $this->createMysqlDatabase($connection, $name, $charset, $collation, $rootPassword);
             } elseif ($databaseType === 'postgresql') {
-                $this->createPostgresDatabase($connection, $name, $rootPassword);
+                $this->createPostgresDatabase($connection, $name);
             } else {
                 throw new RuntimeException("Unsupported database type: {$databaseType}");
             }
@@ -116,19 +116,15 @@ class CreateServerDatabase
         string $collation,
         string $rootPassword,
     ): void {
-        $sql = "CREATE DATABASE IF NOT EXISTS {$this->mysqlIdentifier($name)} CHARACTER SET {$charset} COLLATE {$collation}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($sql);
-        $connection->exec($cmd, 60);
+        $this->runMysqlAsRoot($connection, $rootPassword, [
+            "CREATE DATABASE IF NOT EXISTS {$this->mysqlIdentifier($name)} CHARACTER SET {$charset} COLLATE {$collation}",
+        ]);
     }
 
-    private function createPostgresDatabase(
-        SshConnection $connection,
-        string $name,
-        string $postgresPassword,
-    ): void {
+    private function createPostgresDatabase(SshConnection $connection, string $name): void
+    {
         $escapedName = str_replace('"', '""', $name);
-        $sql = 'CREATE DATABASE "'.$escapedName.'"';
-        $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($sql);
-        $connection->exec($cmd, 60);
+
+        $this->runPostgresAsSuperuser($connection, ['CREATE DATABASE "'.$escapedName.'"']);
     }
 }

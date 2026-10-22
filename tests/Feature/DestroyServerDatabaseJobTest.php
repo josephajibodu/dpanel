@@ -45,9 +45,7 @@ it('removes the deleted database from every database user referencing it', funct
         'databases' => ['keepdb'],
     ]);
 
-    $mockConnection = Mockery::mock(App\Services\Ssh\SshConnection::class)->makePartial();
-    $mockConnection->shouldReceive('exec')->andReturn('');
-    $mockConnection->shouldReceive('disconnect')->andReturn(null);
+    $mockConnection = mockDatabaseConnection();
 
     $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')

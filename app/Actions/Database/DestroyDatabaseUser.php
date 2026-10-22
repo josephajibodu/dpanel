@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DestroyDatabaseUser
 {
-    use EscapesShell, QuotesMysql;
+    use EscapesShell, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -49,7 +49,7 @@ class DestroyDatabaseUser
             if ($databaseType === 'mysql' || $databaseType === 'mariadb') {
                 $this->dropMysqlUser($connection, $databaseUser, $rootPassword);
             } elseif ($databaseType === 'postgresql') {
-                $this->dropPostgresUser($connection, $databaseUser, $rootPassword);
+                $this->dropPostgresUser($connection, $databaseUser);
             } else {
                 throw new RuntimeException("Unsupported database type: {$databaseType}");
             }
@@ -63,21 +63,17 @@ class DestroyDatabaseUser
         $user = $databaseUser->username;
         $host = $databaseUser->host ?? 'localhost';
 
-        $dropSql = "DROP USER IF EXISTS {$this->mysqlString($user)}@{$this->mysqlString($host)}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($dropSql);
-        $connection->exec($cmd, 60);
-
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e "FLUSH PRIVILEGES;"';
-        $connection->exec($cmd, 60);
+        $this->runMysqlAsRoot($connection, $rootPassword, [
+            "DROP USER IF EXISTS {$this->mysqlString($user)}@{$this->mysqlString($host)}",
+            'FLUSH PRIVILEGES',
+        ]);
     }
 
-    private function dropPostgresUser(SshConnection $connection, DatabaseUser $databaseUser, string $postgresPassword): void
+    private function dropPostgresUser(SshConnection $connection, DatabaseUser $databaseUser): void
     {
         $user = $databaseUser->username;
         $userIdent = '"'.str_replace('"', '""', $user).'"';
 
-        $dropSql = 'DROP USER IF EXISTS '.$userIdent;
-        $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($dropSql);
-        $connection->exec($cmd, 60);
+        $this->runPostgresAsSuperuser($connection, ['DROP USER IF EXISTS '.$userIdent]);
     }
 }

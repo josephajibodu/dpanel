@@ -12,14 +12,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+/**
+ * Record the SQL each action runs. The statements are uploaded as a script
+ * rather than passed in the command, so the uploaded scripts are what's kept.
+ */
 function mockConnectionRecordingCommands(array &$commands): SshConnection
 {
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('exec')
-        ->andReturnUsing(function (string $cmd) use (&$commands) {
-            $commands[] = $cmd;
-
-            return '';
+        ->andReturnUsing(fn (string $cmd) => $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
+    $connection->shouldReceive('upload')
+        ->andReturnUsing(function (string $content, string $remotePath) use (&$commands) {
+            if (str_ends_with($remotePath, 'statements.sql')) {
+                $commands[] = $content;
+            }
         });
     $connection->shouldReceive('disconnect')->andReturn(null);
 

@@ -40,9 +40,7 @@ it('creates database user on server and sets status to ready', function () {
         'status' => 'pending',
     ]);
 
-    $mockConnection = \Mockery::mock(\App\Services\Ssh\SshConnection::class)->makePartial();
-    $mockConnection->shouldReceive('exec')->andReturn('');
-    $mockConnection->shouldReceive('disconnect')->andReturn(null);
+    $mockConnection = mockDatabaseConnection();
 
     $sshService = \Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')

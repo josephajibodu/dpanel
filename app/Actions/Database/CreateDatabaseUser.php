@@ -11,7 +11,7 @@ use RuntimeException;
 
 class CreateDatabaseUser
 {
-    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql;
+    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -67,7 +67,7 @@ class CreateDatabaseUser
             if ($databaseType === 'mysql' || $databaseType === 'mariadb') {
                 $this->createMysqlUser($connection, $databaseUser, $rootPassword);
             } elseif ($databaseType === 'postgresql') {
-                $this->createPostgresUser($connection, $databaseUser, $rootPassword);
+                $this->createPostgresUser($connection, $databaseUser);
             } else {
                 throw new RuntimeException("Unsupported database type: {$databaseType}");
             }
@@ -84,23 +84,20 @@ class CreateDatabaseUser
 
         $account = $this->mysqlString($user).'@'.$this->mysqlString($host);
 
-        $createSql = "CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY {$this->mysqlString($pass)}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($createSql);
-        $connection->exec($cmd, 60);
+        $statements = ["CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY {$this->mysqlString($pass)}"];
 
         $privilege = $databaseUser->permission === 'readonly' ? 'SELECT' : 'ALL PRIVILEGES';
 
         foreach ($databaseUser->databases as $dbName) {
-            $grantSql = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
-            $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($grantSql);
-            $connection->exec($cmd, 60);
+            $statements[] = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
         }
 
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e "FLUSH PRIVILEGES;"';
-        $connection->exec($cmd, 60);
+        $statements[] = 'FLUSH PRIVILEGES';
+
+        $this->runMysqlAsRoot($connection, $rootPassword, $statements);
     }
 
-    private function createPostgresUser(SshConnection $connection, DatabaseUser $databaseUser, string $postgresPassword): void
+    private function createPostgresUser(SshConnection $connection, DatabaseUser $databaseUser): void
     {
         $user = $databaseUser->username;
         $pass = $databaseUser->password;
@@ -108,10 +105,8 @@ class CreateDatabaseUser
         $userIdent = '"'.str_replace('"', '""', $user).'"';
         $passEsc = str_replace("'", "''", $pass);
 
-        $createSql = 'CREATE USER '.$userIdent.' WITH PASSWORD '."'{$passEsc}'";
-        $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($createSql);
-        $connection->exec($cmd, 60);
+        $this->runPostgresAsSuperuser($connection, ['CREATE USER '.$userIdent.' WITH PASSWORD '."'{$passEsc}'"]);
 
-        $this->grantPostgresPrivileges($connection, $databaseUser, $postgresPassword, $userIdent);
+        $this->grantPostgresPrivileges($connection, $databaseUser, $userIdent);
     }
 }

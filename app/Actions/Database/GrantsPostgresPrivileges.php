@@ -16,7 +16,6 @@ trait GrantsPostgresPrivileges
     private function grantPostgresPrivileges(
         SshConnection $connection,
         DatabaseUser $databaseUser,
-        string $postgresPassword,
         string $userIdent,
     ): void {
         $readonly = $databaseUser->permission === 'readonly';
@@ -25,25 +24,18 @@ trait GrantsPostgresPrivileges
             $dbIdent = '"'.str_replace('"', '""', $dbName).'"';
 
             if (! $readonly) {
-                $grantSql = 'GRANT ALL PRIVILEGES ON DATABASE '.$dbIdent.' TO '.$userIdent;
-                $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($grantSql);
-                $connection->exec($cmd, 60);
+                $this->runPostgresAsSuperuser($connection, ['GRANT ALL PRIVILEGES ON DATABASE '.$dbIdent.' TO '.$userIdent]);
 
                 continue;
             }
 
-            $connectSql = 'GRANT CONNECT ON DATABASE '.$dbIdent.' TO '.$userIdent;
-            $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($connectSql);
-            $connection->exec($cmd, 60);
+            $this->runPostgresAsSuperuser($connection, ['GRANT CONNECT ON DATABASE '.$dbIdent.' TO '.$userIdent]);
 
-            foreach ([
+            $this->runPostgresAsSuperuser($connection, [
                 'GRANT USAGE ON SCHEMA public TO '.$userIdent,
                 'GRANT SELECT ON ALL TABLES IN SCHEMA public TO '.$userIdent,
                 'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO '.$userIdent,
-            ] as $sql) {
-                $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -d '.$this->escapeForShell($dbName).' -c '.$this->escapeForShell($sql);
-                $connection->exec($cmd, 60);
-            }
+            ], $dbName);
         }
     }
 }

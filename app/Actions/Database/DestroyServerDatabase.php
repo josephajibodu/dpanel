@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DestroyServerDatabase
 {
-    use EscapesShell, QuotesMysql;
+    use EscapesShell, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -50,7 +50,7 @@ class DestroyServerDatabase
             if ($databaseType === 'mysql' || $databaseType === 'mariadb') {
                 $this->dropMysqlDatabase($connection, $name, $rootPassword);
             } elseif ($databaseType === 'postgresql') {
-                $this->dropPostgresDatabase($connection, $name, $rootPassword);
+                $this->dropPostgresDatabase($connection, $name);
             } else {
                 throw new RuntimeException("Unsupported database type: {$databaseType}");
             }
@@ -61,16 +61,13 @@ class DestroyServerDatabase
 
     private function dropMysqlDatabase(SshConnection $connection, string $name, string $rootPassword): void
     {
-        $sql = "DROP DATABASE IF EXISTS {$this->mysqlIdentifier($name)}";
-        $cmd = 'sudo mysql -u root -p'.$this->escapeForShell($rootPassword).' -e '.$this->escapeForShell($sql);
-        $connection->exec($cmd, 60);
+        $this->runMysqlAsRoot($connection, $rootPassword, ["DROP DATABASE IF EXISTS {$this->mysqlIdentifier($name)}"]);
     }
 
-    private function dropPostgresDatabase(SshConnection $connection, string $name, string $postgresPassword): void
+    private function dropPostgresDatabase(SshConnection $connection, string $name): void
     {
         $escapedName = str_replace('"', '""', $name);
-        $sql = 'DROP DATABASE IF EXISTS "'.$escapedName.'"';
-        $cmd = 'PGPASSWORD='.$this->escapeForShell($postgresPassword).' sudo -u postgres psql -c '.$this->escapeForShell($sql);
-        $connection->exec($cmd, 60);
+
+        $this->runPostgresAsSuperuser($connection, ['DROP DATABASE IF EXISTS "'.$escapedName.'"']);
     }
 }
