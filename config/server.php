@@ -29,6 +29,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Allow Private Server Addresses
+    |--------------------------------------------------------------------------
+    |
+    | Custom servers must normally use a public IP address, so FlitOps never
+    | connects to its own machine, its internal network or a cloud metadata
+    | endpoint. Self-hosted installs that manage servers on a private network
+    | can turn this on to allow private, local and reserved addresses too.
+    |
+    */
+
+    'allow_private_addresses' => (bool) env('SERVER_ALLOW_PRIVATE_ADDRESSES', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Supported Ubuntu Versions
     |--------------------------------------------------------------------------
     |

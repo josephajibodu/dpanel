@@ -2,9 +2,14 @@
 
 namespace App\Models;
 
+use App\Rules\AllowedProcessUser;
+use App\Rules\NoControlCharacters;
+use App\Rules\SafeAbsolutePath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Validator;
+use RuntimeException;
 
 class Worker extends Model
 {
@@ -53,9 +58,13 @@ class Worker extends Model
      * without it, supervisord starts the child process from `/`, which breaks
      * the common Laravel pattern (`php artisan queue:work`) because artisan
      * and vendor/ only exist inside a release, not the site's base directory.
+     *
+     * @throws RuntimeException when a stored value is unsafe to write into the file.
      */
     public function supervisorConfig(string $programName): string
     {
+        $this->ensureSafeForConfigFile();
+
         $lines = ['[program:'.$programName.']'];
 
         if ($this->site_id) {
@@ -82,5 +91,25 @@ class Worker extends Model
         }
 
         return implode("\n", $lines)."\n";
+    }
+
+    /**
+     * Re-check the values written into the supervisor file, so a worker saved
+     * before validation was tightened can't add extra settings (such as a
+     * second `user=root` line) to its program block.
+     *
+     * @throws RuntimeException
+     */
+    private function ensureSafeForConfigFile(): void
+    {
+        $validator = Validator::make($this->only(['command', 'user', 'stdout_logfile']), [
+            'command' => ['required', 'string', new NoControlCharacters],
+            'user' => ['required', 'string', new AllowedProcessUser],
+            'stdout_logfile' => ['nullable', 'string', new SafeAbsolutePath],
+        ]);
+
+        if ($validator->fails()) {
+            throw new RuntimeException("Worker {$this->id} was not written to the server: {$validator->errors()->first()}");
+        }
     }
 }

@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use App\Rules\AllowedProcessUser;
+use App\Rules\NoControlCharacters;
 use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,14 +25,14 @@ class StoreCronJobRequest extends FormRequest
         $server = $this->route('server');
 
         return [
-            'command' => ['required', 'string', 'max:1024'],
+            'command' => ['required', 'string', 'max:1024', new NoControlCharacters],
             'site_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('sites', 'id')->where('server_id', $server->id),
             ],
-            'user' => ['required', 'string', 'max:64'],
-            'frequency' => ['required', 'string', 'max:128', new ValidCronExpression],
+            'user' => ['required', 'string', 'max:64', new AllowedProcessUser],
+            'frequency' => ['required', 'string', 'max:128', new NoControlCharacters, new ValidCronExpression],
         ];
     }
 

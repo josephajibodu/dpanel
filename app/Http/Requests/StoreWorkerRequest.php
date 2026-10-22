@@ -3,6 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use App\Rules\AllowedProcessUser;
+use App\Rules\NoControlCharacters;
+use App\Rules\SafeAbsolutePath;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,18 +26,18 @@ class StoreWorkerRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'command' => ['required', 'string', 'max:1024'],
+            'command' => ['required', 'string', 'max:1024', new NoControlCharacters],
             'site_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('sites', 'id')->where('server_id', $server->id),
             ],
-            'user' => ['required', 'string', 'max:64'],
+            'user' => ['required', 'string', 'max:64', new AllowedProcessUser],
             'numprocs' => ['required', 'integer', 'min:1', 'max:64'],
             'auto_start' => ['boolean'],
             'auto_restart' => ['boolean'],
             'redirect_stderr' => ['nullable', 'boolean'],
-            'stdout_logfile' => ['nullable', 'string', 'max:512'],
+            'stdout_logfile' => ['nullable', 'string', 'max:512', new SafeAbsolutePath],
         ];
     }
 

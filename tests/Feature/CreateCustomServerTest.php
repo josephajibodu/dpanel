@@ -82,7 +82,7 @@ it('creates a custom server and redirects to the setup page', function () {
     $response = $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/custom", [
             'name' => 'test-server',
-            'ip_address' => '192.168.1.100',
+            'ip_address' => '8.8.8.8',
             'ssh_port' => 22,
             'php_version' => '8.3',
             'database_type' => 'mysql',
@@ -203,4 +203,91 @@ it('does not re-provision a server that is already provisioning', function () {
         ->assertRedirect("/{$this->team->slug}/servers/{$server->id}");
 
     Queue::assertNothingPushed();
+});
+
+// --- ip_address must be a public address ---
+
+it('accepts public IPv4 and IPv6 addresses', function (string $ip) {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => $ip,
+            'ssh_port' => 22,
+        ])->assertValid(['ip_address']);
+
+    expect(Server::where('ip_address', $ip)->exists())->toBeTrue();
+})->with([
+    'IPv4' => '8.8.8.8',
+    'another IPv4' => '146.190.253.93',
+    'IPv6' => '2606:4700:4700::1111',
+]);
+
+it('rejects addresses that are not public', function (string $ip) {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => $ip,
+            'ssh_port' => 22,
+        ])->assertInvalid(['ip_address']);
+
+    expect(Server::count())->toBe(0);
+})->with([
+    'IPv4 loopback' => '127.0.0.1',
+    'IPv4 loopback range' => '127.1.2.3',
+    'private 10/8' => '10.0.0.5',
+    'private 172.16/12' => '172.16.0.1',
+    'private 192.168/16' => '192.168.1.100',
+    'cloud metadata' => '169.254.169.254',
+    'IPv4 unspecified' => '0.0.0.0',
+    'carrier-grade NAT' => '100.64.0.1',
+    'IPv4 broadcast' => '255.255.255.255',
+    'IPv4 reserved' => '240.0.0.1',
+    'IPv4 multicast' => '224.0.0.1',
+    'IPv4 documentation' => '203.0.113.10',
+    'IPv6 loopback' => '::1',
+    'IPv6 unspecified' => '::',
+    'IPv6 unique local' => 'fd00::1',
+    'IPv6 unique local fc00' => 'fc00::1',
+    'IPv6 link-local' => 'fe80::1',
+    'IPv6 multicast' => 'ff02::1',
+    'IPv4-mapped loopback' => '::ffff:127.0.0.1',
+    'IPv4-mapped metadata' => '::ffff:169.254.169.254',
+    'NAT64 to private' => '64:ff9b::a00:1',
+    '6to4 to loopback' => '2002:7f00:1::',
+]);
+
+it('rejects hostnames and malformed addresses', function (string $value) {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => $value,
+            'ssh_port' => 22,
+        ])->assertInvalid(['ip_address']);
+})->with([
+    'hostname' => 'example.com',
+    'localhost' => 'localhost',
+    'incomplete IPv4' => '1.2.3',
+    'IPv4 with port' => '8.8.8.8:22',
+]);
+
+it('accepts private addresses when the self-hosting switch is on', function (string $ip) {
+    config(['server.allow_private_addresses' => true]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => $ip,
+            'ssh_port' => 22,
+        ])->assertValid(['ip_address']);
+})->with(['192.168.1.100', '10.0.0.5', 'fd00::1']);
+
+it('still rejects hostnames when the self-hosting switch is on', function () {
+    config(['server.allow_private_addresses' => true]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => 'example.com',
+            'ssh_port' => 22,
+        ])->assertInvalid(['ip_address']);
 });

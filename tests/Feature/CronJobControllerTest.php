@@ -30,7 +30,7 @@ it('stores a new cron job and dispatches job', function () {
         ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => 'php artisan schedule:run',
             'site_id' => null,
-            'user' => 'deploy',
+            'user' => 'artisan',
             'frequency' => '* * * * *',
         ]);
 
@@ -39,7 +39,7 @@ it('stores a new cron job and dispatches job', function () {
     $this->assertDatabaseHas('cron_jobs', [
         'server_id' => $this->server->id,
         'command' => 'php artisan schedule:run',
-        'user' => 'deploy',
+        'user' => 'artisan',
         'frequency' => '* * * * *',
         'hidden' => false,
         'status' => 'pending',
@@ -52,7 +52,7 @@ it('validates cron job command and frequency are required', function () {
     $response = $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => '',
-            'user' => 'deploy',
+            'user' => 'artisan',
             'frequency' => '',
         ]);
 
@@ -70,7 +70,7 @@ it('validates cron job site_id belongs to server', function () {
         ->post("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs", [
             'command' => 'php artisan schedule:run',
             'site_id' => $site->id,
-            'user' => 'deploy',
+            'user' => 'artisan',
             'frequency' => '* * * * *',
         ]);
 
@@ -91,7 +91,7 @@ it('updates a cron job and dispatches job', function () {
         ->put("/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}", [
             'command' => 'php artisan custom:task',
             'site_id' => null,
-            'user' => 'www-data',
+            'user' => 'artisan',
             'frequency' => '0 * * * *',
         ]);
 
@@ -99,7 +99,7 @@ it('updates a cron job and dispatches job', function () {
 
     $cronJob->refresh();
     expect($cronJob->command)->toBe('php artisan custom:task')
-        ->and($cronJob->user)->toBe('www-data')
+        ->and($cronJob->user)->toBe('artisan')
         ->and($cronJob->frequency)->toBe('0 * * * *');
 
     Queue::assertPushed(UpdateCronJobJob::class);
@@ -165,3 +165,50 @@ it('denies access to cron job from another server', function () {
     $response->assertNotFound();
     $this->assertDatabaseHas('cron_jobs', ['id' => $cronJob->id]);
 });
+
+// --- Values written into the cron.d file ---
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function cronJobPayload(array $overrides = []): array
+{
+    return array_merge([
+        'command' => 'php artisan schedule:run',
+        'site_id' => null,
+        'user' => 'artisan',
+        'frequency' => '* * * * *',
+    ], $overrides);
+}
+
+it('rejects cron job users other than the server user', function (string $method, string $user) {
+    Queue::fake();
+
+    $cronJob = CronJob::factory()->create(['server_id' => $this->server->id]);
+    $url = $method === 'post'
+        ? "/{$this->team->slug}/servers/{$this->server->id}/cron-jobs"
+        : "/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}";
+
+    $this->actingAs($this->user)
+        ->{$method}($url, cronJobPayload(['user' => $user]))
+        ->assertSessionHasErrors('user');
+})->with(['post', 'put'])->with(['root', 'www-data', 'deploy', 'artisan2']);
+
+it('rejects line breaks and control characters in cron job fields', function (string $method, string $field, string $value) {
+    Queue::fake();
+
+    $cronJob = CronJob::factory()->create(['server_id' => $this->server->id]);
+    $url = $method === 'post'
+        ? "/{$this->team->slug}/servers/{$this->server->id}/cron-jobs"
+        : "/{$this->team->slug}/servers/{$this->server->id}/cron-jobs/{$cronJob->id}";
+
+    $this->actingAs($this->user)
+        ->{$method}($url, cronJobPayload([$field => $value]))
+        ->assertSessionHasErrors($field);
+})->with(['post', 'put'])->with([
+    'newline in command' => ['command', "php artisan schedule:run\n* * * * * root id"],
+    'carriage return in command' => ['command', "php artisan schedule:run\r* * * * * root id"],
+    'newline in user' => ['user', "artisan\n* * * * * root id"],
+    'newline between frequency fields' => ['frequency', "*\n*\n*\n*\n*"],
+]);

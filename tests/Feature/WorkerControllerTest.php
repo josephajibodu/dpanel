@@ -30,7 +30,7 @@ it('stores a new worker and dispatches job', function () {
             'name' => 'queue-worker',
             'command' => 'php artisan queue:work',
             'site_id' => null,
-            'user' => 'deploy',
+            'user' => 'artisan',
             'numprocs' => 2,
             'auto_start' => true,
             'auto_restart' => true,
@@ -42,7 +42,7 @@ it('stores a new worker and dispatches job', function () {
         'server_id' => $this->server->id,
         'name' => 'queue-worker',
         'command' => 'php artisan queue:work',
-        'user' => 'deploy',
+        'user' => 'artisan',
         'numprocs' => 2,
         'auto_start' => true,
         'auto_restart' => true,
@@ -57,7 +57,7 @@ it('validates worker name and command are required', function () {
         ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [
             'name' => '',
             'command' => '',
-            'user' => 'deploy',
+            'user' => 'artisan',
             'numprocs' => 1,
         ]);
 
@@ -76,7 +76,7 @@ it('validates worker site_id belongs to server', function () {
             'name' => 'worker',
             'command' => 'php artisan queue:work',
             'site_id' => $site->id,
-            'user' => 'deploy',
+            'user' => 'artisan',
             'numprocs' => 1,
         ]);
 
@@ -99,7 +99,7 @@ it('updates a worker and dispatches job', function () {
             'name' => 'new-name',
             'command' => 'php artisan queue:work --sleep=3',
             'site_id' => null,
-            'user' => 'www-data',
+            'user' => 'artisan',
             'numprocs' => 4,
             'auto_start' => false,
             'auto_restart' => true,
@@ -110,7 +110,7 @@ it('updates a worker and dispatches job', function () {
     $worker->refresh();
     expect($worker->name)->toBe('new-name')
         ->and($worker->command)->toBe('php artisan queue:work --sleep=3')
-        ->and($worker->user)->toBe('www-data')
+        ->and($worker->user)->toBe('artisan')
         ->and($worker->numprocs)->toBe(4)
         ->and($worker->auto_start)->toBeFalse();
 
@@ -214,3 +214,77 @@ it('denies access to worker from another server', function () {
     $response->assertNotFound();
     $this->assertDatabaseHas('workers', ['id' => $worker->id]);
 });
+
+// --- Values written into the supervisor file ---
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function workerPayload(array $overrides = []): array
+{
+    return array_merge([
+        'name' => 'queue-worker',
+        'command' => 'php artisan queue:work',
+        'site_id' => null,
+        'user' => 'artisan',
+        'numprocs' => 1,
+        'stdout_logfile' => '/home/artisan/worker.log',
+    ], $overrides);
+}
+
+it('accepts a worker that runs as the server user with a safe log path', function () {
+    Queue::fake();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", workerPayload())
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('workers', ['user' => 'artisan', 'stdout_logfile' => '/home/artisan/worker.log']);
+});
+
+it('rejects worker users other than the server user', function (string $method, string $user) {
+    Queue::fake();
+
+    $worker = Worker::factory()->create(['server_id' => $this->server->id]);
+    $url = $method === 'post'
+        ? "/{$this->team->slug}/servers/{$this->server->id}/workers"
+        : "/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}";
+
+    $this->actingAs($this->user)
+        ->{$method}($url, workerPayload(['user' => $user]))
+        ->assertSessionHasErrors('user');
+})->with(['post', 'put'])->with(['root', 'www-data', 'deploy', 'artisan2']);
+
+it('rejects line breaks and control characters in worker fields', function (string $method, string $field, string $value) {
+    Queue::fake();
+
+    $worker = Worker::factory()->create(['server_id' => $this->server->id]);
+    $url = $method === 'post'
+        ? "/{$this->team->slug}/servers/{$this->server->id}/workers"
+        : "/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}";
+
+    $this->actingAs($this->user)
+        ->{$method}($url, workerPayload([$field => $value]))
+        ->assertSessionHasErrors($field);
+})->with(['post', 'put'])->with([
+    'newline in command' => ['command', "php artisan queue:work\nuser=root"],
+    'carriage return in command' => ['command', "php artisan queue:work\ruser=root"],
+    'null byte in command' => ['command', "php artisan\0queue:work"],
+    'newline in user' => ['user', "artisan\nuser=root"],
+    'newline in log file' => ['stdout_logfile', "/home/artisan/w.log\nuser=root"],
+]);
+
+it('rejects unsafe worker log file paths', function (string $path) {
+    Queue::fake();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", workerPayload(['stdout_logfile' => $path]))
+        ->assertSessionHasErrors('stdout_logfile');
+})->with([
+    'relative path' => 'worker.log',
+    'parent directory' => '/home/artisan/../../etc/cron.d/x',
+    'space' => '/home/artisan/my worker.log',
+    'shell characters' => '/home/artisan/$(id).log',
+    'semicolon' => '/home/artisan/w.log;rm',
+]);

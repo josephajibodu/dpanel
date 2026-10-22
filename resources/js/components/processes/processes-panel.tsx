@@ -882,7 +882,7 @@ export function ProcessesPanel({
                                         user: e.target.value,
                                     }))
                                 }
-                                placeholder="deploy"
+                                placeholder={defaultUser}
                                 className="font-mono"
                             />
                             {errors?.user && (
@@ -1330,7 +1330,7 @@ export function ProcessesPanel({
                                         user: e.target.value,
                                     }))
                                 }
-                                placeholder="deploy"
+                                placeholder={defaultUser}
                                 className="font-mono"
                             />
                             {errors?.user && (

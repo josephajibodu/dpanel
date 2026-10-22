@@ -334,14 +334,14 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
 
                                     <div className="space-y-2">
                                         <Label htmlFor="ip_address">
-                                            IP address or hostname <span className="text-destructive">*</span>
+                                            IP address <span className="text-destructive">*</span>
                                         </Label>
                                         <Input
                                             id="ip_address"
                                             type="text"
                                             value={customForm.data.ip_address}
                                             onChange={(e) => customForm.setData('ip_address', e.target.value)}
-                                            placeholder="Enter a IPv4, IPv6 address, or hostname"
+                                            placeholder="Enter a public IPv4 or IPv6 address"
                                         />
                                         <InputError message={customForm.errors.ip_address} />
                                     </div>
