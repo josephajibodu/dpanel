@@ -160,7 +160,7 @@ php artisan key:generate
 php artisan migrate
 
 # Development
-composer dev  # Runs PHP + Vite + Reverb + Queue
+composer dev  # Runs PHP + Vite + Reverb + Horizon + Scheduler + Logs
 ```
 
 ## 📁 Project Structure
