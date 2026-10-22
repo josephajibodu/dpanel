@@ -31,7 +31,6 @@ it('includes directory= for site-bound workers', function () {
         'auto_start' => true,
         'auto_restart' => true,
         'redirect_stderr' => true,
-        'stdout_logfile' => null,
     ]);
 
     $config = $worker->supervisorConfig('flitops-worker-'.$worker->id);
@@ -66,20 +65,11 @@ it('adds process_name when numprocs > 1', function () {
         ->and($config)->toContain('process_name=%(program_name)s_%(process_num)02d');
 });
 
-it('writes stdout_logfile only when set', function () {
-    $worker = Worker::factory()->create([
-        'server_id' => $this->server->id,
-        'site_id' => null,
-        'stdout_logfile' => null,
-    ]);
-    expect($worker->supervisorConfig('w'))->not->toContain('stdout_logfile=');
+it('always writes output to a log file in the root-only supervisor directory', function () {
+    $worker = Worker::factory()->create(['server_id' => $this->server->id]);
 
-    $worker2 = Worker::factory()->create([
-        'server_id' => $this->server->id,
-        'site_id' => null,
-        'stdout_logfile' => '/var/log/x.log',
-    ]);
-    expect($worker2->supervisorConfig('w'))->toContain('stdout_logfile=/var/log/x.log');
+    expect($worker->logFilePath())->toBe('/var/log/supervisor/flitops-worker-'.$worker->id.'.log')
+        ->and($worker->supervisorConfig('w'))->toContain('stdout_logfile='.$worker->logFilePath()."\n");
 });
 
 // -------- CronJob::cronLine() -----------------------------------------------
@@ -124,8 +114,6 @@ it('refuses to build a supervisor block from unsafe stored values', function (ar
     'arbitrary user' => [['user' => 'www-data']],
     'newline in user' => [['user' => "artisan\nuser=root"]],
     'newline in command' => [['command' => "php artisan queue:work\nuser=root"]],
-    'newline in log file' => [['stdout_logfile' => "/var/log/w.log\nuser=root"]],
-    'relative log file' => [['stdout_logfile' => 'worker.log']],
 ]);
 
 it('refuses to build a cron line from unsafe stored values', function (array $attributes) {

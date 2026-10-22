@@ -9,6 +9,8 @@ use App\Models\Server;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
+use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
@@ -190,18 +192,26 @@ it('restarts a worker and marks it restarting immediately', function () {
     ]);
 });
 
-it('returns worker logs when log file is not configured', function () {
-    $worker = Worker::factory()->create([
-        'server_id' => $this->server->id,
-        'stdout_logfile' => null,
-    ]);
+it('returns worker logs from the log file FlitOps chose', function () {
+    $worker = Worker::factory()->create(['server_id' => $this->server->id]);
+
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('download')
+        ->once()
+        ->with('/var/log/supervisor/flitops-worker-'.$worker->id.'.log')
+        ->andReturn('processed job 1');
+    $connection->shouldReceive('disconnect');
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
 
     $response = $this->actingAs($this->user)
         ->get("/{$this->team->slug}/servers/{$this->server->id}/workers/{$worker->id}/logs");
 
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
-    expect($response->getContent())->toContain('not configured');
+    expect($response->getContent())->toBe('processed job 1');
 });
 
 it('denies access to worker from another server', function () {
@@ -229,18 +239,31 @@ function workerPayload(array $overrides = []): array
         'site_id' => null,
         'user' => 'artisan',
         'numprocs' => 1,
-        'stdout_logfile' => '/home/artisan/worker.log',
     ], $overrides);
 }
 
-it('accepts a worker that runs as the server user with a safe log path', function () {
+it('accepts a worker that runs as the server user', function () {
     Queue::fake();
 
     $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", workerPayload())
         ->assertSessionHasNoErrors();
 
-    $this->assertDatabaseHas('workers', ['user' => 'artisan', 'stdout_logfile' => '/home/artisan/worker.log']);
+    $this->assertDatabaseHas('workers', ['user' => 'artisan']);
+});
+
+it('ignores a log file path sent by the browser', function () {
+    Queue::fake();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", workerPayload(['stdout_logfile' => '/etc/cron.d/evil']))
+        ->assertSessionHasNoErrors();
+
+    $worker = Worker::firstOrFail();
+
+    expect($worker->supervisorConfig('w'))
+        ->toContain('stdout_logfile=/var/log/supervisor/flitops-worker-'.$worker->id.'.log')
+        ->not->toContain('/etc/cron.d/evil');
 });
 
 it('rejects worker users other than the server user', function (string $method, string $user) {
@@ -272,19 +295,4 @@ it('rejects line breaks and control characters in worker fields', function (stri
     'carriage return in command' => ['command', "php artisan queue:work\ruser=root"],
     'null byte in command' => ['command', "php artisan\0queue:work"],
     'newline in user' => ['user', "artisan\nuser=root"],
-    'newline in log file' => ['stdout_logfile', "/home/artisan/w.log\nuser=root"],
-]);
-
-it('rejects unsafe worker log file paths', function (string $path) {
-    Queue::fake();
-
-    $this->actingAs($this->user)
-        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", workerPayload(['stdout_logfile' => $path]))
-        ->assertSessionHasErrors('stdout_logfile');
-})->with([
-    'relative path' => 'worker.log',
-    'parent directory' => '/home/artisan/../../etc/cron.d/x',
-    'space' => '/home/artisan/my worker.log',
-    'shell characters' => '/home/artisan/$(id).log',
-    'semicolon' => '/home/artisan/w.log;rm',
 ]);

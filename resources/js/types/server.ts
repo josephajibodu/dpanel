@@ -89,7 +89,6 @@ export interface Worker {
     auto_start: boolean;
     auto_restart: boolean;
     redirect_stderr: boolean | null;
-    stdout_logfile: string | null;
     site?: WorkerSite | null;
     created_at: string;
     updated_at: string;

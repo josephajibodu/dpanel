@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Rules\AllowedProcessUser;
 use App\Rules\NoControlCharacters;
-use App\Rules\SafeAbsolutePath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +24,6 @@ class Worker extends Model
         'auto_restart',
         'numprocs',
         'redirect_stderr',
-        'stdout_logfile',
         'status',
         'name',
     ];
@@ -86,11 +84,19 @@ class Worker extends Model
             $lines[] = 'process_name=%(program_name)s_%(process_num)02d';
         }
 
-        if ($this->stdout_logfile) {
-            $lines[] = 'stdout_logfile='.$this->stdout_logfile;
-        }
+        $lines[] = 'stdout_logfile='.$this->logFilePath();
 
         return implode("\n", $lines)."\n";
+    }
+
+    /**
+     * Where supervisord writes this worker's output. FlitOps picks the path
+     * inside a root-only directory rather than letting users choose one,
+     * because supervisord opens it as root.
+     */
+    public function logFilePath(): string
+    {
+        return config('supervisor.log_path').'/'.config('supervisor.file_prefix').'-'.$this->id.'.log';
     }
 
     /**
@@ -102,10 +108,9 @@ class Worker extends Model
      */
     private function ensureSafeForConfigFile(): void
     {
-        $validator = Validator::make($this->only(['command', 'user', 'stdout_logfile']), [
+        $validator = Validator::make($this->only(['command', 'user']), [
             'command' => ['required', 'string', new NoControlCharacters],
             'user' => ['required', 'string', new AllowedProcessUser],
-            'stdout_logfile' => ['nullable', 'string', new SafeAbsolutePath],
         ]);
 
         if ($validator->fails()) {

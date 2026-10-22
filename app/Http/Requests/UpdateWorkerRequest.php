@@ -5,7 +5,6 @@ namespace App\Http\Requests;
 use App\Models\Server;
 use App\Rules\AllowedProcessUser;
 use App\Rules\NoControlCharacters;
-use App\Rules\SafeAbsolutePath;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -37,7 +36,6 @@ class UpdateWorkerRequest extends FormRequest
             'auto_start' => ['boolean'],
             'auto_restart' => ['boolean'],
             'redirect_stderr' => ['nullable', 'boolean'],
-            'stdout_logfile' => ['nullable', 'string', 'max:512', new SafeAbsolutePath],
         ];
     }
 

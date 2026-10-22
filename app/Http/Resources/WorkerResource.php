@@ -29,7 +29,6 @@ class WorkerResource extends JsonResource
             'auto_start' => $this->auto_start,
             'auto_restart' => $this->auto_restart,
             'redirect_stderr' => $this->redirect_stderr,
-            'stdout_logfile' => $this->stdout_logfile,
             'site' => $this->whenLoaded('site', fn () => [
                 'id' => $this->site->id,
                 'domain' => $this->site->domain,

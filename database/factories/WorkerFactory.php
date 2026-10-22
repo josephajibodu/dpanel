@@ -27,7 +27,6 @@ class WorkerFactory extends Factory
             'auto_restart' => true,
             'numprocs' => 1,
             'redirect_stderr' => true,
-            'stdout_logfile' => '/var/log/worker.log',
             'status' => 'active',
             'name' => 'worker-'.fake()->randomNumber(3),
         ];

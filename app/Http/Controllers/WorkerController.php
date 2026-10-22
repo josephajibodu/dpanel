@@ -101,15 +101,9 @@ class WorkerController extends Controller
     {
         $this->authorize('view', $server);
 
-        if (! $worker->stdout_logfile) {
-            return response('Log file path not configured.', 200, [
-                'Content-Type' => 'text/plain; charset=UTF-8',
-            ]);
-        }
-
         try {
             $connection = $this->sshService->connect($server);
-            $content = $connection->download($worker->stdout_logfile);
+            $content = $connection->download($worker->logFilePath());
             $connection->disconnect();
         } catch (\Throwable) {
             $content = 'Could not retrieve log file from server.';

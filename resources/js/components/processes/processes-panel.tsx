@@ -161,7 +161,6 @@ export function ProcessesPanel({
         numprocs: 1,
         auto_start: true,
         auto_restart: true,
-        stdout_logfile: '',
     });
     const [cronForm, setCronForm] = useState({
         command: '',
@@ -212,7 +211,6 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
-                stdout_logfile: workerForm.stdout_logfile || null,
             },
             {
                 preserveScroll: true,
@@ -226,7 +224,6 @@ export function ProcessesPanel({
                         numprocs: 1,
                         auto_start: true,
                         auto_restart: true,
-                        stdout_logfile: '',
                     });
                 },
                 onFinish: () => setIsSubmitting(false),
@@ -248,7 +245,6 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
-                stdout_logfile: workerForm.stdout_logfile || null,
             },
             {
                 preserveScroll: true,
@@ -271,7 +267,6 @@ export function ProcessesPanel({
             numprocs: w.numprocs,
             auto_start: w.auto_start,
             auto_restart: w.auto_restart,
-            stdout_logfile: w.stdout_logfile ?? '',
         });
         setEditWorkerOpen(true);
     };
@@ -910,27 +905,6 @@ export function ProcessesPanel({
                                 }
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="worker-stdout-logfile">
-                                Log file path
-                            </Label>
-                            <Input
-                                id="worker-stdout-logfile"
-                                value={workerForm.stdout_logfile}
-                                onChange={(e) =>
-                                    setWorkerForm((p) => ({
-                                        ...p,
-                                        stdout_logfile: e.target.value,
-                                    }))
-                                }
-                                placeholder="/home/artisan/worker.log"
-                                className="font-mono"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Absolute path where stdout is written. Required
-                                to use the Logs button.
-                            </p>
-                        </div>
                         <div className="flex items-center gap-2">
                             <Checkbox
                                 id="worker-auto-start"
@@ -1113,27 +1087,6 @@ export function ProcessesPanel({
                                     }))
                                 }
                             />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-worker-stdout-logfile">
-                                Log file path
-                            </Label>
-                            <Input
-                                id="edit-worker-stdout-logfile"
-                                value={workerForm.stdout_logfile}
-                                onChange={(e) =>
-                                    setWorkerForm((p) => ({
-                                        ...p,
-                                        stdout_logfile: e.target.value,
-                                    }))
-                                }
-                                placeholder="/home/artisan/worker.log"
-                                className="font-mono"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Absolute path where stdout is written. Required
-                                to use the Logs button.
-                            </p>
                         </div>
                         <div className="flex items-center gap-2">
                             <Checkbox
