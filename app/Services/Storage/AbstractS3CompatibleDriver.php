@@ -63,12 +63,12 @@ abstract class AbstractS3CompatibleDriver implements StorageProviderContract
         return $this->credentials['bucket'] ?? '';
     }
 
-    public function envPrefix(): string
+    public function awsCredentialsFile(): string
     {
         return sprintf(
-            'AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s',
-            $this->escapeForShell($this->credentials['access_key_id'] ?? ''),
-            $this->escapeForShell($this->credentials['secret_access_key'] ?? ''),
+            "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n",
+            $this->credentials['access_key_id'] ?? '',
+            $this->credentials['secret_access_key'] ?? '',
         );
     }
 

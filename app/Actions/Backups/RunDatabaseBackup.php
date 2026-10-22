@@ -3,6 +3,7 @@
 namespace App\Actions\Backups;
 
 use App\Actions\Database\EscapesShell;
+use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Contracts\StorageProviderContract;
 use App\Events\BackupStatusChanged;
 use App\Exceptions\BackupFailedException;
@@ -19,7 +20,7 @@ use RuntimeException;
 
 class RunDatabaseBackup
 {
-    use EscapesShell, ManagesBackupLifecycle;
+    use EscapesShell, KeepsSecretsOffCommandLine, ManagesBackupLifecycle;
 
     public function __construct(
         private SshService $sshService,
@@ -70,11 +71,16 @@ class RunDatabaseBackup
         try {
             $this->ensureAwsCliInstalled($connection);
 
-            $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
-            $this->streamDumpToStorage($connection, $server, $serverDatabase->name, $rootPassword, $driver, $s3Uri);
+            $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $backup, $server, $serverDatabase, $rootPassword, $driver, $s3Uri, $scratchDb): void {
+                $mysqlCredentials = $this->uploadMysqlRootCredentials($connection, $directory, $rootPassword);
+                $awsCredentials = $this->uploadStorageCredentials($connection, $directory, $driver);
 
-            $this->updateStatus($backup, 'verifying');
-            $this->verifyBackup($connection, $server, $rootPassword, $driver, $s3Uri, $scratchDb);
+                $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
+                $this->streamDumpToStorage($connection, $server, $serverDatabase->name, $mysqlCredentials, $awsCredentials, $driver, $s3Uri);
+
+                $this->updateStatus($backup, 'verifying');
+                $this->verifyBackup($connection, $server, $mysqlCredentials, $awsCredentials, $driver, $s3Uri, $scratchDb);
+            });
 
             $backup->update([
                 'status' => 'completed',
@@ -117,13 +123,14 @@ class RunDatabaseBackup
         SshConnection $connection,
         Server $server,
         string $dbName,
-        string $rootPassword,
+        string $mysqlCredentials,
+        string $awsCredentials,
         StorageProviderContract $driver,
         string $s3Uri,
     ): void {
-        $dumpCmd = $this->buildDumpCommand($server, $dbName, $rootPassword);
+        $dumpCmd = $this->buildDumpCommand($server, $dbName, $mysqlCredentials);
 
-        $inner = 'set -o pipefail; '.$dumpCmd.' | gzip -c | '.$driver->envPrefix().
+        $inner = 'set -o pipefail; '.$dumpCmd.' | gzip -c | '.$awsCredentials.
             ' aws s3 cp - '.$this->escapeForShell($s3Uri).' '.$driver->awsCliArgs();
 
         $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
@@ -136,14 +143,15 @@ class RunDatabaseBackup
     private function verifyBackup(
         SshConnection $connection,
         Server $server,
-        string $rootPassword,
+        string $mysqlCredentials,
+        string $awsCredentials,
         StorageProviderContract $driver,
         string $s3Uri,
         string $scratchDb,
     ): void {
         // Clean up any orphaned scratch database from a previous failed run.
-        $this->dropScratchDatabase($connection, $server, $rootPassword, $scratchDb);
-        $this->createScratchDatabase($connection, $server, $rootPassword, $scratchDb);
+        $this->dropScratchDatabase($connection, $server, $mysqlCredentials, $scratchDb);
+        $this->createScratchDatabase($connection, $server, $mysqlCredentials, $scratchDb);
 
         try {
             // `-B`/`--create` make the dump self-contained with its own
@@ -155,27 +163,31 @@ class RunDatabaseBackup
             // then run against whichever database we explicitly connect
             // to below (the scratch one).
             $filterCmd = $this->buildVerifyFilterCommand($server->database_type);
-            $importCmd = $this->buildImportCommand($server, $rootPassword, $scratchDb);
+            $importCmd = $this->buildImportCommand($server, $mysqlCredentials, $scratchDb);
 
-            $inner = 'set -o pipefail; '.$driver->envPrefix().' aws s3 cp '.
+            $inner = 'set -o pipefail; '.$awsCredentials.' aws s3 cp '.
                 $this->escapeForShell($s3Uri).' - '.$driver->awsCliArgs().
                 ' | gunzip -c | '.$filterCmd.' | '.$importCmd;
 
             $connection->exec('bash -c '.$this->escapeForShell($inner), 1800);
         } finally {
-            $this->dropScratchDatabase($connection, $server, $rootPassword, $scratchDb);
+            $this->dropScratchDatabase($connection, $server, $mysqlCredentials, $scratchDb);
         }
     }
 
-    private function buildDumpCommand(Server $server, string $dbName, string $rootPassword): string
+    /**
+     * MySQL/MariaDB read root's login from the uploaded option file (it must be
+     * the first option); Postgres signs in as the local postgres system user.
+     */
+    private function buildDumpCommand(Server $server, string $dbName, string $mysqlCredentials): string
     {
         $dbNameEsc = $this->escapeForShell($dbName);
-        $passEsc = $this->escapeForShell($rootPassword);
+        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
 
         return match ($server->database_type) {
-            'mysql' => "sudo mysqldump --user=root --password={$passEsc} --single-transaction --skip-lock-tables --routines --hex-blob -B {$dbNameEsc}",
-            'mariadb' => "sudo mariadb-dump --user=root --password={$passEsc} --single-transaction --skip-lock-tables --routines --hex-blob -B {$dbNameEsc}",
-            'postgresql' => "PGPASSWORD={$passEsc} sudo -u postgres pg_dump --clean --create -F p {$dbNameEsc}",
+            'mysql' => "sudo mysqldump {$credentialsOption} --single-transaction --skip-lock-tables --routines --hex-blob -B {$dbNameEsc}",
+            'mariadb' => "sudo mariadb-dump {$credentialsOption} --single-transaction --skip-lock-tables --routines --hex-blob -B {$dbNameEsc}",
+            'postgresql' => "sudo -u postgres pg_dump --clean --create -F p {$dbNameEsc}",
             default => throw new RuntimeException("Unsupported database type: {$server->database_type}"),
         };
     }
@@ -189,27 +201,27 @@ class RunDatabaseBackup
         };
     }
 
-    private function buildImportCommand(Server $server, string $rootPassword, string $scratchDb): string
+    private function buildImportCommand(Server $server, string $mysqlCredentials, string $scratchDb): string
     {
-        $passEsc = $this->escapeForShell($rootPassword);
+        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
         $scratchEsc = $this->escapeForShell($scratchDb);
 
         return match ($server->database_type) {
-            'mysql' => "sudo mysql --user=root --password={$passEsc} {$scratchEsc}",
-            'mariadb' => "sudo mariadb --user=root --password={$passEsc} {$scratchEsc}",
-            'postgresql' => "PGPASSWORD={$passEsc} sudo -u postgres psql {$scratchEsc}",
+            'mysql' => "sudo mysql {$credentialsOption} {$scratchEsc}",
+            'mariadb' => "sudo mariadb {$credentialsOption} {$scratchEsc}",
+            'postgresql' => "sudo -u postgres psql {$scratchEsc}",
             default => throw new RuntimeException("Unsupported database type: {$server->database_type}"),
         };
     }
 
-    private function createScratchDatabase(SshConnection $connection, Server $server, string $rootPassword, string $scratchDb): void
+    private function createScratchDatabase(SshConnection $connection, Server $server, string $mysqlCredentials, string $scratchDb): void
     {
-        $passEsc = $this->escapeForShell($rootPassword);
+        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
         $scratchEsc = $this->escapeForShell($scratchDb);
 
         $cmd = match ($server->database_type) {
-            'mysql' => "sudo mysql --user=root --password={$passEsc} -e ".$this->escapeForShell("CREATE DATABASE IF NOT EXISTS `{$scratchDb}`"),
-            'mariadb' => "sudo mariadb --user=root --password={$passEsc} -e ".$this->escapeForShell("CREATE DATABASE IF NOT EXISTS `{$scratchDb}`"),
+            'mysql' => "sudo mysql {$credentialsOption} -e ".$this->escapeForShell("CREATE DATABASE IF NOT EXISTS `{$scratchDb}`"),
+            'mariadb' => "sudo mariadb {$credentialsOption} -e ".$this->escapeForShell("CREATE DATABASE IF NOT EXISTS `{$scratchDb}`"),
             'postgresql' => "sudo -u postgres createdb {$scratchEsc}",
             default => throw new RuntimeException("Unsupported database type: {$server->database_type}"),
         };
@@ -217,14 +229,14 @@ class RunDatabaseBackup
         $connection->exec($cmd, 60);
     }
 
-    private function dropScratchDatabase(SshConnection $connection, Server $server, string $rootPassword, string $scratchDb): void
+    private function dropScratchDatabase(SshConnection $connection, Server $server, string $mysqlCredentials, string $scratchDb): void
     {
-        $passEsc = $this->escapeForShell($rootPassword);
+        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
         $scratchEsc = $this->escapeForShell($scratchDb);
 
         $cmd = match ($server->database_type) {
-            'mysql' => "sudo mysql --user=root --password={$passEsc} -e ".$this->escapeForShell("DROP DATABASE IF EXISTS `{$scratchDb}`"),
-            'mariadb' => "sudo mariadb --user=root --password={$passEsc} -e ".$this->escapeForShell("DROP DATABASE IF EXISTS `{$scratchDb}`"),
+            'mysql' => "sudo mysql {$credentialsOption} -e ".$this->escapeForShell("DROP DATABASE IF EXISTS `{$scratchDb}`"),
+            'mariadb' => "sudo mariadb {$credentialsOption} -e ".$this->escapeForShell("DROP DATABASE IF EXISTS `{$scratchDb}`"),
             'postgresql' => "sudo -u postgres dropdb --if-exists {$scratchEsc}",
             default => 'true',
         };

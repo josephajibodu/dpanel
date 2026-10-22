@@ -3,30 +3,26 @@
 namespace App\Actions\Database;
 
 use App\Services\Ssh\SshConnection;
-use Closure;
-use RuntimeException;
 
 /**
- * Runs SQL as the database superuser without any secret appearing in a command.
- *
- * Every user on a server can see the full text of running commands (`ps`), so a
- * password passed as `-p…` or inside the SQL after `-e` leaks while it runs. The
- * credentials and the SQL are uploaded into a fresh private directory instead
- * (mktemp -d creates it readable only by the server user), and the commands only
- * reference those files. Classes using this trait must also use EscapesShell.
+ * Runs SQL as the database superuser without any secret appearing in a command:
+ * the credentials and the SQL itself (which can carry user passwords) are
+ * uploaded into a private directory and the commands only reference the files.
+ * Classes using this trait must also use EscapesShell.
  */
 trait RunsSqlPrivately
 {
+    use KeepsSecretsOffCommandLine;
+
     /**
      * @param  array<int, string>  $statements
      */
     private function runMysqlAsRoot(SshConnection $connection, string $rootPassword, array $statements): void
     {
         $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $rootPassword, $statements): void {
-            $credentialsFile = "{$directory}/client.cnf";
+            $credentialsFile = $this->uploadMysqlRootCredentials($connection, $directory, $rootPassword);
             $sqlFile = "{$directory}/statements.sql";
 
-            $connection->upload("[client]\nuser=root\npassword=\"".addcslashes($rootPassword, '"\\')."\"\n", $credentialsFile);
             $connection->upload($this->toSqlScript($statements), $sqlFile);
 
             $connection->exec(
@@ -56,24 +52,6 @@ trait RunsSqlPrivately
                 60,
             );
         });
-    }
-
-    /**
-     * @param  Closure(string): void  $callback
-     */
-    private function withPrivateDirectory(SshConnection $connection, Closure $callback): void
-    {
-        $directory = trim($connection->exec('mktemp -d', 10));
-
-        if (! str_starts_with($directory, '/tmp/')) {
-            throw new RuntimeException("Could not create a private temporary directory (got: {$directory}).");
-        }
-
-        try {
-            $callback($directory);
-        } finally {
-            $connection->exec('rm -rf '.$this->escapeForShell($directory), 10);
-        }
     }
 
     /**

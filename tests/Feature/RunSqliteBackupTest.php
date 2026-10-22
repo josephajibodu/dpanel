@@ -22,7 +22,7 @@ function mockSqliteBackupDriver(): CloudflareR2Driver
 {
     $driver = Mockery::mock(CloudflareR2Driver::class);
     $driver->shouldReceive('bucket')->andReturn('test-bucket');
-    $driver->shouldReceive('envPrefix')->andReturn("AWS_ACCESS_KEY_ID='x' AWS_SECRET_ACCESS_KEY='y'");
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
     $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
     $driver->shouldReceive('size')->andReturn(4096);
 
@@ -42,8 +42,9 @@ function fakeSqliteBackupConnection(array &$commands, ?callable $failWhen = null
             throw new SshCommandException($cmd, 1, '', 'boom');
         }
 
-        return '';
+        return $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
     });
+    $connection->shouldReceive('upload');
     $connection->shouldReceive('disconnect')->andReturn(null);
 
     return $connection;

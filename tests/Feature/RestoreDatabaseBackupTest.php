@@ -7,7 +7,6 @@ use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
 use App\Models\StorageProvider;
-use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use App\Services\Storage\CloudflareR2Driver;
 use App\Services\Storage\StorageProviderManager;
@@ -30,9 +29,7 @@ beforeEach(function () {
 });
 
 it('restores a completed backup in place', function () {
-    $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->once()->andReturn('');
-    $connection->shouldReceive('disconnect')->andReturn(null);
+    $connection = mockDatabaseConnection();
 
     $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')->once()->andReturn($connection);
@@ -40,7 +37,7 @@ it('restores a completed backup in place', function () {
 
     $driver = Mockery::mock(CloudflareR2Driver::class);
     $driver->shouldReceive('bucket')->andReturn('test-bucket');
-    $driver->shouldReceive('envPrefix')->andReturn("AWS_ACCESS_KEY_ID='x' AWS_SECRET_ACCESS_KEY='y'");
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
     $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
 
     $storageManager = Mockery::mock(StorageProviderManager::class);
@@ -61,11 +58,11 @@ it('restores a completed backup in place', function () {
 });
 
 it('marks the restore failed when the remote restore command fails', function () {
-    $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->once()->andThrow(
-        new SshCommandException('restore-command', 1, '', 'ERROR: connection refused'),
-    );
-    $connection->shouldReceive('disconnect')->andReturn(null);
+    $connection = mockDatabaseConnection(onExec: function (string $command) {
+        if (str_contains($command, 'gunzip -c')) {
+            throw new SshCommandException('restore-command', 1, '', 'ERROR: connection refused');
+        }
+    });
 
     $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')->once()->andReturn($connection);
@@ -73,7 +70,7 @@ it('marks the restore failed when the remote restore command fails', function ()
 
     $driver = Mockery::mock(CloudflareR2Driver::class);
     $driver->shouldReceive('bucket')->andReturn('test-bucket');
-    $driver->shouldReceive('envPrefix')->andReturn("AWS_ACCESS_KEY_ID='x' AWS_SECRET_ACCESS_KEY='y'");
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
     $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
 
     $storageManager = Mockery::mock(StorageProviderManager::class);

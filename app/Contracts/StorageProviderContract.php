@@ -42,12 +42,12 @@ interface StorageProviderContract
     public function size(string $path): ?int;
 
     /**
-     * Build the shell-escaped `KEY=value` environment prefix an SSH command
-     * needs so the AWS CLI running on a *managed server* (not this app) can
-     * authenticate against this account, e.g.
-     * `AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...'`.
+     * Build the contents of an AWS CLI credentials file the AWS CLI on a
+     * *managed server* (not this app) can authenticate against this account
+     * with. It's uploaded as a file rather than passed in the command, so the
+     * keys never show up in the server's process list.
      */
-    public function envPrefix(): string;
+    public function awsCredentialsFile(): string;
 
     /**
      * Build the shell-escaped extra `aws` CLI flags a managed-server command

@@ -13,7 +13,6 @@ use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
 use App\Models\StorageProvider;
 use App\Notifications\DatabaseBackupFailed;
-use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use App\Services\Storage\CloudflareR2Driver;
 use App\Services\Storage\StorageProviderManager;
@@ -107,17 +106,11 @@ it('words the generic message for a restore', function () {
 });
 
 it('stores the safe message, never the raw command, when a backup upload is rejected', function () {
-    $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $callCount = 0;
-    $connection->shouldReceive('exec')->andReturnUsing(function () use (&$callCount) {
-        $callCount++;
-        if ($callCount === 2) {
+    $connection = mockDatabaseConnection(onExec: function (string $command) {
+        if (str_contains($command, 'aws s3 cp -')) {
             throw ($this->failedUpload)('upload failed: An error occurred (Unauthorized) when calling the PutObject operation: Unauthorized');
         }
-
-        return '';
     });
-    $connection->shouldReceive('disconnect')->andReturn(null);
 
     $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')->andReturn($connection);
@@ -125,7 +118,7 @@ it('stores the safe message, never the raw command, when a backup upload is reje
 
     $driver = Mockery::mock(CloudflareR2Driver::class);
     $driver->shouldReceive('bucket')->andReturn('my-bucket');
-    $driver->shouldReceive('envPrefix')->andReturn("AWS_ACCESS_KEY_ID='AKIDSTORAGEKEY' AWS_SECRET_ACCESS_KEY='STORAGESECRETVALUE'");
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = AKIDSTORAGEKEY\naws_secret_access_key = STORAGESECRETVALUE\n");
     $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
     $driver->shouldReceive('delete');
     $storageManager = Mockery::mock(StorageProviderManager::class);

@@ -50,15 +50,21 @@ function something()
  * A mocked SSH connection for the database actions: `mktemp -d` hands back a
  * private directory, uploads are captured by remote path, and every command
  * is recorded, so tests can assert on the SQL that would reach the server.
+ * `$onExec` sees each command first and may throw to simulate it failing.
  *
  * @param  array<string, string>  $uploads
  * @param  array<int, string>  $commands
+ * @param  (Closure(string): void)|null  $onExec
  */
-function mockDatabaseConnection(array &$uploads = [], array &$commands = []): App\Services\Ssh\SshConnection
+function mockDatabaseConnection(array &$uploads = [], array &$commands = [], ?Closure $onExec = null): App\Services\Ssh\SshConnection
 {
     $connection = Mockery::mock(App\Services\Ssh\SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands) {
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands, $onExec) {
         $commands[] = $command;
+
+        if ($onExec) {
+            $onExec($command);
+        }
 
         return $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
     });

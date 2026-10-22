@@ -3,6 +3,7 @@
 namespace App\Actions\Backups;
 
 use App\Actions\Database\EscapesShell;
+use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Contracts\StorageProviderContract;
 use App\Events\BackupStatusChanged;
 use App\Exceptions\BackupFailedException;
@@ -17,7 +18,7 @@ use App\Services\Storage\StorageProviderManager;
 
 class RunSqliteBackup
 {
-    use EscapesShell, ManagesBackupLifecycle;
+    use EscapesShell, KeepsSecretsOffCommandLine, ManagesBackupLifecycle;
 
     /**
      * Takes a transactionally-consistent copy of a live SQLite database via
@@ -89,12 +90,16 @@ class RunSqliteBackup
         try {
             $this->ensureAwsCliInstalled($connection);
 
-            $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
-            $this->prepareWorkDir($connection, $workDir);
-            $this->streamSnapshotToStorage($connection, $site->sqliteDatabasePath(), $workDir, $driver, $s3Uri);
+            $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $backup, $site, $workDir, $driver, $s3Uri): void {
+                $awsCredentials = $this->uploadStorageCredentials($connection, $directory, $driver);
 
-            $this->updateStatus($backup, 'verifying');
-            $this->verifyBackup($connection, $workDir, $driver, $s3Uri);
+                $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
+                $this->prepareWorkDir($connection, $workDir);
+                $this->streamSnapshotToStorage($connection, $site->sqliteDatabasePath(), $workDir, $awsCredentials, $driver, $s3Uri);
+
+                $this->updateStatus($backup, 'verifying');
+                $this->verifyBackup($connection, $workDir, $awsCredentials, $driver, $s3Uri);
+            });
 
             $backup->update([
                 'status' => 'completed',
@@ -154,6 +159,7 @@ class RunSqliteBackup
         SshConnection $connection,
         string $sqlitePath,
         string $workDir,
+        string $awsCredentials,
         StorageProviderContract $driver,
         string $s3Uri,
     ): void {
@@ -163,7 +169,7 @@ class RunSqliteBackup
         $inner = 'set -o pipefail; '.
             "test -f {$sourceEsc} || { echo \"SQLite database not found at {$sqlitePath}\" >&2; exit 1; }; ".
             'php -r '.$this->escapeForShell(self::SNAPSHOT_SCRIPT)." {$sourceEsc} {$snapshotEsc} && ".
-            "gzip -c {$snapshotEsc} | ".$driver->envPrefix().
+            "gzip -c {$snapshotEsc} | ".$awsCredentials.
             ' aws s3 cp - '.$this->escapeForShell($s3Uri).' '.$driver->awsCliArgs();
 
         $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
@@ -177,12 +183,13 @@ class RunSqliteBackup
     private function verifyBackup(
         SshConnection $connection,
         string $workDir,
+        string $awsCredentials,
         StorageProviderContract $driver,
         string $s3Uri,
     ): void {
         $verifyEsc = $this->escapeForShell("{$workDir}/verify.sqlite");
 
-        $inner = 'set -o pipefail; '.$driver->envPrefix().' aws s3 cp '.
+        $inner = 'set -o pipefail; '.$awsCredentials.' aws s3 cp '.
             $this->escapeForShell($s3Uri).' - '.$driver->awsCliArgs().
             " | gunzip -c > {$verifyEsc} && ".
             'php -r '.$this->escapeForShell(self::INTEGRITY_CHECK_SCRIPT)." {$verifyEsc}";

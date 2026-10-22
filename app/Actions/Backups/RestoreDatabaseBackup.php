@@ -3,6 +3,7 @@
 namespace App\Actions\Backups;
 
 use App\Actions\Database\EscapesShell;
+use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Events\BackupStatusChanged;
 use App\Exceptions\BackupFailedException;
 use App\Jobs\RestoreBackupJob;
@@ -14,7 +15,7 @@ use RuntimeException;
 
 class RestoreDatabaseBackup
 {
-    use EscapesShell;
+    use EscapesShell, KeepsSecretsOffCommandLine;
 
     public function __construct(
         private SshService $sshService,
@@ -54,13 +55,16 @@ class RestoreDatabaseBackup
         $connection = $this->sshService->connect($server);
 
         try {
-            $restoreCmd = $this->buildRestoreCommand($server, $rootPassword);
+            $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $server, $rootPassword, $driver, $s3Uri): void {
+                $restoreCmd = $this->buildRestoreCommand($server, $this->uploadMysqlRootCredentials($connection, $directory, $rootPassword));
+                $awsCredentials = $this->uploadStorageCredentials($connection, $directory, $driver);
 
-            $inner = 'set -o pipefail; '.$driver->envPrefix().' aws s3 cp '.
-                $this->escapeForShell($s3Uri).' - '.$driver->awsCliArgs().
-                ' | gunzip -c | '.$restoreCmd;
+                $inner = 'set -o pipefail; '.$awsCredentials.' aws s3 cp '.
+                    $this->escapeForShell($s3Uri).' - '.$driver->awsCliArgs().
+                    ' | gunzip -c | '.$restoreCmd;
 
-            $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
+                $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
+            });
 
             $backup->update([
                 'restore_status' => 'completed',
@@ -82,16 +86,17 @@ class RestoreDatabaseBackup
      * restoring doesn't need a target database name — MySQL's dump includes
      * its own `CREATE DATABASE`/`USE`, and Postgres's dump includes its own
      * `DROP DATABASE`/`CREATE DATABASE`/`\connect`. Postgres just needs an
-     * initial connection to any existing database to run those from.
+     * initial connection to any existing database to run those from, and
+     * signs in as the local postgres system user, so it needs no password.
      */
-    private function buildRestoreCommand(Server $server, string $rootPassword): string
+    private function buildRestoreCommand(Server $server, string $mysqlCredentials): string
     {
-        $passEsc = $this->escapeForShell($rootPassword);
+        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
 
         return match ($server->database_type) {
-            'mysql' => "sudo mysql --user=root --password={$passEsc}",
-            'mariadb' => "sudo mariadb --user=root --password={$passEsc}",
-            'postgresql' => "PGPASSWORD={$passEsc} sudo -u postgres psql -d postgres",
+            'mysql' => "sudo mysql {$credentialsOption}",
+            'mariadb' => "sudo mariadb {$credentialsOption}",
+            'postgresql' => 'sudo -u postgres psql -d postgres',
             default => throw new RuntimeException("Unsupported database type: {$server->database_type}"),
         };
     }
