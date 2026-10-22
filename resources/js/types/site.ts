@@ -9,6 +9,8 @@ export interface Site {
     directory: string;
     root_path: string;
     web_root: string;
+    system_user: string;
+    is_isolated: boolean;
     repository: string | null;
     short_repository: string | null;
     repository_url: string | null;

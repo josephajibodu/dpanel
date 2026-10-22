@@ -81,7 +81,7 @@ class CronJob extends Model
     {
         $validator = Validator::make($this->only(['frequency', 'user', 'command']), [
             'frequency' => ['required', 'string', new NoControlCharacters, new ValidCronExpression],
-            'user' => ['required', 'string', new AllowedProcessUser],
+            'user' => ['required', 'string', new AllowedProcessUser($this->site_id ? $this->site : null)],
             'command' => ['required', 'string', new NoControlCharacters],
         ]);
 

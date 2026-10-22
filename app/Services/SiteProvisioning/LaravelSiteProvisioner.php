@@ -19,12 +19,12 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
         // A fresh release won't have .env.example yet at this point (real code
         // hasn't been cloned — see createBootstrapRelease()), so seed an empty
         // file here; configureEnvValues() below fills in the real keys.
-        $this->connection->exec("touch {$sharedPath}/.env");
+        $this->runAsOwner("touch {$sharedPath}/.env");
 
         $this->configureEnvValues();
         $this->createStorageSkeleton();
 
-        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
+        $this->runAsOwner("{$this->sudo}chown {$this->owner}:{$this->group} {$sharedPath}/.env && {$this->sudo}chmod {$this->secretFileMode} {$sharedPath}/.env");
     }
 
     protected function configureEnvValues(): void
@@ -85,7 +85,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     {
         $sqlitePath = $this->site->sqliteDatabasePath();
 
-        $this->connection->exec('mkdir -p '.dirname($sqlitePath)." && touch {$sqlitePath}");
+        $this->runAsOwner('mkdir -p '.dirname($sqlitePath)." && touch {$sqlitePath}");
 
         return $sqlitePath;
     }
@@ -100,7 +100,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     {
         $storagePath = "{$this->site->sharedPath()}/storage";
 
-        $this->connection->exec(
+        $this->runAsOwner(
             "mkdir -p {$storagePath}/app/public ".
             "{$storagePath}/framework/cache/data {$storagePath}/framework/sessions {$storagePath}/framework/views ".
             "{$storagePath}/logs"
@@ -126,7 +126,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
     {
         $escapedValue = str_replace(['\\', '#', '&'], ['\\\\', '\\#', '\\&'], $value);
 
-        $this->connection->exec(
+        $this->runAsOwner(
             "if [ -f {$envPath} ] && grep -q '^{$key}=' {$envPath}; then "
             ."sed -i 's#^{$key}=.*#{$key}={$escapedValue}#' {$envPath}; "
             ."elif [ -f {$envPath} ]; then "
@@ -142,9 +142,9 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
 
         // bootstrap/cache doesn't exist yet (no real code cloned during
         // provisioning) — the deploy strategy chmods it per-release instead.
-        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$sharedPath}/storage {$sharedPath}/database 2>/dev/null || true");
-        $this->connection->exec("sudo chmod -R 775 {$sharedPath}/storage 2>/dev/null || true");
-        $this->connection->exec("if [ -d {$sharedPath}/database ]; then sudo chmod -R 775 {$sharedPath}/database; fi");
-        $this->connection->exec("if [ -f {$sharedPath}/.env ]; then sudo chmod 640 {$sharedPath}/.env; fi");
+        $this->runAsOwner("{$this->sudo}chown -R {$this->owner}:{$this->group} {$sharedPath}/storage {$sharedPath}/database 2>/dev/null || true");
+        $this->runAsOwner("{$this->sudo}chmod -R 775 {$sharedPath}/storage 2>/dev/null || true");
+        $this->runAsOwner("if [ -d {$sharedPath}/database ]; then {$this->sudo}chmod -R 775 {$sharedPath}/database; fi");
+        $this->runAsOwner("if [ -f {$sharedPath}/.env ]; then {$this->sudo}chmod {$this->secretFileMode} {$sharedPath}/.env; fi");
     }
 }

@@ -116,4 +116,5 @@ export interface CronJob {
 export interface ProcessSite {
     id: number;
     domain: string;
+    system_user: string;
 }

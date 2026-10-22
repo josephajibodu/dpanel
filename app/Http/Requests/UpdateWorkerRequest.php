@@ -31,7 +31,7 @@ class UpdateWorkerRequest extends FormRequest
                 'integer',
                 Rule::exists('sites', 'id')->where('server_id', $server->id),
             ],
-            'user' => ['required', 'string', 'max:64', new AllowedProcessUser],
+            'user' => ['required', 'string', 'max:64', AllowedProcessUser::forSiteId($server, $this->input('site_id'))],
             'numprocs' => ['required', 'integer', 'min:1', 'max:64'],
             'auto_start' => ['boolean'],
             'auto_restart' => ['boolean'],

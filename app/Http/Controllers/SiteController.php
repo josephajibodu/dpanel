@@ -14,6 +14,7 @@ use App\Http\Resources\ServerDatabaseResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Http\Resources\SourceControlAccountResource;
+use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\Site;
@@ -184,7 +185,11 @@ class SiteController extends Controller
         $site->update($request->validated());
 
         if ($previousPhpVersion !== $site->php_version && $server->isReady()) {
-            SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
+            if ($site->isIsolated()) {
+                MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
+            } else {
+                SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
+            }
         }
 
         return redirect()

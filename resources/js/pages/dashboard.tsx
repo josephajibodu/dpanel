@@ -40,6 +40,17 @@ interface DashboardDeployment {
     created_at: string;
 }
 
+interface DashboardSslAlert {
+    hostname: string;
+    ssl_status: 'expiring_soon' | 'expired';
+    ssl_expires_at: string | null;
+    site: {
+        id: number;
+        domain: string;
+        server_id: number;
+    };
+}
+
 interface Props {
     stats: {
         servers: number;
@@ -48,6 +59,7 @@ interface Props {
         deployments_this_week: number;
         ssl_alerts: number;
     };
+    sslAlerts: DashboardSslAlert[];
     recentServers: {
         data: Server[];
     };
@@ -56,6 +68,7 @@ interface Props {
 
 export default function Dashboard({
     stats,
+    sslAlerts,
     recentServers,
     recentDeployments,
 }: Props) {
@@ -146,6 +159,76 @@ export default function Dashboard({
                                 />
                             </div>
                         </StatGroup>
+
+                        {sslAlerts.length > 0 && (
+                            <div className="space-y-4">
+                                <CardTitle>SSL alerts</CardTitle>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Domain</TableHead>
+                                                <TableHead>Site</TableHead>
+                                                <TableHead>Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {sslAlerts.map((alert) => (
+                                                <TableRow key={alert.hostname}>
+                                                    <TableCell>
+                                                        <p className="font-mono text-sm">
+                                                            {alert.hostname}
+                                                        </p>
+                                                        {alert.ssl_expires_at && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {alert.ssl_status ===
+                                                                'expired'
+                                                                    ? 'Expired '
+                                                                    : 'Expires '}
+                                                                {formatDistanceToNow(
+                                                                    new Date(
+                                                                        alert.ssl_expires_at,
+                                                                    ),
+                                                                    {
+                                                                        addSuffix: true,
+                                                                    },
+                                                                )}
+                                                            </p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Link
+                                                            href={teamPath(
+                                                                `/servers/${alert.site.server_id}/sites/${alert.site.id}/domains`,
+                                                            )}
+                                                            className="font-medium hover:underline"
+                                                        >
+                                                            {alert.site.domain}
+                                                        </Link>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <StatusBadge
+                                                            status={
+                                                                alert.ssl_status ===
+                                                                'expired'
+                                                                    ? 'Expired'
+                                                                    : 'Expiring soon'
+                                                            }
+                                                            color={
+                                                                alert.ssl_status ===
+                                                                'expired'
+                                                                    ? 'red'
+                                                                    : 'orange'
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid gap-6 lg:grid-cols-2">
                             <div className="space-y-4">

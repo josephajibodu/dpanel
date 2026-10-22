@@ -11,12 +11,14 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Cloudflare\CloudflareDnsService;
+use App\Services\SiteUserNameGenerator;
 use Illuminate\Support\Str;
 
 class CreateSiteAction
 {
     public function __construct(
         private CloudflareDnsService $cloudflare,
+        private SiteUserNameGenerator $siteUserNames,
     ) {}
 
     public function execute(Server $server, SiteData $data): Site
@@ -37,6 +39,7 @@ class CreateSiteAction
         $site = $server->sites()->create([
             'domain' => $domain,
             'root_path' => $domain,
+            'system_user' => $data->isolated ? $this->siteUserNames->generate($server, $domain) : null,
             'site_name' => $data->siteName,
             'aliases' => $data->aliases,
             'directory' => $data->directory,

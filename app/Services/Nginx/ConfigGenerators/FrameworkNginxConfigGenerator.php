@@ -32,7 +32,7 @@ class FrameworkNginxConfigGenerator extends BaseNginxConfigGenerator
 
     error_page 404 /index.php;
 
-{$this->getPhpFpmConfig($phpVersion)}
+{$this->getPhpFpmConfig($site, $phpVersion)}
 
 {$this->getHiddenFilesProtection()}
 NGINX;

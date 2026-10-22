@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Site extends Model
 {
+    use EscapesShell;
+
     /** @use HasFactory<\Database\Factories\SiteFactory> */
     use HasFactory, HasUlids;
 
@@ -25,6 +28,7 @@ class Site extends Model
         'source_control_account_id',
         'domain',
         'root_path',
+        'system_user',
         'site_name',
         'aliases',
         'directory',
@@ -81,14 +85,55 @@ class Site extends Model
     }
 
     /**
+     * Whether this site runs as its own Linux user. Sites created before
+     * isolation existed (or with it turned off) have no user of their own
+     * and run as the server user.
+     */
+    public function isIsolated(): bool
+    {
+        return $this->system_user !== null;
+    }
+
+    /**
+     * The Linux user that owns this site's files and runs its PHP, deploys,
+     * workers and cron jobs.
+     */
+    public function systemUser(): string
+    {
+        return $this->system_user ?? config('server.user');
+    }
+
+    /**
+     * Wrap a shell command so it runs as this site's own user. FlitOps
+     * connects as the server user, so isolated sites need the switch;
+     * other sites already run as the server user and get the command back
+     * unchanged.
+     */
+    public function commandAsSystemUser(string $command): string
+    {
+        if (! $this->isIsolated()) {
+            return $command;
+        }
+
+        return 'sudo -u '.$this->escapeForShell($this->system_user).' -H bash -c '.$this->escapeForShell($command);
+    }
+
+    /**
+     * The PHP-FPM socket nginx hands this site's PHP requests to.
+     */
+    public function phpFpmSocket(string $phpVersion): string
+    {
+        return "/run/php/php{$phpVersion}-fpm-{$this->systemUser()}.sock";
+    }
+
+    /**
      * Get the root path for this site on the server.
      */
     public function rootPath(): string
     {
-        $serverUser = config('server.user');
         $segment = $this->root_path ?? $this->domain;
 
-        return "/home/{$serverUser}/{$segment}";
+        return "/home/{$this->systemUser()}/{$segment}";
     }
 
     /**

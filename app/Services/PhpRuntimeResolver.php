@@ -13,7 +13,12 @@ class PhpRuntimeResolver
      */
     public function forSite(Site $site): array
     {
-        return $this->forVersion($site->php_version ?? '8.4');
+        $version = $site->php_version ?? '8.4';
+
+        return [
+            ...$this->forVersion($version),
+            'fpm_socket' => $site->phpFpmSocket($version),
+        ];
     }
 
     /**

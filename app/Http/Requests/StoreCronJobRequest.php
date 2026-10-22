@@ -31,7 +31,7 @@ class StoreCronJobRequest extends FormRequest
                 'integer',
                 Rule::exists('sites', 'id')->where('server_id', $server->id),
             ],
-            'user' => ['required', 'string', 'max:64', new AllowedProcessUser],
+            'user' => ['required', 'string', 'max:64', AllowedProcessUser::forSiteId($server, $this->input('site_id'))],
             'frequency' => ['required', 'string', 'max:128', new NoControlCharacters, new ValidCronExpression],
         ];
     }

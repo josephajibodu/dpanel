@@ -95,7 +95,7 @@ class RunSqliteBackup
 
                 $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
                 $this->prepareWorkDir($connection, $workDir);
-                $this->streamSnapshotToStorage($connection, $site->sqliteDatabasePath(), $workDir, $awsCredentials, $driver, $s3Uri);
+                $this->streamSnapshotToStorage($connection, $site, $workDir, $awsCredentials, $driver, $s3Uri);
 
                 $this->updateStatus($backup, 'verifying');
                 $this->verifyBackup($connection, $workDir, $awsCredentials, $driver, $s3Uri);
@@ -157,22 +157,39 @@ class RunSqliteBackup
      */
     private function streamSnapshotToStorage(
         SshConnection $connection,
-        string $sqlitePath,
+        Site $site,
         string $workDir,
         string $awsCredentials,
         StorageProviderContract $driver,
         string $s3Uri,
     ): void {
+        $sqlitePath = $site->sqliteDatabasePath();
         $sourceEsc = $this->escapeForShell($sqlitePath);
         $snapshotEsc = $this->escapeForShell("{$workDir}/snapshot.sqlite");
+        $missing = "test -f {$sourceEsc} || { echo \"SQLite database not found at {$sqlitePath}\" >&2; exit 1; }; ";
+        $upload = $awsCredentials.' aws s3 cp - '.$this->escapeForShell($s3Uri).' '.$driver->awsCliArgs();
 
-        $inner = 'set -o pipefail; '.
-            "test -f {$sourceEsc} || { echo \"SQLite database not found at {$sqlitePath}\" >&2; exit 1; }; ".
-            'php -r '.$this->escapeForShell(self::SNAPSHOT_SCRIPT)." {$sourceEsc} {$snapshotEsc} && ".
-            "gzip -c {$snapshotEsc} | ".$awsCredentials.
-            ' aws s3 cp - '.$this->escapeForShell($s3Uri).' '.$driver->awsCliArgs();
+        $inner = $site->isIsolated()
+            ? 'set -o pipefail; '.$site->commandAsSystemUser($this->isolatedSnapshotCommand($missing, $sourceEsc)).' | '.$upload
+            : 'set -o pipefail; '.$missing.
+                'php -r '.$this->escapeForShell(self::SNAPSHOT_SCRIPT)." {$sourceEsc} {$snapshotEsc} && ".
+                "gzip -c {$snapshotEsc} | ".$upload;
 
         $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
+    }
+
+    /**
+     * An isolated site's database is only readable by the site's own user,
+     * so that user takes the snapshot in a temporary directory of its own
+     * and streams it out compressed. The server user does the upload, so the
+     * storage credentials never reach the site's user.
+     */
+    private function isolatedSnapshotCommand(string $missing, string $sourceEsc): string
+    {
+        return $missing.
+            'snapshot_dir=$(mktemp -d) || exit 1; '.
+            'php -r '.$this->escapeForShell(self::SNAPSHOT_SCRIPT)." {$sourceEsc} \"\$snapshot_dir/snapshot.sqlite\" && ".
+            'gzip -c "$snapshot_dir/snapshot.sqlite"; status=$?; rm -rf "$snapshot_dir"; exit $status';
     }
 
     /**

@@ -26,6 +26,7 @@ readonly class SiteData
         public ?string $packageManager = null,
         public ?string $buildCommand = null,
         public bool $autoDeploy = false,
+        public bool $isolated = true,
     ) {}
 
     /**
@@ -53,6 +54,7 @@ readonly class SiteData
             packageManager: $data['package_manager'] ?? null,
             buildCommand: $data['build_command'] ?? null,
             autoDeploy: $data['auto_deploy'] ?? false,
+            isolated: $data['isolated'] ?? true,
         );
     }
 
@@ -77,6 +79,7 @@ readonly class SiteData
             'package_manager' => $this->packageManager,
             'build_command' => $this->buildCommand,
             'auto_deploy' => $this->autoDeploy,
+            'isolated' => $this->isolated,
         ];
     }
 }

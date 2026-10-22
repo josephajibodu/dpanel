@@ -2,11 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
 use App\Exceptions\DeploymentFailedException;
 use App\Jobs\Concerns\ManagesDeploymentLifecycle;
 use App\Models\Deployment;
+use App\Models\Site;
 use App\Services\Deployment\DeploymentStrategy;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  */
 class RollbackSiteJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, ManagesDeploymentLifecycle, Queueable, SerializesModels;
+    use Dispatchable, EscapesShell, InteractsWithQueue, ManagesDeploymentLifecycle, Queueable, SerializesModels;
 
     public int $tries = 1;
 
@@ -65,17 +68,25 @@ class RollbackSiteJob implements ShouldQueue
             $connection = $sshService->connect($site->server);
 
             try {
-                if (! $connection->directoryExists($releasePath)) {
+                if (! $this->releaseExists($connection, $site, $releasePath)) {
                     throw new DeploymentFailedException(
                         "Release {$this->deployment->releaseFolderName()} no longer exists on the server (it may have been pruned) — cannot roll back to it."
                     );
                 }
 
                 $this->logOutput("Rolling back to release {$this->deployment->releaseFolderName()}...", 'info');
+                $preamble = "set -e\n".$this->scriptPreamble($site, $releasePath);
+
                 $connection->exec(
-                    "set -e\n".$this->scriptPreamble($site, $releasePath).$strategy->activate($site),
+                    $site->commandAsSystemUser($preamble.$strategy->activate($site)),
                     timeout: $this->timeout,
                 );
+
+                // An isolated site's user can't use sudo, so its activation
+                // leaves the PHP-FPM reload to the server user.
+                if ($site->isIsolated()) {
+                    $connection->exec($preamble.$strategy->reloadPhpFpm($site), 60);
+                }
                 $this->logOutput('Rollback complete.', 'info');
             } finally {
                 $connection->disconnect();
@@ -99,5 +110,20 @@ class RollbackSiteJob implements ShouldQueue
             $this->markDeploymentFailed($site);
             throw $e;
         }
+    }
+
+    /**
+     * An isolated site's home is closed to the server user, so the check
+     * runs as the site's own user there.
+     */
+    private function releaseExists(SshConnection $connection, Site $site, string $releasePath): bool
+    {
+        if (! $site->isIsolated()) {
+            return $connection->directoryExists($releasePath);
+        }
+
+        $answer = $connection->exec($site->commandAsSystemUser('test -d '.$this->escapeForShell($releasePath).' && echo yes || true'));
+
+        return trim($answer) === 'yes';
     }
 }

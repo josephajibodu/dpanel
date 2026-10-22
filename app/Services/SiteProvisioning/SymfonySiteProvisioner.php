@@ -18,10 +18,10 @@ class SymfonySiteProvisioner extends BaseSiteProvisioner
         // No real code exists yet at provisioning time (see createBootstrapRelease()),
         // so both files start empty — the app's env-var management UI (SyncEnvironmentJob)
         // fills in .env; .env.local persists whatever the app itself writes to it.
-        $this->connection->exec("touch {$sharedPath}/.env {$sharedPath}/.env.local");
+        $this->runAsOwner("touch {$sharedPath}/.env {$sharedPath}/.env.local");
 
-        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env.local && sudo chmod 640 {$sharedPath}/.env.local");
-        $this->connection->exec("sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
+        $this->runAsOwner("{$this->sudo}chown {$this->owner}:{$this->group} {$sharedPath}/.env.local && {$this->sudo}chmod {$this->secretFileMode} {$sharedPath}/.env.local");
+        $this->runAsOwner("{$this->sudo}chown {$this->owner}:{$this->group} {$sharedPath}/.env && {$this->sudo}chmod {$this->secretFileMode} {$sharedPath}/.env");
     }
 
     protected function setPermissions(): void
@@ -30,8 +30,8 @@ class SymfonySiteProvisioner extends BaseSiteProvisioner
 
         $sharedPath = $this->site->sharedPath();
 
-        $this->connection->exec("mkdir -p {$sharedPath}/var/cache {$sharedPath}/var/log");
-        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$sharedPath}/var/cache {$sharedPath}/var/log");
-        $this->connection->exec("sudo chmod -R 775 {$sharedPath}/var/cache {$sharedPath}/var/log");
+        $this->runAsOwner("mkdir -p {$sharedPath}/var/cache {$sharedPath}/var/log");
+        $this->runAsOwner("{$this->sudo}chown -R {$this->owner}:{$this->group} {$sharedPath}/var/cache {$sharedPath}/var/log");
+        $this->runAsOwner("{$this->sudo}chmod -R 775 {$sharedPath}/var/cache {$sharedPath}/var/log");
     }
 }

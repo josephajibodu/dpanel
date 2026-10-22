@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Actions\Database\EscapesShell;
+use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Enums\DeploymentStatus;
 use App\Exceptions\DeploymentFailedException;
 use App\Jobs\Concerns\ManagesDeploymentLifecycle;
@@ -9,6 +11,7 @@ use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Deployment\ReleaseManager;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +24,7 @@ use Illuminate\Support\Str;
 
 class DeploySiteJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, ManagesDeploymentLifecycle, Queueable, SerializesModels;
+    use Dispatchable, EscapesShell, InteractsWithQueue, KeepsSecretsOffCommandLine, ManagesDeploymentLifecycle, Queueable, SerializesModels;
 
     public int $tries = 1;
 
@@ -70,22 +73,13 @@ class DeploySiteJob implements ShouldQueue
             } else {
                 $releasePath = $site->releasesPath().'/'.$this->deployment->releaseFolderName();
                 $script = $site->deployScript?->script ?? $this->getDefaultScript($site);
-                $scriptPath = $this->prepareScript($connection, $script, $site, $releasePath);
 
-                try {
-                    $this->logOutput('Starting deployment script...', 'info');
-                    $exitCode = $connection->execWithOutput(
-                        $scriptPath,
-                        fn (string $line) => $this->logOutput($line, 'output'),
-                        $this->timeout
-                    );
-                    $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
-                } finally {
-                    $this->cleanupScript($connection, $scriptPath);
-                }
+                $exitCode = $site->isIsolated()
+                    ? $this->deployIsolatedSite($connection, $script, $site, $releasePath)
+                    : $this->deploySite($connection, $script, $site, $releasePath);
 
                 if ($exitCode === 0) {
-                    $commitInfo = $this->getCommitInfo($connection, $releasePath);
+                    $commitInfo = $this->getCommitInfo($connection, $site, $releasePath);
 
                     if ($commitInfo) {
                         $this->deployment->update([
@@ -132,21 +126,101 @@ class DeploySiteJob implements ShouldQueue
     }
 
     /**
+     * Run the deploy script as the server user, which owns sites that
+     * aren't isolated.
+     */
+    private function deploySite(SshConnection $connection, string $script, Site $site, string $releasePath): int
+    {
+        $scriptPath = $this->prepareScript($connection, $script, $site, $releasePath);
+
+        try {
+            $this->logOutput('Starting deployment script...', 'info');
+            $exitCode = $connection->execWithOutput(
+                $scriptPath,
+                fn (string $line) => $this->logOutput($line, 'output'),
+                $this->timeout
+            );
+            $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
+        } finally {
+            $this->cleanupScript($connection, $scriptPath);
+        }
+
+        return $exitCode;
+    }
+
+    /**
+     * Deploy an isolated site in three parts: FlitOps clones the code as the
+     * server user (so the site's user never holds a git key), the deploy
+     * script runs as the site's user, then FlitOps reloads PHP-FPM, which
+     * needs sudo the site's user doesn't have.
+     *
+     * The script reaches the site's user through a pipe from a private
+     * directory, never a shared /tmp path, and the user saves it to a temp
+     * file of its own before running it.
+     */
+    private function deployIsolatedSite(SshConnection $connection, string $script, Site $site, string $releasePath): int
+    {
+        $strategy = app(DeploymentStrategy::class);
+        $preamble = "set -e\n".$this->scriptPreamble($site, $releasePath);
+
+        $this->logOutput('Cloning repository...', 'info');
+        $exitCode = $connection->execWithOutput(
+            $preamble.$strategy->cloneForIsolatedSite($site),
+            fn (string $line) => $this->logOutput($line, 'output'),
+            $this->timeout
+        );
+
+        if ($exitCode !== 0) {
+            $this->logOutput('Cloning the repository exited with code '.$exitCode, 'info');
+
+            return $exitCode;
+        }
+
+        $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $script, $site, $releasePath, &$exitCode): void {
+            $scriptPath = "{$directory}/deploy.sh";
+            $connection->upload("#!/bin/bash\nset -e\n\n".$this->buildScript($script, $site, $releasePath), $scriptPath);
+
+            $runAsSiteUser = $site->commandAsSystemUser(
+                'script=$(mktemp) && cat > "$script" && { bash "$script"; status=$?; rm -f "$script"; exit $status; }'
+            );
+
+            $this->logOutput('Starting deployment script...', 'info');
+            $exitCode = $connection->execWithOutput(
+                'cat '.$this->escapeForShell($scriptPath).' | '.$runAsSiteUser,
+                fn (string $line) => $this->logOutput($line, 'output'),
+                $this->timeout
+            );
+            $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
+        });
+
+        if ($exitCode === 0) {
+            $this->logOutput('Restarting FPM...', 'output');
+            $connection->exec($preamble.$strategy->reloadPhpFpm($site), 60);
+        }
+
+        return $exitCode;
+    }
+
+    /**
      * Get commit information from the release the deploy script just built.
      *
      * @return array<string, string>|null
      */
-    private function getCommitInfo($connection, string $releasePath): ?array
+    private function getCommitInfo($connection, Site $site, string $releasePath): ?array
     {
         try {
-            if (! $connection->directoryExists("{$releasePath}/.git")) {
+            $hasGitDirectory = $site->isIsolated()
+                ? trim($connection->exec($site->commandAsSystemUser("test -d {$releasePath}/.git && echo yes || true"), 10)) === 'yes'
+                : $connection->directoryExists("{$releasePath}/.git");
+
+            if (! $hasGitDirectory) {
                 return null;
             }
 
             $commitHash = '';
 
             try {
-                $output = $connection->exec("cd {$releasePath} && git rev-parse HEAD 2>/dev/null", 10);
+                $output = $connection->exec($site->commandAsSystemUser("cd {$releasePath} && git rev-parse HEAD 2>/dev/null"), 10);
                 $commitHash = trim($output);
             } catch (\Throwable $e) {
                 // Git command failed, skip commit info
@@ -161,14 +235,14 @@ class DeploySiteJob implements ShouldQueue
             $commitAuthor = '';
 
             try {
-                $output = $connection->exec("cd {$releasePath} && git log -1 --format='%s' 2>/dev/null", 10);
+                $output = $connection->exec($site->commandAsSystemUser("cd {$releasePath} && git log -1 --format='%s' 2>/dev/null"), 10);
                 $commitMessage = trim($output);
             } catch (\Throwable $e) {
                 // Ignore - message is optional
             }
 
             try {
-                $output = $connection->exec("cd {$releasePath} && git log -1 --format='%an' 2>/dev/null", 10);
+                $output = $connection->exec($site->commandAsSystemUser("cd {$releasePath} && git log -1 --format='%an' 2>/dev/null"), 10);
                 $commitAuthor = trim($output);
             } catch (\Throwable $e) {
                 // Ignore - author is optional
@@ -196,6 +270,26 @@ class DeploySiteJob implements ShouldQueue
      */
     private function prepareScript($connection, string $script, Site $site, string $releasePath): string
     {
+        $prepared = $this->buildScript($script, $site, $releasePath);
+
+        $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
+
+        // Self-delete on the first line so the temp file is gone the moment the
+        // script starts running, regardless of how the run later terminates.
+        $contents = "#!/bin/bash\nset -e\nrm -f '{$scriptPath}'\n\n{$prepared}";
+
+        $connection->upload($contents, $scriptPath);
+        $connection->exec("chmod +x '{$scriptPath}'");
+
+        return $scriptPath;
+    }
+
+    /**
+     * Substitute the placeholder variables and wrap the editable script in
+     * the preamble and the deployment strategy's fragments.
+     */
+    private function buildScript(string $script, Site $site, string $releasePath): string
+    {
         $phpVersion = $site->php_version ?? '8.4';
 
         // Replace placeholder variables in script ({{SITE_PATH}}, {{BRANCH}}, etc.)
@@ -215,18 +309,8 @@ class DeploySiteJob implements ShouldQueue
 
         $strategy = app(DeploymentStrategy::class);
         $userScript = str_replace(array_keys($replacements), array_values($replacements), $script);
-        $prepared = $this->scriptPreamble($site, $releasePath).$strategy->prepend($site).$userScript.$strategy->append($site);
 
-        $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
-
-        // Self-delete on the first line so the temp file is gone the moment the
-        // script starts running, regardless of how the run later terminates.
-        $contents = "#!/bin/bash\nset -e\nrm -f '{$scriptPath}'\n\n{$prepared}";
-
-        $connection->upload($contents, $scriptPath);
-        $connection->exec("chmod +x '{$scriptPath}'");
-
-        return $scriptPath;
+        return $this->scriptPreamble($site, $releasePath).$strategy->prepend($site).$userScript.$strategy->append($site);
     }
 
     /**

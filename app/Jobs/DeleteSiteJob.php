@@ -9,6 +9,7 @@ use App\Models\CronJob;
 use App\Models\Site;
 use App\Models\Worker;
 use App\Services\Nginx\NginxConfigService;
+use App\Services\SiteProvisioning\SiteIsolationService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,6 +29,12 @@ class DeleteSiteJob implements ShouldQueue
     protected string $domain;
 
     protected string $siteRoot;
+
+    protected ?string $systemUser;
+
+    protected string $siteUlid;
+
+    protected string $phpVersion;
 
     protected int $serverId;
 
@@ -67,6 +74,9 @@ class DeleteSiteJob implements ShouldQueue
         $site->loadMissing('domains');
         $this->domain = $site->domain;
         $this->siteRoot = $site->rootPath();
+        $this->systemUser = $site->system_user;
+        $this->siteUlid = $site->ulid;
+        $this->phpVersion = $site->php_version ?? '8.4';
         $this->serverId = $site->server_id;
         $this->siteId = $site->id;
         $this->repository = $site->repository;
@@ -172,8 +182,18 @@ class DeleteSiteJob implements ShouldQueue
 
             $connection->exec('sudo systemctl reload nginx');
 
+            // An isolated site's files live in its user's home, so deleting the
+            // user (after its PHP-FPM pool, which would otherwise stop PHP-FPM
+            // from starting) removes them too.
+            if ($this->systemUser !== null) {
+                $isolation = app(SiteIsolationService::class);
+                $isolation->removePool($connection, $this->systemUser, $this->phpVersion);
+                $isolation->deleteUser($connection, $this->systemUser, $this->siteUlid);
+                Log::info("Removed site user {$this->systemUser} and its home directory");
+            }
+
             $serverUser = config('server.user');
-            if ($this->siteRoot && str_starts_with($this->siteRoot, "/home/{$serverUser}/")) {
+            if ($this->systemUser === null && $this->siteRoot && str_starts_with($this->siteRoot, "/home/{$serverUser}/")) {
                 $connection->exec("rm -rf {$this->siteRoot}");
                 Log::info("Removed site directory: {$this->siteRoot}");
             }
