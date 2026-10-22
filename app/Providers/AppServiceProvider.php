@@ -9,6 +9,7 @@ use App\Services\Deployment\ZeroDowntimeDeploymentStrategy;
 use App\Services\Providers\ProviderManager;
 use App\Services\Storage\StorageProviderManager;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Support\Facades\Date;
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDevCommands();
         $this->configureHttpClientLogging();
 
         Route::bind('site_domain', function (string $value, \Illuminate\Routing\Route $route) {
@@ -71,6 +73,14 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+    }
+
+    /**
+     * Add the scheduler to the processes started by `php artisan dev`.
+     */
+    protected function configureDevCommands(): void
+    {
+        DevCommands::artisan('schedule:work', 'schedule');
     }
 
     protected function configureHttpClientLogging(): void
