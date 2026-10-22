@@ -1,36 +1,52 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { Loader2, Trash2, UserMinus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { destroy as cancelInvitation, store as storeInvitation } from '@/actions/App/Http/Controllers/TeamInvitationController';
+import { destroy as removeMember, update as updateMemberRole } from '@/actions/App/Http/Controllers/TeamMemberController';
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { type BreadcrumbItem, type SharedData, type Team, type TeamInvitation, type TeamMember } from '@/types';
+import { type BreadcrumbItem, type Team, type TeamInvitation, type TeamMember, type TeamRoleKey } from '@/types';
+
+type ManagedMember = TeamMember & { can_change_role: boolean; can_remove: boolean };
+
+type ManagedInvitation = TeamInvitation & { can_cancel: boolean };
+
+interface AssignableRole {
+    key: TeamRoleKey;
+    label: string;
+}
 
 interface Props {
     team: Team;
-    members: TeamMember[];
-    invitations: TeamInvitation[];
+    members: ManagedMember[];
+    invitations: ManagedInvitation[];
+    assignableRoles: AssignableRole[];
+    can: {
+        updateTeam: boolean;
+        deleteTeam: boolean;
+        inviteMembers: boolean;
+    };
 }
 
-export default function TeamSettings({ team, members, invitations }: Props) {
-    const { auth } = usePage<SharedData>().props;
-
-    const isOwner = auth.user.id === team.user_id;
-
+export default function TeamSettings({ team, members, invitations, assignableRoles, can }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Team settings', href: '/settings/team' },
     ];
 
-    const removeMember = (userId: number) => {
-        router.delete(`/teams/${team.slug}/members/${userId}`, {
-            preserveScroll: true,
-        });
+    const changeRole = (userId: number, role: TeamRoleKey) => {
+        router.patch(updateMemberRole.url({ team: team.slug, user: userId }), { role }, { preserveScroll: true });
+    };
+
+    const remove = (userId: number) => {
+        router.delete(removeMember.url({ team: team.slug, user: userId }), { preserveScroll: true });
     };
 
     return (
@@ -40,7 +56,7 @@ export default function TeamSettings({ team, members, invitations }: Props) {
             <h1 className="sr-only">Team Settings</h1>
 
             <SettingsLayout>
-                {isOwner && (
+                {can.updateTeam && (
                     <TeamNameForm team={team} />
                 )}
 
@@ -61,14 +77,32 @@ export default function TeamSettings({ team, members, invitations }: Props) {
                                     <p className="text-muted-foreground text-xs">{member.email}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-muted-foreground rounded bg-neutral-100 px-2 py-0.5 text-xs capitalize dark:bg-neutral-800">
-                                        {member.role}
-                                    </span>
-                                    {isOwner && member.id !== auth.user.id && (
+                                    {member.can_change_role ? (
+                                        <Select
+                                            value={member.role}
+                                            onValueChange={(role) => changeRole(member.id, role as TeamRoleKey)}
+                                        >
+                                            <SelectTrigger className="h-8 w-32" aria-label={`Role for ${member.name}`}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {assignableRoles.map((role) => (
+                                                    <SelectItem key={role.key} value={role.key}>
+                                                        {role.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <span className="text-muted-foreground rounded bg-neutral-100 px-2 py-0.5 text-xs capitalize dark:bg-neutral-800">
+                                            {member.role}
+                                        </span>
+                                    )}
+                                    {member.can_remove && (
                                         <Button
                                             size="sm"
                                             variant="ghost"
-                                            onClick={() => removeMember(member.id)}
+                                            onClick={() => remove(member.id)}
                                             className="text-destructive hover:text-destructive size-8 p-0"
                                         >
                                             <UserMinus className="size-4" />
@@ -81,11 +115,11 @@ export default function TeamSettings({ team, members, invitations }: Props) {
                     </ul>
                 </div>
 
-                {isOwner && (
-                    <InviteMemberForm team={team} invitations={invitations} />
+                {can.inviteMembers && (
+                    <InviteMemberForm team={team} invitations={invitations} assignableRoles={assignableRoles} />
                 )}
 
-                {isOwner && !team.personal_team && (
+                {can.deleteTeam && (
                     <div className="space-y-6">
                         <HeadingSmall
                             title="Delete team"
@@ -243,8 +277,21 @@ function TeamNameForm({ team }: { team: Team }) {
     );
 }
 
-function InviteMemberForm({ team, invitations }: { team: Team; invitations: TeamInvitation[] }) {
-    const [inviteEmail, setInviteEmail] = useState('');
+function InviteMemberForm({
+    team,
+    invitations,
+    assignableRoles,
+}: {
+    team: Team;
+    invitations: ManagedInvitation[];
+    assignableRoles: AssignableRole[];
+}) {
+    const defaultRole = assignableRoles.some((role) => role.key === 'developer') ? 'developer' : (assignableRoles[0]?.key ?? '');
+
+    const { data, setData, post, processing, errors, reset } = useForm<{ email: string; role: string }>({
+        email: '',
+        role: defaultRole,
+    });
 
     return (
         <div className="space-y-6">
@@ -256,11 +303,10 @@ function InviteMemberForm({ team, invitations }: { team: Team; invitations: Team
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-                    router.post(
-                        `/teams/${team.slug}/invitations`,
-                        { email: inviteEmail, role: 'member' },
-                        { preserveScroll: true, onSuccess: () => setInviteEmail('') },
-                    );
+                    post(storeInvitation.url(team.slug), {
+                        preserveScroll: true,
+                        onSuccess: () => reset('email'),
+                    });
                 }}
                 className="space-y-4"
             >
@@ -270,14 +316,32 @@ function InviteMemberForm({ team, invitations }: { team: Team; invitations: Team
                         id="email"
                         name="email"
                         type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
                         placeholder="colleague@example.com"
                         required
                     />
+                    <InputError message={errors.email} />
                 </div>
 
-                <Button type="submit">Send invitation</Button>
+                <div className="grid gap-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select value={data.role} onValueChange={(role) => setData('role', role)}>
+                        <SelectTrigger id="role">
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {assignableRoles.map((role) => (
+                                <SelectItem key={role.key} value={role.key}>
+                                    {role.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.role} />
+                </div>
+
+                <Button type="submit" disabled={processing}>Send invitation</Button>
             </form>
 
             {invitations.length > 0 && (
@@ -297,19 +361,21 @@ function InviteMemberForm({ team, invitations }: { team: Team; invitations: Team
                                         {inv.role} · Pending
                                     </p>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() =>
-                                        router.delete(`/teams/${team.slug}/invitations/${inv.id}`, {
-                                            preserveScroll: true,
-                                        })
-                                    }
-                                    className="size-8 p-0"
-                                >
-                                    <X className="size-4" />
-                                    <span className="sr-only">Cancel</span>
-                                </Button>
+                                {inv.can_cancel && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                            router.delete(cancelInvitation.url({ team: team.slug, invitation: inv.id }), {
+                                                preserveScroll: true,
+                                            })
+                                        }
+                                        className="size-8 p-0"
+                                    >
+                                        <X className="size-4" />
+                                        <span className="sr-only">Cancel</span>
+                                    </Button>
+                                )}
                             </li>
                         ))}
                     </ul>

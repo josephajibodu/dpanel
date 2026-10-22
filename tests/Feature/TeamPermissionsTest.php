@@ -14,11 +14,18 @@ use Illuminate\Support\Facades\DB;
  */
 const DENIED_PERMISSIONS = [
     'owner' => [],
-    'admin' => [],
+    'admin' => [
+        TeamPermission::ManageOwners,
+        TeamPermission::DeleteTeam,
+    ],
     'developer' => [
         TeamPermission::RestoreBackups,
         TeamPermission::ManageServers,
         TeamPermission::ManageProviders,
+        TeamPermission::ManageMembers,
+        TeamPermission::ManageTeamSettings,
+        TeamPermission::ManageOwners,
+        TeamPermission::DeleteTeam,
     ],
     'viewer' => [
         TeamPermission::Deploy,
@@ -33,6 +40,10 @@ const DENIED_PERMISSIONS = [
         TeamPermission::RestoreBackups,
         TeamPermission::ManageServers,
         TeamPermission::ManageProviders,
+        TeamPermission::ManageMembers,
+        TeamPermission::ManageTeamSettings,
+        TeamPermission::ManageOwners,
+        TeamPermission::DeleteTeam,
     ],
 ];
 

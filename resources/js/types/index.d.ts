@@ -2,7 +2,7 @@ import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
 import { Team } from './team';
 
-export type { Team, TeamMember, TeamInvitation } from './team';
+export type { Team, TeamMember, TeamInvitation, TeamRoleKey } from './team';
 
 export interface Auth {
     user: User;

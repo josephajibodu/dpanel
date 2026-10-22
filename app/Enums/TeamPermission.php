@@ -24,5 +24,20 @@ enum TeamPermission: string
     case RestoreBackups = 'restore_backups';
     case ManageServers = 'manage_servers';
     case ManageProviders = 'manage_providers';
+    case ManageMembers = 'manage_members';
+    case ManageTeamSettings = 'manage_team_settings';
+    case ManageOwners = 'manage_owners';
+    case DeleteTeam = 'delete_team';
 
+    /**
+     * Permissions only an Owner holds. A role that grants ManageOwners counts
+     * as owner-level: only someone who also holds it may grant that role or
+     * change, remove or cancel the invitation of anyone holding it.
+     *
+     * @return list<self>
+     */
+    public static function ownerOnly(): array
+    {
+        return [self::ManageOwners, self::DeleteTeam];
+    }
 }

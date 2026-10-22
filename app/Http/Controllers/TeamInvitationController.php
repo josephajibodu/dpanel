@@ -45,7 +45,7 @@ class TeamInvitationController extends Controller
 
     public function destroy(Team $team, TeamInvitation $invitation): RedirectResponse
     {
-        $this->authorize('update', $team);
+        $this->authorize('cancelInvitation', [$team, $invitation]);
 
         $invitation->delete();
 

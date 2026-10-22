@@ -13,7 +13,7 @@ class UpdateTeamNameRequest extends FormRequest
         /** @var Team $team */
         $team = $this->route('team');
 
-        return $this->user()->ownsTeam($team);
+        return $this->user()->can('update', $team);
     }
 
     /** @return array<string, mixed> */

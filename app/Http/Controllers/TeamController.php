@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Actions\Teams\CreateTeam;
 use App\Actions\Teams\DeleteTeam;
 use App\Actions\Teams\UpdateTeamName;
+use App\Enums\TeamRoleKey;
 use App\Http\Requests\StoreTeamRequest;
 use App\Http\Requests\UpdateTeamNameRequest;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Models\TeamRole;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,6 +45,8 @@ class TeamController extends Controller
     {
         $team->load(['owner', 'users', 'invitations.teamRole']);
 
+        $user = auth()->user();
+
         $roles = TeamRole::query()
             ->whereKey($team->users->pluck('pivot.team_role_id')->unique())
             ->get()
@@ -49,13 +54,27 @@ class TeamController extends Controller
 
         return Inertia::render('settings/team', [
             'team' => $team,
-            'members' => $team->users->map(fn ($u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'role' => $roles->get($u->pivot->team_role_id)?->key,
+            'members' => $team->users->map(fn (User $member) => [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $roles->get($member->pivot->team_role_id)?->key,
+                'can_change_role' => $user->can('changeRole', [$team, $member]),
+                'can_remove' => $user->can('removeMember', [$team, $member]),
             ]),
-            'invitations' => $team->invitations,
+            'invitations' => $team->invitations->map(fn (TeamInvitation $invitation) => [
+                ...$invitation->toArray(),
+                'can_cancel' => $user->can('cancelInvitation', [$team, $invitation]),
+            ]),
+            'assignableRoles' => collect(TeamRoleKey::cases())
+                ->filter(fn (TeamRoleKey $roleKey): bool => $user->can('inviteMember', [$team, TeamRole::builtIn($roleKey)]))
+                ->map(fn (TeamRoleKey $roleKey): array => ['key' => $roleKey->value, 'label' => $roleKey->label()])
+                ->values(),
+            'can' => [
+                'updateTeam' => $user->can('update', $team),
+                'deleteTeam' => $user->can('delete', $team),
+                'inviteMembers' => $user->can('inviteMember', $team),
+            ],
         ]);
     }
 

@@ -30,16 +30,29 @@ enum TeamRoleKey: string
     public function permissions(): array
     {
         return match ($this) {
-            self::Owner, self::Admin => TeamPermission::cases(),
-            self::Developer => array_values(array_filter(
-                TeamPermission::cases(),
-                fn (TeamPermission $permission): bool => ! in_array($permission, [
-                    TeamPermission::RestoreBackups,
-                    TeamPermission::ManageServers,
-                    TeamPermission::ManageProviders,
-                ], true),
-            )),
+            self::Owner => TeamPermission::cases(),
+            self::Admin => self::allExcept(TeamPermission::ownerOnly()),
+            self::Developer => self::allExcept([
+                ...TeamPermission::ownerOnly(),
+                TeamPermission::RestoreBackups,
+                TeamPermission::ManageServers,
+                TeamPermission::ManageProviders,
+                TeamPermission::ManageMembers,
+                TeamPermission::ManageTeamSettings,
+            ]),
             self::Viewer => [TeamPermission::View],
         };
+    }
+
+    /**
+     * @param  list<TeamPermission>  $excluded
+     * @return list<TeamPermission>
+     */
+    private static function allExcept(array $excluded): array
+    {
+        return array_values(array_filter(
+            TeamPermission::cases(),
+            fn (TeamPermission $permission): bool => ! in_array($permission, $excluded, true),
+        ));
     }
 }

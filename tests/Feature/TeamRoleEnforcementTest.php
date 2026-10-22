@@ -150,11 +150,11 @@ describe('viewer', function () {
 });
 
 describe('invitations', function () {
-    it('invites a member as a Developer who keeps that role after accepting', function () {
+    it('invites a Developer who keeps that role after accepting', function () {
         Notification::fake();
 
         $this->actingAs($this->owner)
-            ->post("/teams/{$this->team->slug}/invitations", ['email' => 'new@example.com', 'role' => 'member'])
+            ->post("/teams/{$this->team->slug}/invitations", ['email' => 'new@example.com', 'role' => 'developer'])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -187,7 +187,7 @@ describe('invitations', function () {
     it('shows each member role and invited role on the team settings page', function () {
         Notification::fake();
         $this->actingAs($this->owner)
-            ->post("/teams/{$this->team->slug}/invitations", ['email' => 'new@example.com', 'role' => 'member']);
+            ->post("/teams/{$this->team->slug}/invitations", ['email' => 'new@example.com', 'role' => 'developer']);
 
         $this->actingAs($this->owner)
             ->get("/teams/{$this->team->slug}/settings")
@@ -198,13 +198,5 @@ describe('invitations', function () {
                     $this->viewer->id => 'viewer',
                 ])
                 ->where('invitations.0.role', 'developer'));
-    });
-
-    it('still lets only the team creator invite people', function () {
-        $admin = User::factory()->adminOf($this->team)->create();
-
-        $this->actingAs($admin)
-            ->post("/teams/{$this->team->slug}/invitations", ['email' => 'new@example.com', 'role' => 'member'])
-            ->assertForbidden();
     });
 });
