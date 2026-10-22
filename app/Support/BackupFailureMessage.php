@@ -46,7 +46,7 @@ class BackupFailureMessage
         $storage = $provider?->type->label() ?? 'The storage provider';
 
         return match (true) {
-            (bool) preg_match('/An error occurred \((Unauthorized|AccessDenied|InvalidAccessKeyId|SignatureDoesNotMatch|Forbidden|403)\)/', $output) => "{$storage} rejected the access key. Check that the key on the \"{$provider?->name}\" storage provider is valid and has read and write access to its bucket.",
+            (bool) preg_match('/An error occurred \((Unauthorized|AccessDenied|InvalidAccessKeyId|SignatureDoesNotMatch|Forbidden|403)\)/', $output) => "{$storage} didn't accept the access key on the \"{$provider?->name}\" storage provider. The key has most likely expired or been revoked, or lacks read and write access to the bucket. Update it under Storage providers, then run the {$operation} again.",
             str_contains($output, 'An error occurred (NoSuchBucket)') => "The bucket set on the \"{$provider?->name}\" storage provider doesn't exist.",
             str_contains($output, 'Could not connect to the endpoint URL') => "The server couldn't reach {$storage}. Check that it can make outbound HTTPS connections.",
             str_contains($output, 'No space left on device') => "The server ran out of disk space during the {$operation}.",

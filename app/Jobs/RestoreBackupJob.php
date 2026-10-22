@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Backups\EnsureBackupStorageIsReachable;
 use App\Actions\Backups\RestoreDatabaseBackup;
 use App\Models\Backup;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,8 +29,10 @@ class RestoreBackupJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(RestoreDatabaseBackup $action): void
+    public function handle(EnsureBackupStorageIsReachable $ensureStorageIsReachable, RestoreDatabaseBackup $action): void
     {
+        $ensureStorageIsReachable->execute($this->backup, 'restore');
+
         $action->execute($this->backup);
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Backups\RestoreDatabaseBackup;
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Exceptions\BackupFailedException;
 use App\Exceptions\SshCommandException;
@@ -63,9 +64,9 @@ it('names failures the user can fix', function (string $stderr, string $expected
 
     expect($message)->toContain($expected);
 })->with([
-    'r2 unauthorized' => ['upload failed: An error occurred (Unauthorized) when calling the PutObject operation: Unauthorized', 'Cloudflare R2 rejected the access key'],
-    's3 access denied' => ['An error occurred (AccessDenied) when calling the PutObject operation: Access Denied', 'rejected the access key'],
-    'invalid key' => ['An error occurred (InvalidAccessKeyId) when calling the PutObject operation', 'rejected the access key'],
+    'r2 unauthorized' => ['upload failed: An error occurred (Unauthorized) when calling the PutObject operation: Unauthorized', "Cloudflare R2 didn't accept the access key"],
+    's3 access denied' => ['An error occurred (AccessDenied) when calling the PutObject operation: Access Denied', "didn't accept the access key"],
+    'invalid key' => ['An error occurred (InvalidAccessKeyId) when calling the PutObject operation', "didn't accept the access key"],
     'missing bucket' => ['An error occurred (NoSuchBucket) when calling the PutObject operation', 'The bucket set on the "Primary R2" storage provider doesn\'t exist.'],
     'endpoint unreachable' => ['Could not connect to the endpoint URL: "https://example.r2.cloudflarestorage.com"', "The server couldn't reach Cloudflare R2"],
     'disk full' => ['gzip: stdout: No space left on device', 'ran out of disk space during the backup'],
@@ -136,7 +137,7 @@ it('stores the safe message, never the raw command, when a backup upload is reje
 
     $this->backup->refresh();
     expect($this->backup->status)->toBe('failed')
-        ->and($this->backup->error_message)->toStartWith('Cloudflare R2 rejected the access key.')
+        ->and($this->backup->error_message)->toStartWith("Cloudflare R2 didn't accept the access key")
         ->and($this->backup->error_message)->not->toContain('STORAGESECRETVALUE');
 });
 
@@ -200,4 +201,66 @@ it('leaves a finished restore alone when the restore job fails', function () {
     (new RestoreBackupJob($this->backup))->failed(new RuntimeException('late failure'));
 
     expect($this->backup->fresh()->restore_status)->toBe('completed');
+});
+
+it('fails a backup with a plain message when the storage key no longer works, before touching the server', function () {
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('validateCredentials')->once()->andReturn(false);
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    app()->instance(StorageProviderManager::class, $storageManager);
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldNotReceive('connect');
+    app()->instance(SshService::class, $sshService);
+
+    $this->storageProvider->update(['is_valid' => true]);
+
+    expect(fn () => app()->call([new RunBackupJob($this->backup), 'handle']))
+        ->toThrow(BackupFailedException::class, "Cloudflare R2 didn't accept the access key on the \"Primary R2\" storage provider. The key has most likely expired or been revoked");
+
+    expect($this->storageProvider->fresh()->is_valid)->toBeFalse();
+});
+
+it('records the storage key check message on the backup and in the email', function () {
+    Notification::fake();
+    $exception = new BackupFailedException('Cloudflare R2 didn\'t accept the access key on the "Primary R2" storage provider.');
+
+    (new RunBackupJob($this->backup))->failed($exception);
+
+    expect($this->backup->fresh()->error_message)->toBe($exception->getMessage());
+    Notification::assertSentTo($this->server->team->owner, DatabaseBackupFailed::class);
+});
+
+it('runs the backup when the storage key works', function () {
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('validateCredentials')->once()->andReturn(true);
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    app()->instance(StorageProviderManager::class, $storageManager);
+
+    $action = Mockery::mock(RunDatabaseBackup::class);
+    $action->shouldReceive('execute')->once()->with(Mockery::on(fn (Backup $backup) => $backup->is($this->backup)));
+    app()->instance(RunDatabaseBackup::class, $action);
+
+    app()->call([new RunBackupJob($this->backup), 'handle']);
+
+    expect($this->storageProvider->fresh())
+        ->is_valid->toBeTrue()
+        ->validated_at->not->toBeNull();
+});
+
+it('checks the storage key before a restore', function () {
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('validateCredentials')->once()->andReturn(false);
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    app()->instance(StorageProviderManager::class, $storageManager);
+
+    $restore = Mockery::mock(RestoreDatabaseBackup::class);
+    $restore->shouldNotReceive('execute');
+    app()->instance(RestoreDatabaseBackup::class, $restore);
+
+    expect(fn () => app()->call([new RestoreBackupJob($this->backup), 'handle']))
+        ->toThrow(BackupFailedException::class, 'then run the restore again.');
 });

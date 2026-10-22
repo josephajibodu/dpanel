@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Backups\EnsureBackupStorageIsReachable;
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Actions\Backups\RunSqliteBackup;
 use App\Models\Backup;
@@ -30,8 +31,10 @@ class RunBackupJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(EnsureBackupStorageIsReachable $ensureStorageIsReachable): void
     {
+        $ensureStorageIsReachable->execute($this->backup);
+
         $action = $this->backup->isSqlite()
             ? app(RunSqliteBackup::class)
             : app(RunDatabaseBackup::class);
