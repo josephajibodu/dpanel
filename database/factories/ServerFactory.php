@@ -136,6 +136,14 @@ class ServerFactory extends Factory
         ]);
     }
 
+    public function withPinnedHostKey(string $fingerprint, string $type = 'ssh-ed25519'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'host_key_type' => $type,
+            'host_key_fingerprint' => $fingerprint,
+        ]);
+    }
+
     public function custom(): static
     {
         return $this->state(fn (array $attributes) => [

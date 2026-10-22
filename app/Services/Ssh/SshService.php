@@ -3,6 +3,7 @@
 namespace App\Services\Ssh;
 
 use App\Exceptions\SshConnectionException;
+use App\Exceptions\SshHostKeyMismatchException;
 use App\Models\Server;
 use Illuminate\Support\Facades\Log;
 use phpseclib3\Crypt\PublicKeyLoader;
@@ -11,6 +12,10 @@ use phpseclib3\Net\SSH2;
 class SshService
 {
     private const CONNECT_TIMEOUT = 10;
+
+    public function __construct(
+        private HostKeyVerifier $hostKeyVerifier,
+    ) {}
 
     /**
      * Connect to a server via SSH as the default user.
@@ -31,14 +36,19 @@ class SshService
 
     /**
      * Connect to a server via SSH as a specific user.
+     *
+     * The server's host key is checked before logging in, and recorded on the
+     * first successful login.
+     *
+     * @throws SshHostKeyMismatchException
      */
     public function connectAs(Server $server, string $username): SshConnection
     {
-        $ssh = new SSH2(
-            host: $server->ip_address,
-            port: $server->ssh_port,
-            timeout: self::CONNECT_TIMEOUT,
-        );
+        $ssh = app()->makeWith(SSH2::class, [
+            'host' => $server->ip_address,
+            'port' => $server->ssh_port,
+            'timeout' => self::CONNECT_TIMEOUT,
+        ]);
 
         $ssh->setKeepAlive(30);
 
@@ -57,7 +67,10 @@ class SshService
         $key = PublicKeyLoader::load($privateKeyCredential->value);
 
         try {
+            $hostKey = $this->hostKeyVerifier->verify($ssh, $server);
             $loginSuccess = $ssh->login($username, $key);
+        } catch (SshConnectionException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             $errors = $ssh->getErrors();
             $errors = is_array($errors) ? $errors : [];
@@ -119,6 +132,10 @@ class SshService
             ]
         );
 
+        if (! $server->hasPinnedHostKey()) {
+            $server->pinHostKey($hostKey['type'], $hostKey['fingerprint']);
+        }
+
         $server->touch('last_ssh_connection_at');
 
         return new SshConnection($ssh, $server, $username);
@@ -143,6 +160,11 @@ class SshService
 
     /**
      * Test if SSH connection to a server works as a specific user.
+     *
+     * A changed host key is rethrown rather than reported as "not reachable
+     * yet", so callers that retry don't treat it as a network blip.
+     *
+     * @throws SshHostKeyMismatchException
      */
     public function testConnectionAs(Server $server, string $username): bool
     {
@@ -152,6 +174,8 @@ class SshService
             $connection->disconnect();
 
             return trim($result) === 'ok';
+        } catch (SshHostKeyMismatchException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::debug(
                 'SSH test connection failed',

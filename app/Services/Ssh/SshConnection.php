@@ -182,14 +182,19 @@ class SshConnection
 
     /**
      * Get the SFTP connection using the same credentials as SSH.
+     *
+     * SFTP opens a second connection, so the server's host key is checked
+     * again before logging in.
      */
     private function getSftp(): SFTP
     {
         if ($this->sftp === null) {
-            $this->sftp = new SFTP(
-                $this->server->ip_address,
-                $this->server->ssh_port
-            );
+            $this->sftp = app()->makeWith(SFTP::class, [
+                'host' => $this->server->ip_address,
+                'port' => $this->server->ssh_port,
+            ]);
+
+            app(HostKeyVerifier::class)->verify($this->sftp, $this->server);
 
             $privateKeyCredential = $this->server->credentials()
                 ->where('type', 'private_key')

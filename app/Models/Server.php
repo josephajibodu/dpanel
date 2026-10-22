@@ -53,6 +53,8 @@ class Server extends Model
         'local_public_key',
         'provisioned_at',
         'last_ssh_connection_at',
+        'host_key_type',
+        'host_key_fingerprint',
         'meta',
     ];
 
@@ -390,6 +392,38 @@ class Server extends Model
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Whether a host key has been recorded for this server yet.
+     */
+    public function hasPinnedHostKey(): bool
+    {
+        return $this->host_key_fingerprint !== null;
+    }
+
+    /**
+     * Record the host key this server presented, so later connections can
+     * check they are talking to the same machine.
+     */
+    public function pinHostKey(string $type, string $fingerprint): void
+    {
+        $this->update([
+            'host_key_type' => $type,
+            'host_key_fingerprint' => $fingerprint,
+        ]);
+    }
+
+    /**
+     * Forget the recorded host key, for a server that really was rebuilt or
+     * reinstalled. The next successful connection records the new key.
+     */
+    public function forgetHostKey(): void
+    {
+        $this->update([
+            'host_key_type' => null,
+            'host_key_fingerprint' => null,
+        ]);
     }
 
     /**

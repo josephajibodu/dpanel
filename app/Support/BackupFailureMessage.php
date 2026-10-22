@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Exceptions\BackupFailedException;
 use App\Exceptions\SshCommandException;
 use App\Exceptions\SshConnectionException;
+use App\Exceptions\SshHostKeyMismatchException;
 use App\Models\Backup;
 use Illuminate\Queue\TimeoutExceededException;
 use Throwable;
@@ -24,6 +25,7 @@ class BackupFailureMessage
     {
         $message = match (true) {
             $exception instanceof BackupFailedException => $exception->getMessage(),
+            $exception instanceof SshHostKeyMismatchException => $exception->getMessage(),
             $exception instanceof SshConnectionException => "Couldn't connect to the server over SSH. Make sure it's online and reachable, then try again.",
             $exception instanceof TimeoutExceededException => "The {$operation} didn't finish within an hour and was stopped.",
             $exception instanceof SshCommandException => self::forRemoteOutput($exception->stderr.$exception->output, $backup, $operation),
