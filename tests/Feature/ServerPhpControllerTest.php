@@ -3,6 +3,7 @@
 use App\Actions\ServerPhp\GetPhpInfo;
 use App\Enums\ConnectionStatus;
 use App\Enums\ServiceType;
+use App\Http\Requests\UpdatePhpSettingsRequest;
 use App\Jobs\InstallPhpVersionJob;
 use App\Jobs\SetDefaultPhpVersionJob;
 use App\Jobs\SyncSiteNginxJob;
@@ -15,6 +16,7 @@ use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
@@ -167,6 +169,40 @@ it('validates update settings request', function () {
 
     $response->assertSessionHasErrors('max_execution_time');
 });
+
+it('accepts PHP shorthand byte values for size settings', function (string $field, string $value) {
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [$field => $value])
+        ->assertSessionDoesntHaveErrors($field);
+})->with([
+    'upload megabytes' => ['upload_max_filesize', '64M'],
+    'upload gigabytes' => ['upload_max_filesize', '2G'],
+    'post lowercase kilobytes' => ['post_max_size', '512k'],
+    'post plain bytes' => ['post_max_size', '1024'],
+    'memory megabytes' => ['memory_limit', '256M'],
+    'memory unlimited' => ['memory_limit', '-1'],
+]);
+
+it('rejects size settings that are not PHP shorthand byte values', function (string $field, string $value) {
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/php/settings", [$field => $value])
+        ->assertSessionHasErrors($field);
+})->with([
+    'newline injection' => ['upload_max_filesize', "128M\nauto_prepend_file=/tmp/x.php"],
+    'semicolon' => ['post_max_size', '128M;'],
+    'equals sign' => ['memory_limit', '128M=1'],
+    'space' => ['upload_max_filesize', '128 M'],
+    'back-reference' => ['memory_limit', '$1'],
+    'two-letter unit' => ['post_max_size', '10MB'],
+    'unlimited upload size' => ['upload_max_filesize', '-1'],
+    'unlimited post size' => ['post_max_size', '-1'],
+]);
+
+it('rejects a trailing newline in size settings even when input is not trimmed', function (string $field) {
+    $validator = Validator::make([$field => "128M\n"], (new UpdatePhpSettingsRequest)->rules());
+
+    expect($validator->errors()->has($field))->toBeTrue();
+})->with(['upload_max_filesize', 'post_max_size', 'memory_limit']);
 
 it('redirects with error when installing version and server is not ready', function () {
     $response = $this->actingAs($this->user)

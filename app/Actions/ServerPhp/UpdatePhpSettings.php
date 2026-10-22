@@ -4,6 +4,7 @@ namespace App\Actions\ServerPhp;
 
 use App\Models\Server;
 use App\Services\Ssh\SshService;
+use InvalidArgumentException;
 use RuntimeException;
 
 class UpdatePhpSettings
@@ -21,9 +22,13 @@ class UpdatePhpSettings
 
     /**
      * @param  array<string, mixed>  $input  Keys: upload_max_filesize, post_max_size, max_execution_time, memory_limit (nullable)
+     *
+     * @throws InvalidArgumentException when a value contains a line break or other control character
      */
     public function execute(Server $server, array $input): void
     {
+        $settings = $this->settingsToWrite($input);
+
         if (! $server->isReady()) {
             throw new RuntimeException("Server {$server->id} is not ready.");
         }
@@ -39,16 +44,9 @@ class UpdatePhpSettings
             $iniPath = "/etc/php/{$version}/fpm/php.ini";
             $content = $connection->sudo("cat {$iniPath}", 10);
 
-            foreach (self::PHP_INI_KEYS as $key) {
-                $value = $input[$key] ?? null;
-                if ($value === null || $value === '') {
-                    continue;
-                }
-
-                $valueStr = is_int($value) ? (string) $value : (string) $value;
+            foreach ($settings as $key => $value) {
                 $pattern = '/^\s*;?\s*'.preg_quote($key, '/').'\s*=.*$/m';
-                $replacement = "{$key} = {$valueStr}";
-                $content = preg_replace($pattern, $replacement, $content, 1);
+                $content = preg_replace_callback($pattern, fn (): string => "{$key} = {$value}", $content, 1);
             }
 
             $tmpPath = '/tmp/php-fpm-php.ini.'.uniqid('', true);
@@ -58,5 +56,33 @@ class UpdatePhpSettings
         } finally {
             $connection->disconnect();
         }
+    }
+
+    /**
+     * Pick out the php.ini settings to write, refusing any value that could
+     * add extra lines to php.ini.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, string>
+     */
+    private function settingsToWrite(array $input): array
+    {
+        $settings = [];
+
+        foreach (self::PHP_INI_KEYS as $key) {
+            $value = $input[$key] ?? null;
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $value = (string) $value;
+            if (preg_match('/[\x00-\x1F\x7F]/', $value)) {
+                throw new InvalidArgumentException("PHP setting {$key} contains a line break or other control character.");
+            }
+
+            $settings[$key] = $value;
+        }
+
+        return $settings;
     }
 }
