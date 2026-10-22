@@ -23,10 +23,21 @@ class RevokeSshKeyJob implements ShouldQueue
 
     public int $timeout = 60;
 
+    public int $sshKeyId;
+
+    public string $publicKey;
+
+    /**
+     * The key is captured by value rather than serialized as a model, so the job
+     * still runs when it was queued just before the key itself was deleted.
+     */
     public function __construct(
-        public SshKey $sshKey,
+        SshKey $sshKey,
         public Server $server,
     ) {
+        $this->sshKeyId = $sshKey->id;
+        $this->publicKey = $sshKey->public_key;
+
         $this->onQueue('ssh');
     }
 
@@ -34,7 +45,7 @@ class RevokeSshKeyJob implements ShouldQueue
     {
         try {
             // Update status to revoking
-            $this->sshKey->servers()->updateExistingPivot($this->server->id, [
+            $this->server->sshKeys()->updateExistingPivot($this->sshKeyId, [
                 'status' => 'revoking',
             ]);
 
@@ -45,7 +56,7 @@ class RevokeSshKeyJob implements ShouldQueue
             // (so lines with an options prefix match too). It's compared as a literal
             // string, so the stored key never reaches a regex or the shell unquoted.
             $authorizedKeysPath = '/home/'.config('server.user').'/.ssh/authorized_keys';
-            $keyMaterial = escapeshellarg(explode(' ', trim($this->sshKey->public_key))[1] ?? '');
+            $keyMaterial = escapeshellarg(explode(' ', trim($this->publicKey))[1] ?? '');
             $authorizedKeys = escapeshellarg($authorizedKeysPath);
             $tmpFile = escapeshellarg($authorizedKeysPath.'.tmp');
 
@@ -56,14 +67,14 @@ class RevokeSshKeyJob implements ShouldQueue
             $connection->disconnect();
 
             // Remove pivot record
-            $this->sshKey->servers()->detach($this->server->id);
+            $this->server->sshKeys()->detach($this->sshKeyId);
 
-            Log::info("SSH key {$this->sshKey->id} revoked from server {$this->server->id}");
+            Log::info("SSH key {$this->sshKeyId} revoked from server {$this->server->id}");
         } catch (Throwable $e) {
-            Log::error("Failed to revoke SSH key {$this->sshKey->id} from server {$this->server->id}: {$e->getMessage()}");
+            Log::error("Failed to revoke SSH key {$this->sshKeyId} from server {$this->server->id}: {$e->getMessage()}");
 
             // Update status to failed
-            $this->sshKey->servers()->updateExistingPivot($this->server->id, [
+            $this->server->sshKeys()->updateExistingPivot($this->sshKeyId, [
                 'status' => 'failed',
             ]);
 

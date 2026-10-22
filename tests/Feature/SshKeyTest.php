@@ -225,3 +225,51 @@ it('revokes a key by its quoted key material rather than a regex prefix', functi
         ->and($commands[0])->not->toContain('$(touch');
     expect($sshKey->servers()->count())->toBe(0);
 });
+
+it('still revokes a deleted ssh key from its servers once the queued job runs', function () {
+    Queue::fake();
+
+    $firstServer = Server::factory()->forTeam($this->team)->create();
+    $secondServer = Server::factory()->forTeam($this->team)->create();
+    $sshKey = SshKey::factory()->create([
+        'user_id' => $this->user->id,
+        'public_key' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDeletedKeyMaterial me@laptop',
+    ]);
+    $sshKey->servers()->attach([
+        $firstServer->id => ['status' => 'synced'],
+        $secondServer->id => ['status' => 'synced'],
+    ]);
+
+    $this->actingAs($this->user)
+        ->delete(route('ssh-keys.destroy', [$this->team, $sshKey]))
+        ->assertRedirect(route('ssh-keys.index', $this->team));
+
+    $this->assertDatabaseMissing('ssh_keys', ['id' => $sshKey->id]);
+
+    $commandsByServer = [];
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturnUsing(function (Server $server) use (&$commandsByServer) {
+        $connection = Mockery::mock(SshConnection::class);
+        $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commandsByServer, $server) {
+            $commandsByServer[$server->id][] = $command;
+
+            return '';
+        });
+        $connection->shouldReceive('disconnect');
+
+        return $connection;
+    });
+
+    // Round-trip each job through serialization, as a real queue worker would,
+    // now that the key row is gone.
+    Queue::pushed(RevokeSshKeyJob::class)->each(
+        fn (RevokeSshKeyJob $job) => unserialize(serialize($job))->handle($sshService)
+    );
+
+    expect(array_keys($commandsByServer))->toEqualCanonicalizing([$firstServer->id, $secondServer->id]);
+
+    foreach ($commandsByServer as $commands) {
+        expect($commands)->toHaveCount(1)
+            ->and($commands[0])->toStartWith("awk -v key='AAAAC3NzaC1lZDI1NTE5AAAAIDeletedKeyMaterial' ");
+    }
+});
