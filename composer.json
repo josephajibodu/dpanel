@@ -59,7 +59,7 @@
         ],
         "dev:horizon": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fca5a5,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"php artisan reverb:start\" \"npm run dev\" --names='server,horizon,reverb,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fca5a5,#fdba74,#86efac\" \"php artisan serve\" \"php artisan horizon\" \"php artisan reverb:start\" \"npm run dev\" \"php artisan schedule:work\" --names='server,horizon,reverb,vite,schedule'"
         ],
         "dev:ssr": [
             "npm run build:ssr",
