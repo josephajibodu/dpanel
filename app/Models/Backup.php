@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Events\BackupStatusChanged;
+use App\Support\BackupFailureMessage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Throwable;
 
 class Backup extends Model
 {
@@ -97,5 +100,49 @@ class Backup extends Model
         return $this->isSqlite()
             ? route('servers.sites.backups.index', [$server->team, $server, $this->site])
             : route('servers.databases.backups.index', [$server->team, $server, $this->serverDatabase]);
+    }
+
+    /**
+     * Record a failed backup run with a message that is safe to show the user.
+     */
+    public function markAsFailed(Throwable $exception): void
+    {
+        $this->update([
+            'status' => 'failed',
+            'error_message' => BackupFailureMessage::for($exception, $this),
+            'finished_at' => now(),
+        ]);
+
+        event(new BackupStatusChanged($this->targetServer()));
+    }
+
+    /**
+     * Record a failed restore with a message that is safe to show the user.
+     */
+    public function markRestoreAsFailed(Throwable $exception): void
+    {
+        $this->update([
+            'restore_status' => 'failed',
+            'restore_error' => BackupFailureMessage::for($exception, $this, 'restore'),
+        ]);
+
+        event(new BackupStatusChanged($this->targetServer()));
+    }
+
+    /**
+     * Strip the server's and the storage provider's credentials from a
+     * message before it is logged — a failed command echoes its full command
+     * line, storage keys included.
+     */
+    public function redactSecrets(string $message): string
+    {
+        $message = $this->targetServer()->redactSecrets($message);
+
+        $storageSecrets = array_filter([
+            $this->storageProvider?->credentials['access_key_id'] ?? null,
+            $this->storageProvider?->credentials['secret_access_key'] ?? null,
+        ]);
+
+        return $storageSecrets === [] ? $message : str_replace($storageSecrets, '[redacted]', $message);
     }
 }

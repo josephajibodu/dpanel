@@ -4,6 +4,7 @@ namespace App\Actions\Backups;
 
 use App\Actions\Database\EscapesShell;
 use App\Events\BackupStatusChanged;
+use App\Exceptions\BackupFailedException;
 use App\Jobs\RestoreBackupJob;
 use App\Models\Backup;
 use App\Models\Server;
@@ -34,7 +35,7 @@ class RestoreDatabaseBackup
         $server = $serverDatabase->server;
 
         if (! $server->isReady()) {
-            throw new RuntimeException("Server {$server->id} is not ready.");
+            throw new BackupFailedException("The server isn't active and connected, so the restore couldn't start. Check its connection and try again.");
         }
 
         if (! $backup->storage_path) {
@@ -66,16 +67,13 @@ class RestoreDatabaseBackup
                 'restored_at' => now(),
                 'restore_error' => null,
             ]);
+            event(new BackupStatusChanged($server));
         } catch (\Throwable $e) {
-            $backup->update([
-                'restore_status' => 'failed',
-                'restore_error' => $server->redactSecrets($e->getMessage()),
-            ]);
+            $backup->markRestoreAsFailed($e);
 
             throw $e;
         } finally {
             $connection->disconnect();
-            event(new BackupStatusChanged($server));
         }
     }
 

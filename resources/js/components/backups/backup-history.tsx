@@ -118,10 +118,17 @@ export function BackupHistory({
                                             status={backup.status}
                                         />
                                         {backup.error_message && (
-                                            <p className="mt-1 max-w-xs truncate text-xs text-destructive">
+                                            <p className="mt-1 max-w-sm text-xs text-destructive">
                                                 {backup.error_message}
                                             </p>
                                         )}
+                                        {backup.restore_status === 'failed' &&
+                                            backup.restore_error && (
+                                                <p className="mt-1 max-w-sm text-xs text-destructive">
+                                                    Restore failed:{' '}
+                                                    {backup.restore_error}
+                                                </p>
+                                            )}
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
                                         {backup.triggered_by === 'manual'

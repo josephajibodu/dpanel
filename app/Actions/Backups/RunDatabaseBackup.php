@@ -5,6 +5,7 @@ namespace App\Actions\Backups;
 use App\Actions\Database\EscapesShell;
 use App\Contracts\StorageProviderContract;
 use App\Events\BackupStatusChanged;
+use App\Exceptions\BackupFailedException;
 use App\Jobs\RunBackupJob;
 use App\Models\Backup;
 use App\Models\Server;
@@ -50,7 +51,7 @@ class RunDatabaseBackup
         $storageProvider = $backup->storageProvider;
 
         if (! $server->isReady()) {
-            throw new RuntimeException("Server {$server->id} is not ready.");
+            throw new BackupFailedException("The server isn't active and connected, so the backup couldn't start. Check its connection and try again.");
         }
 
         $credential = $server->credential('database_password');
@@ -92,12 +93,7 @@ class RunDatabaseBackup
                 // Best effort — nothing to clean up if the upload never completed.
             }
 
-            $backup->update([
-                'status' => 'failed',
-                'error_message' => $server->redactSecrets($e->getMessage()),
-                'finished_at' => now(),
-            ]);
-            event(new BackupStatusChanged($server));
+            $backup->markAsFailed($e);
 
             throw $e;
         } finally {
