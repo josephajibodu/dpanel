@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TeamPermission;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Jobs\DeploySiteJob;
 use App\Models\Backup;
 use App\Models\DatabaseUser;
@@ -108,6 +109,7 @@ describe('viewer', function () {
         $this->actingAs($this->viewer)
             ->get("{$this->sitePath}/environment", [
                 'X-Inertia' => 'true',
+                'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
                 'X-Inertia-Partial-Component' => 'sites/environment/show',
                 'X-Inertia-Partial-Data' => 'env_content',
             ])
