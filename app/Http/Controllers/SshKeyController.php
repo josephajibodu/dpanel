@@ -68,7 +68,7 @@ class SshKeyController extends Controller
     {
         $this->authorize('sync', $sshKey);
 
-        $action->execute($sshKey, $request->validated('server_ids'));
+        $action->execute($team, $sshKey, $request->validated('server_ids'));
 
         return redirect()
             ->route('ssh-keys.index', $team)

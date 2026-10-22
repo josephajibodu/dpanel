@@ -41,28 +41,16 @@ class SyncSshKeyJob implements ShouldQueue
             // Connect to server
             $connection = $sshService->connect($this->server);
 
-            // Append the key to authorized_keys if not already present
-            $publicKey = trim($this->sshKey->public_key);
-            $fingerprint = $this->sshKey->fingerprint;
+            // Append the key to authorized_keys if the exact line isn't already present
+            $publicKey = escapeshellarg(trim($this->sshKey->public_key));
+            $authorizedKeys = escapeshellarg('/home/'.config('server.user').'/.ssh/authorized_keys');
 
-            // Check if key already exists
-            $serverUser = config('server.user');
-            $checkCommand = sprintf(
-                'grep -q "%s" /home/%s/.ssh/authorized_keys && echo "exists" || echo "not_found"',
-                substr($publicKey, 0, 50), // Use first 50 chars for matching
-                $serverUser
-            );
+            $checkCommand = "grep -qxF -- {$publicKey} {$authorizedKeys} && echo \"exists\" || echo \"not_found\"";
 
             $result = trim($connection->exec($checkCommand));
 
             if ($result !== 'exists') {
-                // Append the key
-                $appendCommand = sprintf(
-                    'echo "%s" >> /home/%s/.ssh/authorized_keys',
-                    $publicKey,
-                    $serverUser
-                );
-                $connection->exec($appendCommand);
+                $connection->exec("printf '%s\\n' {$publicKey} >> {$authorizedKeys}");
             }
 
             $connection->disconnect();

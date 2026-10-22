@@ -41,20 +41,16 @@ class RevokeSshKeyJob implements ShouldQueue
             // Connect to server
             $connection = $sshService->connect($this->server);
 
-            // Remove the key from authorized_keys using the fingerprint
-            // We use a unique portion of the key to identify and remove it
-            $publicKey = trim($this->sshKey->public_key);
+            // Drop every line containing this key's base64 material as a whole field
+            // (so lines with an options prefix match too). It's compared as a literal
+            // string, so the stored key never reaches a regex or the shell unquoted.
+            $authorizedKeysPath = '/home/'.config('server.user').'/.ssh/authorized_keys';
+            $keyMaterial = escapeshellarg(explode(' ', trim($this->sshKey->public_key))[1] ?? '');
+            $authorizedKeys = escapeshellarg($authorizedKeysPath);
+            $tmpFile = escapeshellarg($authorizedKeysPath.'.tmp');
 
-            // Escape special characters for sed
-            $escapedKey = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $publicKey);
-
-            // Remove the line containing this key
-            $serverUser = config('server.user');
-            $command = sprintf(
-                'sed -i "\\|%s|d" /home/%s/.ssh/authorized_keys',
-                substr($escapedKey, 0, 50), // Use first 50 chars for matching
-                $serverUser
-            );
+            $command = "awk -v key={$keyMaterial} '{ for (i = 1; i <= NF; i++) if (\$i == key) next } 1' {$authorizedKeys} > {$tmpFile}"
+                ." && cat {$tmpFile} > {$authorizedKeys} && rm -f {$tmpFile}";
 
             $connection->exec($command);
             $connection->disconnect();

@@ -68,30 +68,15 @@ class StoreSshKeyRequest extends FormRequest
      */
     public function isValidSshKey(string $key): bool
     {
-        $validPrefixes = [
-            'ssh-rsa',
-            'ssh-ed25519',
-            'ecdsa-sha2-nistp256',
-            'ecdsa-sha2-nistp384',
-            'ecdsa-sha2-nistp521',
-            'ssh-dss',
-        ];
+        $pattern = '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-dss) ([A-Za-z0-9+\/]+={0,2})( [\x20-\x7E]*)?$/';
 
-        $key = trim($key);
-
-        foreach ($validPrefixes as $prefix) {
-            if (str_starts_with($key, $prefix.' ')) {
-                // Try to decode the base64 portion
-                $parts = explode(' ', $key);
-                if (count($parts) >= 2) {
-                    $decoded = base64_decode($parts[1], true);
-
-                    return $decoded !== false && strlen($decoded) > 0;
-                }
-            }
+        if (! preg_match($pattern, trim($key), $matches)) {
+            return false;
         }
 
-        return false;
+        $decoded = base64_decode($matches[2], true);
+
+        return $decoded !== false && strlen($decoded) > 0;
     }
 
     /**

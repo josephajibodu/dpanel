@@ -3,20 +3,22 @@
 namespace App\Actions\SshKeys;
 
 use App\Jobs\SyncSshKeyJob;
-use App\Models\Server;
 use App\Models\SshKey;
+use App\Models\Team;
 
 class SyncSshKeyAction
 {
     /**
-     * Sync an SSH key to the specified servers.
+     * Sync an SSH key to the specified servers. Only active servers belonging to
+     * the given team are considered, so a key can never reach a server outside
+     * the team the request was made in.
      *
      * @param  array<int>  $serverIds
      */
-    public function execute(SshKey $sshKey, array $serverIds): void
+    public function execute(Team $team, SshKey $sshKey, array $serverIds): void
     {
-        $servers = Server::whereIn('id', $serverIds)
-            ->where('user_id', $sshKey->user_id)
+        $servers = $team->servers()
+            ->whereIn('id', $serverIds)
             ->where('status', 'active')
             ->get();
 
