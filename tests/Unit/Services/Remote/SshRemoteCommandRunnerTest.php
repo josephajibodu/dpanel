@@ -21,6 +21,7 @@ function mockSshConnectionEmitting(array $lines, int $exitCode = 0, string $stde
         });
 
     $connection->shouldReceive('lastStdError')->andReturn($stderr);
+    $connection->shouldReceive('secretValues')->andReturn([]);
 
     return $connection;
 }

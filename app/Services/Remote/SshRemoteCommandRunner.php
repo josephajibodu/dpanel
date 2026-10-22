@@ -55,6 +55,7 @@ class SshRemoteCommandRunner implements RemoteCommandRunner
                 exitCode: $exitCode,
                 output: $output,
                 stderr: $this->connection->lastStdError(),
+                secrets: $this->connection->secretValues(),
             );
         }
 

@@ -47,6 +47,7 @@ class SshConnection
                 exitCode: $this->ssh->getExitStatus() ?? -1,
                 output: $output,
                 stderr: $this->ssh->getStdError(),
+                secrets: $this->server->secretValues(),
             );
         }
 
@@ -103,6 +104,16 @@ class SshConnection
     public function lastStdError(): string
     {
         return $this->ssh->getStdError();
+    }
+
+    /**
+     * The server's passwords, for scrubbing from a failed command's error.
+     *
+     * @return array<int, string>
+     */
+    public function secretValues(): array
+    {
+        return $this->server->secretValues();
     }
 
     /**

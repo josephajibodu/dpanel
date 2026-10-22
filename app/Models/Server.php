@@ -372,13 +372,24 @@ class Server extends Model
      */
     public function redactSecrets(string $message): string
     {
-        $secrets = $this->credentials()
+        $secrets = $this->secretValues();
+
+        return $secrets === [] ? $message : str_replace($secrets, '[redacted]', $message);
+    }
+
+    /**
+     * The plaintext sudo and database passwords for this server.
+     *
+     * @return array<int, string>
+     */
+    public function secretValues(): array
+    {
+        return $this->credentials()
             ->whereIn('type', ['sudo_password', 'database_password'])
             ->pluck('value')
             ->filter()
+            ->values()
             ->all();
-
-        return $secrets === [] ? $message : str_replace($secrets, '[redacted]', $message);
     }
 
     /**
