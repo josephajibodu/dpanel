@@ -9,7 +9,7 @@ class InstallPhpVersionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('view', $this->route('server'));
+        return $this->user()->can('managePhp', $this->route('server'));
     }
 
     /**

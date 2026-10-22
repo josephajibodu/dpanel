@@ -47,7 +47,7 @@ class DeploymentController extends Controller
      */
     public function store(Request $request, Team $team, Server $server, Site $site, TriggerDeploymentAction $triggerDeployment): RedirectResponse
     {
-        $this->authorize('view', $site);
+        $this->authorize('deploy', $site);
 
         try {
             $deployment = $triggerDeployment->execute($site, 'manual', $request->user());
@@ -69,7 +69,7 @@ class DeploymentController extends Controller
      */
     public function cancel(Team $team, Server $server, Site $site, Deployment $deployment, CancelDeploymentAction $cancelDeployment): RedirectResponse
     {
-        $this->authorize('view', $site);
+        $this->authorize('deploy', $site);
 
         try {
             $cancelDeployment->execute($deployment);
@@ -85,7 +85,7 @@ class DeploymentController extends Controller
      */
     public function rollback(Request $request, Team $team, Server $server, Site $site, Deployment $deployment, RollbackDeploymentAction $rollbackDeployment): RedirectResponse
     {
-        $this->authorize('view', $site);
+        $this->authorize('deploy', $site);
 
         try {
             $rollbackDeployment->execute($site, $deployment, $request->user());

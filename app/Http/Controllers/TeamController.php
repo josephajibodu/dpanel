@@ -8,6 +8,7 @@ use App\Actions\Teams\UpdateTeamName;
 use App\Http\Requests\StoreTeamRequest;
 use App\Http\Requests\UpdateTeamNameRequest;
 use App\Models\Team;
+use App\Models\TeamRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,12 @@ class TeamController extends Controller
 
     private function renderTeamSettings(Team $team): Response
     {
-        $team->load(['owner', 'users', 'invitations']);
+        $team->load(['owner', 'users', 'invitations.teamRole']);
+
+        $roles = TeamRole::query()
+            ->whereKey($team->users->pluck('pivot.team_role_id')->unique())
+            ->get()
+            ->keyBy('id');
 
         return Inertia::render('settings/team', [
             'team' => $team,
@@ -47,7 +53,7 @@ class TeamController extends Controller
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
-                'role' => $u->pivot->role,
+                'role' => $roles->get($u->pivot->team_role_id)?->key,
             ]),
             'invitations' => $team->invitations,
         ]);

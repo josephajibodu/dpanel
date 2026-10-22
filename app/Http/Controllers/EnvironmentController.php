@@ -19,7 +19,7 @@ class EnvironmentController extends Controller
 {
     public function show(Team $team, Server $server, Site $site, SshService $sshService): Response
     {
-        $this->authorize('view', $site);
+        $this->authorize('viewSecrets', $site);
 
         $site->load(['server']);
 
@@ -49,7 +49,7 @@ class EnvironmentController extends Controller
 
     public function update(Request $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('update', $site);
+        $this->authorize('deploy', $site);
 
         $validated = $request->validate([
             'env_content' => ['required', 'string'],

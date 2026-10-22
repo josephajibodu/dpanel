@@ -44,8 +44,6 @@ class SiteDomainController extends Controller
 
     public function validateHostname(ValidateSiteDomainRequest $request, Team $team, Server $server, Site $site): JsonResponse
     {
-        $this->authorize('view', $site);
-
         $hostname = strtolower($request->validated('hostname'));
         $existing = SiteDomain::query()->where('hostname', $hostname)->with('site')->first();
 
@@ -64,8 +62,6 @@ class SiteDomainController extends Controller
 
     public function store(StoreSiteDomainRequest $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         $data = $request->validated();
         $hostname = strtolower($data['hostname']);
 
@@ -96,8 +92,6 @@ class SiteDomainController extends Controller
 
     public function update(UpdateSiteDomainRequest $request, Team $team, Server $server, Site $site, SiteDomain $siteDomain): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         $data = $request->validated();
         if (isset($data['www_redirect'])) {
             $data['www_redirect'] = WwwRedirect::from($data['www_redirect']);

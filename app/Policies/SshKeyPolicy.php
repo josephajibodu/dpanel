@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
+use App\Enums\TeamPermission;
 use App\Models\SshKey;
+use App\Models\Team;
 use App\Models\User;
 
 class SshKeyPolicy
@@ -48,18 +50,21 @@ class SshKeyPolicy
     }
 
     /**
-     * Determine whether the user can sync the key to servers.
+     * Determine whether the user can sync the key to the team's servers, which
+     * gives them a shell on those servers.
      */
-    public function sync(User $user, SshKey $sshKey): bool
+    public function sync(User $user, SshKey $sshKey, Team $team): bool
     {
-        return $user->id === $sshKey->user_id;
+        return $user->id === $sshKey->user_id
+            && $user->hasTeamPermission($team, TeamPermission::AccessServers);
     }
 
     /**
-     * Determine whether the user can revoke the key from servers.
+     * Determine whether the user can revoke the key from the team's servers.
      */
-    public function revoke(User $user, SshKey $sshKey): bool
+    public function revoke(User $user, SshKey $sshKey, Team $team): bool
     {
-        return $user->id === $sshKey->user_id;
+        return $user->id === $sshKey->user_id
+            && $user->hasTeamPermission($team, TeamPermission::AccessServers);
     }
 }

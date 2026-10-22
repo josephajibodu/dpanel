@@ -15,7 +15,8 @@ class UpdateSiteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('update', $this->route('site'))
+            && (! $this->has('auto_deploy') || $this->user()->can('deploy', $this->route('site')));
     }
 
     /**

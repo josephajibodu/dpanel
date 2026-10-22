@@ -41,7 +41,8 @@ class Team extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('role')
+            ->using(Membership::class)
+            ->withPivot('team_role_id')
             ->withTimestamps();
     }
 

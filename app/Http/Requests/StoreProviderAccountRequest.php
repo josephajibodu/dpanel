@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Provider;
+use App\Models\ProviderAccount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +14,7 @@ class StoreProviderAccountRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', [ProviderAccount::class, $this->route('team')]);
     }
 
     /**

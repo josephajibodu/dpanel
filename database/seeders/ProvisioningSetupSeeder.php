@@ -7,6 +7,7 @@ use App\Enums\Provider;
 use App\Enums\RepositoryProvider;
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
+use App\Enums\TeamRoleKey;
 use App\Models\Deployment;
 use App\Models\ProviderAccount;
 use App\Models\ProviderRegion;
@@ -16,6 +17,7 @@ use App\Models\Service;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
+use App\Models\TeamRole;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -56,7 +58,7 @@ class ProvisioningSetupSeeder extends Seeder
         if (! $team) {
             $team = app(CreateTeam::class)->execute($user, "Test User's Team", personalTeam: true, slug: 'test-user');
         } elseif (! $team->hasUser($user)) {
-            $team->users()->attach($user, ['role' => 'owner']);
+            $team->users()->attach($user, ['team_role_id' => TeamRole::builtIn(TeamRoleKey::Owner)->id]);
         }
 
         // Ensure current_team_id is set so all team-scoped queries work.

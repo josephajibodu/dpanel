@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\TeamPermission;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\User;
@@ -21,7 +22,7 @@ class SitePolicy
      */
     public function view(User $user, Site $site): bool
     {
-        return $user->belongsToTeam($site->server->team);
+        return $user->hasTeamPermission($site->server->team, TeamPermission::View);
     }
 
     /**
@@ -29,15 +30,15 @@ class SitePolicy
      */
     public function create(User $user, Server $server): bool
     {
-        return $user->belongsToTeam($server->team) && $server->supportsSites();
+        return $user->hasTeamPermission($server->team, TeamPermission::ManageSites) && $server->supportsSites();
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Determine whether the user can change the site, its domains and its nginx files.
      */
     public function update(User $user, Site $site): bool
     {
-        return $user->belongsToTeam($site->server->team);
+        return $user->hasTeamPermission($site->server->team, TeamPermission::ManageSites);
     }
 
     /**
@@ -45,22 +46,40 @@ class SitePolicy
      */
     public function delete(User $user, Site $site): bool
     {
-        return $user->belongsToTeam($site->server->team);
+        return $user->hasTeamPermission($site->server->team, TeamPermission::ManageSites);
     }
 
     /**
-     * Determine whether the user can restore the model.
+     * Determine whether the user can deploy the site and change what a deploy uses
+     * (the deploy script, the environment file and auto-deploy).
      */
-    public function restore(User $user, Site $site): bool
+    public function deploy(User $user, Site $site): bool
     {
-        return $user->belongsToTeam($site->server->team);
+        return $user->hasTeamPermission($site->server->team, TeamPermission::Deploy);
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Determine whether the user can run commands in the site's directory.
      */
-    public function forceDelete(User $user, Site $site): bool
+    public function runCommands(User $user, Site $site): bool
     {
-        return $user->belongsToTeam($site->server->team);
+        return $user->hasTeamPermission($site->server->team, TeamPermission::RunCommands);
+    }
+
+    /**
+     * Determine whether the user can take backups and edit the backup schedule.
+     */
+    public function runBackups(User $user, Site $site): bool
+    {
+        return $user->hasTeamPermission($site->server->team, TeamPermission::RunBackups);
+    }
+
+    /**
+     * Determine whether the user can see the site's secrets: its environment
+     * file, command output and backup files.
+     */
+    public function viewSecrets(User $user, Site $site): bool
+    {
+        return $user->hasTeamPermission($site->server->team, TeamPermission::ViewSecrets);
     }
 }

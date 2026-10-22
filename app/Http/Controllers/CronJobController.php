@@ -37,8 +37,6 @@ class CronJobController extends Controller
         Server $server,
         CronJob $cron_job,
     ): RedirectResponse {
-        $this->authorize('view', $server);
-
         app(UpdateCronJob::class)->update($cron_job, $request->validated());
 
         return redirect()
@@ -48,7 +46,7 @@ class CronJobController extends Controller
 
     public function destroy(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(DestroyCronJob::class)->delete($cron_job);
 
@@ -59,7 +57,7 @@ class CronJobController extends Controller
 
     public function disable(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(DisableCronJob::class)->disable($cron_job);
 
@@ -70,7 +68,7 @@ class CronJobController extends Controller
 
     public function enable(Team $team, Server $server, CronJob $cron_job): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(EnableCronJob::class)->enable($cron_job);
 

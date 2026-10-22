@@ -51,6 +51,16 @@ class Site extends Model
     ];
 
     /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'webhook_secret',
+        'env_content',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

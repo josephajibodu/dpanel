@@ -47,7 +47,7 @@ class SiteBackupController extends Controller
 
     public function store(Team $team, Server $server, Site $site, RunSqliteBackup $action): RedirectResponse
     {
-        $this->authorize('view', $site);
+        $this->authorize('runBackups', $site);
 
         if (! $site->usesSqlite()) {
             return redirect()
@@ -83,7 +83,7 @@ class SiteBackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('view', $site);
+        $this->authorize('runBackups', $site);
 
         if ($backup->storage_path) {
             try {
@@ -107,7 +107,7 @@ class SiteBackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('view', $site);
+        $this->authorize('viewSecrets', $site);
 
         if (! $backup->storage_path) {
             return redirect()->back()->with('error', 'This backup has no file to download.');

@@ -2,7 +2,9 @@
 
 namespace App\Actions\Teams;
 
+use App\Enums\TeamRoleKey;
 use App\Models\Team;
+use App\Models\TeamRole;
 use App\Models\User;
 use Illuminate\Support\Str;
 
@@ -17,7 +19,7 @@ class CreateTeam
             'personal_team' => $personalTeam,
         ]);
 
-        $team->users()->attach($user, ['role' => 'owner']);
+        $team->users()->attach($user, ['team_role_id' => TeamRole::builtIn(TeamRoleKey::Owner)->id]);
 
         return $team;
     }

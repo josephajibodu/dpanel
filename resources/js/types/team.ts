@@ -1,3 +1,5 @@
+export type TeamRoleKey = 'owner' | 'admin' | 'developer' | 'viewer';
+
 export interface Team {
     id: number;
     name: string;
@@ -12,13 +14,13 @@ export interface TeamMember {
     id: number;
     name: string;
     email: string;
-    role: 'owner' | 'member';
+    role: TeamRoleKey;
 }
 
 export interface TeamInvitation {
     id: number;
     team_id: number;
     email: string;
-    role: 'owner' | 'member';
+    role: TeamRoleKey;
     created_at: string;
 }

@@ -35,8 +35,6 @@ class ServerDatabaseController extends Controller
 
     public function store(StoreServerDatabaseRequest $request, Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('view', $server);
-
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -52,7 +50,7 @@ class ServerDatabaseController extends Controller
 
     public function destroy(Team $team, Server $server, ServerDatabase $server_database): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageDatabases', $server);
 
         app(DestroyServerDatabase::class)->delete($server_database);
 

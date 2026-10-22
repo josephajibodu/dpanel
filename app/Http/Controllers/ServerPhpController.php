@@ -70,8 +70,6 @@ class ServerPhpController extends Controller
 
     public function updateSettings(UpdatePhpSettingsRequest $request, Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('view', $server);
-
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -109,8 +107,6 @@ class ServerPhpController extends Controller
 
     public function installVersion(InstallPhpVersionRequest $request, Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('view', $server);
-
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -142,8 +138,6 @@ class ServerPhpController extends Controller
 
     public function setDefaultVersion(SetDefaultPhpVersionRequest $request, Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('view', $server);
-
         if (! $server->isReady()) {
             return redirect()
                 ->back()

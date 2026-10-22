@@ -11,7 +11,10 @@ class SyncSshKeyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can(
+            $this->routeIs('ssh-keys.revoke') ? 'revoke' : 'sync',
+            [$this->route('sshKey'), $this->route('team')],
+        );
     }
 
     /**

@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
+use App\Enums\TeamPermission;
 use App\Models\ProviderAccount;
+use App\Models\Team;
 use App\Models\User;
 
 class ProviderAccountPolicy
@@ -20,23 +22,23 @@ class ProviderAccountPolicy
      */
     public function view(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->belongsToTeam($providerAccount->team);
+        return $user->hasTeamPermission($providerAccount->team, TeamPermission::View);
     }
 
     /**
-     * Determine whether the user can create models.
+     * Determine whether the user can create models in the team.
      */
-    public function create(User $user): bool
+    public function create(User $user, Team $team): bool
     {
-        return true;
+        return $user->hasTeamPermission($team, TeamPermission::ManageProviders);
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Determine whether the user can update (or re-validate) the model.
      */
     public function update(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->belongsToTeam($providerAccount->team);
+        return $user->hasTeamPermission($providerAccount->team, TeamPermission::ManageProviders);
     }
 
     /**
@@ -44,22 +46,6 @@ class ProviderAccountPolicy
      */
     public function delete(User $user, ProviderAccount $providerAccount): bool
     {
-        return $user->belongsToTeam($providerAccount->team);
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, ProviderAccount $providerAccount): bool
-    {
-        return $user->belongsToTeam($providerAccount->team);
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, ProviderAccount $providerAccount): bool
-    {
-        return $user->belongsToTeam($providerAccount->team);
+        return $user->hasTeamPermission($providerAccount->team, TeamPermission::ManageProviders);
     }
 }

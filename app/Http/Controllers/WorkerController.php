@@ -44,8 +44,6 @@ class WorkerController extends Controller
         Server $server,
         Worker $worker,
     ): RedirectResponse {
-        $this->authorize('view', $server);
-
         app(UpdateWorker::class)->update($worker, $request->validated());
 
         return redirect()
@@ -55,7 +53,7 @@ class WorkerController extends Controller
 
     public function destroy(Team $team, Server $server, Worker $worker): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(DestroyWorker::class)->delete($worker);
 
@@ -66,7 +64,7 @@ class WorkerController extends Controller
 
     public function start(Team $team, Server $server, Worker $worker): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(ControlWorker::class)->request($worker, WorkerControlAction::Start);
 
@@ -77,7 +75,7 @@ class WorkerController extends Controller
 
     public function stop(Team $team, Server $server, Worker $worker): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(ControlWorker::class)->request($worker, WorkerControlAction::Stop);
 
@@ -88,7 +86,7 @@ class WorkerController extends Controller
 
     public function restart(Team $team, Server $server, Worker $worker): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageProcesses', $server);
 
         app(ControlWorker::class)->request($worker, WorkerControlAction::Restart);
 

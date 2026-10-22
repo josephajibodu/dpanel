@@ -18,8 +18,6 @@ class DatabaseUserController extends Controller
 {
     public function store(StoreDatabaseUserRequest $request, Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('view', $server);
-
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -39,8 +37,6 @@ class DatabaseUserController extends Controller
         Server $server,
         DatabaseUser $database_user,
     ): RedirectResponse {
-        $this->authorize('view', $server);
-
         app(UpdateDatabaseUser::class)->update($database_user, $request->validated());
 
         return redirect()
@@ -50,7 +46,7 @@ class DatabaseUserController extends Controller
 
     public function destroy(Team $team, Server $server, DatabaseUser $database_user): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('manageDatabases', $server);
 
         app(DestroyDatabaseUser::class)->delete($database_user);
 
@@ -61,7 +57,7 @@ class DatabaseUserController extends Controller
 
     public function revealPassword(Team $team, Server $server, DatabaseUser $database_user): JsonResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('viewSecrets', $server);
 
         Log::info('Database user password revealed', [
             'user_id' => auth()->id(),

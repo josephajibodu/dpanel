@@ -12,7 +12,7 @@ class UpdateBackupScheduleRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('runBackups', $this->route('site') ?? $this->route('server'));
     }
 
     /**

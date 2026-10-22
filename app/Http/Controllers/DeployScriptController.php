@@ -28,7 +28,7 @@ class DeployScriptController extends Controller
 
     public function update(Request $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('update', $site);
+        $this->authorize('deploy', $site);
 
         $validated = $request->validate([
             'script' => ['required', 'string', 'max:65535'],

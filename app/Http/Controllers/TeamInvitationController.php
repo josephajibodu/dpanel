@@ -15,7 +15,7 @@ class TeamInvitationController extends Controller
 {
     public function store(InviteTeamMemberRequest $request, Team $team, InviteTeamMember $action): RedirectResponse
     {
-        $action->execute($team, $request->validated('email'), $request->validated('role'));
+        $action->execute($team, $request->validated('email'), $request->teamRole());
 
         return redirect()
             ->back()
@@ -28,7 +28,7 @@ class TeamInvitationController extends Controller
 
         if (! $request->user()) {
             return Inertia::render('teams/accept-invitation', [
-                'invitation' => $invitation->load('team'),
+                'invitation' => $invitation->load(['team', 'teamRole']),
                 'token' => $token,
             ]);
         }
@@ -65,7 +65,7 @@ class TeamInvitationController extends Controller
         }
 
         if (! $team->hasUser($user)) {
-            $team->users()->attach($user, ['role' => $invitation->role]);
+            $team->users()->attach($user, ['team_role_id' => $invitation->team_role_id]);
         }
 
         $invitation->delete();

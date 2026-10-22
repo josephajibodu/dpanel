@@ -14,6 +14,15 @@ class EnvironmentVariable extends Model
     ];
 
     /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'value',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

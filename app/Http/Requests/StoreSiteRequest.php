@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\SiteDomain;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -17,7 +18,7 @@ class StoreSiteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', [Site::class, $this->route('server')]);
     }
 
     /**

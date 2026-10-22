@@ -46,7 +46,7 @@ class BackupController extends Controller
 
     public function store(Team $team, Server $server, ServerDatabase $server_database, RunDatabaseBackup $action): RedirectResponse
     {
-        $this->authorize('view', $server);
+        $this->authorize('runBackups', $server);
 
         $schedule = $server_database->backupSchedule;
 
@@ -76,7 +76,7 @@ class BackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('view', $server);
+        $this->authorize('runBackups', $server);
 
         if ($backup->storage_path) {
             try {
@@ -100,7 +100,7 @@ class BackupController extends Controller
         Backup $backup,
         RestoreDatabaseBackup $action,
     ): RedirectResponse {
-        $this->authorize('view', $server);
+        $this->authorize('restoreBackups', $server);
 
         if ($backup->status !== 'completed') {
             return redirect()
@@ -128,7 +128,7 @@ class BackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('view', $server);
+        $this->authorize('viewSecrets', $server);
 
         if (! $backup->storage_path) {
             return redirect()->back()->with('error', 'This backup has no file to download.');

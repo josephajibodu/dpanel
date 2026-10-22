@@ -16,8 +16,6 @@ class SiteBackupScheduleController extends Controller
         Site $site,
         UpdateBackupScheduleRequest $request,
     ): RedirectResponse {
-        $this->authorize('view', $site);
-
         if (! $site->usesSqlite()) {
             return redirect()
                 ->back()

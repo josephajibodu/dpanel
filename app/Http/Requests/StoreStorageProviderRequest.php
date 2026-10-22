@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\StorageProviderType;
+use App\Models\StorageProvider;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +14,7 @@ class StoreStorageProviderRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', [StorageProvider::class, $this->route('team')]);
     }
 
     /**

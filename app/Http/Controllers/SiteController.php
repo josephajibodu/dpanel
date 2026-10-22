@@ -91,8 +91,6 @@ class SiteController extends Controller
 
     public function checkSiteName(CheckSiteNameRequest $request, Team $team, Server $server): JsonResponse
     {
-        $this->authorize('create', [Site::class, $server]);
-
         $siteName = strtolower($request->validated('site_name'));
         $freeDomain = config('server.free_domain');
         $hostname = "{$siteName}.{$freeDomain}";
@@ -113,8 +111,6 @@ class SiteController extends Controller
         Server $server,
         CreateSiteAction $action,
     ): RedirectResponse {
-        $this->authorize('create', [Site::class, $server]);
-
         $site = $action->execute(
             server: $server,
             data: SiteData::from($request->validated()),
@@ -184,8 +180,6 @@ class SiteController extends Controller
 
     public function update(UpdateSiteRequest $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         $previousPhpVersion = $site->php_version;
         $site->update($request->validated());
 

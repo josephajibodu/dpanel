@@ -8,7 +8,7 @@ class StoreSiteCommandRunRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('view', $this->route('site'));
+        return $this->user()->can('runCommands', $this->route('site'));
     }
 
     /**

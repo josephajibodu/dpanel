@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TeamRoleKey;
 use App\Models\Team;
+use App\Models\TeamRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,6 +33,15 @@ class InviteTeamMemberRequest extends FormRequest
             ],
             'role' => ['required', 'string', Rule::in(['owner', 'member'])],
         ];
+    }
+
+    /**
+     * The built-in role the invite form's choice maps to. The form still
+     * offers "owner" and "member"; a member joins as a Developer.
+     */
+    public function teamRole(): TeamRole
+    {
+        return TeamRole::builtIn($this->validated('role') === 'owner' ? TeamRoleKey::Owner : TeamRoleKey::Developer);
     }
 
     /** @return array<string, string> */

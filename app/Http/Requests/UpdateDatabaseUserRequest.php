@@ -13,7 +13,7 @@ class UpdateDatabaseUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('view', $this->route('server'));
+        return $this->user()->can('manageDatabases', $this->route('server'));
     }
 
     /**

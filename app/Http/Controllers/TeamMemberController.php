@@ -13,7 +13,7 @@ class TeamMemberController extends Controller
 {
     public function store(InviteTeamMemberRequest $request, Team $team, InviteTeamMember $action): RedirectResponse
     {
-        $action->execute($team, $request->validated('email'), $request->validated('role'));
+        $action->execute($team, $request->validated('email'), $request->teamRole());
 
         return redirect()
             ->back()

@@ -89,8 +89,6 @@ class SiteNginxController extends Controller
 
     public function store(StoreNginxFileRequest $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         if (! $server->isReady()) {
             return redirect()->back()->with('error', 'Server must be active and connected.');
         }
@@ -128,8 +126,6 @@ class SiteNginxController extends Controller
 
     public function update(UpdateNginxFileRequest $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         if (! $server->isReady()) {
             return redirect()->back()->with('error', 'Server must be active and connected.');
         }
@@ -155,8 +151,6 @@ class SiteNginxController extends Controller
 
     public function rename(RenameNginxFileRequest $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
     {
-        $this->authorize('update', $site);
-
         if ($nginxFile->section === NginxFileSection::Main) {
             return redirect()->back()->with('error', 'Main configuration files cannot be renamed.');
         }

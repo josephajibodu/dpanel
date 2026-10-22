@@ -13,6 +13,7 @@ use App\Models\SiteCommandRun;
 use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -48,7 +49,7 @@ class SiteCommandRunController extends Controller
             ->with('success', 'Command has been queued to run.');
     }
 
-    public function show(Team $team, Server $server, Site $site, SiteCommandRun $commandRun): JsonResponse
+    public function show(Request $request, Team $team, Server $server, Site $site, SiteCommandRun $commandRun): JsonResponse
     {
         $this->authorize('view', $site);
 
@@ -58,8 +59,12 @@ class SiteCommandRunController extends Controller
 
         $commandRun->load('user');
 
-        return response()->json(
-            SiteCommandRunResource::make($commandRun)->withOutput()->resolve()
-        );
+        $resource = SiteCommandRunResource::make($commandRun);
+
+        if ($request->user()->can('viewSecrets', $site)) {
+            $resource->withOutput();
+        }
+
+        return response()->json($resource->resolve());
     }
 }

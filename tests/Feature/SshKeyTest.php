@@ -127,8 +127,7 @@ it('accepts an ssh public key with a multi-word comment', function () {
 it('only syncs an ssh key to active servers of the team in the url', function () {
     Queue::fake();
 
-    $teammate = User::factory()->create();
-    $this->team->users()->attach($teammate, ['role' => 'member']);
+    $teammate = User::factory()->developerOf($this->team)->create();
 
     $ownTeamServer = Server::factory()->forTeam($this->team)->create();
     $teammateServer = Server::factory()->forTeam($this->team)->forUser($teammate)->create();

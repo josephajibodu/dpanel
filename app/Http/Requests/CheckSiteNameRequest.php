@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Site;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CheckSiteNameRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('create', [Site::class, $this->route('server')]);
     }
 
     /**

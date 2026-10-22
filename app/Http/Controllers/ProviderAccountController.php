@@ -29,6 +29,8 @@ class ProviderAccountController extends Controller
 
     public function create(Team $team): Response
     {
+        $this->authorize('create', [ProviderAccount::class, $team]);
+
         return Inertia::render('provider-accounts/create', [
             'providers' => collect(Provider::cases())->map(fn ($p) => [
                 'value' => $p->value,

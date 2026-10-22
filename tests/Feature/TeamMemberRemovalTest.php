@@ -17,8 +17,7 @@ beforeEach(function () {
     $this->team = Team::factory()->create(['user_id' => $this->owner->id]);
     $this->owner->switchTeam($this->team);
 
-    $this->member = User::factory()->create();
-    $this->team->users()->attach($this->member, ['role' => 'member']);
+    $this->member = User::factory()->developerOf($this->team)->create();
 });
 
 it('revokes the removed member ssh keys from every server of the team', function () {
@@ -82,8 +81,7 @@ it('does not let a non-owner remove a member or revoke their keys', function () 
     $sshKey = SshKey::factory()->create(['user_id' => $this->member->id]);
     $sshKey->servers()->attach($server->id, ['status' => 'synced']);
 
-    $otherMember = User::factory()->create();
-    $this->team->users()->attach($otherMember, ['role' => 'member']);
+    $otherMember = User::factory()->developerOf($this->team)->create();
 
     $this->actingAs($otherMember)
         ->delete(route('team-members.destroy', [$this->team, $this->member]))

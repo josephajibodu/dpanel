@@ -30,6 +30,16 @@ class SourceControlAccount extends Model
     ];
 
     /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'token',
+        'refresh_token',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

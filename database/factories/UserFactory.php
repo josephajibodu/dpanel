@@ -2,6 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\TeamRoleKey;
+use App\Models\Team;
+use App\Models\TeamRole;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -55,5 +59,35 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
         ]);
+    }
+
+    /**
+     * Make the user a member of the given team with the given built-in role.
+     */
+    public function memberOf(Team $team, TeamRoleKey $roleKey = TeamRoleKey::Developer): static
+    {
+        return $this->afterCreating(function (User $user) use ($team, $roleKey): void {
+            $team->users()->attach($user, ['team_role_id' => TeamRole::builtIn($roleKey)->id]);
+        });
+    }
+
+    public function ownerOf(Team $team): static
+    {
+        return $this->memberOf($team, TeamRoleKey::Owner);
+    }
+
+    public function adminOf(Team $team): static
+    {
+        return $this->memberOf($team, TeamRoleKey::Admin);
+    }
+
+    public function developerOf(Team $team): static
+    {
+        return $this->memberOf($team, TeamRoleKey::Developer);
+    }
+
+    public function viewerOf(Team $team): static
+    {
+        return $this->memberOf($team, TeamRoleKey::Viewer);
     }
 }

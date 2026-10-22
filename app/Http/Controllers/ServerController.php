@@ -48,6 +48,8 @@ class ServerController extends Controller
 
     public function create(Team $team, ProviderManager $providerManager, ServerNameGenerator $nameGenerator): Response
     {
+        $this->authorize('create', [Server::class, $team]);
+
         $providerAccounts = $team->providerAccounts()
             ->where('is_valid', true)
             ->get();
@@ -153,7 +155,7 @@ class ServerController extends Controller
 
     public function testConnection(Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('update', $server);
+        $this->authorize('refreshStatus', $server);
 
         TestServerConnectionJob::dispatch($server);
 
@@ -162,7 +164,7 @@ class ServerController extends Controller
 
     public function refreshMetrics(Team $team, Server $server): RedirectResponse
     {
-        $this->authorize('update', $server);
+        $this->authorize('refreshStatus', $server);
 
         CollectServerMetricsJob::dispatch($server);
 

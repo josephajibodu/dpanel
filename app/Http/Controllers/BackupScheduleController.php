@@ -16,8 +16,6 @@ class BackupScheduleController extends Controller
         ServerDatabase $server_database,
         UpdateBackupScheduleRequest $request,
     ): RedirectResponse {
-        $this->authorize('view', $server);
-
         $validated = $request->validated();
 
         $schedule = $server_database->backupSchedule()->updateOrCreate([], [

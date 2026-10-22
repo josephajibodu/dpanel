@@ -66,8 +66,6 @@ class SshKeyController extends Controller
 
     public function sync(Team $team, SshKey $sshKey, SyncSshKeyRequest $request, SyncSshKeyAction $action): RedirectResponse
     {
-        $this->authorize('sync', $sshKey);
-
         $action->execute($team, $sshKey, $request->validated('server_ids'));
 
         return redirect()
@@ -77,8 +75,6 @@ class SshKeyController extends Controller
 
     public function revoke(Team $team, SshKey $sshKey, SyncSshKeyRequest $request): RedirectResponse
     {
-        $this->authorize('revoke', $sshKey);
-
         $serverIds = $request->validated('server_ids');
         $servers = $team->servers()->whereIn('id', $serverIds)->get();
 
