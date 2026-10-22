@@ -32,7 +32,6 @@ class CreateWorker
             'auto_start' => $input['auto_start'] ?? true,
             'auto_restart' => $input['auto_restart'] ?? true,
             'redirect_stderr' => $input['redirect_stderr'] ?? true,
-            'stdout_logfile' => $input['stdout_logfile'] ?? null,
             'status' => 'pending',
         ]);
 
