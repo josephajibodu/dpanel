@@ -112,6 +112,9 @@ export function ProcessesPanel({
     headingDescription,
 }: ProcessesPanelProps) {
     const scope: 'server' | 'site' = site ? 'site' : 'server';
+    /** Jobs tied to an isolated site must run as that site's own user. */
+    const userForSite = (siteId: number | '') =>
+        sites.find((s) => s.id === siteId)?.system_user ?? defaultUser;
     const teamPath = useTeamPath();
     const pageProps = usePage<SharedData>().props;
     const { errors } = pageProps as { errors?: Record<string, string> };
@@ -839,6 +842,9 @@ export function ProcessesPanel({
                                             ...p,
                                             site_id:
                                                 v === 'server' ? '' : Number(v),
+                                            user: userForSite(
+                                                v === 'server' ? '' : Number(v),
+                                            ),
                                         }))
                                     }
                                 >
@@ -1021,6 +1027,9 @@ export function ProcessesPanel({
                                             ...p,
                                             site_id:
                                                 v === 'server' ? '' : Number(v),
+                                            user: userForSite(
+                                                v === 'server' ? '' : Number(v),
+                                            ),
                                         }))
                                     }
                                 >
@@ -1184,6 +1193,9 @@ export function ProcessesPanel({
                                             ...p,
                                             site_id:
                                                 v === 'server' ? '' : Number(v),
+                                            user: userForSite(
+                                                v === 'server' ? '' : Number(v),
+                                            ),
                                         }))
                                     }
                                 >
@@ -1357,6 +1369,9 @@ export function ProcessesPanel({
                                             ...p,
                                             site_id:
                                                 v === 'server' ? '' : Number(v),
+                                            user: userForSite(
+                                                v === 'server' ? '' : Number(v),
+                                            ),
                                         }))
                                     }
                                 >

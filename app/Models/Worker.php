@@ -110,7 +110,7 @@ class Worker extends Model
     {
         $validator = Validator::make($this->only(['command', 'user']), [
             'command' => ['required', 'string', new NoControlCharacters],
-            'user' => ['required', 'string', new AllowedProcessUser],
+            'user' => ['required', 'string', new AllowedProcessUser($this->site_id ? $this->site : null)],
         ]);
 
         if ($validator->fails()) {

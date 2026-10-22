@@ -78,6 +78,7 @@ class StoreSiteRequest extends FormRequest
             'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
             'build_command' => ['nullable', 'string', 'max:500'],
             'auto_deploy' => ['sometimes', 'boolean'],
+            'isolated' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -125,6 +126,7 @@ class StoreSiteRequest extends FormRequest
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
             'server_database_id.exists' => 'The selected database does not belong to this server.',
+            'isolated.boolean' => 'Choose whether to isolate this site.',
         ];
     }
 

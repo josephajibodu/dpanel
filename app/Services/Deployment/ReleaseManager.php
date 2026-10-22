@@ -17,7 +17,7 @@ class ReleaseManager
     {
         $releasesPath = $site->releasesPath();
 
-        $listing = trim($connection->exec("ls -1 {$releasesPath} 2>/dev/null || true"));
+        $listing = trim($connection->exec($site->commandAsSystemUser("ls -1 {$releasesPath} 2>/dev/null || true")));
 
         if ($listing === '') {
             return;
@@ -48,12 +48,12 @@ class ReleaseManager
             $toDelete
         ));
 
-        $connection->exec("rm -rf {$paths}");
+        $connection->exec($site->commandAsSystemUser("rm -rf {$paths}"));
     }
 
     private function currentReleaseName(SshConnection $connection, Site $site): ?string
     {
-        $resolved = trim($connection->exec("readlink -f {$site->currentPath()} 2>/dev/null || true"));
+        $resolved = trim($connection->exec($site->commandAsSystemUser("readlink -f {$site->currentPath()} 2>/dev/null || true")));
 
         return $resolved !== '' ? basename($resolved) : null;
     }

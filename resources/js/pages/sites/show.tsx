@@ -208,6 +208,11 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         value={`PHP ${siteData.php_version}`}
                                     />
                                     <DetailRow
+                                        label="System user"
+                                        value={siteData.system_user}
+                                        valueClassName="font-mono"
+                                    />
+                                    <DetailRow
                                         label="Public IP"
                                         value={
                                             siteData.server?.ip_address ?? '—'

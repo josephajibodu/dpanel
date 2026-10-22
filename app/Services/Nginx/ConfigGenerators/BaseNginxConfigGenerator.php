@@ -193,22 +193,17 @@ NGINX;
     /**
      * Get common PHP-FPM configuration.
      */
-    protected function getPhpFpmConfig(string $phpVersion): string
+    protected function getPhpFpmConfig(Site $site, string $phpVersion): string
     {
         return <<<NGINX
     # PHP-FPM configuration
     location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php{$phpVersion}-fpm-{$this->serverUser()}.sock;
+        fastcgi_pass unix:{$site->phpFpmSocket($phpVersion)};
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
     }
 NGINX;
-    }
-
-    protected function serverUser(): string
-    {
-        return config('server.user');
     }
 
     /**

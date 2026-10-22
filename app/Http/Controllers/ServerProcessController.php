@@ -25,6 +25,7 @@ class ServerProcessController extends Controller
         $sites = $server->sites->map(fn ($site) => [
             'id' => $site->id,
             'domain' => $site->domain,
+            'system_user' => $site->systemUser(),
         ])->values()->all();
 
         return Inertia::render('servers/processes/index', [

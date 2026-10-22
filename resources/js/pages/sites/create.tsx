@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { RepositorySelector } from '@/components/sites/repository-selector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -128,6 +129,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         package_manager: 'npm',
         build_command: 'npm run build',
         auto_deploy: false,
+        isolated: true,
         source_control_account_id: firstAccountId ?? undefined,
     });
 
@@ -818,6 +820,25 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="isolated"
+                                        checked={form.data.isolated}
+                                        onCheckedChange={(checked) => form.setData('isolated', checked === true)}
+                                        className="mt-0.5"
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="isolated" className="font-normal">
+                                            Isolate this site (recommended)
+                                        </Label>
+                                        <p className="text-muted-foreground text-xs">
+                                            Runs the site as its own system user, so if it's ever hacked it can't reach your other sites or
+                                            take over the server.
+                                        </p>
+                                        {form.errors.isolated && <p className="text-destructive text-sm">{form.errors.isolated}</p>}
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

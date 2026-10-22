@@ -3,6 +3,7 @@
 namespace App\Actions\ServerPhp;
 
 use App\Enums\ServiceType;
+use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\SetDefaultPhpVersionJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
@@ -36,8 +37,14 @@ class SetDefaultPhpVersion
             $server->sites()
                 ->get()
                 ->each(function (Site $site) use ($version) {
+                    $previousPhpVersion = $site->php_version;
                     $site->update(['php_version' => $version]);
-                    SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
+
+                    if ($site->isIsolated()) {
+                        MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
+                    } else {
+                        SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
+                    }
                 });
         }
 

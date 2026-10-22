@@ -14,7 +14,31 @@ abstract class BaseSiteProvisioner
 {
     protected string $serverUser;
 
-    protected string $webUser;
+    /**
+     * The Linux user that owns the site's files: the site's own user when
+     * isolated, otherwise the server user.
+     */
+    protected string $owner;
+
+    /**
+     * Group on the site's files. Non-isolated sites share the web user's
+     * group; an isolated site keeps its own group, which the web user is a
+     * member of (see SiteIsolationService).
+     */
+    protected string $group;
+
+    /**
+     * Mode for files holding secrets (.env, wp-config.php). On an isolated
+     * site the web user is in the site's group, so the group gets no access.
+     */
+    protected string $secretFileMode;
+
+    /**
+     * "sudo " for commands that change ownership or permissions. Empty for
+     * isolated sites, whose user already owns everything under its home and
+     * runs these commands itself.
+     */
+    protected string $sudo;
 
     protected string $siteRoot;
 
@@ -25,7 +49,10 @@ abstract class BaseSiteProvisioner
         protected SourceControlService $sourceControlService,
     ) {
         $this->serverUser = config('server.user');
-        $this->webUser = config('server.web_user');
+        $this->owner = $site->systemUser();
+        $this->group = $site->isIsolated() ? $site->systemUser() : config('server.web_user');
+        $this->secretFileMode = $site->isIsolated() ? '600' : '640';
+        $this->sudo = $site->isIsolated() ? '' : 'sudo ';
         $this->siteRoot = $site->rootPath();
     }
 
@@ -67,12 +94,21 @@ abstract class BaseSiteProvisioner
 
     protected function initializeSiteDirectory(): void
     {
-        $parentDir = dirname($this->siteRoot);
+        if ($this->site->isIsolated()) {
+            $isolation = app(SiteIsolationService::class);
+            $isolation->createUser($this->connection, $this->site);
+            $isolation->writePool($this->connection, $this->site, $this->site->php_version ?? '8.4');
+        }
 
-        $this->connection->exec("sudo rm -rf {$this->siteRoot}");
-        $this->connection->exec("mkdir -p {$this->siteRoot}/releases {$this->siteRoot}/shared");
-        $this->connection->exec("sudo chmod 755 {$parentDir}");
-        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->serverUser} {$this->siteRoot}");
+        $this->runAsOwner("{$this->sudo}rm -rf {$this->siteRoot}");
+        $this->runAsOwner("mkdir -p {$this->siteRoot}/releases {$this->siteRoot}/shared");
+
+        if (! $this->site->isIsolated()) {
+            $parentDir = dirname($this->siteRoot);
+
+            $this->connection->exec("sudo chmod 755 {$parentDir}");
+            $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->serverUser} {$this->siteRoot}");
+        }
     }
 
     protected function configureNginx(): void
@@ -134,13 +170,23 @@ abstract class BaseSiteProvisioner
     protected function runMigrations(): void {}
 
     /**
-     * Base permission model: serverUser:webUser ownership, 755 dirs, 644 files.
+     * Base permission model: owner:group ownership, 755 dirs, 644 files.
+     * Secret files are locked down again by each project type afterwards.
      */
     protected function setPermissions(): void
     {
-        $this->connection->exec("sudo chown -R {$this->serverUser}:{$this->webUser} {$this->siteRoot}", timeout: 120);
-        $this->connection->exec("sudo find {$this->siteRoot} -type d -exec chmod 755 {} \\;", timeout: 120);
-        $this->connection->exec("sudo find {$this->siteRoot} -type f -exec chmod 644 {} \\;", timeout: 120);
+        $this->runAsOwner("{$this->sudo}chown -R {$this->owner}:{$this->group} {$this->siteRoot}", timeout: 120);
+        $this->runAsOwner("{$this->sudo}find {$this->siteRoot} -type d -exec chmod 755 {} \\;", timeout: 120);
+        $this->runAsOwner("{$this->sudo}find {$this->siteRoot} -type f -exec chmod 644 {} \\;", timeout: 120);
+    }
+
+    /**
+     * Run a command as the site's owner. Non-isolated sites are owned by the
+     * server user FlitOps connects as, so the command is sent unchanged.
+     */
+    protected function runAsOwner(string $command, int $timeout = 30): string
+    {
+        return $this->connection->exec($this->site->commandAsSystemUser($command), $timeout);
     }
 
     // ------------------------------------------------------------------
@@ -177,10 +223,10 @@ abstract class BaseSiteProvisioner
         $releasePath = "{$this->siteRoot}/releases/bootstrap";
         $webDir = ltrim($this->site->directory ?: '/', '/');
 
-        $this->connection->exec("mkdir -p {$releasePath}");
+        $this->runAsOwner("mkdir -p {$releasePath}");
 
         if ($webDir && $webDir !== '/') {
-            $this->connection->exec("mkdir -p {$releasePath}/{$webDir}");
+            $this->runAsOwner("mkdir -p {$releasePath}/{$webDir}");
         }
 
         $placeholderPath = $webDir && $webDir !== '/' ? "{$releasePath}/{$webDir}/index.php" : "{$releasePath}/index.php";
@@ -192,8 +238,8 @@ echo "This site is hosted by {$appName}.";
 PHP;
 
         $escapedPlaceholder = str_replace("'", "'\\''", $placeholder);
-        $this->connection->exec("echo '{$escapedPlaceholder}' > {$placeholderPath}");
-        $this->connection->exec("ln -sfn {$releasePath} {$this->siteRoot}/current");
+        $this->runAsOwner("echo '{$escapedPlaceholder}' > {$placeholderPath}");
+        $this->runAsOwner("ln -sfn {$releasePath} {$this->siteRoot}/current");
     }
 
     // ------------------------------------------------------------------

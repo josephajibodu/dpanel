@@ -15,18 +15,27 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
 {
     public function prepend(Site $site): string
     {
-        $lines = [
-            'mkdir -p "$RELEASE_PATH"',
-            $this->cloneCommand($site),
-            'cd "$RELEASE_PATH"',
-            $this->symlinkSharedPaths($site),
-        ];
+        $lines = $site->isIsolated()
+            ? ['cd "$RELEASE_PATH"', $this->symlinkSharedPaths($site)]
+            : [
+                'mkdir -p "$RELEASE_PATH"',
+                $this->cloneCommand($site),
+                'cd "$RELEASE_PATH"',
+                $this->symlinkSharedPaths($site),
+            ];
 
         return implode("\n", array_filter($lines, fn (string $line) => $line !== ''))."\n";
     }
 
     public function append(Site $site): string
     {
+        if ($site->isIsolated()) {
+            $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then chmod -R 775 "$RELEASE_PATH/storage"; fi';
+            $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
+
+            return "\n{$storageChmod}\n{$cacheChmod}\n".$this->activate($site);
+        }
+
         $chown = 'sudo chown -R $SERVER_USER:$WEB_USER "$RELEASE_PATH"';
         $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then sudo chmod -R 775 "$RELEASE_PATH/storage"; fi';
         $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then sudo chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
@@ -39,9 +48,8 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         $currentPath = $site->currentPath();
 
         $swap = "ln -sfn \"\$RELEASE_PATH\" {$currentPath}";
-        $reload = "( flock -w 10 9 || exit 1\n    echo 'Restarting FPM...'; sudo -S service \$PHP_FPM reload ) 9>/tmp/fpmlock";
 
-        $script = "{$swap}\n{$reload}";
+        $script = $site->isIsolated() ? $swap : "{$swap}\n".$this->reloadPhpFpm($site);
 
         $postActivation = $site->project_type->postActivationScript();
 
@@ -52,15 +60,46 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         return $script;
     }
 
+    public function reloadPhpFpm(Site $site): string
+    {
+        return "( flock -w 10 9 || exit 1\n    echo 'Restarting FPM...'; sudo -S service \$PHP_FPM reload ) 9>/tmp/fpmlock";
+    }
+
+    /**
+     * The site's user never holds a git key: FlitOps clones as the server
+     * user into a private temporary directory, then streams the files to
+     * the site user, who unpacks them into the release directory.
+     */
+    public function cloneForIsolatedSite(Site $site): string
+    {
+        $unpack = $site->commandAsSystemUser('mkdir -p "$1" && tar -C "$1" -xf -').' _ "$RELEASE_PATH"';
+
+        return implode("\n", [
+            'CLONE_DIR=$(mktemp -d)',
+            'trap \'rm -rf "$CLONE_DIR"\' EXIT',
+            $this->gitCloneCommand($site, '"$CLONE_DIR/release"'),
+            'tar -C "$CLONE_DIR/release" -cf - . | '.$unpack,
+        ])."\n";
+    }
+
     private function cloneCommand(Site $site): string
+    {
+        $gitCommand = $this->gitCloneCommand($site, '"$RELEASE_PATH"');
+
+        return "{$gitCommand}\ngit -C \"\$RELEASE_PATH\" config --global --add safe.directory \"\$RELEASE_PATH\"";
+    }
+
+    /**
+     * Clone with the server user's key, which is the one added to the
+     * source control account.
+     */
+    private function gitCloneCommand(Site $site, string $target): string
     {
         $serverUser = config('server.user');
         $sshKeyPath = "/home/{$serverUser}/.ssh/id_ed25519";
         $repoUrl = $site->gitCloneUrl();
 
-        $gitCommand = "GIT_SSH_COMMAND='ssh -i {$sshKeyPath} -o StrictHostKeyChecking=accept-new' git clone --branch {$site->branch} {$repoUrl} \"\$RELEASE_PATH\"";
-
-        return "{$gitCommand}\ngit -C \"\$RELEASE_PATH\" config --global --add safe.directory \"\$RELEASE_PATH\"";
+        return "GIT_SSH_COMMAND='ssh -i {$sshKeyPath} -o StrictHostKeyChecking=accept-new' git clone --branch {$site->branch} {$repoUrl} {$target}";
     }
 
     /**

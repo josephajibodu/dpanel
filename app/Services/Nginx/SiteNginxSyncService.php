@@ -119,12 +119,12 @@ class SiteNginxSyncService
         $url = 'https://'.$primary->hostname;
         $escapedValue = str_replace(['\\', '#', '&'], ['\\\\', '\\#', '\\&'], $url);
 
-        $connection->exec(
+        $connection->exec($site->commandAsSystemUser(
             "if [ -f {$envPath} ] && grep -q '^APP_URL=' {$envPath}; then "
             ."sed -i 's#^APP_URL=.*#APP_URL={$escapedValue}#' {$envPath}; "
             ."elif [ -f {$envPath} ]; then "
             ."echo 'APP_URL={$url}' >> {$envPath}; fi"
-        );
+        ));
     }
 
     protected function ensureSnippetDirectories(SshConnection $connection, SiteDomain $domain): void

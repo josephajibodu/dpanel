@@ -15,6 +15,6 @@ class PhpSiteProvisioner extends BaseSiteProvisioner
     {
         $sharedPath = $this->site->sharedPath();
 
-        $this->connection->exec("touch {$sharedPath}/.env && sudo chown {$this->serverUser}:{$this->webUser} {$sharedPath}/.env && sudo chmod 640 {$sharedPath}/.env");
+        $this->runAsOwner("touch {$sharedPath}/.env && {$this->sudo}chown {$this->owner}:{$this->group} {$sharedPath}/.env && {$this->sudo}chmod {$this->secretFileMode} {$sharedPath}/.env");
     }
 }

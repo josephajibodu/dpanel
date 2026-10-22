@@ -154,4 +154,14 @@ class SiteFactory extends Factory
             'auto_deploy' => true,
         ]);
     }
+
+    /**
+     * A site that runs as its own Linux user instead of the server user.
+     */
+    public function isolated(?string $systemUser = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'system_user' => $systemUser ?? 'site_'.fake()->unique()->numberBetween(1000, 999999),
+        ]);
+    }
 }
