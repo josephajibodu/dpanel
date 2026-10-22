@@ -3,6 +3,7 @@
 namespace App\Actions\Sites;
 
 use App\Enums\DeploymentStatus;
+use App\Enums\SiteStatus;
 use App\Jobs\DeploySiteJob;
 use App\Models\Deployment;
 use App\Models\Site;
@@ -20,6 +21,10 @@ class TriggerDeploymentAction
      */
     public function execute(Site $site, string $triggeredBy = 'manual', ?User $user = null): Deployment
     {
+        if ($site->status === SiteStatus::Isolating) {
+            throw new \RuntimeException('This site is being moved to its own user. Deploy again once that finishes.');
+        }
+
         $inProgress = $site->deployments()
             ->whereIn('status', [DeploymentStatus::Pending, DeploymentStatus::Running])
             ->exists();

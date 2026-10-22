@@ -29,6 +29,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | ACME Challenge Directory
+    |--------------------------------------------------------------------------
+    |
+    | Where certbot writes Let's Encrypt HTTP challenge files for isolated
+    | sites, and where nginx serves them from. Only root can write here, so
+    | a site's own user can't tamper with certbot (which runs as root).
+    |
+    */
+
+    'acme_challenge_path' => env('SERVER_ACME_CHALLENGE_PATH', '/var/lib/flitops/acme'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Allow Private Server Addresses
     |--------------------------------------------------------------------------
     |

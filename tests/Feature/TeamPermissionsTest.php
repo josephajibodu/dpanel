@@ -19,6 +19,7 @@ const DENIED_PERMISSIONS = [
         TeamPermission::DeleteTeam,
     ],
     'developer' => [
+        TeamPermission::AccessServersAsAdmin,
         TeamPermission::RestoreBackups,
         TeamPermission::ManageServers,
         TeamPermission::ManageProviders,
@@ -36,6 +37,7 @@ const DENIED_PERMISSIONS = [
         TeamPermission::RunCommands,
         TeamPermission::ViewSecrets,
         TeamPermission::AccessServers,
+        TeamPermission::AccessServersAsAdmin,
         TeamPermission::RunBackups,
         TeamPermission::RestoreBackups,
         TeamPermission::ManageServers,

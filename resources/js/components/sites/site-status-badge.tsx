@@ -7,7 +7,7 @@ interface SiteStatusBadgeProps {
     className?: string;
 }
 
-const PULSING_STATUSES = ['installing', 'deploying', 'deleting'];
+const PULSING_STATUSES = ['installing', 'deploying', 'deleting', 'isolating'];
 
 export function SiteStatusBadge({
     status,

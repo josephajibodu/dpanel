@@ -60,6 +60,17 @@ class SshKeyPolicy
     }
 
     /**
+     * Determine whether the user can put the key on the team's servers' own
+     * user, which has passwordless sudo and so means root on the server.
+     * Without this, keys can only go on isolated sites' users.
+     */
+    public function syncToServerUser(User $user, SshKey $sshKey, Team $team): bool
+    {
+        return $this->sync($user, $sshKey, $team)
+            && $user->hasTeamPermission($team, TeamPermission::AccessServersAsAdmin);
+    }
+
+    /**
      * Determine whether the user can revoke the key from the team's servers.
      */
     public function revoke(User $user, SshKey $sshKey, Team $team): bool

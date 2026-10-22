@@ -46,12 +46,12 @@ class IssueSslForDomainJob implements ShouldQueue
 
             $certDir = "/etc/nginx/ssl/domains/{$this->site->id}/{$this->siteDomain->id}";
 
-            $webRoot = $this->site->webRoot();
-            // An isolated site's web root belongs to its own user, so that user
-            // creates the challenge directory (and can delete it with an old release).
-            $connection->exec($this->site->isIsolated()
-                ? $this->site->commandAsSystemUser('mkdir -p '.escapeshellarg($webRoot).'/.well-known/acme-challenge')
-                : 'sudo mkdir -p '.escapeshellarg($webRoot).'/.well-known/acme-challenge');
+            $webRoot = $this->site->acmeChallengeRoot();
+            $connection->exec('sudo mkdir -p '.escapeshellarg($webRoot).'/.well-known/acme-challenge');
+
+            if ($this->site->isIsolated()) {
+                $connection->exec('sudo chmod 755 '.escapeshellarg($webRoot).' '.escapeshellarg($webRoot.'/.well-known').' '.escapeshellarg($webRoot.'/.well-known/acme-challenge'));
+            }
             $connection->exec("sudo mkdir -p {$certDir}");
 
             // For apex domains with a www redirect, include www in the cert so that

@@ -127,6 +127,17 @@ class Site extends Model
     }
 
     /**
+     * The folder certbot writes Let's Encrypt challenge files into and nginx
+     * serves them from. Isolated sites use a folder only root controls, so
+     * certbot (running as root) never writes into a folder the site's user
+     * can redirect; other sites keep using their web root.
+     */
+    public function acmeChallengeRoot(): string
+    {
+        return $this->isIsolated() ? config('server.acme_challenge_path') : $this->webRoot();
+    }
+
+    /**
      * Get the root path for this site on the server.
      */
     public function rootPath(): string

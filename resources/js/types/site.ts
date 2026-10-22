@@ -21,7 +21,7 @@ export interface Site {
     project_type_label: string | null;
     php_version: string;
     php_binary: string | null;
-    status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed' | 'deleting';
+    status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed' | 'deleting' | 'isolating';
     status_label: string;
     status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red' | 'orange';
     error_message: string | null;

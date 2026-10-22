@@ -55,7 +55,9 @@ interface Props {
 }
 
 export default function SitesShow({ server: serverProp, site }: Props) {
-    const { currentTeam } = usePage<SharedData>().props;
+    const { currentTeam, errors } = usePage<
+        SharedData & { errors?: Record<string, string> }
+    >().props;
     const teamPath = useTeamPath();
     const server = serverProp?.data ?? serverProp;
     const siteData = (site?.data ?? site) as Props['site']['data'] | undefined;
@@ -72,6 +74,8 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
+    const [isolateDialogOpen, setIsolateDialogOpen] = useState(false);
+    const [isIsolating, setIsIsolating] = useState(false);
 
     if (!siteData?.id) {
         return (
@@ -115,6 +119,21 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                 setDeleteDialogOpen(false);
             },
         });
+    };
+
+    const confirmIsolate = () => {
+        setIsIsolating(true);
+        router.post(
+            teamPath(`/servers/${serverId}/sites/${siteData.id}/isolate`),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsIsolating(false);
+                    setIsolateDialogOpen(false);
+                },
+            },
+        );
     };
 
     const handleDeploy = () => {
@@ -212,6 +231,36 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                         value={siteData.system_user}
                                         valueClassName="font-mono"
                                     />
+                                    {!siteData.is_isolated && (
+                                        <div className="space-y-2 border-t pt-4">
+                                            <p className="text-xs text-muted-foreground">
+                                                This site shares the server
+                                                user, so if it's hacked it can
+                                                reach your other sites and the
+                                                server.
+                                            </p>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                    setIsolateDialogOpen(true)
+                                                }
+                                                disabled={
+                                                    ![
+                                                        'provisioned',
+                                                        'deployed',
+                                                    ].includes(siteData.status)
+                                                }
+                                            >
+                                                Isolate this site
+                                            </Button>
+                                            {errors?.isolate && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.isolate}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     <DetailRow
                                         label="Public IP"
                                         value={
@@ -246,6 +295,13 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                 </div>
                             </div>
                         )}
+
+                        {siteData.status !== 'failed' &&
+                            siteData.error_message && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                                    {siteData.error_message}
+                                </div>
+                            )}
 
                         {/* Overview */}
                         <StatGroup>
@@ -669,6 +725,16 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                open={isolateDialogOpen}
+                onOpenChange={setIsolateDialogOpen}
+                title="Isolate this site"
+                description={`${siteData.domain} will get its own system user, and its files will move into that user's home folder. The site will be unavailable for a few seconds while this happens. If anything goes wrong, the site is put back exactly as it was.`}
+                confirmLabel="Isolate site"
+                onConfirm={confirmIsolate}
+                loading={isIsolating}
+            />
 
             <ConfirmDialog
                 open={deleteDialogOpen}

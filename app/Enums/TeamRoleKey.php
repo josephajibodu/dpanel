@@ -34,6 +34,7 @@ enum TeamRoleKey: string
             self::Admin => self::allExcept(TeamPermission::ownerOnly()),
             self::Developer => self::allExcept([
                 ...TeamPermission::ownerOnly(),
+                TeamPermission::AccessServersAsAdmin,
                 TeamPermission::RestoreBackups,
                 TeamPermission::ManageServers,
                 TeamPermission::ManageProviders,

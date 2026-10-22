@@ -211,7 +211,7 @@ describe('server access on a role change', function () {
             ->and($sshKey->servers()->where('servers.id', $this->otherTeamServer->id)->first()->pivot->status)->toBe('synced');
     })->with([TeamRoleKey::Developer, TeamRoleKey::Admin, TeamRoleKey::Owner]);
 
-    it('leaves the member keys alone when they keep or gain server access', function (TeamRoleKey $from, TeamRoleKey $to) {
+    it('leaves the member keys alone when they keep or gain admin server access', function (TeamRoleKey $from, TeamRoleKey $to) {
         [$member, $sshKey] = memberWithSyncedKey($this->team, $from, $this->teamServer);
 
         $this->actingAs($this->team->owner)
@@ -221,10 +221,9 @@ describe('server access on a role change', function () {
         Queue::assertNotPushed(RevokeSshKeyJob::class);
         expect($sshKey->servers()->first()->pivot->status)->toBe('synced');
     })->with([
-        'viewer to developer' => [TeamRoleKey::Viewer, TeamRoleKey::Developer],
         'developer to admin' => [TeamRoleKey::Developer, TeamRoleKey::Admin],
-        'admin to developer' => [TeamRoleKey::Admin, TeamRoleKey::Developer],
-        'viewer to viewer' => [TeamRoleKey::Viewer, TeamRoleKey::Viewer],
+        'admin to owner' => [TeamRoleKey::Admin, TeamRoleKey::Owner],
+        'owner to admin' => [TeamRoleKey::Owner, TeamRoleKey::Admin],
     ]);
 });
 

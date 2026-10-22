@@ -18,16 +18,22 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type Server } from '@/types/server';
-import { type SshKey } from '@/types/ssh-key';
+import { type IsolatedSiteTarget, type SshKey } from '@/types/ssh-key';
 
 interface Props {
     sshKeys: {
         data: SshKey[];
     };
     servers?: Server[];
+    isolatedSites: IsolatedSiteTarget[];
+    canSyncToServerUser: boolean;
 }
 
-export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
+export default function SshKeysIndex({
+    sshKeys: sshKeysData,
+    isolatedSites,
+    canSyncToServerUser,
+}: Props) {
     const teamPath = useTeamPath();
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -149,6 +155,8 @@ export default function SshKeysIndex({ sshKeys: sshKeysData }: Props) {
                 <SyncServersDialog
                     sshKey={selectedKey}
                     servers={servers}
+                    isolatedSites={isolatedSites}
+                    canSyncToServerUser={canSyncToServerUser}
                     open={syncDialogOpen}
                     onOpenChange={setSyncDialogOpen}
                 />

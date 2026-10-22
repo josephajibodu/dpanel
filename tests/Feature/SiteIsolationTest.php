@@ -189,7 +189,8 @@ it('creates the site user and its own php-fpm pool, and points nginx at it', fun
         ->and($all)->toContain("sudo systemctl reload 'php8.3-fpm'");
 
     expect($all)->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-example_com.sock;')
-        ->and($all)->not->toContain('php8.3-fpm-artisan.sock');
+        ->and($all)->not->toContain('php8.3-fpm-artisan.sock')
+        ->and($all)->toContain("location ^~ /.well-known/acme-challenge/ {\n    root /var/lib/flitops/acme;");
 
     // Site files are created by the site's own user, never chowned to the server user.
     expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'mkdir -p /home/example_com/example.com/releases")))->toBeTrue()
@@ -221,7 +222,8 @@ it('provisions an unisolated site exactly as before', function () {
         ->and($all)->toContain('mkdir -p /home/artisan/example.com/releases /home/artisan/example.com/shared')
         ->and($all)->toContain('sudo chown -R artisan:www-data /home/artisan/example.com')
         ->and($all)->toContain('sudo chmod 640 /home/artisan/example.com/shared/.env')
-        ->and($all)->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-artisan.sock;');
+        ->and($all)->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-artisan.sock;')
+        ->and($all)->not->toContain('/var/lib/flitops/acme');
 });
 
 it('refuses to take over an existing Linux user it did not create for the site', function () {

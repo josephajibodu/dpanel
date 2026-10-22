@@ -4,8 +4,19 @@ export interface SshKeyServer {
     id: number;
     ulid: string;
     name: string;
+    /** Set when the key is on an isolated site's own user rather than the server user. */
+    site_id: number | null;
+    system_user: string;
     status: SshKeyServerStatus;
     synced_at: string | null;
+}
+
+export interface IsolatedSiteTarget {
+    id: number;
+    domain: string;
+    system_user: string;
+    server_id: number;
+    server_name: string;
 }
 
 export interface SshKey {

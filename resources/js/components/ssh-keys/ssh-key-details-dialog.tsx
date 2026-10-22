@@ -105,11 +105,14 @@ export function SshKeyDetailsDialog({
                                     const info = statusInfo[server.status];
                                     return (
                                         <div
-                                            key={server.id}
+                                            key={`${server.id}-${server.system_user}`}
                                             className="flex items-center justify-between gap-2 rounded-md border p-2.5"
                                         >
                                             <span className="truncate text-sm font-medium">
                                                 {server.name}
+                                                <span className="ml-2 font-mono text-xs text-muted-foreground">
+                                                    {server.system_user}
+                                                </span>
                                             </span>
                                             <StatusBadge
                                                 status={info.label}

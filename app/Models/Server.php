@@ -172,7 +172,7 @@ class Server extends Model
     {
         return $this->belongsToMany(SshKey::class, 'server_ssh_key')
             ->using(ServerSshKey::class)
-            ->withPivot(['status', 'synced_at'])
+            ->withPivot(['site_id', 'system_user', 'status', 'synced_at'])
             ->withTimestamps();
     }
 

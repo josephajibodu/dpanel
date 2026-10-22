@@ -102,6 +102,51 @@ class SiteNginxSyncService
 
         $this->syncSslRedirectSnippet($connection, $site, $domain, $usesSsl);
         $this->syncWwwRedirectSnippet($connection, $site, $domain, $usesSsl);
+        $this->syncAcmeChallengeSnippet($connection, $site, $domain);
+    }
+
+    /**
+     * Write or remove server/acme_challenge.conf for a specific domain. An
+     * isolated site serves Let's Encrypt challenges from a folder only root
+     * controls (see Site::acmeChallengeRoot()); it's a snippet rather than
+     * part of the main config so it also reaches configs a user has edited.
+     */
+    protected function syncAcmeChallengeSnippet(SshConnection $connection, Site $site, SiteDomain $domain): void
+    {
+        $dbPath = 'server/acme_challenge.conf';
+        $snippetAbsPath = $domain->nginxSnippetsBasePath().'/'.$dbPath;
+
+        if (! $site->isIsolated()) {
+            $connection->exec("sudo rm -f {$snippetAbsPath}");
+            $site->nginxFiles()
+                ->where('site_domain_id', $domain->id)
+                ->where('section', NginxFileSection::Server->value)
+                ->where('path', $dbPath)
+                ->delete();
+
+            return;
+        }
+
+        $content = <<<NGINX
+location ^~ /.well-known/acme-challenge/ {
+    root {$site->acmeChallengeRoot()};
+    default_type text/plain;
+}
+
+NGINX;
+        $escaped = str_replace("'", "'\\''", $content);
+        $connection->exec("echo '{$escaped}' | sudo tee {$snippetAbsPath} > /dev/null");
+
+        $site->nginxFiles()->updateOrCreate(
+            ['site_domain_id' => $domain->id, 'section' => NginxFileSection::Server->value, 'path' => $dbPath],
+            [
+                'content' => $content,
+                'hash' => md5($content),
+                'last_synced_at' => now(),
+                'sync_status' => 'synced',
+                'sync_error' => null,
+            ]
+        );
     }
 
     /**
@@ -243,7 +288,7 @@ NGINX;
         }
 
         $certDir = "/etc/nginx/ssl/domains/{$site->id}/{$domain->id}";
-        $webRoot = $site->webRoot();
+        $challengeRoot = $site->acmeChallengeRoot();
 
         if ($domain->www_redirect->value === 'from_www') {
             $wwwHost = 'www.'.$hostname;
@@ -260,7 +305,7 @@ server {
     server_tokens off;
 
     location /.well-known/ {
-        root {$webRoot};
+        root {$challengeRoot};
     }
 
     location / {
@@ -290,7 +335,7 @@ server {
     server_tokens off;
 
     location /.well-known/ {
-        root {$webRoot};
+        root {$challengeRoot};
     }
 
     location / {
@@ -315,7 +360,7 @@ server {
     server_tokens off;
 
     location /.well-known/ {
-        root {$webRoot};
+        root {$challengeRoot};
     }
 
     location / {
@@ -345,7 +390,7 @@ server {
     server_tokens off;
 
     location /.well-known/ {
-        root {$webRoot};
+        root {$challengeRoot};
     }
 
     location / {

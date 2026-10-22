@@ -11,6 +11,7 @@ enum SiteStatus: string
     case Deploying = 'deploying';
     case Failed = 'failed';
     case Deleting = 'deleting';
+    case Isolating = 'isolating';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum SiteStatus: string
             self::Deploying => 'Deploying',
             self::Failed => 'Failed',
             self::Deleting => 'Deleting',
+            self::Isolating => 'Isolating',
         };
     }
 
@@ -35,6 +37,7 @@ enum SiteStatus: string
             self::Deploying => 'yellow',
             self::Failed => 'red',
             self::Deleting => 'orange',
+            self::Isolating => 'blue',
         };
     }
 }

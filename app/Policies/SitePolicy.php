@@ -42,6 +42,14 @@ class SitePolicy
     }
 
     /**
+     * Determine whether the user can move an existing site to its own Linux user.
+     */
+    public function isolate(User $user, Site $site): bool
+    {
+        return $user->hasTeamPermission($site->server->team, TeamPermission::ManageSites);
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Site $site): bool

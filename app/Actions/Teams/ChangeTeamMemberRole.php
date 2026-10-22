@@ -12,17 +12,20 @@ class ChangeTeamMemberRole
     public function __construct(private RevokeMemberServerAccess $revokeServerAccess) {}
 
     /**
-     * Give the member a new role. If it takes away their server access, their
-     * SSH keys come off this team's servers too.
+     * Give the member a new role. Without server access their SSH keys come
+     * off this team's servers; without admin server access they come off the
+     * server user (which has root access), staying only on isolated sites.
+     * That also cleans up keys a member put on the server user before admin
+     * access became its own permission.
      */
     public function execute(Team $team, User $member, TeamRole $role): void
     {
-        $hadServerAccess = $member->teamRole($team)?->grants(TeamPermission::AccessServers) ?? false;
-
         $team->users()->updateExistingPivot($member->id, ['team_role_id' => $role->id]);
 
-        if ($hadServerAccess && ! $role->grants(TeamPermission::AccessServers)) {
+        if (! $role->grants(TeamPermission::AccessServers)) {
             $this->revokeServerAccess->execute($team, $member);
+        } elseif (! $role->grants(TeamPermission::AccessServersAsAdmin)) {
+            $this->revokeServerAccess->execute($team, $member, serverUserOnly: true);
         }
     }
 }

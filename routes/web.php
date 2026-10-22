@@ -20,6 +20,7 @@ use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDomainController;
+use App\Http\Controllers\SiteIsolationController;
 use App\Http\Controllers\SshKeyController;
 use App\Http\Controllers\StorageProviderController;
 use App\Http\Controllers\TeamController;
@@ -159,6 +160,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.update');
                 Route::delete('servers/{server}/sites/{site}', [SiteController::class, 'destroy'])
                     ->name('servers.sites.destroy');
+                Route::post('servers/{server}/sites/{site}/isolate', [SiteIsolationController::class, 'store'])
+                    ->name('servers.sites.isolate');
 
                 // Domains
                 Route::get('servers/{server}/sites/{site}/domains', [SiteDomainController::class, 'index'])

@@ -28,6 +28,8 @@ class SshKeyResource extends JsonResource
                     'id' => $server->id,
                     'ulid' => $server->ulid,
                     'name' => $server->name,
+                    'site_id' => $server->pivot->site_id,
+                    'system_user' => $server->pivot->system_user,
                     'status' => $server->pivot->status,
                     'synced_at' => $server->pivot->synced_at?->toIso8601String(),
                 ]);
