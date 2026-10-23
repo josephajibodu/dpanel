@@ -60,9 +60,14 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         return $script;
     }
 
+    /**
+     * Reloads are serialised with a lock file in /run, where only root can
+     * create files, so a site's user can't pre-create the lock, hold it or
+     * swap it for a link the way it could in the shared /tmp.
+     */
     public function reloadPhpFpm(Site $site): string
     {
-        return "( flock -w 10 9 || exit 1\n    echo 'Restarting FPM...'; sudo -S service \$PHP_FPM reload ) 9>/tmp/fpmlock";
+        return "echo 'Restarting FPM...'\nsudo -S flock -w 10 /run/flitops-php-fpm.lock service \"\$PHP_FPM\" reload";
     }
 
     /**

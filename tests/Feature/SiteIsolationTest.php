@@ -312,7 +312,7 @@ it('clones as the server user and runs the deploy script as the site user', func
 
     $clone = collect($commands)->first(fn ($c) => str_contains($c, 'git clone'));
     $run = collect($commands)->first(fn ($c) => str_starts_with($c, "cat '/tmp/tmp.fleetops/deploy.sh' | "));
-    $reload = collect($commands)->first(fn ($c) => str_contains($c, 'service $PHP_FPM reload'));
+    $reload = collect($commands)->first(fn ($c) => str_contains($c, 'service "$PHP_FPM" reload'));
 
     // The clone uses the server user's key and hands the files to the site user.
     expect($clone)->toContain('ssh -i /home/artisan/.ssh/id_ed25519')
@@ -385,8 +385,8 @@ it('rolls back as the site user and reloads php-fpm as the server user', functio
         ->and($commands[1])->toStartWith("sudo -u 'example_com' -H bash -c")
         ->and($commands[1])->toContain('ln -sfn')
         ->and($commands[1])->toContain($target->ulid)
-        ->and($commands[1])->not->toContain('service $PHP_FPM reload')
-        ->and($commands[2])->toContain('sudo -S service $PHP_FPM reload')
+        ->and($commands[1])->not->toContain('service "$PHP_FPM" reload')
+        ->and($commands[2])->toContain('sudo -S flock -w 10 /run/flitops-php-fpm.lock service "$PHP_FPM" reload')
         ->and($commands[2])->not->toContain('sudo -u');
 });
 

@@ -83,22 +83,20 @@ class RunSqliteBackup
         $driver = $this->storageProviderManager->forAccount($storageProvider);
         $path = $this->buildStoragePath($site, $backup);
         $s3Uri = 's3://'.$driver->bucket().'/'.$path;
-        $workDir = "/tmp/flitops-sqlite-backup-{$backup->id}";
 
         $connection = $this->sshService->connect($server);
 
         try {
             $this->ensureAwsCliInstalled($connection);
 
-            $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $backup, $site, $workDir, $driver, $s3Uri): void {
+            $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $backup, $site, $driver, $s3Uri): void {
                 $awsCredentials = $this->uploadStorageCredentials($connection, $directory, $driver);
 
                 $this->updateStatus($backup, 'dumping', ['started_at' => now()]);
-                $this->prepareWorkDir($connection, $workDir);
-                $this->streamSnapshotToStorage($connection, $site, $workDir, $awsCredentials, $driver, $s3Uri);
+                $this->streamSnapshotToStorage($connection, $site, $directory, $awsCredentials, $driver, $s3Uri);
 
                 $this->updateStatus($backup, 'verifying');
-                $this->verifyBackup($connection, $workDir, $awsCredentials, $driver, $s3Uri);
+                $this->verifyBackup($connection, $directory, $awsCredentials, $driver, $s3Uri);
             });
 
             $backup->update([
@@ -122,12 +120,6 @@ class RunSqliteBackup
 
             throw $e;
         } finally {
-            try {
-                $connection->exec('rm -rf '.$this->escapeForShell($workDir), 60);
-            } catch (\Throwable) {
-                // Best effort — don't let a failed cleanup mask the real error.
-            }
-
             $connection->disconnect();
         }
     }
@@ -140,18 +132,7 @@ class RunSqliteBackup
     }
 
     /**
-     * A private scratch directory for the snapshot and the verify copy,
-     * cleared first in case a previous attempt for this backup left one.
-     */
-    private function prepareWorkDir(SshConnection $connection, string $workDir): void
-    {
-        $dirEsc = $this->escapeForShell($workDir);
-
-        $connection->exec("rm -rf {$dirEsc} && mkdir -m 700 {$dirEsc}", 60);
-    }
-
-    /**
-     * Snapshot the live file into the scratch directory, then stream it
+     * Snapshot the live file into the private directory, then stream it
      * compressed straight to the bucket — like the server database backups,
      * the data never touches the Flitops app server.
      */

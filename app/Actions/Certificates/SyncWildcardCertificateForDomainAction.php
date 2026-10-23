@@ -2,11 +2,12 @@
 
 namespace App\Actions\Certificates;
 
+use App\Actions\Database\EscapesShell;
 use App\Models\Certificate;
 use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\StagesFilesPrivately;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -20,6 +21,8 @@ use RuntimeException;
  */
 class SyncWildcardCertificateForDomainAction
 {
+    use EscapesShell, StagesFilesPrivately;
+
     public function __construct(
         private WildcardCertificateIssuer $issuer,
     ) {}
@@ -55,8 +58,8 @@ class SyncWildcardCertificateForDomainAction
         $connection->sudo("mkdir -p {$directory}");
         $connection->sudo("chmod 700 {$directory}");
 
-        $this->uploadAsRoot($connection, $certContent, $certPath, '0644');
-        $this->uploadAsRoot($connection, $keyContent, $keyPath, '0600');
+        $this->installAsRoot($connection, $certContent, $certPath, '0644');
+        $this->installAsRoot($connection, $keyContent, $keyPath, '0600');
 
         return true;
     }
@@ -108,19 +111,5 @@ class SyncWildcardCertificateForDomainAction
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    /**
-     * SFTP-upload to a temp path then `sudo install` into place so the file
-     * lands root-owned at the requested mode. `install(1)` does the
-     * ownership + mode + atomic rename in one step.
-     */
-    private function uploadAsRoot(SshConnection $connection, string $content, string $destination, string $mode): void
-    {
-        $tempPath = '/tmp/wildcard_'.Str::random(16);
-
-        $connection->upload($content, $tempPath);
-        $connection->sudo("install -o root -g root -m {$mode} {$tempPath} {$destination}");
-        $connection->exec("rm -f {$tempPath}");
     }
 }

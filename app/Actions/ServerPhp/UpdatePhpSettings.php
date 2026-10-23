@@ -2,13 +2,17 @@
 
 namespace App\Actions\ServerPhp;
 
+use App\Actions\Database\EscapesShell;
 use App\Models\Server;
 use App\Services\Ssh\SshService;
+use App\Services\Ssh\StagesFilesPrivately;
 use InvalidArgumentException;
 use RuntimeException;
 
 class UpdatePhpSettings
 {
+    use EscapesShell, StagesFilesPrivately;
+
     private const PHP_INI_KEYS = [
         'upload_max_filesize',
         'post_max_size',
@@ -49,9 +53,7 @@ class UpdatePhpSettings
                 $content = preg_replace_callback($pattern, fn (): string => "{$key} = {$value}", $content, 1);
             }
 
-            $tmpPath = '/tmp/php-fpm-php.ini.'.uniqid('', true);
-            $connection->upload($content, $tmpPath);
-            $connection->sudo("mv {$tmpPath} {$iniPath}", 10);
+            $this->installAsRoot($connection, $content, $iniPath, timeout: 10);
             $connection->sudo("systemctl restart php{$version}-fpm", 30);
         } finally {
             $connection->disconnect();

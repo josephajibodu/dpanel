@@ -131,19 +131,19 @@ class DeploySiteJob implements ShouldQueue
      */
     private function deploySite(SshConnection $connection, string $script, Site $site, string $releasePath): int
     {
-        $scriptPath = $this->prepareScript($connection, $script, $site, $releasePath);
+        $exitCode = 0;
 
-        try {
+        $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $script, $site, $releasePath, &$exitCode): void {
+            $scriptPath = $this->prepareScript($connection, $directory, $script, $site, $releasePath);
+
             $this->logOutput('Starting deployment script...', 'info');
             $exitCode = $connection->execWithOutput(
-                $scriptPath,
+                'bash '.$this->escapeForShell($scriptPath),
                 fn (string $line) => $this->logOutput($line, 'output'),
                 $this->timeout
             );
             $this->logOutput('Deployment script exited with code '.$exitCode, 'info');
-        } finally {
-            $this->cleanupScript($connection, $scriptPath);
-        }
+        });
 
         return $exitCode;
     }
@@ -261,25 +261,20 @@ class DeploySiteJob implements ShouldQueue
     }
 
     /**
-     * Prepare the deploy script (variable substitution + preamble), upload it to
-     * the server, and return the remote path to execute.
+     * Prepare the deploy script (variable substitution + preamble), upload it
+     * into the private directory, and return the remote path to execute.
      *
      * The uploaded script deletes itself as its first action: once bash has the
-     * file open, unlinking it doesn't interrupt execution, so the temp file can't
-     * be orphaned by a timeout, dropped connection, or signal mid-deploy.
+     * file open, unlinking it doesn't interrupt execution, so the file can't be
+     * left behind if the job dies before the private directory is removed.
      */
-    private function prepareScript($connection, string $script, Site $site, string $releasePath): string
+    private function prepareScript(SshConnection $connection, string $directory, string $script, Site $site, string $releasePath): string
     {
-        $prepared = $this->buildScript($script, $site, $releasePath);
+        $scriptPath = "{$directory}/deploy.sh";
 
-        $scriptPath = '/tmp/deploy_'.uniqid().'.sh';
-
-        // Self-delete on the first line so the temp file is gone the moment the
-        // script starts running, regardless of how the run later terminates.
-        $contents = "#!/bin/bash\nset -e\nrm -f '{$scriptPath}'\n\n{$prepared}";
+        $contents = "#!/bin/bash\nset -e\nrm -f ".$this->escapeForShell($scriptPath)."\n\n".$this->buildScript($script, $site, $releasePath);
 
         $connection->upload($contents, $scriptPath);
-        $connection->exec("chmod +x '{$scriptPath}'");
 
         return $scriptPath;
     }
@@ -311,21 +306,6 @@ class DeploySiteJob implements ShouldQueue
         $userScript = str_replace(array_keys($replacements), array_values($replacements), $script);
 
         return $this->scriptPreamble($site, $releasePath).$strategy->prepend($site).$userScript.$strategy->append($site);
-    }
-
-    /**
-     * Best-effort removal of the remote deploy script.
-     *
-     * The script also deletes itself on start; this safety net covers the narrow
-     * window where it was uploaded but the run never began (e.g. the job died first).
-     */
-    private function cleanupScript($connection, string $scriptPath): void
-    {
-        try {
-            $connection->exec("rm -f '{$scriptPath}'");
-        } catch (\Throwable $e) {
-            Log::warning("Failed to remove remote deploy script {$scriptPath}: {$e->getMessage()}");
-        }
     }
 
     /**

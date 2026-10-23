@@ -2,14 +2,18 @@
 
 namespace App\Actions\CronJob;
 
+use App\Actions\Database\EscapesShell;
 use App\Jobs\CreateCronJobJob;
 use App\Models\CronJob;
 use App\Models\Server;
 use App\Services\Ssh\SshService;
+use App\Services\Ssh\StagesFilesPrivately;
 use RuntimeException;
 
 class CreateCronJob
 {
+    use EscapesShell, StagesFilesPrivately;
+
     public function __construct(
         private SshService $sshService
     ) {}
@@ -57,15 +61,7 @@ class CreateCronJob
             $filename = "{$prefix}-{$cronJob->id}";
             $destPath = "{$path}/{$filename}";
 
-            $content = $cronJob->cronLine();
-            $tmpPath = '/tmp/'.$filename;
-
-            $connection->upload($content, $tmpPath);
-
-            // install atomically moves the file to /etc/cron.d with the correct
-            // owner and mode in one sudo call — avoids the chown/chmod running
-            // without elevated privileges when chained with &&.
-            $connection->sudo("install -o root -g root -m 644 {$tmpPath} {$destPath}", 30);
+            $this->installAsRoot($connection, $cronJob->cronLine(), $destPath);
 
             $cronJob->update(['status' => 'active']);
         } finally {

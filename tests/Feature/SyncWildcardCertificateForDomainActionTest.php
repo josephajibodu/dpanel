@@ -48,27 +48,28 @@ it('uploads cert + key for one (site, domain) and lands them at the ID-based pat
     $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
         $execCalls[] = $cmd;
 
-        return ''; // sha256sum probe → empty → triggers upload
+        // sha256sum probe → empty → triggers upload.
+        return $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
     });
     $connection->shouldReceive('upload')->andReturnUsing(function (string $content, string $path) use (&$uploads) {
-        $uploads[$path] = $content;
+        $uploads[] = $path;
     });
 
     $result = syncWildcardCertificateAction()->execute($connection, siteId: 42, domainId: 7);
 
     expect($result)->toBeTrue();
 
-    // Two temp uploads (cert + key) into /tmp/wildcard_*.
+    // Two uploads (cert + key), each staged in a private mktemp -d directory.
     expect($uploads)->toHaveCount(2);
-    foreach (array_keys($uploads) as $tempPath) {
-        expect($tempPath)->toStartWith('/tmp/wildcard_');
+    foreach ($uploads as $tempPath) {
+        expect($tempPath)->toBe('/tmp/tmp.fleetops/staged');
     }
 
     // sudo install moves them to the Forge-style ID-based path with the right modes.
     $installs = collect($execCalls)->filter(fn ($c) => str_starts_with($c, 'sudo install '))->values();
     expect($installs)->toHaveCount(2);
-    expect($installs->contains(fn ($c) => str_contains($c, '/etc/nginx/ssl/domains/42/7/server.crt') && str_contains($c, '-m 0644')))->toBeTrue();
-    expect($installs->contains(fn ($c) => str_contains($c, '/etc/nginx/ssl/domains/42/7/server.key') && str_contains($c, '-m 0600')))->toBeTrue();
+    expect($installs->contains(fn ($c) => str_contains($c, '/etc/nginx/ssl/domains/42/7/server.crt') && str_contains($c, "-m '0644'")))->toBeTrue();
+    expect($installs->contains(fn ($c) => str_contains($c, '/etc/nginx/ssl/domains/42/7/server.key') && str_contains($c, "-m '0600'")))->toBeTrue();
 
     // Action never reloads nginx — the caller (site provisioner) does that itself.
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'reload nginx')))->toBeFalse();
@@ -125,7 +126,7 @@ it('renews a certificate that is due for renewal before installing it', function
     $issuer->shouldReceive('issueOrRenew')->once()->with('*.flitops.test')->andReturn($renewedCert);
 
     $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $cmd) => $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->andReturnNull();
 
     $result = (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1);
@@ -140,7 +141,7 @@ it('falls back to the existing certificate when renewal fails but it is still va
     $issuer->shouldReceive('issueOrRenew')->once()->andThrow(new RuntimeException('acme.sh unreachable'));
 
     $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $cmd) => $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->andReturnNull();
 
     $result = (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1);

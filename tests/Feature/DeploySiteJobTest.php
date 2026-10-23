@@ -43,6 +43,7 @@ function deployConnectionMock(int $exitCode = 0, array $outputLines = ['Pulling 
 
     $connection->shouldReceive('exec')->andReturnUsing(function (string $command, int $timeout = 30) {
         return match (true) {
+            $command === 'mktemp -d' => '/tmp/tmp.fleetops',
             str_contains($command, 'git rev-parse HEAD') => 'a1b2c3d4e5f67890',
             str_contains($command, "--format='%s'") => 'Add deployment job tests',
             str_contains($command, "--format='%an'") => 'Jane Developer',
@@ -149,7 +150,7 @@ it('uploads the site custom deploy script when one is defined', function () {
     $uploaded = null;
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('directoryExists')->andReturnTrue();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
         $uploaded = $content;
     });
@@ -173,7 +174,7 @@ it('clones into a fresh release directory and symlinks shared paths', function (
     $uploaded = null;
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('directoryExists')->andReturnTrue();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
         $uploaded = $content;
     });
@@ -199,7 +200,7 @@ function uploadedDeployScriptFor(Site $site): string
     $uploaded = '';
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('directoryExists')->andReturnTrue();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
         $uploaded = $content;
     });
@@ -266,6 +267,7 @@ it('prunes old releases after a successful deploy', function () {
         }
 
         return match (true) {
+            $command === 'mktemp -d' => '/tmp/tmp.fleetops',
             str_contains($command, 'git rev-parse HEAD') => 'a1b2c3d4e5f67890',
             default => '',
         };
@@ -347,7 +349,7 @@ it('completes the deployment without commit metadata when no git directory exist
 
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('directoryExists')->andReturnFalse();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->andReturnNull();
     $connection->shouldReceive('execWithOutput')->once()->andReturn(0);
     $connection->shouldReceive('disconnect')->andReturnNull();
@@ -372,7 +374,7 @@ it('makes the uploaded deploy script self-delete and runs it by path', function 
 
     $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('directoryExists')->andReturnTrue();
-    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '');
     $connection->shouldReceive('upload')->once()->andReturnUsing(function (string $content) use (&$uploaded) {
         $uploaded = $content;
     });
@@ -386,18 +388,16 @@ it('makes the uploaded deploy script self-delete and runs it by path', function 
     $job = new DeploySiteJob($deployment);
     $job->handle(deploySshServiceMock($connection));
 
-    // The self-delete is the first command, ahead of the deploy body.
-    expect($uploaded)->toContain("rm -f '/tmp/deploy_")
+    // The script lives in the private directory and deletes itself first,
+    // ahead of the deploy body.
+    expect($uploaded)->toContain("rm -f '/tmp/tmp.fleetops/deploy.sh'")
         ->and(strpos($uploaded, 'rm -f'))->toBeLessThan(strpos($uploaded, 'cd "$RELEASE_PATH"'));
 
     // The run command is just the script path — no fragile trailing cleanup chain.
-    expect($ranCommand)->toStartWith('/tmp/deploy_')
-        ->and($ranCommand)->toEndWith('.sh')
-        ->and($ranCommand)->not->toContain('rm -f')
-        ->and($ranCommand)->not->toContain('EXIT_CODE');
+    expect($ranCommand)->toBe("bash '/tmp/tmp.fleetops/deploy.sh'");
 });
 
-it('removes the remote script via the safety net even when the run throws', function () {
+it('removes the private script directory even when the run throws', function () {
     Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
 
     $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
@@ -409,7 +409,7 @@ it('removes the remote script via the safety net even when the run throws', func
     $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$execCommands) {
         $execCommands[] = $command;
 
-        return '';
+        return $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
     });
     $connection->shouldReceive('upload')->once()->andReturnNull();
     $connection->shouldReceive('execWithOutput')->once()->andThrow(new RuntimeException('SSH timed out'));
@@ -420,6 +420,5 @@ it('removes the remote script via the safety net even when the run throws', func
     expect(fn () => $job->handle(deploySshServiceMock($connection)))
         ->toThrow(RuntimeException::class, 'SSH timed out');
 
-    expect(collect($execCommands)->contains(fn (string $cmd) => str_starts_with($cmd, "rm -f '/tmp/deploy_")))
-        ->toBeTrue();
+    expect($execCommands)->toContain("rm -rf '/tmp/tmp.fleetops'");
 });

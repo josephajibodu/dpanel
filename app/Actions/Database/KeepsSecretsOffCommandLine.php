@@ -4,8 +4,7 @@ namespace App\Actions\Database;
 
 use App\Contracts\StorageProviderContract;
 use App\Services\Ssh\SshConnection;
-use Closure;
-use RuntimeException;
+use App\Services\Ssh\StagesFilesPrivately;
 
 /**
  * Every user on a server can see the full text of running commands (`ps`), so
@@ -16,26 +15,7 @@ use RuntimeException;
  */
 trait KeepsSecretsOffCommandLine
 {
-    /**
-     * Run the callback with a private temporary directory that is removed
-     * afterwards, even when the callback throws.
-     *
-     * @param  Closure(string): void  $callback
-     */
-    private function withPrivateDirectory(SshConnection $connection, Closure $callback): void
-    {
-        $directory = trim($connection->exec('mktemp -d', 10));
-
-        if (! str_starts_with($directory, '/tmp/')) {
-            throw new RuntimeException("Could not create a private temporary directory (got: {$directory}).");
-        }
-
-        try {
-            $callback($directory);
-        } finally {
-            $connection->exec('rm -rf '.$this->escapeForShell($directory), 10);
-        }
-    }
+    use StagesFilesPrivately;
 
     /**
      * Upload a MySQL/MariaDB client option file for root and return its path,
