@@ -1,11 +1,19 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
-import { Team } from './team';
+import { Team, TeamPermission } from './team';
 
-export type { Team, TeamMember, TeamInvitation, TeamRoleKey } from './team';
+export type {
+    Team,
+    TeamInvitation,
+    TeamMember,
+    TeamPermission,
+    TeamRoleKey,
+} from './team';
 
 export interface Auth {
     user: User;
+    /** What the user may do in their current team. Presentation only; the server re-checks every action. */
+    permissions: Record<TeamPermission, boolean>;
 }
 
 export interface BreadcrumbItem {
@@ -30,6 +38,8 @@ export interface SubNavItem {
     href: string;
     /** When true, active only on exact path match (e.g. Overview base pages). */
     exactMatch?: boolean;
+    /** Hide the item from users without this permission in the current team. */
+    permission?: TeamPermission;
 }
 
 export interface ServerSummary {

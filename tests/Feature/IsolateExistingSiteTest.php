@@ -142,7 +142,7 @@ it('moves a site to its own user and rewrites everything that named the old fold
 
     // User, pool, and the move itself (with a record of the original owners).
     expect($all)->toContain("sudo useradd --create-home --home-dir '/home/example_com'")
-        ->and($all)->toContain("sudo install -o root -g root -m 644 '/tmp/tmp.fleetops/pool.conf' '/etc/php/8.3/fpm/pool.d/example_com.conf'")
+        ->and($all)->toContain("sudo install -o root -g root -m '644' '/tmp/tmp.fleetops/staged' '/etc/php/8.3/fpm/pool.d/example_com.conf'")
         ->and($commands)->toContain("sudo find '".OLD_ROOT."' -printf '%U:%G %m %p\\0' > '/tmp/tmp.fleetops/ownership'")
         ->and($commands)->toContain("sudo mv -T '".OLD_ROOT."' '".NEW_ROOT."'")
         ->and($commands)->toContain("sudo chown -R 'example_com':'example_com' '".NEW_ROOT."'");
@@ -165,12 +165,12 @@ it('moves a site to its own user and rewrites everything that named the old fold
     expect($all)->toContain("sudo sed -i 's#= /home/artisan/example\\.com/current/public\\(,\\?\\)\$#= /var/lib/flitops/acme\\1#' '/etc/letsencrypt/renewal/example.com.conf'");
 
     // Workers and cron jobs run as the site user from the new folder.
-    $workerFile = collect($uploads)->firstWhere('path', "/tmp/tmp.fleetops/flitops-worker-{$this->worker->id}.conf");
-    $cronFile = collect($uploads)->firstWhere('path', "/tmp/tmp.fleetops/flitops-cron-{$this->cronJob->id}");
+    $workerFile = collect($uploads)->first(fn ($upload) => str_contains($upload['content'], "[program:flitops-worker-{$this->worker->id}]"));
+    $cronFile = collect($uploads)->first(fn ($upload) => str_contains($upload['content'], 'schedule:run'));
 
     expect($workerFile['content'])->toContain('user=example_com')->toContain('directory='.NEW_ROOT.'/current')
         ->and($cronFile['content'])->toContain('* * * * * example_com cd '.NEW_ROOT.'/current && php artisan schedule:run')
-        ->and($all)->toContain("sudo install -o root -g root -m 644 '/tmp/tmp.fleetops/flitops-worker-{$this->worker->id}.conf' '/etc/supervisor/conf.d/flitops-worker-{$this->worker->id}.conf'")
+        ->and($all)->toContain("sudo install -o root -g root -m '644' '/tmp/tmp.fleetops/staged' '/etc/supervisor/conf.d/flitops-worker-{$this->worker->id}.conf'")
         ->and($commands)->toContain('sudo supervisorctl update')
         ->and($commands)->toContain("sudo supervisorctl stop 'flitops-worker-{$this->stoppedWorker->id}:*'");
 
@@ -225,7 +225,7 @@ it('puts everything back exactly as it was when a late step fails', function () 
     $afterAll = implode("\n", $after);
 
     // Process files rewritten for the server user again.
-    $rewrittenWorker = collect($uploads)->where('path', "/tmp/tmp.fleetops/flitops-worker-{$this->worker->id}.conf")->last();
+    $rewrittenWorker = collect($uploads)->filter(fn ($upload) => str_contains($upload['content'], "[program:flitops-worker-{$this->worker->id}]"))->last();
     expect($rewrittenWorker['content'])->toContain('user=artisan')->toContain('directory='.OLD_ROOT.'/current');
 
     // Each finished step undone, newest first.

@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { type DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerMetrics } from '@/hooks/use-server-metrics';
 import { useServerProvisioningLogs } from '@/hooks/use-server-provisioning-logs';
 import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
@@ -65,10 +66,12 @@ export default function ServersShow({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const { server: data, connectionState } = useServerProvisioningUpdates(
         server.data,
     );
     const sites = data.sites ?? [];
+    const canCreateSite = data.status === 'active' && can('manage_sites');
     const databases = data.databases ?? [];
     const isProvisioningLifecycle = [
         'pending',
@@ -139,17 +142,19 @@ export default function ServersShow({
                                                 'An unexpected error occurred during provisioning.'}
                                         </p>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleRetryProvisioning}
-                                        disabled={retryForm.processing}
-                                    >
-                                        {retryForm.processing && (
-                                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                        )}
-                                        Retry provisioning
-                                    </Button>
+                                    {can('manage_servers') && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleRetryProvisioning}
+                                            disabled={retryForm.processing}
+                                        >
+                                            {retryForm.processing && (
+                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                            )}
+                                            Retry provisioning
+                                        </Button>
+                                    )}
                                 </div>
 
                                 {logs.length > 0 && (
@@ -190,7 +195,7 @@ export default function ServersShow({
                                                 server.
                                             </CardDescription>
                                         </div>
-                                        {data.status === 'active' && (
+                                        {canCreateSite && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -210,9 +215,13 @@ export default function ServersShow({
                                     {sites.length === 0 ? (
                                         <EmptyState
                                             title="No sites on this server yet"
-                                            description="Get started by creating your first site."
+                                            description={
+                                                can('manage_sites')
+                                                    ? 'Get started by creating your first site.'
+                                                    : 'Sites added to this server will appear here.'
+                                            }
                                             action={
-                                                data.status === 'active' && (
+                                                canCreateSite && (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"

@@ -2,14 +2,18 @@
 
 namespace App\Actions\Worker;
 
+use App\Actions\Database\EscapesShell;
 use App\Jobs\CreateWorkerJob;
 use App\Models\Server;
 use App\Models\Worker;
 use App\Services\Ssh\SshService;
+use App\Services\Ssh\StagesFilesPrivately;
 use RuntimeException;
 
 class CreateWorker
 {
+    use EscapesShell, StagesFilesPrivately;
+
     public function __construct(
         private SshService $sshService
     ) {}
@@ -56,11 +60,7 @@ class CreateWorker
             $filename = "{$prefix}-{$worker->id}.conf";
             $programName = "{$prefix}-{$worker->id}";
 
-            $content = $worker->supervisorConfig($programName);
-            $tmpPath = '/tmp/'.$filename;
-
-            $connection->upload($content, $tmpPath);
-            $connection->sudo("mv {$tmpPath} {$confPath}/{$filename}", 30);
+            $this->installAsRoot($connection, $worker->supervisorConfig($programName), "{$confPath}/{$filename}");
             $connection->sudo('supervisorctl reread', 30);
             $connection->sudo('supervisorctl update', 30);
 

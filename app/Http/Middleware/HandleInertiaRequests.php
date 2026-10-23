@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\TeamPermission;
 use App\Models\Server;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -32,6 +33,9 @@ class HandleInertiaRequests extends Middleware
     /**
      * Define the props that are shared by default.
      *
+     * Team-dependent props are closures so they are resolved after the
+     * `team.slug` middleware has switched the user to the team in the URL.
+     *
      * @see https://inertiajs.com/shared-data
      *
      * @return array<string, mixed>
@@ -45,9 +49,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
+                'permissions' => fn () => $user ? $this->permissionsFor($user) : [],
             ],
-            'currentTeam' => $user?->currentTeam,
-            'servers' => $user?->currentTeam
+            'currentTeam' => fn () => $user?->currentTeam,
+            'servers' => fn () => $user?->currentTeam
                 ? $user->currentTeam->servers()->select(['id', 'name'])->orderBy('name')->get()
                 : [],
             'sites' => fn () => $this->resolveSitesForRequest($request),
@@ -65,6 +70,24 @@ class HandleInertiaRequests extends Middleware
                 'deployment_started' => $request->session()->get('deployment_started'),
             ],
         ];
+    }
+
+    /**
+     * What the user may do in their current team, keyed by permission value.
+     * Only used to hide controls the user can't use; every action is still
+     * authorized on the server.
+     *
+     * @return array<string, bool>
+     */
+    protected function permissionsFor(User $user): array
+    {
+        $team = $user->currentTeam;
+
+        return collect(TeamPermission::cases())
+            ->mapWithKeys(fn (TeamPermission $permission): array => [
+                $permission->value => $team !== null && $user->hasTeamPermission($team, $permission),
+            ])
+            ->all();
     }
 
     /**

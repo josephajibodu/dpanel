@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\SshKeys\SyncSshKeyAction;
-use App\Enums\TeamPermission;
 use App\Http\Requests\StoreSshKeyRequest;
 use App\Http\Requests\SyncSshKeyRequest;
 use App\Http\Resources\ServerResource;
@@ -44,7 +43,6 @@ class SshKeyController extends Controller
             'sshKeys' => SshKeyResource::collection($sshKeys),
             'servers' => ServerResource::collection($servers),
             'isolatedSites' => $isolatedSites,
-            'canSyncToServerUser' => auth()->user()->hasTeamPermission($team, TeamPermission::AccessServersAsAdmin),
         ]);
     }
 

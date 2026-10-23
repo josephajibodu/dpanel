@@ -1,5 +1,26 @@
 export type TeamRoleKey = 'owner' | 'admin' | 'developer' | 'viewer';
 
+/** Mirrors App\Enums\TeamPermission; TeamPermissionTypesTest fails if they drift apart. */
+export type TeamPermission =
+    | 'view'
+    | 'deploy'
+    | 'manage_sites'
+    | 'manage_processes'
+    | 'manage_databases'
+    | 'manage_php'
+    | 'run_commands'
+    | 'view_secrets'
+    | 'access_servers'
+    | 'access_servers_as_admin'
+    | 'run_backups'
+    | 'restore_backups'
+    | 'manage_servers'
+    | 'manage_providers'
+    | 'manage_members'
+    | 'manage_team_settings'
+    | 'manage_owners'
+    | 'delete_team';
+
 export interface Team {
     id: number;
     name: string;

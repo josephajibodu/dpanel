@@ -5,6 +5,7 @@ import { Loader2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -26,6 +27,7 @@ export default function SiteDeployScriptShow({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -126,6 +128,7 @@ export default function SiteDeployScriptShow({
                                     padding: { top: 24, bottom: 24 },
                                     fontFamily:
                                         'Menlo, Monaco, "Courier New", monospace',
+                                    readOnly: !can('deploy'),
                                 }}
                             />
                         </div>
@@ -136,14 +139,16 @@ export default function SiteDeployScriptShow({
                         )}
                     </div>
 
-                    <div className="flex justify-end">
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing && (
-                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Save Script
-                        </Button>
-                    </div>
+                    {can('deploy') && (
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={form.processing}>
+                                {form.processing && (
+                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                Save Script
+                            </Button>
+                        </div>
+                    )}
                 </form>
             </div>
         </AppLayout>

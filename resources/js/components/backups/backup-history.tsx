@@ -33,6 +33,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { type Backup } from '@/types/backup';
 
 interface Props {
@@ -44,7 +45,7 @@ interface Props {
     /** Team-prefixed URL of the backups collection; row actions append `/{id}/...`. */
     backupsUrl: string;
     description: string;
-    /** Omit to hide the Restore action. */
+    /** Omit to hide the Restore action (e.g. when the user may not restore). */
     onRestore?: (backup: Backup) => void;
 }
 
@@ -62,6 +63,9 @@ export function BackupHistory({
     description,
     onRestore,
 }: Props) {
+    const can = usePermission();
+    const canDownload = can('view_secrets');
+    const canDelete = can('run_backups');
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [backupToDelete, setBackupToDelete] = useState<Backup | null>(null);
 
@@ -155,56 +159,68 @@ export function BackupHistory({
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <MoreVerticalIcon className="h-4 w-4" />
-                                                    <span className="sr-only">
-                                                        Actions
-                                                    </span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                {backup.status ===
-                                                    'completed' && (
-                                                    <DropdownMenuItem asChild>
-                                                        <a
-                                                            href={`${backupsUrl}/${backup.id}/download`}
-                                                        >
-                                                            <DownloadIcon className="mr-2 h-4 w-4" />
-                                                            Download
-                                                        </a>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {onRestore &&
-                                                    backup.status ===
-                                                        'completed' && (
+                                        {(canDelete ||
+                                            (backup.status === 'completed' &&
+                                                (canDownload ||
+                                                    onRestore))) && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                        <span className="sr-only">
+                                                            Actions
+                                                        </span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {canDownload &&
+                                                        backup.status ===
+                                                            'completed' && (
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <a
+                                                                    href={`${backupsUrl}/${backup.id}/download`}
+                                                                >
+                                                                    <DownloadIcon className="mr-2 h-4 w-4" />
+                                                                    Download
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    {onRestore &&
+                                                        backup.status ===
+                                                            'completed' && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    onRestore(
+                                                                        backup,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <RotateCcwIcon className="mr-2 h-4 w-4" />
+                                                                Restore
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    {canDelete && (
                                                         <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive"
                                                             onClick={() =>
-                                                                onRestore(
+                                                                handleDelete(
                                                                     backup,
                                                                 )
                                                             }
                                                         >
-                                                            <RotateCcwIcon className="mr-2 h-4 w-4" />
-                                                            Restore
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Delete
                                                         </DropdownMenuItem>
                                                     )}
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onClick={() =>
-                                                        handleDelete(backup)
-                                                    }
-                                                >
-                                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

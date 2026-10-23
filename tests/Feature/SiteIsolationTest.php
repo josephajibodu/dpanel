@@ -177,14 +177,14 @@ it('creates the site user and its own php-fpm pool, and points nginx at it', fun
         ->and($all)->not->toContain('sudoers')
         ->and($all)->not->toContain('usermod -aG sudo');
 
-    expect($uploads['/tmp/tmp.fleetops/pool.conf'])->toContain('[example_com]')
+    expect($uploads['/tmp/tmp.fleetops/staged'])->toContain('[example_com]')
         ->toContain('user = example_com')
         ->toContain('group = example_com')
         ->toContain('listen = /run/php/php8.3-fpm-example_com.sock')
         ->toContain('listen.owner = www-data')
         ->toContain('pm = ondemand');
 
-    expect($all)->toContain("sudo install -o root -g root -m 644 '/tmp/tmp.fleetops/pool.conf' '/etc/php/8.3/fpm/pool.d/example_com.conf'")
+    expect($all)->toContain("sudo install -o root -g root -m '644' '/tmp/tmp.fleetops/staged' '/etc/php/8.3/fpm/pool.d/example_com.conf'")
         ->and($all)->toContain("sudo 'php-fpm8.3' -t")
         ->and($all)->toContain("sudo systemctl reload 'php8.3-fpm'");
 
@@ -314,7 +314,7 @@ it('clones as the server user and runs the deploy script as the site user', func
 
     $clone = collect($commands)->first(fn ($c) => str_contains($c, 'git clone'));
     $run = collect($commands)->first(fn ($c) => str_starts_with($c, "cat '/tmp/tmp.fleetops/deploy.sh' | "));
-    $reload = collect($commands)->first(fn ($c) => str_contains($c, 'service $PHP_FPM reload'));
+    $reload = collect($commands)->first(fn ($c) => str_contains($c, 'service "$PHP_FPM" reload'));
 
     // The clone uses the server user's key and hands the files to the site user.
     expect($clone)->toContain('ssh -i /home/artisan/.ssh/id_ed25519')
@@ -387,8 +387,8 @@ it('rolls back as the site user and reloads php-fpm as the server user', functio
         ->and($commands[1])->toStartWith("sudo -u 'example_com' -H bash -c")
         ->and($commands[1])->toContain('ln -sfn')
         ->and($commands[1])->toContain($target->ulid)
-        ->and($commands[1])->not->toContain('service $PHP_FPM reload')
-        ->and($commands[2])->toContain('sudo -S service $PHP_FPM reload')
+        ->and($commands[1])->not->toContain('service "$PHP_FPM" reload')
+        ->and($commands[2])->toContain('sudo -S flock -w 10 /run/flitops-php-fpm.lock service "$PHP_FPM" reload')
         ->and($commands[2])->not->toContain('sudo -u');
 });
 
@@ -568,7 +568,7 @@ it('creates the new pool and repoints nginx before removing the old pool', funct
 
     app()->call([new MoveSitePhpPoolJob($site, '8.3'), 'handle']);
 
-    $newPool = array_search("sudo install -o root -g root -m 644 '/tmp/tmp.fleetops/pool.conf' '/etc/php/8.4/fpm/pool.d/example_com.conf'", $commands, true);
+    $newPool = array_search("sudo install -o root -g root -m '644' '/tmp/tmp.fleetops/staged' '/etc/php/8.4/fpm/pool.d/example_com.conf'", $commands, true);
     $nginx = collect($commands)->search(fn ($c) => str_contains($c, 'fastcgi_pass unix:/run/php/php8.4-fpm-example_com.sock;'));
     $oldPool = array_search("sudo rm -f '/etc/php/8.3/fpm/pool.d/example_com.conf'", $commands, true);
 
@@ -578,7 +578,7 @@ it('creates the new pool and repoints nginx before removing the old pool', funct
         ->and($newPool)->toBeLessThan($nginx)
         ->and($nginx)->toBeLessThan($oldPool)
         ->and($commands)->toContain("sudo systemctl reload 'php8.3-fpm'")
-        ->and($uploads['/tmp/tmp.fleetops/pool.conf'])->toContain('listen = /run/php/php8.4-fpm-example_com.sock');
+        ->and($uploads['/tmp/tmp.fleetops/staged'])->toContain('listen = /run/php/php8.4-fpm-example_com.sock');
 });
 
 // --------------------------------------------------------------------------

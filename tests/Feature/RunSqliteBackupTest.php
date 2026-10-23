@@ -101,7 +101,10 @@ it('snapshots, uploads, verifies and records a completed backup', function () {
         ->and($all)->toContain('VACUUM INTO')
         ->and($all)->toContain('aws s3 cp - ')
         ->and($all)->toContain('PRAGMA integrity_check')
-        ->and(end($commands))->toBe("rm -rf '/tmp/flitops-sqlite-backup-{$backup->id}'");
+        ->and($all)->toContain("'/tmp/tmp.fleetops/snapshot.sqlite'")
+        ->and($all)->toContain("'/tmp/tmp.fleetops/verify.sqlite'")
+        ->and($all)->not->toContain('flitops-sqlite-backup')
+        ->and(end($commands))->toBe("rm -rf '/tmp/tmp.fleetops'");
 });
 
 it('marks the backup failed, removes the object and cleans up when the snapshot fails', function () {
@@ -124,7 +127,7 @@ it('marks the backup failed, removes the object and cleans up when the snapshot 
         ->and($backup->error_message)->not->toBeNull()
         ->and($backup->storage_path)->toBeNull()
         ->and(implode("\n", $commands))->not->toContain('PRAGMA integrity_check')
-        ->and(end($commands))->toBe("rm -rf '/tmp/flitops-sqlite-backup-{$backup->id}'");
+        ->and(end($commands))->toBe("rm -rf '/tmp/tmp.fleetops'");
 });
 
 it('marks the backup failed when the integrity check fails', function () {

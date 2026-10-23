@@ -32,6 +32,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -60,6 +61,7 @@ export default function SiteDeploymentsIndex({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
@@ -140,28 +142,36 @@ export default function SiteDeploymentsIndex({
                             Recent deployments for this site.
                         </p>
                     </div>
-                    <Button
-                        onClick={handleDeploy}
-                        disabled={isDeploying || site.status === 'installing'}
-                    >
-                        {isDeploying ? (
-                            <>
-                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                Deploying...
-                            </>
-                        ) : (
-                            <>
-                                <RocketIcon className="mr-2 h-4 w-4" />
-                                Deploy Now
-                            </>
-                        )}
-                    </Button>
+                    {can('deploy') && (
+                        <Button
+                            onClick={handleDeploy}
+                            disabled={
+                                isDeploying || site.status === 'installing'
+                            }
+                        >
+                            {isDeploying ? (
+                                <>
+                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                    Deploying...
+                                </>
+                            ) : (
+                                <>
+                                    <RocketIcon className="mr-2 h-4 w-4" />
+                                    Deploy Now
+                                </>
+                            )}
+                        </Button>
+                    )}
                 </div>
 
                 {deploymentList.length === 0 ? (
                     <EmptyState
                         title="No deployments yet"
-                        description="Deployments will appear here once you trigger your first deployment."
+                        description={
+                            can('deploy')
+                                ? 'Deployments will appear here once you trigger your first deployment.'
+                                : 'Deployments will appear here once the site is deployed.'
+                        }
                     />
                 ) : (
                     <div className="space-y-4">
@@ -265,18 +275,19 @@ export default function SiteDeploymentsIndex({
                                                                 View
                                                             </Link>
                                                         </DropdownMenuItem>
-                                                        {deployment.rollback_available && (
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    setRollbackTarget(
-                                                                        deployment,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <HistoryIcon className="mr-2 h-4 w-4" />
-                                                                Rollback
-                                                            </DropdownMenuItem>
-                                                        )}
+                                                        {deployment.rollback_available &&
+                                                            can('deploy') && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        setRollbackTarget(
+                                                                            deployment,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <HistoryIcon className="mr-2 h-4 w-4" />
+                                                                    Rollback
+                                                                </DropdownMenuItem>
+                                                            )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </div>

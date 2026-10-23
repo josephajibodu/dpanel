@@ -7,11 +7,13 @@ use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
 use App\Events\ServerSitesUpdated;
 use App\Jobs\DeploySiteJob;
+use App\Models\Certificate;
 use App\Models\Server;
 use App\Models\Site;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
@@ -23,12 +25,16 @@ beforeEach(function () {
 
 function mockSshConnection(array &$execCalls = []): SshConnection
 {
-    $mock = \Mockery::mock(SshConnection::class)->makePartial();
+    $mock = Mockery::mock(SshConnection::class)->makePartial();
     $mock->shouldReceive('exec')
         ->andReturnUsing(function (string $cmd) use (&$execCalls) {
             $execCalls[] = $cmd;
 
-            return str_contains($cmd, 'nginx -t') ? 'syntax is ok' : '';
+            return match (true) {
+                $cmd === 'mktemp -d' => '/tmp/tmp.fleetops',
+                str_contains($cmd, 'nginx -t') => 'syntax is ok',
+                default => '',
+            };
         });
     $mock->shouldReceive('disconnect')->andReturn(null);
 
@@ -37,10 +43,10 @@ function mockSshConnection(array &$execCalls = []): SshConnection
 
 function mockSshService(SshConnection $connection, ?int $serverId = null): SshService
 {
-    $mock = \Mockery::mock(SshService::class);
+    $mock = Mockery::mock(SshService::class);
     $matcher = $serverId
-        ? \Mockery::on(fn ($s) => $s->id === $serverId)
-        : \Mockery::any();
+        ? Mockery::on(fn ($s) => $s->id === $serverId)
+        : Mockery::any();
 
     $mock->shouldReceive('connect')
         ->once()
@@ -118,17 +124,17 @@ it('sets site status to failed when a step throws', function () {
         ]);
     $site->deployScript()->create(['script' => 'echo "test"']);
 
-    $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+    $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
     $mockConnection->shouldReceive('exec')
-        ->andThrow(new \RuntimeException('SSH connection lost'));
+        ->andThrow(new RuntimeException('SSH connection lost'));
     $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-    $sshService = \Mockery::mock(SshService::class);
+    $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
     $this->app->instance(SshService::class, $sshService);
 
     expect(fn () => app(ProvisionSiteAction::class)->execute($site))
-        ->toThrow(\RuntimeException::class, 'SSH connection lost');
+        ->toThrow(RuntimeException::class, 'SSH connection lost');
 
     $site->refresh();
     expect($site->status)->toBe(SiteStatus::Failed);
@@ -348,17 +354,17 @@ it('marks the site as failed and skips auto-deploy when an infra step throws', f
     ]);
     $site->deployScript()->create(['script' => 'echo "deploy"']);
 
-    $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+    $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
     $mockConnection->shouldReceive('exec')
-        ->andThrow(new \RuntimeException('git clone failed'));
+        ->andThrow(new RuntimeException('git clone failed'));
     $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-    $sshService = \Mockery::mock(SshService::class);
+    $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
     $this->app->instance(SshService::class, $sshService);
 
     expect(fn () => app(ProvisionSiteAction::class)->execute($site))
-        ->toThrow(\RuntimeException::class, 'git clone failed');
+        ->toThrow(RuntimeException::class, 'git clone failed');
 
     $site->refresh();
     expect($site->status)->toBe(SiteStatus::Failed);
@@ -369,7 +375,7 @@ it('marks the site as failed and skips auto-deploy when an infra step throws', f
 });
 
 it('syncs the wildcard certificate to the (site, domain) folder before nginx -t runs for a free-domain site', function () {
-    \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+    Config::set('server.free_domain', 'flitops.test');
 
     // Stage a fake wildcard cert on disk + register it in the certificates table.
     $certDir = sys_get_temp_dir().'/provision-cert-'.bin2hex(random_bytes(4));
@@ -377,7 +383,7 @@ it('syncs the wildcard certificate to the (site, domain) folder before nginx -t 
     file_put_contents("{$certDir}/server.crt", 'FAKE-CERT');
     file_put_contents("{$certDir}/server.key", 'FAKE-KEY');
 
-    \App\Models\Certificate::factory()->create([
+    Certificate::factory()->create([
         'domain' => '*.flitops.test',
         'certificate_path' => "{$certDir}/server.crt",
         'private_key_path' => "{$certDir}/server.key",

@@ -33,6 +33,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useServersListUpdates } from '@/hooks/use-servers-list-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -53,6 +54,7 @@ export default function ServersIndex({ servers }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamId = currentTeam?.id ?? 0;
     const teamPath = useTeamPath();
+    const canManageServers = usePermission()('manage_servers');
     useServersListUpdates(teamId);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -123,26 +125,34 @@ export default function ServersIndex({ servers }: Props) {
                                 Docs
                             </a>
                         </Button>
-                        <Button asChild>
-                            <Link href={teamPath('/servers/create')}>
-                                <PlusIcon className="mr-2 h-4 w-4" />
-                                Create server
-                            </Link>
-                        </Button>
+                        {canManageServers && (
+                            <Button asChild>
+                                <Link href={teamPath('/servers/create')}>
+                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    Create server
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                 </div>
 
                 {servers.data.length === 0 ? (
                     <EmptyState
                         title="No servers yet"
-                        description="Create your first server to get started with deploying applications."
+                        description={
+                            canManageServers
+                                ? 'Create your first server to get started with deploying applications.'
+                                : 'Servers added to this team will appear here.'
+                        }
                         action={
-                            <Button asChild>
-                                <Link href={teamPath('/servers/create')}>
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Create Server
-                                </Link>
-                            </Button>
+                            canManageServers && (
+                                <Button asChild>
+                                    <Link href={teamPath('/servers/create')}>
+                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        Create Server
+                                    </Link>
+                                </Button>
+                            )
                         }
                     />
                 ) : (
@@ -278,19 +288,20 @@ export default function ServersIndex({ servers }: Props) {
                                                                             Details
                                                                         </Link>
                                                                     </DropdownMenuItem>
-                                                                    {!isDeleting && (
-                                                                        <DropdownMenuItem
-                                                                            onClick={() =>
-                                                                                handleDelete(
-                                                                                    server,
-                                                                                )
-                                                                            }
-                                                                            className="text-destructive focus:text-destructive"
-                                                                        >
-                                                                            <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                            Delete
-                                                                        </DropdownMenuItem>
-                                                                    )}
+                                                                    {canManageServers &&
+                                                                        !isDeleting && (
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    handleDelete(
+                                                                                        server,
+                                                                                    )
+                                                                                }
+                                                                                className="text-destructive focus:text-destructive"
+                                                                            >
+                                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                                Delete
+                                                                            </DropdownMenuItem>
+                                                                        )}
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </div>

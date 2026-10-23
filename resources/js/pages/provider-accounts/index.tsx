@@ -26,6 +26,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -45,6 +46,7 @@ const providerIcons: Record<string, string> = {
 
 export default function ProviderAccountsIndex({ accounts }: Props) {
     const teamPath = useTeamPath();
+    const canManageProviders = usePermission()('manage_providers');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -91,27 +93,37 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                             servers.
                         </p>
                     </div>
-                    <Button asChild>
-                        <Link href={teamPath('/provider-accounts/create')}>
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            Connect Provider
-                        </Link>
-                    </Button>
+                    {canManageProviders && (
+                        <Button asChild>
+                            <Link href={teamPath('/provider-accounts/create')}>
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                Connect Provider
+                            </Link>
+                        </Button>
+                    )}
                 </div>
 
                 {accounts.data.length === 0 ? (
                     <EmptyState
                         title="No provider accounts connected"
-                        description="Connect a cloud provider account to start provisioning servers."
+                        description={
+                            canManageProviders
+                                ? 'Connect a cloud provider account to start provisioning servers.'
+                                : 'Cloud provider accounts connected to this team will appear here.'
+                        }
                         action={
-                            <Button asChild>
-                                <Link
-                                    href={teamPath('/provider-accounts/create')}
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Connect Provider
-                                </Link>
-                            </Button>
+                            canManageProviders && (
+                                <Button asChild>
+                                    <Link
+                                        href={teamPath(
+                                            '/provider-accounts/create',
+                                        )}
+                                    >
+                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        Connect Provider
+                                    </Link>
+                                </Button>
+                            )
                         }
                     />
                 ) : (
@@ -176,43 +188,48 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-end gap-1">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8"
+                                            {canManageProviders && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <MoreVerticalIcon className="h-4 w-4" />
-                                                        <span className="sr-only">
-                                                            Actions
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleValidate(
-                                                                account,
-                                                            )
-                                                        }
-                                                    >
-                                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
-                                                        Re-validate Credentials
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                account,
-                                                            )
-                                                        }
-                                                        className="text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2Icon className="mr-2 h-4 w-4" />
-                                                        Disconnect
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleValidate(
+                                                                    account,
+                                                                )
+                                                            }
+                                                        >
+                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                            Re-validate
+                                                            Credentials
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    account,
+                                                                )
+                                                            }
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            Disconnect
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>

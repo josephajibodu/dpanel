@@ -3,10 +3,10 @@
 namespace App\Services\SiteProvisioning;
 
 use App\Actions\Database\EscapesShell;
-use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Models\Site;
 use App\Services\SiteUserNameGenerator;
 use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\StagesFilesPrivately;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -21,7 +21,7 @@ use RuntimeException;
  */
 class SiteIsolationService
 {
-    use EscapesShell, KeepsSecretsOffCommandLine;
+    use EscapesShell, StagesFilesPrivately;
 
     public function __construct(
         private SiteUserNameGenerator $names,
@@ -72,12 +72,7 @@ class SiteIsolationService
         $poolPath = $this->escapeForShell($this->poolPath($user, $phpVersion));
         $service = $this->escapeForShell("php{$phpVersion}-fpm");
 
-        $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $site, $user, $phpVersion, $poolPath): void {
-            $staged = "{$directory}/pool.conf";
-
-            $connection->upload($this->poolConfig($site, $user, $phpVersion), $staged);
-            $connection->exec('sudo install -o root -g root -m 644 '.$this->escapeForShell($staged)." {$poolPath}");
-        });
+        $this->installAsRoot($connection, $this->poolConfig($site, $user, $phpVersion), $this->poolPath($user, $phpVersion));
 
         try {
             $connection->exec('sudo '.$this->escapeForShell("php-fpm{$phpVersion}").' -t 2>&1');

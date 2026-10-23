@@ -35,6 +35,9 @@ beforeEach(function () {
     $uploads = &$this->uploads;
 
     $this->connection = Mockery::mock(SshConnection::class);
+    $this->connection->shouldReceive('exec')->andReturnUsing(
+        fn (string $command) => $command === 'mktemp -d' ? '/tmp/tmp.fleetops' : ''
+    );
     $this->connection->shouldReceive('sudo')->andReturnUsing(
         fn (string $command) => str_starts_with($command, 'cat ') ? ORIGINAL_PHP_INI : ''
     );

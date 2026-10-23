@@ -45,6 +45,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerCommandRunUpdates } from '@/hooks/use-server-command-run-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -91,6 +92,9 @@ export default function SiteCommandsIndex({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
+    const canRunCommands = can('run_commands');
+    const canViewOutput = can('view_secrets');
     const server = serverProp?.data ?? serverProp;
     const site = siteProp?.data ?? siteProp;
     const serverId = server?.id ?? site?.server?.id;
@@ -205,21 +209,27 @@ export default function SiteCommandsIndex({
                             Run commands on the server in this site’s directory.
                         </p>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRunSheetOpen(true)}
-                    >
-                        <TerminalIcon className="mr-2 h-4 w-4" />
-                        Run command
-                    </Button>
+                    {canRunCommands && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setRunSheetOpen(true)}
+                        >
+                            <TerminalIcon className="mr-2 h-4 w-4" />
+                            Run command
+                        </Button>
+                    )}
                 </div>
 
                 <div className="space-y-4">
                     {runs.length === 0 ? (
                         <EmptyState
                             title="No command runs yet"
-                            description="Run a command to see output and history here."
+                            description={
+                                canRunCommands
+                                    ? 'Run a command to see output and history here.'
+                                    : 'Commands run on this site will appear here.'
+                            }
                         />
                     ) : (
                         <>
@@ -263,50 +273,63 @@ export default function SiteCommandsIndex({
                                                       : '—'}
                                             </TableCell>
                                             <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            aria-label="Actions"
+                                                {(canViewOutput ||
+                                                    canRunCommands) && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                openLogs(run)
-                                                            }
-                                                        >
-                                                            <FileTextIcon className="mr-2 h-4 w-4" />
-                                                            View logs
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleRunAgain(
-                                                                    run,
-                                                                )
-                                                            }
-                                                        >
-                                                            <PlayIcon className="mr-2 h-4 w-4" />
-                                                            Run again
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleEditAndRun(
-                                                                    run,
-                                                                )
-                                                            }
-                                                        >
-                                                            <PencilIcon className="mr-2 h-4 w-4" />
-                                                            Edit and run
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                aria-label="Actions"
+                                                            >
+                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            {canViewOutput && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        openLogs(
+                                                                            run,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <FileTextIcon className="mr-2 h-4 w-4" />
+                                                                    View logs
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {canRunCommands && (
+                                                                <>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            handleRunAgain(
+                                                                                run,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <PlayIcon className="mr-2 h-4 w-4" />
+                                                                        Run
+                                                                        again
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            handleEditAndRun(
+                                                                                run,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                                                        Edit and
+                                                                        run
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}

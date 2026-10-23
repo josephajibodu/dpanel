@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import { type Server } from '@/types/server';
 import { type IsolatedSiteTarget, type SshKey } from '@/types/ssh-key';
@@ -13,14 +14,16 @@ interface SyncServersDialogProps {
     sshKey: SshKey;
     servers: Server[] | { data: Server[] };
     isolatedSites: IsolatedSiteTarget[];
-    /** Whether the user may put keys on a server's own user (full root access). */
-    canSyncToServerUser: boolean;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function SyncServersDialog({ sshKey, servers, isolatedSites, canSyncToServerUser, open, onOpenChange }: SyncServersDialogProps) {
+export function SyncServersDialog({ sshKey, servers, isolatedSites, open, onOpenChange }: SyncServersDialogProps) {
     const teamPath = useTeamPath();
+    const can = usePermission();
+    // A server's own user can act as root, so full access is admin-only; a site's user reaches that site alone.
+    const canSyncToServerUser = can('access_servers_as_admin');
+    const canSyncToSites = can('access_servers');
     const [selectedServerIds, setSelectedServerIds] = useState<number[]>([]);
     const [selectedSiteIds, setSelectedSiteIds] = useState<number[]>([]);
     const [processing, setProcessing] = useState(false);
@@ -34,7 +37,7 @@ export function SyncServersDialog({ sshKey, servers, isolatedSites, canSyncToSer
     const availableServers = canSyncToServerUser
         ? serversList.filter((s) => !syncedServerIds.includes(s.id) && s.status === 'active')
         : [];
-    const availableSites = isolatedSites.filter((s) => !syncedSiteIds.includes(s.id));
+    const availableSites = canSyncToSites ? isolatedSites.filter((s) => !syncedSiteIds.includes(s.id)) : [];
     const selectedCount = selectedServerIds.length + selectedSiteIds.length;
 
     const toggle = (ids: number[], id: number) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);

@@ -7,6 +7,7 @@ import {
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { useActiveUrl } from '@/hooks/use-active-url';
+import { usePermission } from '@/hooks/use-permission';
 import { cn, toUrl } from '@/lib/utils';
 import type { SubNavItem as SubNavItemType } from '@/types';
 
@@ -28,6 +29,10 @@ const inactiveStyles = 'text-muted-foreground';
 
 export function SubNav({ items, selectedHref, className }: SubNavProps) {
     const { urlIsActive } = useActiveUrl();
+    const can = usePermission();
+    const visibleItems = items.filter(
+        (item) => !item.permission || can(item.permission),
+    );
 
     return (
         <nav
@@ -39,7 +44,7 @@ export function SubNav({ items, selectedHref, className }: SubNavProps) {
             <div className="mx-auto flex h-12 w-full items-center px-4 md:max-w-7xl">
                 <NavigationMenu className="flex h-full w-full justify-start">
                     <NavigationMenuList className="flex h-full items-center gap-1 space-x-0">
-                        {items.map((item) => {
+                        {visibleItems.map((item) => {
                             const isActive = urlIsActive(item.href, undefined, {
                                 exact: item.exactMatch,
                             });

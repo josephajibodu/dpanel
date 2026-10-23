@@ -70,7 +70,7 @@ it('uploads cert + key for each free-domain site and reloads nginx when content 
         $execCalls[] = $cmd;
 
         // sha256sum probes return empty → treated as "no remote file" → triggers upload.
-        return '';
+        return $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
     });
     $connection->shouldReceive('upload')->andReturnUsing(function (string $content, string $path) use (&$uploadDestinations) {
         $uploadDestinations[] = $path;
@@ -85,14 +85,14 @@ it('uploads cert + key for each free-domain site and reloads nginx when content 
     // 2 uploads per (site, domain) — cert + key — across 2 domains.
     expect($uploadDestinations)->toHaveCount(4);
     foreach ($uploadDestinations as $tempPath) {
-        expect($tempPath)->toStartWith('/tmp/wildcard_');
+        expect($tempPath)->toBe('/tmp/tmp.fleetops/staged');
     }
 
     // sudo install lands them at the Forge-style ID-based paths.
     $installs = collect($execCalls)->filter(fn ($c) => str_starts_with($c, 'sudo install '))->values();
     expect($installs)->toHaveCount(4);
-    expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d1->site_id}/{$d1->id}/server.crt") && str_contains($c, '-m 0644')))->toBeTrue();
-    expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d1->site_id}/{$d1->id}/server.key") && str_contains($c, '-m 0600')))->toBeTrue();
+    expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d1->site_id}/{$d1->id}/server.crt") && str_contains($c, "-m '0644'")))->toBeTrue();
+    expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d1->site_id}/{$d1->id}/server.key") && str_contains($c, "-m '0600'")))->toBeTrue();
     expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d2->site_id}/{$d2->id}/server.crt")))->toBeTrue();
     expect($installs->contains(fn ($c) => str_contains($c, "/etc/nginx/ssl/domains/{$d2->site_id}/{$d2->id}/server.key")))->toBeTrue();
 

@@ -25,6 +25,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerPhpUpdates } from '@/hooks/use-server-php-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -81,6 +82,7 @@ export default function ServerPhpIndex({
     const phpPageProps = usePage<SharedData>().props;
     const { errors } = phpPageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
+    const canManagePhp = usePermission()('manage_php');
 
     useServerPhpUpdates(server.id);
 
@@ -226,7 +228,10 @@ export default function ServerPhpIndex({
                                     onSubmit={handleUpdateSettings}
                                     className="flex flex-col gap-4"
                                 >
-                                    <div className="grid gap-4 sm:grid-cols-2">
+                                    <fieldset
+                                        disabled={!canManagePhp}
+                                        className="grid min-w-0 gap-4 sm:grid-cols-2"
+                                    >
                                         <div className="space-y-2">
                                             <Label htmlFor="upload_max_filesize">
                                                 Upload max filesize
@@ -334,18 +339,20 @@ export default function ServerPhpIndex({
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        disabled={
-                                            !serverIsReady ||
-                                            isSubmittingSettings
-                                        }
-                                    >
-                                        {isSubmittingSettings
-                                            ? 'Saving…'
-                                            : 'Save settings'}
-                                    </Button>
+                                    </fieldset>
+                                    {canManagePhp && (
+                                        <Button
+                                            type="submit"
+                                            disabled={
+                                                !serverIsReady ||
+                                                isSubmittingSettings
+                                            }
+                                        >
+                                            {isSubmittingSettings
+                                                ? 'Saving…'
+                                                : 'Save settings'}
+                                        </Button>
+                                    )}
                                 </form>
                             </div>
                         </div>
@@ -394,7 +401,11 @@ export default function ServerPhpIndex({
                                         >
                                             <EmptyState
                                                 title="No PHP versions detected"
-                                                description="Install one below or ensure the server is connected."
+                                                description={
+                                                    canManagePhp
+                                                        ? 'Install one below or ensure the server is connected.'
+                                                        : 'Make sure the server is connected.'
+                                                }
                                             />
                                         </TableCell>
                                     </TableRow>
@@ -425,29 +436,31 @@ export default function ServerPhpIndex({
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {!s.is_default && v && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            disabled={
-                                                                !serverIsReady ||
-                                                                isSubmittingDefault ===
-                                                                    v ||
-                                                                s.status ===
-                                                                    'installing'
-                                                            }
-                                                            onClick={() =>
-                                                                handleSetDefault(
-                                                                    v,
-                                                                )
-                                                            }
-                                                        >
-                                                            {isSubmittingDefault ===
-                                                            v
-                                                                ? 'Setting…'
-                                                                : 'Set as default'}
-                                                        </Button>
-                                                    )}
+                                                    {canManagePhp &&
+                                                        !s.is_default &&
+                                                        v && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={
+                                                                    !serverIsReady ||
+                                                                    isSubmittingDefault ===
+                                                                        v ||
+                                                                    s.status ===
+                                                                        'installing'
+                                                                }
+                                                                onClick={() =>
+                                                                    handleSetDefault(
+                                                                        v,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {isSubmittingDefault ===
+                                                                v
+                                                                    ? 'Setting…'
+                                                                    : 'Set as default'}
+                                                            </Button>
+                                                        )}
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -470,25 +483,28 @@ export default function ServerPhpIndex({
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                {v !== defaultVersion && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={
-                                                            !serverIsReady ||
-                                                            isSubmittingDefault ===
-                                                                v
-                                                        }
-                                                        onClick={() =>
-                                                            handleSetDefault(v)
-                                                        }
-                                                    >
-                                                        {isSubmittingDefault ===
-                                                        v
-                                                            ? 'Setting…'
-                                                            : 'Set as default'}
-                                                    </Button>
-                                                )}
+                                                {canManagePhp &&
+                                                    v !== defaultVersion && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={
+                                                                !serverIsReady ||
+                                                                isSubmittingDefault ===
+                                                                    v
+                                                            }
+                                                            onClick={() =>
+                                                                handleSetDefault(
+                                                                    v,
+                                                                )
+                                                            }
+                                                        >
+                                                            {isSubmittingDefault ===
+                                                            v
+                                                                ? 'Setting…'
+                                                                : 'Set as default'}
+                                                        </Button>
+                                                    )}
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -497,80 +513,87 @@ export default function ServerPhpIndex({
                         </Table>
                     </div>
 
-                    <StatGroup>
-                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
-                            <div className="border-b px-6 py-4">
-                                <CardTitle>Install PHP version</CardTitle>
-                                <CardDescription className="mt-1">
-                                    Install an additional PHP version from the
-                                    ondrej/php PPA.
-                                </CardDescription>
-                            </div>
-                            <div className="p-6">
-                                <form
-                                    onSubmit={handleInstallVersion}
-                                    className="space-y-2"
-                                >
-                                    <Label htmlFor="install-version">
-                                        Version
-                                    </Label>
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                        <Select
-                                            value={installVersion}
-                                            onValueChange={setInstallVersion}
-                                            disabled={!serverIsReady}
-                                        >
-                                            <SelectTrigger
-                                                id="install-version"
-                                                className="w-full sm:w-[200px]"
+                    {canManagePhp && (
+                        <StatGroup>
+                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                <div className="border-b px-6 py-4">
+                                    <CardTitle>Install PHP version</CardTitle>
+                                    <CardDescription className="mt-1">
+                                        Install an additional PHP version from
+                                        the ondrej/php PPA.
+                                    </CardDescription>
+                                </div>
+                                <div className="p-6">
+                                    <form
+                                        onSubmit={handleInstallVersion}
+                                        className="space-y-2"
+                                    >
+                                        <Label htmlFor="install-version">
+                                            Version
+                                        </Label>
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <Select
+                                                value={installVersion}
+                                                onValueChange={
+                                                    setInstallVersion
+                                                }
+                                                disabled={!serverIsReady}
                                             >
-                                                <SelectValue placeholder="Select version" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {versionsToInstall.map((v) => (
-                                                    <SelectItem
-                                                        key={v}
-                                                        value={v}
-                                                    >
-                                                        PHP {v}
-                                                    </SelectItem>
-                                                ))}
-                                                {versionsToInstall.length ===
-                                                    0 && (
-                                                    <SelectItem
-                                                        value=""
-                                                        disabled
-                                                    >
-                                                        All versions installed
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        <Button
-                                            type="submit"
-                                            className="shrink-0"
-                                            disabled={
-                                                !serverIsReady ||
-                                                !installVersion ||
-                                                versionsToInstall.length ===
-                                                    0 ||
-                                                isSubmittingInstall
-                                            }
-                                        >
-                                            {isSubmittingInstall
-                                                ? 'Installing…'
-                                                : 'Install'}
-                                        </Button>
-                                    </div>
-                                    {errors?.version && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.version}
-                                        </p>
-                                    )}
-                                </form>
+                                                <SelectTrigger
+                                                    id="install-version"
+                                                    className="w-full sm:w-[200px]"
+                                                >
+                                                    <SelectValue placeholder="Select version" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {versionsToInstall.map(
+                                                        (v) => (
+                                                            <SelectItem
+                                                                key={v}
+                                                                value={v}
+                                                            >
+                                                                PHP {v}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                    {versionsToInstall.length ===
+                                                        0 && (
+                                                        <SelectItem
+                                                            value=""
+                                                            disabled
+                                                        >
+                                                            All versions
+                                                            installed
+                                                        </SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                type="submit"
+                                                className="shrink-0"
+                                                disabled={
+                                                    !serverIsReady ||
+                                                    !installVersion ||
+                                                    versionsToInstall.length ===
+                                                        0 ||
+                                                    isSubmittingInstall
+                                                }
+                                            >
+                                                {isSubmittingInstall
+                                                    ? 'Installing…'
+                                                    : 'Install'}
+                                            </Button>
+                                        </div>
+                                        {errors?.version && (
+                                            <p className="text-sm text-destructive">
+                                                {errors.version}
+                                            </p>
+                                        )}
+                                    </form>
+                                </div>
                             </div>
-                        </div>
-                    </StatGroup>
+                        </StatGroup>
+                    )}
                 </div>
             </div>
         </AppLayout>

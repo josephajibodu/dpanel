@@ -3,7 +3,6 @@
 namespace App\Actions\Sites;
 
 use App\Actions\Database\EscapesShell;
-use App\Actions\Database\KeepsSecretsOffCommandLine;
 use App\Enums\DeploymentStatus;
 use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
@@ -18,6 +17,7 @@ use App\Services\SiteProvisioning\SiteIsolationService;
 use App\Services\SiteUserNameGenerator;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
+use App\Services\Ssh\StagesFilesPrivately;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +37,7 @@ use Throwable;
  */
 class IsolateSiteAction
 {
-    use EscapesShell, KeepsSecretsOffCommandLine;
+    use EscapesShell, StagesFilesPrivately;
 
     private SshConnection $connection;
 
@@ -358,11 +358,11 @@ class IsolateSiteAction
         $workersWithFiles = $this->workers->reject(fn (Worker $worker): bool => in_array($worker->status, ['pending', 'failed', 'deleting'], true));
 
         foreach ($workersWithFiles as $worker) {
-            $this->installRootFile($worker->supervisorConfig("{$prefix}-{$worker->id}"), config('supervisor.conf_path')."/{$prefix}-{$worker->id}.conf");
+            $this->installAsRoot($this->connection, $worker->supervisorConfig("{$prefix}-{$worker->id}"), config('supervisor.conf_path')."/{$prefix}-{$worker->id}.conf");
         }
 
         foreach ($this->cronJobs->filter(fn (CronJob $cronJob): bool => $cronJob->status === 'active' && ! $cronJob->hidden) as $cronJob) {
-            $this->installRootFile($cronJob->cronLine(), config('cron.cron_d_path').'/'.config('cron.file_prefix')."-{$cronJob->id}");
+            $this->installAsRoot($this->connection, $cronJob->cronLine(), config('cron.cron_d_path').'/'.config('cron.file_prefix')."-{$cronJob->id}");
         }
 
         if ($workersWithFiles->isEmpty()) {
@@ -375,14 +375,6 @@ class IsolateSiteAction
         foreach ($workersWithFiles->where('status', 'stopped') as $worker) {
             $this->connection->exec('sudo supervisorctl stop '.$this->escapeForShell("{$prefix}-{$worker->id}:*"), 30);
         }
-    }
-
-    private function installRootFile(string $content, string $destination): void
-    {
-        $staged = $this->directory.'/'.basename($destination);
-
-        $this->connection->upload($content, $staged);
-        $this->connection->exec('sudo install -o root -g root -m 644 '.$this->escapeForShell($staged).' '.$this->escapeForShell($destination));
     }
 
     private function saveConversion(): void

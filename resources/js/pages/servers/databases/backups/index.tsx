@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
+import { usePermission } from '@/hooks/use-permission';
 import { useServerBackupsUpdates } from '@/hooks/use-server-backups-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -48,6 +49,7 @@ export default function ServerDatabaseBackupsIndex({
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
+    const can = usePermission();
     const server = 'data' in serverProp ? serverProp.data : serverProp;
     const serverDatabase =
         'data' in serverDatabaseProp
@@ -133,13 +135,15 @@ export default function ServerDatabaseBackupsIndex({
                             .
                         </p>
                     </div>
-                    <Button
-                        onClick={handleBackupNow}
-                        disabled={!schedule || isBackingUp}
-                    >
-                        <PlusIcon className="mr-2 h-4 w-4" />
-                        {isBackingUp ? 'Starting…' : 'Backup now'}
-                    </Button>
+                    {can('run_backups') && (
+                        <Button
+                            onClick={handleBackupNow}
+                            disabled={!schedule || isBackingUp}
+                        >
+                            <PlusIcon className="mr-2 h-4 w-4" />
+                            {isBackingUp ? 'Starting…' : 'Backup now'}
+                        </Button>
+                    )}
                 </div>
 
                 <BackupScheduleCard
@@ -153,7 +157,9 @@ export default function ServerDatabaseBackupsIndex({
                     backups={backups}
                     backupsUrl={teamPath(basePath)}
                     description="All backups for this database."
-                    onRestore={handleRestore}
+                    onRestore={
+                        can('restore_backups') ? handleRestore : undefined
+                    }
                 />
             </div>
 

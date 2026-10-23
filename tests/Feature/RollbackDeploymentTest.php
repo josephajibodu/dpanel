@@ -58,7 +58,7 @@ it('cannot roll back to a deployment from another site', function () {
     $target = Deployment::factory()->finished()->forSite($otherSite)->create();
 
     expect(fn () => (new RollbackDeploymentAction)->execute($this->site, $target))
-        ->toThrow(\RuntimeException::class, 'does not belong to this site');
+        ->toThrow(RuntimeException::class, 'does not belong to this site');
 
     Queue::assertNotPushed(RollbackSiteJob::class);
 });
@@ -67,7 +67,7 @@ it('cannot roll back to a deployment that is not finished', function () {
     $target = Deployment::factory()->failed()->forSite($this->site)->create();
 
     expect(fn () => (new RollbackDeploymentAction)->execute($this->site, $target))
-        ->toThrow(\RuntimeException::class, 'Only a finished deployment can be rolled back to.');
+        ->toThrow(RuntimeException::class, 'Only a finished deployment can be rolled back to.');
 
     Queue::assertNotPushed(RollbackSiteJob::class);
 });
@@ -77,7 +77,7 @@ it('cannot roll back when a deployment is already in progress', function () {
     Deployment::factory()->running()->forSite($this->site)->create();
 
     expect(fn () => (new RollbackDeploymentAction)->execute($this->site, $target))
-        ->toThrow(\RuntimeException::class, 'already in progress');
+        ->toThrow(RuntimeException::class, 'already in progress');
 
     Queue::assertNotPushed(RollbackSiteJob::class);
 });
@@ -202,7 +202,7 @@ it('defines the deploy variables before swapping and reloading php-fpm on rollba
     $releasePath = $this->site->releasesPath().'/'.$this->site->deployments()->where('triggered_by', 'rollback')->sole()->releaseFolderName();
 
     $swapPosition = strpos($script, 'ln -sfn "$RELEASE_PATH" '.$this->site->currentPath());
-    $reloadPosition = strpos($script, 'sudo -S service $PHP_FPM reload');
+    $reloadPosition = strpos($script, 'sudo -S flock -w 10 /run/flitops-php-fpm.lock service "$PHP_FPM" reload');
 
     expect($script)->toStartWith("set -e\n")
         ->and($swapPosition)->not->toBeFalse()

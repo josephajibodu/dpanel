@@ -14,6 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -26,15 +27,14 @@ interface Props {
     };
     servers?: Server[];
     isolatedSites: IsolatedSiteTarget[];
-    canSyncToServerUser: boolean;
 }
 
 export default function SshKeysIndex({
     sshKeys: sshKeysData,
     isolatedSites,
-    canSyncToServerUser,
 }: Props) {
     const teamPath = useTeamPath();
+    const canAccessServers = usePermission()('access_servers');
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'SSH Keys',
@@ -119,7 +119,11 @@ export default function SshKeysIndex({
                                     onOpenDetails={() =>
                                         handleOpenDetails(sshKey)
                                     }
-                                    onSync={() => handleSync(sshKey)}
+                                    onSync={
+                                        canAccessServers
+                                            ? () => handleSync(sshKey)
+                                            : undefined
+                                    }
                                     onDelete={() => handleDelete(sshKey)}
                                 />
                             ))}
@@ -156,7 +160,6 @@ export default function SshKeysIndex({
                     sshKey={selectedKey}
                     servers={servers}
                     isolatedSites={isolatedSites}
-                    canSyncToServerUser={canSyncToServerUser}
                     open={syncDialogOpen}
                     onOpenChange={setSyncDialogOpen}
                 />

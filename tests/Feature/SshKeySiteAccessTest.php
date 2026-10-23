@@ -114,14 +114,15 @@ it('keeps a key on the server user and a site user of the same server side by si
         ->toBe(['artisan', 'example_com']);
 });
 
-it('tells the keys page whether full server access is allowed and lists isolated sites', function () {
+it('lists isolated sites on the keys page and shares whether full server access is allowed', function () {
     [$member] = memberWithKey($this->team, TeamRoleKey::Developer);
     Site::factory()->forServer($this->server)->create();
 
     $this->actingAs($member)
         ->get(route('ssh-keys.index', $this->team))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('canSyncToServerUser', false)
+            ->where('auth.permissions.access_servers_as_admin', false)
+            ->where('auth.permissions.access_servers', true)
             ->has('isolatedSites', 1)
             ->where('isolatedSites.0.system_user', 'example_com')
             ->where('isolatedSites.0.domain', 'example.com'));

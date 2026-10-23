@@ -2,13 +2,17 @@
 
 namespace App\Actions\CronJob;
 
+use App\Actions\Database\EscapesShell;
 use App\Jobs\EnableCronJobJob;
 use App\Models\CronJob;
 use App\Services\Ssh\SshService;
+use App\Services\Ssh\StagesFilesPrivately;
 use RuntimeException;
 
 class EnableCronJob
 {
+    use EscapesShell, StagesFilesPrivately;
+
     public function __construct(
         private SshService $sshService
     ) {}
@@ -35,11 +39,7 @@ class EnableCronJob
             $filename = "{$prefix}-{$cronJob->id}";
             $destPath = "{$path}/{$filename}";
 
-            $content = $cronJob->cronLine();
-            $tmpPath = '/tmp/'.$filename;
-
-            $connection->upload($content, $tmpPath);
-            $connection->sudo("install -o root -g root -m 644 {$tmpPath} {$destPath}", 30);
+            $this->installAsRoot($connection, $cronJob->cronLine(), $destPath);
         } finally {
             $connection->disconnect();
         }
