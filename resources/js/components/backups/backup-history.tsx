@@ -65,7 +65,7 @@ export function BackupHistory({
 }: Props) {
     const can = usePermission();
     const canDownload = can('view_secrets');
-    const canDelete = can('run_backups');
+    const canDelete = can('delete_backups');
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [backupToDelete, setBackupToDelete] = useState<Backup | null>(null);
 

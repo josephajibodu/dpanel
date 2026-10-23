@@ -14,6 +14,7 @@ export type TeamPermission =
     | 'access_servers_as_admin'
     | 'run_backups'
     | 'restore_backups'
+    | 'delete_backups'
     | 'manage_servers'
     | 'manage_providers'
     | 'manage_members'

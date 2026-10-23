@@ -1,3 +1,4 @@
+import { destroy as resetHostKey } from '@/actions/App/Http/Controllers/ServerHostKeyController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import HeadingSmall from '@/components/heading-small';
@@ -17,12 +18,14 @@ interface Props {
     server: { data: Server } | Server;
     ssh_command: string | null;
     has_ssh_key: boolean;
+    host_key: { type: string; fingerprint: string } | null;
 }
 
 export default function ServerSettings({
     server: serverProp,
     ssh_command,
     has_ssh_key,
+    host_key,
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
@@ -31,6 +34,8 @@ export default function ServerSettings({
         (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const [destroyDialogOpen, setDestroyDialogOpen] = useState(false);
     const [isDestroying, setIsDestroying] = useState(false);
+    const [resetHostKeyDialogOpen, setResetHostKeyDialogOpen] = useState(false);
+    const [isResettingHostKey, setIsResettingHostKey] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -46,6 +51,20 @@ export default function ServerSettings({
                 setDestroyDialogOpen(false);
             },
         });
+    };
+
+    const handleResetHostKey = () => {
+        setIsResettingHostKey(true);
+        router.delete(
+            resetHostKey.url({ team: currentTeam?.slug ?? '', server: server.id }),
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsResettingHostKey(false);
+                    setResetHostKeyDialogOpen(false);
+                },
+            },
+        );
     };
 
     return (
@@ -110,6 +129,46 @@ export default function ServerSettings({
                         )}
                     </div>
 
+                    <div className="space-y-4">
+                        <HeadingSmall
+                            title="Server identity"
+                            description="The fingerprint of the key this server proved its identity with the first time we connected. Every later connection must match it."
+                        />
+                        {host_key ? (
+                            <div className="space-y-4">
+                                <dl className="grid gap-1 text-sm sm:grid-cols-[8rem_1fr]">
+                                    <dt className="text-muted-foreground">
+                                        Key type
+                                    </dt>
+                                    <dd className="font-mono">
+                                        {host_key.type}
+                                    </dd>
+                                    <dt className="text-muted-foreground">
+                                        Fingerprint
+                                    </dt>
+                                    <dd className="font-mono break-all">
+                                        {host_key.fingerprint}
+                                    </dd>
+                                </dl>
+                                {can('manage_servers') && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            setResetHostKeyDialogOpen(true)
+                                        }
+                                    >
+                                        Reset server identity
+                                    </Button>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Not recorded yet. It will be recorded the next
+                                time we connect to this server.
+                            </p>
+                        )}
+                    </div>
+
                     {can('manage_servers') && (
                         <div className="space-y-6">
                             <HeadingSmall
@@ -135,6 +194,17 @@ export default function ServerSettings({
                         </div>
                     )}
                 </div>
+
+                <ConfirmDialog
+                    open={resetHostKeyDialogOpen}
+                    onOpenChange={setResetHostKeyDialogOpen}
+                    title="Reset this server's identity?"
+                    description="Only do this if you rebuilt or reinstalled this server. If you didn't, a changed identity can mean someone is intercepting the connection, so contact your hosting provider before resetting. After the reset, the next successful connection records the server's new identity."
+                    confirmLabel="Reset identity"
+                    variant="destructive"
+                    loading={isResettingHostKey}
+                    onConfirm={handleResetHostKey}
+                />
 
                 <ConfirmDialog
                     open={destroyDialogOpen}

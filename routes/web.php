@@ -15,12 +15,18 @@ use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\RealtimeDiagnosticsController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
+use App\Http\Controllers\ServerHostKeyController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
+use App\Http\Controllers\SiteBackupController;
+use App\Http\Controllers\SiteBackupScheduleController;
 use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SiteIsolationController;
+use App\Http\Controllers\SiteNginxController;
+use App\Http\Controllers\SiteProcessController;
+use App\Http\Controllers\SourceControlAccountController;
 use App\Http\Controllers\SshKeyController;
 use App\Http\Controllers\StorageProviderController;
 use App\Http\Controllers\TeamController;
@@ -52,10 +58,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('realtime.test.trigger');
 
     // Source Control OAuth (global callback URLs required by providers)
-    Route::get('auth/{provider}/redirect', [\App\Http\Controllers\SourceControlAccountController::class, 'redirect'])
+    Route::get('auth/{provider}/redirect', [SourceControlAccountController::class, 'redirect'])
         ->name('source-control.redirect')
         ->where('provider', 'github|gitlab|bitbucket');
-    Route::get('auth/{provider}/callback', [\App\Http\Controllers\SourceControlAccountController::class, 'callback'])
+    Route::get('auth/{provider}/callback', [SourceControlAccountController::class, 'callback'])
         ->name('source-control.callback')
         ->where('provider', 'github|gitlab|bitbucket');
 
@@ -69,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('teams/{team}/members', [TeamMemberController::class, 'store'])->name('team-members.store');
     Route::patch('teams/{team}/members/{user}', [TeamMemberController::class, 'update'])->name('team-members.update');
     Route::delete('teams/{team}/members/{user}', [TeamMemberController::class, 'destroy'])->name('team-members.destroy');
+    Route::delete('teams/{team}/membership', [TeamMemberController::class, 'leave'])->name('teams.leave');
 
     Route::post('teams/{team}/invitations', [TeamInvitationController::class, 'store'])->name('team-invitations.store');
     Route::delete('teams/{team}/invitations/{invitation}', [TeamInvitationController::class, 'destroy'])->name('team-invitations.destroy');
@@ -95,15 +102,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('ssh-keys.revoke');
 
             // Source Control Accounts (team-scoped URLs; accounts remain user-owned)
-            Route::get('source-control', [\App\Http\Controllers\SourceControlAccountController::class, 'index'])
+            Route::get('source-control', [SourceControlAccountController::class, 'index'])
                 ->name('source-control.index');
-            Route::delete('source-control/{sourceControlAccount}', [\App\Http\Controllers\SourceControlAccountController::class, 'destroy'])
+            Route::delete('source-control/{sourceControlAccount}', [SourceControlAccountController::class, 'destroy'])
                 ->name('source-control.destroy');
-            Route::get('source-control/{sourceControlAccount}/repositories', [\App\Http\Controllers\SourceControlAccountController::class, 'repositories'])
+            Route::get('source-control/{sourceControlAccount}/repositories', [SourceControlAccountController::class, 'repositories'])
                 ->name('source-control.repositories');
-            Route::post('source-control/{sourceControlAccount}/repositories/sync', [\App\Http\Controllers\SourceControlAccountController::class, 'syncRepositories'])
+            Route::post('source-control/{sourceControlAccount}/repositories/sync', [SourceControlAccountController::class, 'syncRepositories'])
                 ->name('source-control.repositories.sync');
-            Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [\App\Http\Controllers\SourceControlAccountController::class, 'branches'])
+            Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [SourceControlAccountController::class, 'branches'])
                 ->where('repository', '.*')
                 ->name('source-control.branches');
 
@@ -212,37 +219,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.command-runs.show');
 
                 // SQLite backups (sites without a server database)
-                Route::put('servers/{server}/sites/{site}/backup-schedule', [\App\Http\Controllers\SiteBackupScheduleController::class, 'update'])
+                Route::put('servers/{server}/sites/{site}/backup-schedule', [SiteBackupScheduleController::class, 'update'])
                     ->name('servers.sites.backup-schedule.update');
-                Route::get('servers/{server}/sites/{site}/backups', [\App\Http\Controllers\SiteBackupController::class, 'index'])
+                Route::get('servers/{server}/sites/{site}/backups', [SiteBackupController::class, 'index'])
                     ->name('servers.sites.backups.index');
-                Route::post('servers/{server}/sites/{site}/backups', [\App\Http\Controllers\SiteBackupController::class, 'store'])
+                Route::post('servers/{server}/sites/{site}/backups', [SiteBackupController::class, 'store'])
                     ->name('servers.sites.backups.store');
-                Route::delete('servers/{server}/sites/{site}/backups/{backup}', [\App\Http\Controllers\SiteBackupController::class, 'destroy'])
+                Route::delete('servers/{server}/sites/{site}/backups/{backup}', [SiteBackupController::class, 'destroy'])
                     ->name('servers.sites.backups.destroy');
-                Route::get('servers/{server}/sites/{site}/backups/{backup}/download', [\App\Http\Controllers\SiteBackupController::class, 'download'])
+                Route::get('servers/{server}/sites/{site}/backups/{backup}/download', [SiteBackupController::class, 'download'])
                     ->name('servers.sites.backups.download');
 
                 // Processes (site-scoped view; CUD reuses server-scoped routes below since workers/cron rows are server-unique)
-                Route::get('servers/{server}/sites/{site}/processes', [\App\Http\Controllers\SiteProcessController::class, 'index'])
+                Route::get('servers/{server}/sites/{site}/processes', [SiteProcessController::class, 'index'])
                     ->name('servers.sites.processes.index');
 
                 // Nginx file management
-                Route::get('servers/{server}/sites/{site}/nginx', [\App\Http\Controllers\SiteNginxController::class, 'index'])
+                Route::get('servers/{server}/sites/{site}/nginx', [SiteNginxController::class, 'index'])
                     ->name('servers.sites.nginx.index');
-                Route::post('servers/{server}/sites/{site}/nginx', [\App\Http\Controllers\SiteNginxController::class, 'store'])
+                Route::post('servers/{server}/sites/{site}/nginx', [SiteNginxController::class, 'store'])
                     ->name('servers.sites.nginx.store');
-                Route::put('servers/{server}/sites/{site}/nginx/{nginxFile}', [\App\Http\Controllers\SiteNginxController::class, 'update'])
+                Route::put('servers/{server}/sites/{site}/nginx/{nginxFile}', [SiteNginxController::class, 'update'])
                     ->name('servers.sites.nginx.update');
-                Route::patch('servers/{server}/sites/{site}/nginx/{nginxFile}/rename', [\App\Http\Controllers\SiteNginxController::class, 'rename'])
+                Route::patch('servers/{server}/sites/{site}/nginx/{nginxFile}/rename', [SiteNginxController::class, 'rename'])
                     ->name('servers.sites.nginx.rename');
-                Route::delete('servers/{server}/sites/{site}/nginx/{nginxFile}', [\App\Http\Controllers\SiteNginxController::class, 'destroy'])
+                Route::delete('servers/{server}/sites/{site}/nginx/{nginxFile}', [SiteNginxController::class, 'destroy'])
                     ->name('servers.sites.nginx.destroy');
-                Route::get('servers/{server}/sites/{site}/nginx-history/{historyId}', [\App\Http\Controllers\SiteNginxController::class, 'history'])
+                Route::get('servers/{server}/sites/{site}/nginx-history/{historyId}', [SiteNginxController::class, 'history'])
                     ->name('servers.sites.nginx.history.show');
-                Route::post('servers/{server}/sites/{site}/nginx-history/{historyId}/restore', [\App\Http\Controllers\SiteNginxController::class, 'restore'])
+                Route::post('servers/{server}/sites/{site}/nginx-history/{historyId}/restore', [SiteNginxController::class, 'restore'])
                     ->name('servers.sites.nginx.history.restore');
-                Route::post('servers/{server}/sites/{site}/nginx/refresh', [\App\Http\Controllers\SiteNginxController::class, 'refresh'])
+                Route::post('servers/{server}/sites/{site}/nginx/refresh', [SiteNginxController::class, 'refresh'])
                     ->name('servers.sites.nginx.refresh');
 
                 // Databases and database users
@@ -315,6 +322,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
                 Route::get('servers/{server}/settings', [ServerController::class, 'settings'])
                     ->name('servers.settings');
+                Route::delete('servers/{server}/host-key', [ServerHostKeyController::class, 'destroy'])
+                    ->name('servers.host-key.destroy');
             });
         });
 });

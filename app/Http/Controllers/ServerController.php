@@ -260,6 +260,10 @@ class ServerController extends Controller
             'server' => new ServerResource($server),
             'ssh_command' => $sshCommand,
             'has_ssh_key' => $hasSshKey,
+            'host_key' => $server->hasPinnedHostKey() ? [
+                'type' => $server->host_key_type,
+                'fingerprint' => $server->host_key_fingerprint,
+            ] : null,
         ]);
     }
 

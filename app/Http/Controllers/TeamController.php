@@ -6,6 +6,7 @@ use App\Actions\Teams\CreateTeam;
 use App\Actions\Teams\DeleteTeam;
 use App\Actions\Teams\UpdateTeamName;
 use App\Enums\TeamRoleKey;
+use App\Http\Requests\DeleteTeamRequest;
 use App\Http\Requests\StoreTeamRequest;
 use App\Http\Requests\UpdateTeamNameRequest;
 use App\Models\Team;
@@ -73,6 +74,7 @@ class TeamController extends Controller
             'can' => [
                 'updateTeam' => $user->can('update', $team),
                 'deleteTeam' => $user->can('delete', $team),
+                'leaveTeam' => $user->can('leave', $team),
                 'inviteMembers' => $user->can('inviteMember', $team),
             ],
         ]);
@@ -124,11 +126,9 @@ class TeamController extends Controller
             ->with('success', 'Team settings updated.');
     }
 
-    public function destroy(Team $team, DeleteTeam $action): RedirectResponse
+    public function destroy(DeleteTeamRequest $request, Team $team, DeleteTeam $action): RedirectResponse
     {
-        $this->authorize('delete', $team);
-
-        $user = auth()->user();
+        $user = $request->user();
 
         $action->execute($user, $team);
 

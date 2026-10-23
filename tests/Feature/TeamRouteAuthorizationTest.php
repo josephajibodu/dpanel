@@ -42,6 +42,9 @@ const VIEWER_ALLOWED_WRITE_ROUTES = [
     // server, so they belong with "view".
     'servers.test-connection',
     'servers.metrics.refresh',
+
+    // Anyone may leave a team they belong to; it only takes their own access away.
+    'teams.leave',
 ];
 
 /**

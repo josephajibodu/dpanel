@@ -83,7 +83,7 @@ class SiteBackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('runBackups', $site);
+        $this->authorize('deleteBackups', $site);
 
         if ($backup->storage_path) {
             try {

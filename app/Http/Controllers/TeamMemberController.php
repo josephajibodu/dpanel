@@ -41,4 +41,27 @@ class TeamMemberController extends Controller
             ->back()
             ->with('success', 'Team member removed.');
     }
+
+    /**
+     * Take the signed-in user out of the team, the same way an admin would
+     * remove them, and send them to their personal team.
+     */
+    public function leave(Team $team, RemoveTeamMember $action): RedirectResponse
+    {
+        $this->authorize('leave', $team);
+
+        $user = auth()->user();
+
+        $action->execute($team, $user);
+
+        $user->refresh();
+
+        $currentTeam = $user->currentTeam;
+
+        $redirect = $currentTeam && $user->belongsToTeam($currentTeam)
+            ? redirect()->route('dashboard', $currentTeam)
+            : redirect()->route('home');
+
+        return $redirect->with('success', "You left {$team->name}.");
+    }
 }

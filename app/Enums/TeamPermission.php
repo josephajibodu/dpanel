@@ -23,6 +23,7 @@ enum TeamPermission: string
     case AccessServersAsAdmin = 'access_servers_as_admin';
     case RunBackups = 'run_backups';
     case RestoreBackups = 'restore_backups';
+    case DeleteBackups = 'delete_backups';
     case ManageServers = 'manage_servers';
     case ManageProviders = 'manage_providers';
     case ManageMembers = 'manage_members';

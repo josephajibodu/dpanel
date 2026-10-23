@@ -1,12 +1,15 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Loader2, Trash2, UserMinus, X } from 'lucide-react';
+import { Loader2, LogOut, Trash2, UserMinus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { destroy as destroyTeam } from '@/actions/App/Http/Controllers/TeamController';
 import { destroy as cancelInvitation, store as storeInvitation } from '@/actions/App/Http/Controllers/TeamInvitationController';
-import { destroy as removeMember, update as updateMemberRole } from '@/actions/App/Http/Controllers/TeamMemberController';
+import { leave as leaveTeam, destroy as removeMember, update as updateMemberRole } from '@/actions/App/Http/Controllers/TeamMemberController';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +35,7 @@ interface Props {
     can: {
         updateTeam: boolean;
         deleteTeam: boolean;
+        leaveTeam: boolean;
         inviteMembers: boolean;
     };
 }
@@ -119,28 +123,142 @@ export default function TeamSettings({ team, members, invitations, assignableRol
                     <InviteMemberForm team={team} invitations={invitations} assignableRoles={assignableRoles} />
                 )}
 
-                {can.deleteTeam && (
-                    <div className="space-y-6">
-                        <HeadingSmall
-                            title="Delete team"
-                            description="Permanently delete this team and all of its resources"
-                        />
+                {can.leaveTeam && <LeaveTeam team={team} />}
 
-                        <Button
-                            variant="destructive"
-                            onClick={() => {
-                                if (confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
-                                    router.delete(`/teams/${team.slug}`);
-                                }
-                            }}
-                        >
+                {can.deleteTeam && <DeleteTeam team={team} />}
+            </SettingsLayout>
+        </AppLayout>
+    );
+}
+
+function LeaveTeam({ team }: { team: Team }) {
+    const [open, setOpen] = useState(false);
+    const [leaving, setLeaving] = useState(false);
+
+    const leave = () => {
+        setLeaving(true);
+        router.delete(leaveTeam.url(team.slug), {
+            onFinish: () => {
+                setLeaving(false);
+                setOpen(false);
+            },
+        });
+    };
+
+    return (
+        <div className="space-y-6">
+            <HeadingSmall
+                title="Leave team"
+                description="Stop being a member of this team"
+            />
+
+            <Button variant="outline" onClick={() => setOpen(true)}>
+                <LogOut className="mr-2 size-4" />
+                Leave team
+            </Button>
+
+            <ConfirmDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={`Leave ${team.name}?`}
+                description="You will lose access to this team's servers and sites, and any of your SSH keys on them will be removed. To come back, someone in the team has to invite you again."
+                confirmLabel="Leave team"
+                variant="destructive"
+                loading={leaving}
+                onConfirm={leave}
+            />
+        </div>
+    );
+}
+
+function DeleteTeam({ team }: { team: Team }) {
+    const { data, setData, delete: destroy, processing, errors, reset, clearErrors } = useForm({ name: '' });
+
+    return (
+        <div className="space-y-6">
+            <HeadingSmall
+                title="Delete team"
+                description="Permanently delete this team and everything it holds in FleetOps"
+            />
+
+            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
+                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
+                    <p className="font-medium">Warning</p>
+                    <p className="text-sm">Please proceed with caution, this cannot be undone.</p>
+                </div>
+
+                <Dialog
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            reset();
+                            clearErrors();
+                        }
+                    }}
+                >
+                    <DialogTrigger asChild>
+                        <Button variant="destructive">
                             <Trash2 className="mr-2 size-4" />
                             Delete team
                         </Button>
-                    </div>
-                )}
-            </SettingsLayout>
-        </AppLayout>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete {team.name}?</DialogTitle>
+                            <DialogDescription>
+                                This permanently removes the team from FleetOps: its servers, sites, databases, workers, cron jobs,
+                                deployment and backup history, the cloud provider and storage accounts connected to it, and all
+                                members and pending invitations.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="text-muted-foreground space-y-2 text-sm">
+                            <p>It does not touch anything outside FleetOps:</p>
+                            <ul className="list-disc space-y-1 pl-5">
+                                <li>
+                                    The servers themselves keep running at your hosting provider, and keep being billed, until you
+                                    delete them there.
+                                </li>
+                                <li>Backup files already uploaded stay in your storage.</li>
+                                <li>SSH keys already added to the servers stay on them.</li>
+                            </ul>
+                        </div>
+
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                destroy(destroyTeam.url(team.slug));
+                            }}
+                            className="space-y-6"
+                        >
+                            <div className="grid gap-2">
+                                <Label htmlFor="delete-team-name">
+                                    Type <span className="text-foreground font-semibold">{team.name}</span> to confirm
+                                </Label>
+                                <Input
+                                    id="delete-team-name"
+                                    name="name"
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
+                                    autoComplete="off"
+                                />
+                                <InputError message={errors.name} />
+                            </div>
+
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">
+                                        Cancel
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" variant="destructive" disabled={processing || data.name !== team.name}>
+                                    Delete team
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </div>
     );
 }
 

@@ -151,6 +151,37 @@ describe('viewer', function () {
     });
 });
 
+describe('deleting backups', function () {
+    it('lets admins but not developers delete a backup', function (string $kind, string $role, bool $allowed) {
+        $serverDatabase = ServerDatabase::factory()->for($this->server)->create();
+        $backup = Backup::factory()->completed()->create([
+            'server_database_id' => $kind === 'database' ? $serverDatabase->id : null,
+            'site_id' => $kind === 'site' ? $this->site->id : null,
+            'storage_path' => null,
+        ]);
+        $path = $kind === 'database'
+            ? "{$this->serverPath}/databases/{$serverDatabase->id}/backups/{$backup->id}"
+            : "{$this->sitePath}/backups/{$backup->id}";
+        $actor = $role === 'admin' ? User::factory()->adminOf($this->team)->create() : $this->developer;
+
+        $response = $this->actingAs($actor)->delete($path);
+
+        if ($allowed) {
+            $response->assertRedirect();
+            expect($backup->fresh())->toBeNull();
+        } else {
+            $response->assertForbidden();
+            expect($backup->fresh())->not->toBeNull();
+        }
+    })->with([
+        'database backup' => 'database',
+        'site backup' => 'site',
+    ])->with([
+        'admin' => ['admin', true],
+        'developer' => ['developer', false],
+    ]);
+});
+
 describe('invitations', function () {
     it('invites a Developer who keeps that role after accepting', function () {
         Notification::fake();

@@ -90,3 +90,61 @@ it('does not let a non-owner remove a member or revoke their keys', function () 
     expect($this->member->fresh()->belongsToTeam($this->team))->toBeTrue();
     Queue::assertNotPushed(RevokeSshKeyJob::class);
 });
+
+describe('leaving a team', function () {
+    it('lets a member leave, revokes their keys and sends them to their personal team', function () {
+        $personalTeam = Team::factory()->personal()->forUser($this->member)->create();
+        $this->member->switchTeam($this->team);
+
+        $server = Server::factory()->forTeam($this->team)->create();
+        $sshKey = SshKey::factory()->create(['user_id' => $this->member->id]);
+        $sshKey->servers()->attach($server->id, ['status' => 'synced']);
+
+        $this->actingAs($this->member)
+            ->delete(route('teams.leave', $this->team))
+            ->assertRedirect(route('dashboard', $personalTeam));
+
+        expect($this->member->fresh())
+            ->belongsToTeam($this->team)->toBeFalse()
+            ->current_team_id->toBe($personalTeam->id);
+
+        Queue::assertPushed(RevokeSshKeyJob::class, fn (RevokeSshKeyJob $job) => $job->server->is($server));
+    });
+
+    it('lets the last owner other than the creator leave', function () {
+        $owner = User::factory()->ownerOf($this->team)->create();
+
+        $this->actingAs($owner)
+            ->delete(route('teams.leave', $this->team))
+            ->assertRedirect();
+
+        expect($owner->fresh()->belongsToTeam($this->team))->toBeFalse();
+    });
+
+    it('does not let the team creator leave', function () {
+        $this->actingAs($this->owner)
+            ->delete(route('teams.leave', $this->team))
+            ->assertForbidden();
+
+        expect($this->owner->fresh()->belongsToTeam($this->team))->toBeTrue();
+    });
+
+    it('does not let anyone leave a personal team', function () {
+        $personalTeam = Team::factory()->personal()->create();
+        $this->member->teams()->attach($personalTeam, ['team_role_id' => $this->member->teamRole($this->team)->id]);
+
+        $this->actingAs($this->member)
+            ->delete(route('teams.leave', $personalTeam))
+            ->assertForbidden();
+
+        expect($this->member->fresh()->belongsToTeam($personalTeam))->toBeTrue();
+    });
+
+    it('does not let someone outside the team leave it', function () {
+        $outsider = User::factory()->create();
+
+        $this->actingAs($outsider)
+            ->delete(route('teams.leave', $this->team))
+            ->assertForbidden();
+    });
+});

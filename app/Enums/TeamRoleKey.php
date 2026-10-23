@@ -36,6 +36,7 @@ enum TeamRoleKey: string
                 ...TeamPermission::ownerOnly(),
                 TeamPermission::AccessServersAsAdmin,
                 TeamPermission::RestoreBackups,
+                TeamPermission::DeleteBackups,
                 TeamPermission::ManageServers,
                 TeamPermission::ManageProviders,
                 TeamPermission::ManageMembers,

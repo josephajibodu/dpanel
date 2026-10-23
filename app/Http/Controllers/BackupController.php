@@ -76,7 +76,7 @@ class BackupController extends Controller
         Backup $backup,
         StorageProviderManager $storageProviderManager,
     ): RedirectResponse {
-        $this->authorize('runBackups', $server);
+        $this->authorize('deleteBackups', $server);
 
         if ($backup->storage_path) {
             try {

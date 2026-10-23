@@ -83,6 +83,15 @@ class SitePolicy
     }
 
     /**
+     * Determine whether the user can delete one of the site's backups. A
+     * deleted backup cannot be brought back, so this needs more than taking one.
+     */
+    public function deleteBackups(User $user, Site $site): bool
+    {
+        return $user->hasTeamPermission($site->server->team, TeamPermission::DeleteBackups);
+    }
+
+    /**
      * Determine whether the user can see the site's secrets: its environment
      * file, command output and backup files.
      */

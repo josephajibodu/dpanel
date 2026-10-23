@@ -60,6 +60,18 @@ class TeamPolicy
     }
 
     /**
+     * Any member may leave a team, except the team creator (the team would be
+     * left without its owner) and the owner of a personal team. Other Owners
+     * may leave even if they are the last one, because the creator remains.
+     */
+    public function leave(User $user, Team $team): bool
+    {
+        return ! $team->personal_team
+            && ! $team->userIsOwner($user)
+            && $user->teams()->whereKey($team->id)->exists();
+    }
+
+    /**
      * Cancelling an invitation is held to the same bar as granting its role,
      * so an Admin cannot undo an Owner's decision to invite another Owner.
      */

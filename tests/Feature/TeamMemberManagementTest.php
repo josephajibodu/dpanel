@@ -325,7 +325,7 @@ describe('team settings', function () {
         $user->switchTeam($this->team);
 
         $response = $this->actingAs($user)
-            ->delete(route('teams.destroy', $this->team));
+            ->delete(route('teams.destroy', $this->team), ['name' => $this->team->name]);
 
         if ($allowed) {
             $response->assertRedirect(route('servers.index', $personalTeam));
@@ -346,11 +346,25 @@ describe('team settings', function () {
         $personalTeam = Team::factory()->personal()->create();
 
         $this->actingAs($personalTeam->owner)
-            ->delete(route('teams.destroy', $personalTeam))
+            ->delete(route('teams.destroy', $personalTeam), ['name' => $personalTeam->name])
             ->assertForbidden();
 
         expect($personalTeam->fresh())->not->toBeNull();
     });
+
+    it('only deletes the team when the request repeats its exact name', function (array $payload, string $message) {
+        $this->team->update(['name' => 'Acme Ops']);
+
+        $this->actingAs($this->team->owner)
+            ->delete(route('teams.destroy', $this->team), $payload)
+            ->assertSessionHasErrors(['name' => $message]);
+
+        expect($this->team->fresh())->not->toBeNull();
+    })->with([
+        'missing' => [[], "Type the team's name to confirm you want to delete it."],
+        'wrong name' => [['name' => 'Other team'], "The name you typed does not match this team's name."],
+        'different case' => [['name' => 'acme ops'], "The name you typed does not match this team's name."],
+    ]);
 });
 
 describe('settings page', function () {
@@ -373,7 +387,7 @@ describe('settings page', function () {
                     ['key' => 'developer', 'label' => 'Developer'],
                     ['key' => 'viewer', 'label' => 'Viewer'],
                 ])
-                ->where('can', ['updateTeam' => true, 'deleteTeam' => false, 'inviteMembers' => true])
+                ->where('can', ['updateTeam' => true, 'deleteTeam' => false, 'leaveTeam' => true, 'inviteMembers' => true])
                 ->where('members', fn ($members) => collect($members)->mapWithKeys(fn ($member) => [
                     $member['id'] => [$member['can_change_role'], $member['can_remove']],
                 ])->all() === [
@@ -391,6 +405,6 @@ describe('settings page', function () {
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('assignableRoles', [])
-                ->where('can', ['updateTeam' => false, 'deleteTeam' => false, 'inviteMembers' => false]));
+                ->where('can', ['updateTeam' => false, 'deleteTeam' => false, 'leaveTeam' => true, 'inviteMembers' => false]));
     });
 });

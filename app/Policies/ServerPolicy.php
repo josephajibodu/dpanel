@@ -60,6 +60,15 @@ class ServerPolicy
     }
 
     /**
+     * Determine whether the user can forget the server's recorded SSH host
+     * key, so the next connection trusts whatever key the server presents.
+     */
+    public function resetHostKey(User $user, Server $server): bool
+    {
+        return $user->hasTeamPermission($server->team, TeamPermission::ManageServers);
+    }
+
+    /**
      * Determine whether the user can manage the server's databases and database users.
      */
     public function manageDatabases(User $user, Server $server): bool
@@ -97,6 +106,15 @@ class ServerPolicy
     public function restoreBackups(User $user, Server $server): bool
     {
         return $user->hasTeamPermission($server->team, TeamPermission::RestoreBackups);
+    }
+
+    /**
+     * Determine whether the user can delete a backup. A deleted backup cannot
+     * be brought back, so this needs more than taking one.
+     */
+    public function deleteBackups(User $user, Server $server): bool
+    {
+        return $user->hasTeamPermission($server->team, TeamPermission::DeleteBackups);
     }
 
     /**
