@@ -31,7 +31,7 @@ Planned design: a small, separate terminal gateway process (could later fold int
 - [ ] Build the gateway: accept a WebSocket, open an SSH PTY to the server with the existing server key, pipe bytes both ways, handle resize
 - [ ] Short-lived, single-use signed token issued by Laravel (user, server, expiry ~60s); the gateway rejects any connection without a valid one
 - [ ] Restrict to team Admins, and require password confirmation (or 2FA) before a session opens
-- [ ] Audit log: who opened a session, on which server, when it started and ended (and optionally the input typed)
+- [ ] Audit log: who opened a session, on which server, when it started and ended (no keystroke recording, since that would capture passwords typed at prompts)
 - [ ] Close idle sessions automatically and cap session length
 - [ ] Frontend terminal with xterm.js on the server detail page
 - [ ] Run the gateway as a supervised worker behind the existing nginx proxy, like Reverb
