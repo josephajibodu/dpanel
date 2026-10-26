@@ -317,7 +317,7 @@ export default function ServerDatabasesIndex({
             breadcrumbs={breadcrumbs}
             subNavItems={getServerSubNavItems(
                 pageProps.currentTeam?.slug ?? '',
-                server.id,
+                server,
             )}
         >
             <Head title={`Databases - ${server.name}`} />

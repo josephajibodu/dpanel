@@ -23,6 +23,7 @@ class ServerPhpController extends Controller
     public function index(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
+        abort_unless($server->hasPhp(), 404);
 
         $phpServicesCollection = $server->installedServices()
             ->where('type', 'php')
@@ -70,6 +71,8 @@ class ServerPhpController extends Controller
 
     public function updateSettings(UpdatePhpSettingsRequest $request, Team $team, Server $server): RedirectResponse
     {
+        abort_unless($server->hasPhp(), 404);
+
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -107,6 +110,8 @@ class ServerPhpController extends Controller
 
     public function installVersion(InstallPhpVersionRequest $request, Team $team, Server $server): RedirectResponse
     {
+        abort_unless($server->hasPhp(), 404);
+
         if (! $server->isReady()) {
             return redirect()
                 ->back()
@@ -138,6 +143,8 @@ class ServerPhpController extends Controller
 
     public function setDefaultVersion(SetDefaultPhpVersionRequest $request, Team $team, Server $server): RedirectResponse
     {
+        abort_unless($server->hasPhp(), 404);
+
         if (! $server->isReady()) {
             return redirect()
                 ->back()

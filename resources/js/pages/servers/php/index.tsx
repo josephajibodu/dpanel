@@ -178,7 +178,7 @@ export default function ServerPhpIndex({
             breadcrumbs={breadcrumbs}
             subNavItems={getServerSubNavItems(
                 phpPageProps.currentTeam?.slug ?? '',
-                server.id,
+                server,
             )}
         >
             <Head title={`PHP - ${server.name}`} />

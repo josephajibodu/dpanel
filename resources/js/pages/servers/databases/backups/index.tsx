@@ -114,10 +114,7 @@ export default function ServerDatabaseBackupsIndex({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(
-                currentTeam?.slug ?? '',
-                server.id,
-            )}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server)}
         >
             <Head title={`Backups - ${serverDatabase.name}`} />
 

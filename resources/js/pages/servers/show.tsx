@@ -101,7 +101,7 @@ export default function ServersShow({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', data.id)}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', data)}
         >
             <Head title={data.name} />
 

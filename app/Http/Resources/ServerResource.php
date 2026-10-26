@@ -3,11 +3,12 @@
 namespace App\Http\Resources;
 
 use App\Enums\ProvisioningStep;
+use App\Models\Server;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Server
+ * @mixin Server
  */
 class ServerResource extends JsonResource
 {
@@ -49,6 +50,7 @@ class ServerResource extends JsonResource
                 ->all(),
             'error_message' => $this->error_message,
             'php_version' => $this->php_version,
+            'has_php' => $this->hasPhp(),
             'database_type' => $this->database_type,
             'ssh_port' => $this->ssh_port,
             'sites_count' => $this->whenCounted('sites'),

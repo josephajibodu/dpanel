@@ -19,13 +19,20 @@ export interface Server {
     size: string;
     ip_address: string | null;
     private_ip_address: string | null;
-    status: 'pending' | 'creating' | 'provisioning' | 'active' | 'error' | 'deleting';
+    status:
+        | 'pending'
+        | 'creating'
+        | 'provisioning'
+        | 'active'
+        | 'error'
+        | 'deleting';
     status_label: string;
     status_color: 'gray' | 'blue' | 'yellow' | 'green' | 'red' | 'orange';
     error_message: string | null;
     provisioning_step: ProvisioningStep | null;
     provisioning_steps: ProvisioningStep[];
     php_version: string;
+    has_php: boolean;
     database_type: string;
     ssh_port: number;
     sites_count?: number;

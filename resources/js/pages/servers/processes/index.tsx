@@ -24,7 +24,8 @@ export default function ServerProcessesIndex({
     sites,
     defaultUser,
 }: Props) {
-    const server = serverProp && 'data' in serverProp ? serverProp.data : serverProp;
+    const server =
+        serverProp && 'data' in serverProp ? serverProp.data : serverProp;
     const teamPath = useTeamPath();
     const { currentTeam } = usePage<SharedData>().props;
 
@@ -33,13 +34,16 @@ export default function ServerProcessesIndex({
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
         { title: server.name, href: teamPath(`/servers/${server.id}`) },
-        { title: 'Processes', href: teamPath(`/servers/${server.id}/processes`) },
+        {
+            title: 'Processes',
+            href: teamPath(`/servers/${server.id}/processes`),
+        },
     ];
 
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server.id)}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server)}
         >
             <Head title={`Processes - ${server.name}`} />
 

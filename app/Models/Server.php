@@ -10,6 +10,7 @@ use App\Enums\ServerType;
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
 use App\Events\ServerStatusChanged;
+use Database\Factories\ServerFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Server extends Model
 {
-    /** @use HasFactory<\Database\Factories\ServerFactory> */
+    /** @use HasFactory<ServerFactory> */
     use HasFactory, HasUlids;
 
     protected $fillable = [
@@ -451,6 +452,14 @@ class Server extends Model
     public function supportsSites(): bool
     {
         return $this->type?->supportsSites() ?? true;
+    }
+
+    /**
+     * Check if the server has PHP installed based on its type.
+     */
+    public function hasPhp(): bool
+    {
+        return $this->type?->requiresPhp() ?? true;
     }
 
     /**

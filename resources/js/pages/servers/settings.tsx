@@ -56,7 +56,10 @@ export default function ServerSettings({
     const handleResetHostKey = () => {
         setIsResettingHostKey(true);
         router.delete(
-            resetHostKey.url({ team: currentTeam?.slug ?? '', server: server.id }),
+            resetHostKey.url({
+                team: currentTeam?.slug ?? '',
+                server: server.id,
+            }),
             {
                 preserveScroll: true,
                 onFinish: () => {
@@ -70,10 +73,7 @@ export default function ServerSettings({
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(
-                currentTeam?.slug ?? '',
-                server.id,
-            )}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server)}
         >
             <Head title={`Settings - ${server.name}`} />
 

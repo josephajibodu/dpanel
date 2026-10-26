@@ -99,10 +99,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     return (
         <AppLayout
             breadcrumbs={breadcrumbs}
-            subNavItems={getServerSubNavItems(
-                currentTeam?.slug ?? '',
-                server.id,
-            )}
+            subNavItems={getServerSubNavItems(currentTeam?.slug ?? '', server)}
         >
             <Head title={`Sites - ${server.name}`} />
 

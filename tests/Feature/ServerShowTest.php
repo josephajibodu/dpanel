@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ServerType;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Team;
@@ -43,3 +44,20 @@ it('shows the 5 most recent databases on the server page', function () {
         )
     );
 });
+
+it('tells the page whether the server has PHP', function (ServerType $type, bool $hasPhp) {
+    $server = Server::factory()->forTeam($this->team)->active()->create(['type' => $type]);
+
+    $response = $this->actingAs($this->user)
+        ->get(route('servers.show', [$this->team, $server]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('server.data.has_php', $hasPhp)
+    );
+})->with([
+    'app server' => [ServerType::App, true],
+    'worker server' => [ServerType::Worker, true],
+    'database server' => [ServerType::Database, false],
+    'load balancer' => [ServerType::Loadbalancer, false],
+]);

@@ -2,6 +2,8 @@
 
 use App\Actions\ServerPhp\GetPhpInfo;
 use App\Enums\ConnectionStatus;
+use App\Enums\ServerStatus;
+use App\Enums\ServerType;
 use App\Enums\ServiceType;
 use App\Http\Requests\UpdatePhpSettingsRequest;
 use App\Jobs\InstallPhpVersionJob;
@@ -12,6 +14,7 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -25,7 +28,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $this->team = Team::factory()->forUser($this->user)->create();
     $this->server = Server::factory()->forTeam($this->team)->create([
-        'status' => \App\Enums\ServerStatus::Active,
+        'status' => ServerStatus::Active,
         'connection_status' => ConnectionStatus::Failed,
         'php_version' => '8.3',
     ]);
@@ -70,7 +73,7 @@ it('derives installed versions from database services without SSH', function () 
 it('fetches settings via SSH when cache is cold', function () {
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
 
-    $connMock = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+    $connMock = Mockery::mock(SshConnection::class);
     $connMock->shouldReceive('sudo')
         ->once()
         ->andReturn("upload_max_filesize = 32M\nmemory_limit = 128M\n");
@@ -224,7 +227,7 @@ it('validates install version request', function () {
 });
 
 it('dispatches job to install PHP version when server is ready', function () {
-    \Illuminate\Support\Facades\Queue::fake();
+    Queue::fake();
 
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
 
@@ -236,7 +239,7 @@ it('dispatches job to install PHP version when server is ready', function () {
     $response->assertRedirect();
     $response->assertSessionHas('success');
 
-    \Illuminate\Support\Facades\Queue::assertPushed(InstallPhpVersionJob::class, function ($job) {
+    Queue::assertPushed(InstallPhpVersionJob::class, function ($job) {
         return $job->service->server_id === $this->server->id && $job->service->version === '8.2';
     });
 });
@@ -303,3 +306,36 @@ it('does not dispatch SyncSiteNginxJob when upgrade_sites is false', function ()
     Queue::assertPushed(SetDefaultPhpVersionJob::class, 1);
     Queue::assertNotPushed(SyncSiteNginxJob::class);
 });
+
+it('returns not found for the PHP page on a server without PHP', function (ServerType $type) {
+    $this->server->update(['type' => $type]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
+
+    $response->assertNotFound();
+})->with([
+    'database server' => [ServerType::Database],
+    'cache server' => [ServerType::Cache],
+    'load balancer' => [ServerType::Loadbalancer],
+]);
+
+it('refuses PHP changes on a server without PHP', function (string $method, string $path, array $payload) {
+    Queue::fake();
+
+    $this->server->createService(ServiceType::Php, '8.3', true);
+    $this->server->update([
+        'type' => ServerType::Database,
+        'connection_status' => ConnectionStatus::Successful,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->{$method}("/{$this->team->slug}/servers/{$this->server->id}/php/{$path}", $payload);
+
+    $response->assertNotFound();
+    Queue::assertNothingPushed();
+})->with([
+    'update settings' => ['put', 'settings', ['upload_max_filesize' => '64M']],
+    'install version' => ['post', 'versions', ['version' => '8.2']],
+    'set default version' => ['patch', 'default-version', ['version' => '8.3']],
+]);

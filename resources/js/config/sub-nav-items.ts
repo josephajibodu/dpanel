@@ -3,10 +3,14 @@ import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 import type { SubNavItem } from '@/types';
+import type { Server } from '@/types/server';
 
-export function getServerSubNavItems(teamSlug: string, serverId: number | string): SubNavItem[] {
-    const base = `/${teamSlug}/servers/${serverId}`;
-    return [
+export function getServerSubNavItems(
+    teamSlug: string,
+    server: Pick<Server, 'id' | 'has_php'>,
+): SubNavItem[] {
+    const base = `/${teamSlug}/servers/${server.id}`;
+    const items: SubNavItem[] = [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Sites', href: `${base}/sites` },
         { title: 'Databases', href: `${base}/databases` },
@@ -17,6 +21,10 @@ export function getServerSubNavItems(teamSlug: string, serverId: number | string
         { title: 'Observe', href: `${base}/observe` },
         { title: 'Settings', href: `${base}/settings` },
     ];
+
+    return server.has_php
+        ? items
+        : items.filter((item) => item.title !== 'PHP');
 }
 
 export function getSiteSubNavItems(
