@@ -182,6 +182,11 @@ class Server extends Model
             ->withTimestamps();
     }
 
+    public function terminalSessions(): HasMany
+    {
+        return $this->hasMany(TerminalSession::class);
+    }
+
     public function credentials(): HasMany
     {
         return $this->hasMany(ServerCredential::class);

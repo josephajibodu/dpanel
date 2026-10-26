@@ -19,6 +19,7 @@ use App\Http\Controllers\ServerHostKeyController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\ServerRuntimeController;
+use App\Http\Controllers\ServerTerminalController;
 use App\Http\Controllers\SiteBackupController;
 use App\Http\Controllers\SiteBackupScheduleController;
 use App\Http\Controllers\SiteCommandRunController;
@@ -33,7 +34,9 @@ use App\Http\Controllers\StorageProviderController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TeamInvitationController;
 use App\Http\Controllers\TeamMemberController;
+use App\Http\Controllers\TerminalGatewayController;
 use App\Http\Controllers\WorkerController;
+use App\Http\Middleware\VerifyTerminalGatewaySecret;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -335,12 +338,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.settings');
                 Route::delete('servers/{server}/host-key', [ServerHostKeyController::class, 'destroy'])
                     ->name('servers.host-key.destroy');
+
+                // Terminal (asks for the password again if it was last confirmed over 15 minutes ago)
+                Route::middleware(['password.confirm:,900'])->group(function () {
+                    Route::get('servers/{server}/terminal', [ServerTerminalController::class, 'show'])
+                        ->name('servers.terminal.show');
+                    Route::post('servers/{server}/terminal-sessions', [ServerTerminalController::class, 'store'])
+                        ->name('servers.terminal-sessions.store');
+                });
             });
         });
 });
 
 // Deployment webhooks — no auth, no CSRF (exempt in bootstrap/app.php), secret in URL identifies the site
 Route::post('webhook/{secret}', [DeploymentWebhookController::class, 'handle'])->name('deployment-webhook.handle');
+
+// Terminal gateway — no user session, no CSRF (exempt in bootstrap/app.php), the shared gateway secret authenticates
+Route::middleware([VerifyTerminalGatewaySecret::class])->prefix('internal/terminal-sessions')->group(function () {
+    Route::post('redeem', [TerminalGatewayController::class, 'redeem'])->name('terminal-gateway.redeem');
+    Route::post('{terminalSession}/end', [TerminalGatewayController::class, 'end'])->name('terminal-gateway.end');
+});
 
 // Team invitation acceptance (accessible without auth to show the page; auth required to confirm)
 Route::get('invitations/{token}/accept', [TeamInvitationController::class, 'accept'])->name('team-invitations.accept');

@@ -28,10 +28,10 @@ There is no way to get a shell on a managed server from the Flitops UI today. De
 
 Planned design: a small, separate terminal gateway process (could later fold into the server agent) that holds an SSH PTY session per terminal and bridges it to the browser over its own WebSocket. Laravel stays the source of authorization and never proxies the bytes itself. This is shell access to production servers from a browser, so the security controls are part of the feature, not a follow-up.
 
-- [ ] Build the gateway: accept a WebSocket, open an SSH PTY to the server with the existing server key, pipe bytes both ways, handle resize
-- [ ] Short-lived, single-use signed token issued by Laravel (user, server, expiry ~60s); the gateway rejects any connection without a valid one
-- [ ] Restrict to team Admins, and require password confirmation (or 2FA) before a session opens
-- [ ] Audit log: who opened a session, on which server, when it started and ended (no keystroke recording, since that would capture passwords typed at prompts)
-- [ ] Close idle sessions automatically and cap session length
-- [ ] Frontend terminal with xterm.js on the server detail page
+- [x] Build the gateway: accept a WebSocket, open an SSH PTY to the server with the existing server key, pipe bytes both ways, handle resize
+- [x] Short-lived, single-use signed token issued by Laravel (user, server, expiry ~60s); the gateway rejects any connection without a valid one
+- [x] Restrict to team Admins, and require password confirmation (or 2FA) before a session opens
+- [x] Audit log: who opened a session, on which server, when it started and ended (no keystroke recording, since that would capture passwords typed at prompts)
+- [x] Close idle sessions automatically and cap session length
+- [x] Frontend terminal with xterm.js on the server detail page
 - [ ] Run the gateway as a supervised worker behind the existing nginx proxy, like Reverb

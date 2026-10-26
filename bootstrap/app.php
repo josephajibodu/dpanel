@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        $middleware->validateCsrfTokens(except: ['webhook/*']);
+        $middleware->validateCsrfTokens(except: ['webhook/*', 'internal/terminal-sessions/*']);
 
         $middleware->alias([
             'team.slug' => EnsureTeamSlugAccess::class,

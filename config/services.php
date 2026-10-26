@@ -58,4 +58,11 @@ return [
         'url' => env('SCHEDULER_HEARTBEAT_URL'),
     ],
 
+    'terminal_gateway' => [
+        // The WebSocket address browsers connect to, e.g. wss://flitops.example.com/terminal
+        'url' => env('TERMINAL_GATEWAY_URL'),
+        // Shared with the gateway, which sends it when redeeming tokens and ending sessions
+        'secret' => env('TERMINAL_GATEWAY_SECRET'),
+    ],
+
 ];

@@ -133,4 +133,14 @@ class ServerPolicy
     {
         return $user->hasTeamPermission($server->team, TeamPermission::ViewSecrets);
     }
+
+    /**
+     * Determine whether the user can open an interactive terminal on the
+     * server. A shell as the server user can sudo, so this needs the same
+     * permission as installing an SSH key for that user.
+     */
+    public function openTerminal(User $user, Server $server): bool
+    {
+        return $user->hasTeamPermission($server->team, TeamPermission::AccessServersAsAdmin);
+    }
 }

@@ -19,6 +19,11 @@ export function getServerSubNavItems(
         { title: 'Processes', href: `${base}/processes` },
         { title: 'Runtime', href: `${base}/runtime` },
         { title: 'Observe', href: `${base}/observe` },
+        {
+            title: 'Terminal',
+            href: `${base}/terminal`,
+            permission: 'access_servers_as_admin',
+        },
         { title: 'Settings', href: `${base}/settings` },
     ];
 
