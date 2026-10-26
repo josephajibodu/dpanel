@@ -273,63 +273,59 @@ export default function SiteCommandsIndex({
                                                       : '—'}
                                             </TableCell>
                                             <TableCell>
-                                                {(canViewOutput ||
-                                                    canRunCommands) && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {canViewOutput && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8"
+                                                            onClick={() =>
+                                                                openLogs(run)
+                                                            }
                                                         >
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                className="h-8 w-8"
-                                                                aria-label="Actions"
+                                                            <FileTextIcon className="mr-2 h-4 w-4" />
+                                                            View logs
+                                                        </Button>
+                                                    )}
+                                                    {canRunCommands && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
                                                             >
-                                                                <MoreVerticalIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            {canViewOutput && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    aria-label="Actions"
+                                                                >
+                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem
                                                                     onClick={() =>
-                                                                        openLogs(
+                                                                        handleRunAgain(
                                                                             run,
                                                                         )
                                                                     }
                                                                 >
-                                                                    <FileTextIcon className="mr-2 h-4 w-4" />
-                                                                    View logs
+                                                                    <PlayIcon className="mr-2 h-4 w-4" />
+                                                                    Run again
                                                                 </DropdownMenuItem>
-                                                            )}
-                                                            {canRunCommands && (
-                                                                <>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() =>
-                                                                            handleRunAgain(
-                                                                                run,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <PlayIcon className="mr-2 h-4 w-4" />
-                                                                        Run
-                                                                        again
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() =>
-                                                                            handleEditAndRun(
-                                                                                run,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <PencilIcon className="mr-2 h-4 w-4" />
-                                                                        Edit and
-                                                                        run
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        handleEditAndRun(
+                                                                            run,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PencilIcon className="mr-2 h-4 w-4" />
+                                                                    Edit and run
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -403,29 +399,60 @@ export default function SiteCommandsIndex({
 
             {/* View logs dialog */}
             <Dialog open={logsDialogOpen} onOpenChange={setLogsDialogOpen}>
-                <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden p-0">
+                <DialogContent className="max-h-[85vh] overflow-hidden p-0 sm:max-w-3xl">
                     <DialogHeader className="px-6 pt-6">
-                        <DialogTitle>
-                            Command output
-                            {logsRun && (
-                                <span className="ml-2 font-mono text-sm font-normal text-muted-foreground">
-                                    {truncateCommand(logsRun.command, 40)}
-                                </span>
-                            )}
-                        </DialogTitle>
+                        <DialogTitle>Command output</DialogTitle>
                     </DialogHeader>
                     <div className="px-6 pb-6">
-                        <div className="max-h-[60vh] min-h-[200px] overflow-y-auto rounded-md border bg-muted/30 p-3">
-                            {logsLoading ? (
-                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Loader2Icon className="h-4 w-4 animate-spin" />
-                                    Loading…
-                                </p>
-                            ) : (
-                                <pre className="font-mono text-xs break-words whitespace-pre-wrap">
-                                    {logsContent || 'No output.'}
-                                </pre>
-                            )}
+                        <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-inner">
+                            <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-3 py-2">
+                                <span className="h-3 w-3 rounded-full bg-red-500/80" />
+                                <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
+                                <span className="h-3 w-3 rounded-full bg-green-500/80" />
+                                <span className="ml-2 truncate font-mono text-xs text-zinc-400">
+                                    {site?.domain ?? 'site'}
+                                </span>
+                            </div>
+                            <div className="max-h-[60vh] min-h-[240px] overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-zinc-100">
+                                {logsRun && (
+                                    <div className="break-all whitespace-pre-wrap">
+                                        <span className="text-green-400">
+                                            ${' '}
+                                        </span>
+                                        {logsRun.command}
+                                    </div>
+                                )}
+                                {logsLoading ? (
+                                    <p className="mt-1 flex items-center gap-2 text-zinc-400">
+                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        Loading…
+                                    </p>
+                                ) : (
+                                    <>
+                                        <pre className="mt-1 break-words whitespace-pre-wrap">
+                                            {logsContent || (
+                                                <span className="text-zinc-500">
+                                                    No output.
+                                                </span>
+                                            )}
+                                        </pre>
+                                        {logsRun?.exit_code !== null &&
+                                            logsRun?.exit_code !==
+                                                undefined && (
+                                                <p
+                                                    className={
+                                                        logsRun.exit_code === 0
+                                                            ? 'mt-3 text-zinc-500'
+                                                            : 'mt-3 text-red-400'
+                                                    }
+                                                >
+                                                    [exited with code{' '}
+                                                    {logsRun.exit_code}]
+                                                </p>
+                                            )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </DialogContent>
