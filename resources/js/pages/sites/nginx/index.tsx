@@ -123,10 +123,10 @@ export default function SiteNginxIndex({
     const [editorContent, setEditorContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [collapsedDomains, setCollapsedDomains] = useState<Set<number>>(
+    const [expandedDomains, setExpandedDomains] = useState<Set<number>>(
         new Set(),
     );
-    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(
         new Set(),
     );
     const [showHistoryPanel, setShowHistoryPanel] = useState(false);
@@ -264,7 +264,7 @@ export default function SiteNginxIndex({
     };
 
     const toggleDomain = (domainId: number) => {
-        setCollapsedDomains((prev) => {
+        setExpandedDomains((prev) => {
             const next = new Set(prev);
             if (next.has(domainId)) {
                 next.delete(domainId);
@@ -276,7 +276,7 @@ export default function SiteNginxIndex({
     };
 
     const toggleSection = (key: string) => {
-        setCollapsedSections((prev) => {
+        setExpandedSections((prev) => {
             const next = new Set(prev);
             if (next.has(key)) {
                 next.delete(key);
@@ -371,7 +371,7 @@ export default function SiteNginxIndex({
                             </p>
                         )}
                         {domains.map((domain) => {
-                            const isDomainCollapsed = collapsedDomains.has(
+                            const isDomainCollapsed = !expandedDomains.has(
                                 domain.id,
                             );
                             const domainFiles = nginxFiles.filter(
@@ -408,7 +408,7 @@ export default function SiteNginxIndex({
                                             {sections.map((section) => {
                                                 const sectionKey = `${domain.id}:${section.value}`;
                                                 const isSectionCollapsed =
-                                                    collapsedSections.has(
+                                                    !expandedSections.has(
                                                         sectionKey,
                                                     );
                                                 const sectionFiles =
