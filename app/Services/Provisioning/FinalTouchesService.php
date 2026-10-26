@@ -2,6 +2,8 @@
 
 namespace App\Services\Provisioning;
 
+use App\Enums\NodeVersion;
+
 class FinalTouchesService
 {
     public function run(ProvisioningContext $context): void
@@ -12,8 +14,9 @@ class FinalTouchesService
             300
         );
 
-        // Node.js 20
-        $context->runner->runQuietly('curl -fsSL https://deb.nodesource.com/setup_20.x | bash -', 300);
+        // Node.js
+        $nodeVersion = $context->server->node_version ?? NodeVersion::Node24;
+        $context->runner->runQuietly("curl -fsSL https://deb.nodesource.com/setup_{$nodeVersion->value}.x | bash -", 300);
         $context->packages->ensureInstalled('nodejs');
 
         // Supervisor

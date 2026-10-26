@@ -85,6 +85,15 @@ class ServerPolicy
     }
 
     /**
+     * Determine whether the user can change the server's language runtimes,
+     * such as the Node.js version. This shares the PHP permission.
+     */
+    public function manageRuntime(User $user, Server $server): bool
+    {
+        return $user->hasTeamPermission($server->team, TeamPermission::ManagePhp);
+    }
+
+    /**
      * Determine whether the user can manage the server's workers and cron jobs.
      */
     public function manageProcesses(User $user, Server $server): bool

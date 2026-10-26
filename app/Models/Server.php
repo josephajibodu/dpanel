@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ConnectionStatus;
+use App\Enums\NodeVersion;
 use App\Enums\Provider;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
@@ -43,6 +44,8 @@ class Server extends Model
         'provisioning_step',
         'connection_status',
         'php_version',
+        'node_version',
+        'node_status',
         'database_type',
         'ubuntu_version',
         'timezone',
@@ -80,6 +83,8 @@ class Server extends Model
             'status' => ServerStatus::class,
             'provisioning_step' => ProvisioningStep::class,
             'connection_status' => ConnectionStatus::class,
+            'node_version' => NodeVersion::class,
+            'node_status' => ServiceStatus::class,
             'archived' => 'boolean',
             'sudo_password' => 'encrypted',
             'database_password' => 'encrypted',

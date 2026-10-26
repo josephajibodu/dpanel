@@ -18,6 +18,7 @@ use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerHostKeyController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
+use App\Http\Controllers\ServerRuntimeController;
 use App\Http\Controllers\SiteBackupController;
 use App\Http\Controllers\SiteBackupScheduleController;
 use App\Http\Controllers\SiteCommandRunController;
@@ -291,6 +292,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.php.versions.install');
                 Route::patch('servers/{server}/php/default-version', [ServerPhpController::class, 'setDefaultVersion'])
                     ->name('servers.php.default-version.update');
+
+                // Runtime
+                Route::get('servers/{server}/runtime', [ServerRuntimeController::class, 'index'])
+                    ->name('servers.runtime.index');
+                Route::put('servers/{server}/runtime/node', [ServerRuntimeController::class, 'updateNodeVersion'])
+                    ->name('servers.runtime.node.update');
 
                 // Processes (workers and cron jobs)
                 Route::get('servers/{server}/processes', [ServerProcessController::class, 'index'])
