@@ -93,6 +93,7 @@ See **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** for a checklist of fe
 | `deploy_scripts` | Custom deploy scripts per site |
 | `environment_variables` | .env variables (encrypted) |
 | `server_actions` | Service restarts, reboots |
+| `terminal_sessions` | Browser terminal sessions: who, which server, from where, when |
 
 ## 🔄 Core Workflows
 
@@ -160,7 +161,7 @@ php artisan key:generate
 php artisan migrate
 
 # Development
-composer dev  # Runs PHP + Vite + Reverb + Horizon + Scheduler + Logs
+composer dev  # Runs PHP + Vite + Reverb + Horizon + Scheduler + Terminal gateway + Logs
 ```
 
 ## 📁 Project Structure
@@ -228,6 +229,96 @@ ACME_BINARY=/root/.acme.sh/acme.sh
 ```bash
 php artisan flitops:wildcard:issue
 ```
+
+---
+
+## 💻 Browser terminal
+
+Owners and Admins can open a live shell on a server from its **Terminal** tab. It logs in as the server user (`artisan`), which has passwordless `sudo`, so it reaches every site on the server, isolated ones included.
+
+**How it works.** Three pieces, each with one job:
+
+1. **The page** (`resources/js/components/terminal/server-terminal.tsx`) draws the terminal with xterm.js.
+2. **Laravel** decides who may connect and records each session. It never carries terminal traffic.
+3. **The gateway** (`terminal-gateway/`, a small Go program) holds the SSH connection and passes keystrokes and output between it and the browser over a WebSocket.
+
+A session goes like this:
+
+1. The page requires the `access_servers_as_admin` permission and a password confirmed in the last 15 minutes.
+2. **Connect** asks Laravel for a token: random, single-use, valid for 60 seconds. Only its SHA-256 hash is stored, in `terminal_sessions`.
+3. The browser opens a WebSocket to the gateway and sends the token as its first message (never in the URL, so it stays out of access logs). The gateway only accepts pages served from `ALLOWED_ORIGINS`.
+4. The gateway redeems the token at `POST /internal/terminal-sessions/redeem`, authenticated with the shared `TERMINAL_GATEWAY_SECRET`. Laravel marks the session started and returns the server address and private key. The key never reaches the browser.
+5. The gateway connects over SSH only if the server's host key matches the fingerprint Flitops recorded, then starts a shell on a PTY.
+6. The session closes when the shell exits, the tab closes, after 15 minutes without typing, or after 2 hours. The gateway then calls `POST /internal/terminal-sessions/{id}/end`, and Laravel records the end time.
+
+Each session records who opened it, on which server, from which IP, and when it started and ended. Keystrokes are not recorded, since that would capture passwords typed at prompts.
+
+### Settings
+
+| Where | Setting | Purpose |
+|-------|---------|---------|
+| Laravel `.env` | `TERMINAL_GATEWAY_URL` | The WebSocket address browsers connect to. Must be `wss://` when the app is served over HTTPS. |
+| Laravel `.env` | `TERMINAL_GATEWAY_SECRET` | Shared with the gateway. Leave either setting empty to turn the terminal off. |
+| Gateway env | `LISTEN_ADDR` | Where the gateway listens. Default `127.0.0.1:8090`. |
+| Gateway env | `FLITOPS_URL` | Base URL of the Flitops app, for the internal endpoints. |
+| Gateway env | `GATEWAY_SECRET` or `GATEWAY_SECRET_FILE` | The same value as `TERMINAL_GATEWAY_SECRET`. |
+| Gateway env | `ALLOWED_ORIGINS` | Comma-separated hosts the Flitops pages are served from. |
+| Gateway env | `IDLE_TIMEOUT`, `MAX_SESSION` | Defaults `15m` and `2h`. |
+
+### Local setup (Herd)
+
+Needs Go installed.
+
+```bash
+# A secure address for the gateway, since the app runs on https://
+herd proxy flitops-terminal http://127.0.0.1:8090 --secure
+```
+
+```env
+TERMINAL_GATEWAY_URL=wss://flitops-terminal.test/terminal
+TERMINAL_GATEWAY_SECRET=   # generate with: openssl rand -hex 32
+```
+
+`composer dev` then builds and starts the gateway (`php artisan flitops:terminal-gateway`) with its settings taken from the app config. When the terminal isn't configured or Go isn't installed, it skips itself. Stop any gateway you started by hand first, or the port will already be taken.
+
+### Production
+
+Build a Linux binary (use `GOARCH=arm64` for ARM servers) and copy it to the Flitops host:
+
+```bash
+cd terminal-gateway
+GOOS=linux GOARCH=amd64 go build -o flitops-terminal .
+```
+
+Run it as a supervisord worker next to Horizon and Reverb:
+
+```ini
+[program:flitops-terminal]
+command=/usr/local/bin/flitops-terminal
+user=artisan
+autostart=true
+autorestart=true
+environment=LISTEN_ADDR="127.0.0.1:8090",FLITOPS_URL="https://flitops.example.com",ALLOWED_ORIGINS="flitops.example.com",GATEWAY_SECRET_FILE="/home/artisan/.flitops/terminal-gateway-secret"
+stdout_logfile=/home/artisan/.flitops/logs/terminal.log
+redirect_stderr=true
+```
+
+Proxy `/terminal` to it in nginx, with the WebSocket upgrade headers:
+
+```nginx
+location /terminal {
+    proxy_pass http://127.0.0.1:8090;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 3h;
+}
+```
+
+Then set `TERMINAL_GATEWAY_URL=wss://flitops.example.com/terminal` and `TERMINAL_GATEWAY_SECRET` in the app's `.env`.
+
+**Tests:** `php artisan test --compact tests/Feature/ServerTerminalTest.php tests/Feature/TerminalGatewayTest.php` for the Laravel side, and `cd terminal-gateway && go test -race ./...` for the gateway, which runs a real SSH server in-process.
 
 ---
 

@@ -76,11 +76,13 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Add the scheduler to the processes started by `php artisan dev`.
+     * Add the scheduler and the terminal gateway to the processes started by
+     * `php artisan dev`. The gateway skips itself when it isn't configured.
      */
     protected function configureDevCommands(): void
     {
         DevCommands::artisan('schedule:work', 'schedule');
+        DevCommands::artisan('flitops:terminal-gateway', 'terminal');
     }
 
     protected function configureHttpClientLogging(): void

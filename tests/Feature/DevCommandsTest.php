@@ -16,12 +16,16 @@ function devProcesses(): array
 
 it('starts every process the app needs locally', function () {
     expect(array_keys(devProcesses()))->toEqualCanonicalizing([
-        'server', 'horizon', 'reverb', 'schedule', 'logs', 'vite',
+        'server', 'horizon', 'reverb', 'schedule', 'terminal', 'logs', 'vite',
     ]);
 });
 
 it('runs the scheduler', function () {
     expect(devProcesses()['schedule'])->toBe('php artisan schedule:work');
+});
+
+it('runs the terminal gateway', function () {
+    expect(devProcesses()['terminal'])->toBe('php artisan flitops:terminal-gateway');
 });
 
 it('lets Horizon process jobs instead of a plain queue worker', function () {
