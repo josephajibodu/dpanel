@@ -399,61 +399,53 @@ export default function SiteCommandsIndex({
 
             {/* View logs dialog */}
             <Dialog open={logsDialogOpen} onOpenChange={setLogsDialogOpen}>
-                <DialogContent className="max-h-[85vh] overflow-hidden p-0 sm:max-w-3xl">
-                    <DialogHeader className="px-6 pt-6">
-                        <DialogTitle>Command output</DialogTitle>
+                <DialogContent className="max-h-[85vh] gap-0 overflow-hidden border-zinc-200 bg-zinc-50 p-0 sm:max-w-3xl dark:border-zinc-800 dark:bg-zinc-950">
+                    <DialogHeader className="flex h-12 flex-row items-center gap-2 border-b border-zinc-200 bg-zinc-100 pr-12 pl-4 dark:border-zinc-800 dark:bg-zinc-900">
+                        <span className="h-3 w-3 shrink-0 rounded-full bg-red-500/80" />
+                        <span className="h-3 w-3 shrink-0 rounded-full bg-yellow-500/80" />
+                        <span className="h-3 w-3 shrink-0 rounded-full bg-green-500/80" />
+                        <DialogTitle className="ml-2 truncate font-mono text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                            {site?.domain ?? 'site'}
+                        </DialogTitle>
                     </DialogHeader>
-                    <div className="px-6 pb-6">
-                        <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-inner">
-                            <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-3 py-2">
-                                <span className="h-3 w-3 rounded-full bg-red-500/80" />
-                                <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                                <span className="h-3 w-3 rounded-full bg-green-500/80" />
-                                <span className="ml-2 truncate font-mono text-xs text-zinc-400">
-                                    {site?.domain ?? 'site'}
+                    <div className="max-h-[70vh] min-h-[280px] overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-zinc-900 dark:text-zinc-100">
+                        {logsRun && (
+                            <div className="break-all whitespace-pre-wrap">
+                                <span className="text-green-600 dark:text-green-400">
+                                    ${' '}
                                 </span>
+                                {logsRun.command}
                             </div>
-                            <div className="max-h-[60vh] min-h-[240px] overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-zinc-100">
-                                {logsRun && (
-                                    <div className="break-all whitespace-pre-wrap">
-                                        <span className="text-green-400">
-                                            ${' '}
+                        )}
+                        {logsLoading ? (
+                            <p className="mt-1 flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                                Loading…
+                            </p>
+                        ) : (
+                            <>
+                                <pre className="mt-1 break-words whitespace-pre-wrap">
+                                    {logsContent || (
+                                        <span className="text-zinc-500">
+                                            No output.
                                         </span>
-                                        {logsRun.command}
-                                    </div>
-                                )}
-                                {logsLoading ? (
-                                    <p className="mt-1 flex items-center gap-2 text-zinc-400">
-                                        <Loader2Icon className="h-4 w-4 animate-spin" />
-                                        Loading…
-                                    </p>
-                                ) : (
-                                    <>
-                                        <pre className="mt-1 break-words whitespace-pre-wrap">
-                                            {logsContent || (
-                                                <span className="text-zinc-500">
-                                                    No output.
-                                                </span>
-                                            )}
-                                        </pre>
-                                        {logsRun?.exit_code !== null &&
-                                            logsRun?.exit_code !==
-                                                undefined && (
-                                                <p
-                                                    className={
-                                                        logsRun.exit_code === 0
-                                                            ? 'mt-3 text-zinc-500'
-                                                            : 'mt-3 text-red-400'
-                                                    }
-                                                >
-                                                    [exited with code{' '}
-                                                    {logsRun.exit_code}]
-                                                </p>
-                                            )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
+                                    )}
+                                </pre>
+                                {logsRun?.exit_code !== null &&
+                                    logsRun?.exit_code !== undefined && (
+                                        <p
+                                            className={
+                                                logsRun.exit_code === 0
+                                                    ? 'mt-3 text-zinc-500'
+                                                    : 'mt-3 text-red-600 dark:text-red-400'
+                                            }
+                                        >
+                                            [exited with code{' '}
+                                            {logsRun.exit_code}]
+                                        </p>
+                                    )}
+                            </>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
