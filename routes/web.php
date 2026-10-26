@@ -292,6 +292,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.php.versions.install');
                 Route::patch('servers/{server}/php/default-version', [ServerPhpController::class, 'setDefaultVersion'])
                     ->name('servers.php.default-version.update');
+                Route::post('servers/{server}/php/extensions', [ServerPhpController::class, 'installExtension'])
+                    ->name('servers.php.extensions.install');
+                Route::delete('servers/{server}/php/extensions', [ServerPhpController::class, 'removeExtension'])
+                    ->name('servers.php.extensions.remove');
 
                 // Runtime
                 Route::get('servers/{server}/runtime', [ServerRuntimeController::class, 'index'])

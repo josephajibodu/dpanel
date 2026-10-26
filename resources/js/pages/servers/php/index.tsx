@@ -2,6 +2,11 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
+import {
+    PhpExtensions,
+    type PhpExtensionOption,
+    type PhpExtensionsVersion,
+} from '@/components/servers/php-extensions';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -45,6 +50,10 @@ export interface PhpServiceRow {
     installed_version: string | null;
     is_default: boolean;
     status: string;
+    extensions: string[];
+    extensions_sync_status: string | null;
+    extensions_sync_error: string | null;
+    extensions_pending: PhpExtensionsVersion['extensions_pending'];
 }
 
 interface Props {
@@ -57,6 +66,8 @@ interface Props {
     settingsSyncStatus: string | null;
     settingsSyncError: string | null;
     availableVersions: string[];
+    availableExtensions: PhpExtensionOption[];
+    includedExtensions: string[];
 }
 
 const SYNC_STATUS_LABELS: Record<string, string> = {
@@ -76,6 +87,8 @@ export default function ServerPhpIndex({
     settingsSyncStatus,
     settingsSyncError,
     availableVersions,
+    availableExtensions,
+    includedExtensions,
 }: Props) {
     const server =
         serverProp && 'data' in serverProp ? serverProp.data : serverProp;
@@ -512,6 +525,21 @@ export default function ServerPhpIndex({
                             </TableBody>
                         </Table>
                     </div>
+
+                    <PhpExtensions
+                        serverId={server.id}
+                        serverIsReady={serverIsReady}
+                        canManagePhp={canManagePhp}
+                        defaultVersion={defaultVersion}
+                        availableExtensions={availableExtensions}
+                        includedExtensions={includedExtensions}
+                        versions={phpServices
+                            .filter((s) => s.status === 'active')
+                            .map((s) => ({
+                                ...s,
+                                version: s.installed_version ?? s.version ?? '',
+                            }))}
+                    />
 
                     {canManagePhp && (
                         <StatGroup>

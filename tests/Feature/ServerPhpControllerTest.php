@@ -1,11 +1,15 @@
 <?php
 
 use App\Actions\ServerPhp\GetPhpInfo;
+use App\Actions\ServerPhp\InstallPhpVersion;
 use App\Enums\ConnectionStatus;
+use App\Enums\PhpExtension;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
+use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
 use App\Http\Requests\UpdatePhpSettingsRequest;
+use App\Jobs\ChangePhpExtensionJob;
 use App\Jobs\InstallPhpVersionJob;
 use App\Jobs\SetDefaultPhpVersionJob;
 use App\Jobs\SyncSiteNginxJob;
@@ -338,4 +342,104 @@ it('refuses PHP changes on a server without PHP', function (string $method, stri
     'update settings' => ['put', 'settings', ['upload_max_filesize' => '64M']],
     'install version' => ['post', 'versions', ['version' => '8.2']],
     'set default version' => ['patch', 'default-version', ['version' => '8.3']],
+    'install extension' => ['post', 'extensions', ['version' => '8.3', 'extension' => 'imagick']],
+    'remove extension' => ['delete', 'extensions', ['version' => '8.3', 'extension' => 'imagick']],
 ]);
+
+describe('extensions', function () {
+    beforeEach(function () {
+        Queue::fake();
+
+        $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+        $this->phpService = $this->server->createService(ServiceType::Php, '8.3', true);
+        $this->phpService->update([
+            'status' => ServiceStatus::Active,
+            'installed_version' => '8.3',
+            'type_data' => ['extensions' => ['soap']],
+        ]);
+        $this->extensionsPath = "/{$this->team->slug}/servers/{$this->server->id}/php/extensions";
+    });
+
+    it('lists the optional extensions and what each PHP version has installed', function () {
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
+
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('phpServices.0.extensions', ['soap'])
+            ->where('availableExtensions.3', [
+                'value' => 'imagick',
+                'label' => 'Imagick',
+                'description' => 'Image processing with ImageMagick.',
+            ])
+            ->where('includedExtensions', InstallPhpVersion::EXTENSION_PACKAGES)
+        );
+    });
+
+    it('queues installing and removing an extension', function (string $method, bool $install, string $message) {
+        $response = $this->actingAs($this->user)
+            ->{$method}($this->extensionsPath, ['version' => '8.3', 'extension' => 'imagick']);
+
+        $response->assertRedirect()->assertSessionHas('success', $message);
+        expect($this->phpService->fresh()->type_data)
+            ->toMatchArray([
+                'extensions' => ['soap'],
+                'extensions_sync_status' => 'pending',
+                'extensions_pending' => ['extension' => 'imagick', 'action' => $install ? 'install' : 'remove'],
+            ]);
+        Queue::assertPushed(ChangePhpExtensionJob::class, fn (ChangePhpExtensionJob $job) => $job->phpService->is($this->phpService)
+            && $job->extension === PhpExtension::Imagick
+            && $job->install === $install);
+    })->with([
+        'install' => ['post', true, 'Installing Imagick for PHP 8.3.'],
+        'remove' => ['delete', false, 'Removing Imagick for PHP 8.3.'],
+    ]);
+
+    it('rejects an extension that is not on the list', function () {
+        $response = $this->actingAs($this->user)
+            ->post($this->extensionsPath, ['version' => '8.3', 'extension' => 'mysql']);
+
+        $response->assertSessionHasErrors(['extension' => 'The selected extension cannot be managed here.']);
+        Queue::assertNothingPushed();
+    });
+
+    it('refuses an extension change from a viewer', function () {
+        $viewer = User::factory()->viewerOf($this->team)->create();
+
+        $response = $this->actingAs($viewer)
+            ->post($this->extensionsPath, ['version' => '8.3', 'extension' => 'imagick']);
+
+        $response->assertForbidden();
+        Queue::assertNothingPushed();
+    });
+
+    it('does not change extensions in these cases', function (Closure $arrange, string $version, string $error) {
+        $arrange($this);
+
+        $response = $this->actingAs($this->user)
+            ->post($this->extensionsPath, ['version' => $version, 'extension' => 'imagick']);
+
+        $response->assertRedirect()->assertSessionHas('error', $error);
+        Queue::assertNothingPushed();
+    })->with([
+        'server not connected' => [
+            fn ($test) => $test->server->update(['connection_status' => ConnectionStatus::Failed]),
+            '8.3',
+            'Server must be active and connected to change PHP extensions.',
+        ],
+        'version not installed' => [
+            fn ($test) => null,
+            '8.2',
+            'PHP 8.2 is not installed on this server.',
+        ],
+        'version still installing' => [
+            fn ($test) => $test->phpService->update(['status' => ServiceStatus::Installing]),
+            '8.3',
+            'PHP 8.3 is not installed on this server.',
+        ],
+        'another change in progress' => [
+            fn ($test) => $test->phpService->update(['type_data' => ['extensions_sync_status' => 'syncing']]),
+            '8.3',
+            'Another extension change is already in progress for PHP 8.3.',
+        ],
+    ]);
+});

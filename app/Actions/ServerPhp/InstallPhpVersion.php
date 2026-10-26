@@ -8,7 +8,11 @@ use RuntimeException;
 
 class InstallPhpVersion
 {
-    private const EXTENSION_PACKAGES = [
+    /**
+     * Extensions installed with every PHP version. These are always present
+     * and cannot be removed from the PHP page.
+     */
+    public const EXTENSION_PACKAGES = [
         'mysql',
         'pgsql',
         'sqlite3',

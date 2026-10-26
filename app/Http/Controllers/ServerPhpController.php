@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ServerPhp\InstallPhpVersion;
 use App\Actions\ServerPhp\SetDefaultPhpVersion;
+use App\Enums\PhpExtension;
+use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
+use App\Http\Requests\ChangePhpExtensionRequest;
 use App\Http\Requests\InstallPhpVersionRequest;
 use App\Http\Requests\SetDefaultPhpVersionRequest;
 use App\Http\Requests\UpdatePhpSettingsRequest;
 use App\Http\Resources\ServerResource;
+use App\Jobs\ChangePhpExtensionJob;
 use App\Jobs\InstallPhpVersionJob;
 use App\Jobs\UpdatePhpSettingsJob;
 use App\Models\Server;
@@ -37,6 +42,10 @@ class ServerPhpController extends Controller
                 'installed_version' => $s->installed_version,
                 'is_default' => $s->is_default,
                 'status' => $s->status->value,
+                'extensions' => $s->type_data['extensions'] ?? [],
+                'extensions_sync_status' => $s->type_data['extensions_sync_status'] ?? null,
+                'extensions_sync_error' => $s->type_data['extensions_sync_error'] ?? null,
+                'extensions_pending' => $s->type_data['extensions_pending'] ?? null,
             ])
             ->values()
             ->all();
@@ -66,6 +75,14 @@ class ServerPhpController extends Controller
             'settings' => $settings,
             'settingsSyncStatus' => $settingsSyncStatus,
             'settingsSyncError' => $settingsSyncError,
+            'availableExtensions' => collect(PhpExtension::cases())
+                ->map(fn (PhpExtension $extension): array => [
+                    'value' => $extension->value,
+                    'label' => $extension->label(),
+                    'description' => $extension->description(),
+                ])
+                ->all(),
+            'includedExtensions' => InstallPhpVersion::EXTENSION_PACKAGES,
         ]);
     }
 
@@ -175,5 +192,61 @@ class ServerPhpController extends Controller
         return redirect()
             ->back()
             ->with('success', $message);
+    }
+
+    public function installExtension(ChangePhpExtensionRequest $request, Team $team, Server $server): RedirectResponse
+    {
+        return $this->changeExtension($request, $server, true);
+    }
+
+    public function removeExtension(ChangePhpExtensionRequest $request, Team $team, Server $server): RedirectResponse
+    {
+        return $this->changeExtension($request, $server, false);
+    }
+
+    private function changeExtension(ChangePhpExtensionRequest $request, Server $server, bool $install): RedirectResponse
+    {
+        abort_unless($server->hasPhp(), 404);
+
+        if (! $server->isReady()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Server must be active and connected to change PHP extensions.');
+        }
+
+        $version = $request->validated('version');
+        $extension = PhpExtension::from($request->validated('extension'));
+        $phpService = $server->service(ServiceType::Php, $version);
+
+        if ($phpService === null || $phpService->status !== ServiceStatus::Active) {
+            return redirect()
+                ->back()
+                ->with('error', "PHP {$version} is not installed on this server.");
+        }
+
+        if (in_array($phpService->type_data['extensions_sync_status'] ?? null, ['pending', 'syncing'], true)) {
+            return redirect()
+                ->back()
+                ->with('error', "Another extension change is already in progress for PHP {$version}.");
+        }
+
+        $phpService->update([
+            'type_data' => array_merge($phpService->type_data ?? [], [
+                'extensions_sync_status' => 'pending',
+                'extensions_sync_error' => null,
+                'extensions_pending' => [
+                    'extension' => $extension->value,
+                    'action' => $install ? 'install' : 'remove',
+                ],
+            ]),
+        ]);
+
+        ChangePhpExtensionJob::dispatch($phpService, $extension, $install);
+
+        $verb = $install ? 'Installing' : 'Removing';
+
+        return redirect()
+            ->back()
+            ->with('success', "{$verb} {$extension->label()} for PHP {$version}.");
     }
 }
