@@ -112,13 +112,7 @@ class UpdateDatabaseUser
 
         $this->runPostgresAsSuperuser($connection, ['ALTER USER '.$userIdent.' WITH PASSWORD '."'{$passEsc}'"]);
 
-        // Revoke everything first so switching between readonly and readwrite
-        // doesn't leave stale broader privileges from the previous grant.
-        foreach ($databaseUser->databases as $dbName) {
-            $dbIdent = '"'.str_replace('"', '""', $dbName).'"';
-            $this->runPostgresAsSuperuser($connection, ['REVOKE ALL PRIVILEGES ON DATABASE '.$dbIdent.' FROM '.$userIdent]);
-            $this->runPostgresAsSuperuser($connection, ['REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM '.$userIdent], $dbName);
-        }
+        $this->revokePostgresPrivileges($connection, $databaseUser, $userIdent);
 
         $this->grantPostgresPrivileges($connection, $databaseUser, $userIdent);
     }

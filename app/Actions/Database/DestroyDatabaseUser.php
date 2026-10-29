@@ -69,10 +69,29 @@ class DestroyDatabaseUser
         ]);
     }
 
+    /**
+     * Postgres refuses to drop a role that still holds privileges or owns
+     * tables, so each of the user's databases is cleared first: anything they
+     * own (the app's tables, if migrations ran as them) is handed to the
+     * postgres superuser so no data is lost, then their remaining grants and
+     * default-privilege rules are dropped. The role check keeps this working
+     * when the user was never created on the server.
+     */
     private function dropPostgresUser(SshConnection $connection, DatabaseUser $databaseUser): void
     {
         $user = $databaseUser->username;
         $userIdent = '"'.str_replace('"', '""', $user).'"';
+        $userLiteral = "'".str_replace("'", "''", $user)."'";
+
+        foreach ($databaseUser->databases ?? [] as $dbName) {
+            $this->runPostgresAsSuperuser($connection, [
+                'DO $$ BEGIN '
+                ."IF EXISTS (SELECT FROM pg_roles WHERE rolname = {$userLiteral}) THEN "
+                ."EXECUTE format('REASSIGN OWNED BY %I TO postgres', {$userLiteral}); "
+                ."EXECUTE format('DROP OWNED BY %I', {$userLiteral}); "
+                .'END IF; END $$',
+            ], $dbName);
+        }
 
         $this->runPostgresAsSuperuser($connection, ['DROP USER IF EXISTS '.$userIdent]);
     }

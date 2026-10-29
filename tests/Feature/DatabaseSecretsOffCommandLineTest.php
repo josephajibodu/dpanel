@@ -113,8 +113,11 @@ it('runs postgres sql from a script as the local postgres user and stops at the 
 
     $psqlCommands = array_values(array_filter($commands, fn (string $command) => str_contains($command, 'psql')));
 
-    expect($psqlCommands)->toHaveCount(2)
-        ->each->toBe("sudo -u postgres psql -v ON_ERROR_STOP=1 < '/tmp/tmp.fleetops/statements.sql'");
+    expect($psqlCommands)->toBe([
+        "sudo -u postgres psql -v ON_ERROR_STOP=1 < '/tmp/tmp.fleetops/statements.sql'",
+        "sudo -u postgres psql -v ON_ERROR_STOP=1 < '/tmp/tmp.fleetops/statements.sql'",
+        "sudo -u postgres psql -v ON_ERROR_STOP=1 -d 'app_db' < '/tmp/tmp.fleetops/statements.sql'",
+    ]);
 });
 
 it('removes the private directory even when the sql fails', function () {
