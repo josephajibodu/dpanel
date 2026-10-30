@@ -40,3 +40,15 @@ it('targets every active server with --all and reports a failure without abortin
     $this->artisan('flitops:nginx:sync-catchall', ['--all' => true])
         ->assertFailed();
 });
+
+it('skips servers without nginx', function () {
+    $nginxServer = Server::factory()->create(['status' => ServerStatus::Active]);
+    Server::factory()->cache()->create(['status' => ServerStatus::Active]);
+
+    $action = Mockery::mock(SyncNginxCatchallVhostAction::class);
+    $action->shouldReceive('execute')->once()->with(Mockery::on(fn ($s) => $s->id === $nginxServer->id));
+    $this->app->instance(SyncNginxCatchallVhostAction::class, $action);
+
+    $this->artisan('flitops:nginx:sync-catchall', ['--all' => true])
+        ->assertSuccessful();
+});

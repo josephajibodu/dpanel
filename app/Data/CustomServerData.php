@@ -2,14 +2,19 @@
 
 namespace App\Data;
 
+use App\Enums\ServerType;
+
 readonly class CustomServerData
 {
     public function __construct(
         public string $name,
         public string $ipAddress,
         public int $sshPort = 22,
-        public string $phpVersion = '8.3',
-        public string $databaseType = 'mysql',
+        public ServerType $type = ServerType::App,
+        public ?string $phpVersion = '8.3',
+        public ?string $webServer = 'nginx',
+        public ?string $databaseType = 'mysql',
+        public bool $redis = true,
     ) {}
 
     /**
@@ -21,8 +26,11 @@ readonly class CustomServerData
             name: $data['name'],
             ipAddress: $data['ip_address'],
             sshPort: (int) ($data['ssh_port'] ?? 22),
-            phpVersion: $data['php_version'] ?? '8.3',
-            databaseType: $data['database_type'] ?? 'mysql',
+            type: ServerType::from($data['type']),
+            phpVersion: $data['php_version'],
+            webServer: $data['web_server'],
+            databaseType: $data['database_type'],
+            redis: (bool) $data['redis'],
         );
     }
 }

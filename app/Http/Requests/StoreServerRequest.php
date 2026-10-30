@@ -2,12 +2,16 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesServerServices;
 use App\Models\Server;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreServerRequest extends FormRequest
 {
+    use ValidatesServerServices;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -19,7 +23,7 @@ class StoreServerRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -37,8 +41,7 @@ class StoreServerRequest extends FormRequest
             ],
             'region' => ['required', 'string', 'max:50'],
             'size' => ['required', 'string', 'max:50'],
-            'php_version' => ['sometimes', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
-            'database_type' => ['sometimes', 'string', Rule::in(['mysql', 'postgresql', 'mariadb'])],
+            ...$this->serviceRules(),
         ];
     }
 
@@ -50,6 +53,7 @@ class StoreServerRequest extends FormRequest
     public function messages(): array
     {
         return [
+            ...$this->serviceMessages(),
             'name.required' => 'Please provide a server name.',
             'name.regex' => 'Server name can only contain letters, numbers, and hyphens.',
             'provider_account_id.required' => 'Please select a provider account.',

@@ -31,15 +31,40 @@ export interface Server {
     error_message: string | null;
     provisioning_step: ProvisioningStep | null;
     provisioning_steps: ProvisioningStep[];
-    php_version: string;
+    type: ServerTypeValue | null;
+    type_label: string | null;
+    web_server: 'nginx' | null;
+    php_version: string | null;
     has_php: boolean;
-    database_type: string;
+    supports_sites: boolean;
+    database_type: 'mysql' | 'postgresql' | 'mariadb' | null;
     ssh_port: number;
     sites_count?: number;
     provisioned_at: string | null;
     last_ssh_connection_at: string | null;
     created_at: string;
     updated_at: string;
+}
+
+export type ServerTypeValue =
+    | 'app'
+    | 'web'
+    | 'worker'
+    | 'database'
+    | 'cache'
+    | 'loadbalancer';
+
+/** A server type and the services it ticks by default. */
+export interface ServerTypeOption {
+    value: ServerTypeValue;
+    label: string;
+    description: string;
+    services: {
+        php: boolean;
+        web_server: boolean;
+        database: boolean;
+        redis: boolean;
+    };
 }
 
 export interface ProviderRegion {

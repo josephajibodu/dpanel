@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\ServerType;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Team;
@@ -45,8 +44,8 @@ it('shows the 5 most recent databases on the server page', function () {
     );
 });
 
-it('tells the page whether the server has PHP', function (ServerType $type, bool $hasPhp) {
-    $server = Server::factory()->forTeam($this->team)->active()->create(['type' => $type]);
+it('tells the page whether the server has PHP', function (string $state, bool $hasPhp) {
+    $server = Server::factory()->forTeam($this->team)->active()->{$state}()->create();
 
     $response = $this->actingAs($this->user)
         ->get(route('servers.show', [$this->team, $server]));
@@ -56,8 +55,25 @@ it('tells the page whether the server has PHP', function (ServerType $type, bool
         ->where('server.data.has_php', $hasPhp)
     );
 })->with([
-    'app server' => [ServerType::App, true],
-    'worker server' => [ServerType::Worker, true],
-    'database server' => [ServerType::Database, false],
-    'load balancer' => [ServerType::Loadbalancer, false],
+    'app server' => ['app', true],
+    'worker server' => ['worker', true],
+    'database server' => ['database', false],
+    'load balancer' => ['loadBalancer', false],
+]);
+
+it('tells the page whether the server can host sites', function (string $state, bool $supportsSites) {
+    $server = Server::factory()->forTeam($this->team)->active()->{$state}()->create();
+
+    $response = $this->actingAs($this->user)
+        ->get(route('servers.show', [$this->team, $server]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('server.data.supports_sites', $supportsSites)
+    );
+})->with([
+    'app server' => ['app', true],
+    'web server' => ['web', true],
+    'worker server' => ['worker', false],
+    'database server' => ['database', false],
 ]);

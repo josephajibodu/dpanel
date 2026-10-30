@@ -20,6 +20,7 @@ class ServerDatabaseController extends Controller
     public function index(Team $team, Server $server): Response
     {
         $this->authorize('view', $server);
+        abort_unless($server->hasDatabase(), 404);
 
         $server->load(['databases', 'databaseUsers']);
 
@@ -35,6 +36,8 @@ class ServerDatabaseController extends Controller
 
     public function store(StoreServerDatabaseRequest $request, Team $team, Server $server): RedirectResponse
     {
+        abort_unless($server->hasDatabase(), 404);
+
         if (! $server->isReady()) {
             return redirect()
                 ->back()

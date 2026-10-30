@@ -30,83 +30,43 @@ enum ServerType: string
             self::Web => 'Web server with PHP and Nginx, connects to external database.',
             self::Worker => 'Queue worker server for background job processing.',
             self::Database => 'Dedicated database server (MySQL, PostgreSQL, or MariaDB).',
-            self::Cache => 'Dedicated cache server (Redis or Memcached).',
+            self::Cache => 'Dedicated Redis server for caching and queues.',
             self::Loadbalancer => 'Load balancer for distributing traffic across servers.',
         };
     }
 
     /**
-     * Get the services that should be installed for this server type.
+     * The services this type ticks by default when creating a server. A type
+     * is only a preset: the user can change the selection before creating it.
      *
-     * @return array<string, bool>
+     * @return array{php: bool, web_server: bool, database: bool, redis: bool}
      */
     public function defaultServices(): array
     {
         return match ($this) {
-            self::App => [
-                'php' => true,
-                'nginx' => true,
-                'database' => true,
-                'redis' => true,
-                'supervisor' => true,
-            ],
-            self::Web => [
-                'php' => true,
-                'nginx' => true,
-                'database' => false,
-                'redis' => false,
-                'supervisor' => true,
-            ],
-            self::Worker => [
-                'php' => true,
-                'nginx' => false,
-                'database' => false,
-                'redis' => true,
-                'supervisor' => true,
-            ],
-            self::Database => [
-                'php' => false,
-                'nginx' => false,
-                'database' => true,
-                'redis' => false,
-                'supervisor' => false,
-            ],
-            self::Cache => [
-                'php' => false,
-                'nginx' => false,
-                'database' => false,
-                'redis' => true,
-                'supervisor' => false,
-            ],
-            self::Loadbalancer => [
-                'php' => false,
-                'nginx' => true,
-                'database' => false,
-                'redis' => false,
-                'supervisor' => false,
-            ],
+            self::App => ['php' => true, 'web_server' => true, 'database' => true, 'redis' => true],
+            self::Web => ['php' => true, 'web_server' => true, 'database' => false, 'redis' => false],
+            self::Worker => ['php' => true, 'web_server' => false, 'database' => false, 'redis' => true],
+            self::Database => ['php' => false, 'web_server' => false, 'database' => true, 'redis' => false],
+            self::Cache => ['php' => false, 'web_server' => false, 'database' => false, 'redis' => true],
+            self::Loadbalancer => ['php' => false, 'web_server' => true, 'database' => false, 'redis' => false],
         };
     }
 
     /**
-     * Check if this server type supports sites.
+     * Whether users can pick this type when creating a server. Load balancers
+     * stay hidden until load balancing itself is built.
      */
-    public function supportsSites(): bool
+    public function isSelectable(): bool
     {
-        return match ($this) {
-            self::App, self::Web, self::Loadbalancer => true,
-            self::Worker, self::Database, self::Cache => false,
-        };
+        return $this !== self::Loadbalancer;
     }
 
     /**
-     * Check if this server type requires PHP.
+     * @return array<int, self>
      */
-    public function requiresPhp(): bool
+    public static function selectable(): array
     {
-        return match ($this) {
-            self::App, self::Web, self::Worker => true,
-            self::Database, self::Cache, self::Loadbalancer => false,
-        };
+        return array_values(array_filter(self::cases(), fn (self $type): bool => $type->isSelectable()));
     }
 }

@@ -48,8 +48,9 @@ interface Props {
 export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
-    const canManageSites = usePermission()('manage_sites');
     const server = serverProp?.data ?? serverProp;
+    const canManageSites =
+        usePermission()('manage_sites') && server.supports_sites;
     useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);

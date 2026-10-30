@@ -71,7 +71,8 @@ export default function ServersShow({
         server.data,
     );
     const sites = data.sites ?? [];
-    const canCreateSite = data.status === 'active' && can('manage_sites');
+    const canCreateSite =
+        data.status === 'active' && data.supports_sites && can('manage_sites');
     const databases = data.databases ?? [];
     const isProvisioningLifecycle = [
         'pending',
@@ -186,6 +187,7 @@ export default function ServersShow({
                             {/* Left column: Sites & databases, SSH, events */}
                             <div className="space-y-6">
                                 {/* Sites */}
+                                {data.supports_sites && (
                                 <div id="sites" className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-1">
@@ -294,8 +296,10 @@ export default function ServersShow({
                                         </div>
                                     )}
                                 </div>
+                                )}
 
                                 {/* Databases */}
+                                {data.database_type !== null && (
                                 <div id="databases" className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-1">
@@ -361,6 +365,7 @@ export default function ServersShow({
                                         </div>
                                     )}
                                 </div>
+                                )}
 
                                 {/* Recent events (optional) */}
                                 {data.actions && data.actions.length > 0 && (
@@ -483,14 +488,7 @@ export default function ServersShow({
                                                     Runtime
                                                 </p>
                                                 <p className="text-sm font-medium">
-                                                    PHP {data.php_version} ·{' '}
-                                                    {data.database_type ===
-                                                    'mysql'
-                                                        ? 'MySQL'
-                                                        : data.database_type ===
-                                                            'postgresql'
-                                                          ? 'PostgreSQL'
-                                                          : 'MariaDB'}
+                                                    {runtimeSummary(data)}
                                                 </p>
                                             </div>
 
@@ -711,4 +709,21 @@ function ServerMetricsOverview({
             </StatGroup>
         </section>
     );
+}
+
+const databaseLabels: Record<NonNullable<Server['database_type']>, string> = {
+    mysql: 'MySQL',
+    postgresql: 'PostgreSQL',
+    mariadb: 'MariaDB',
+};
+
+/** One line naming the software this server runs, e.g. "PHP 8.3 · Nginx · MySQL". */
+function runtimeSummary(server: Server): string {
+    const parts = [
+        server.php_version ? `PHP ${server.php_version}` : null,
+        server.web_server === 'nginx' ? 'Nginx' : null,
+        server.database_type ? databaseLabels[server.database_type] : null,
+    ].filter((part): part is string => part !== null);
+
+    return parts.length > 0 ? parts.join(' · ') : '—';
 }

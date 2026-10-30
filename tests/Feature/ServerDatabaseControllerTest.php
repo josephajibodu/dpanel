@@ -170,7 +170,7 @@ it('validates database name is unique per server', function () {
 });
 
 it('dispatches job to destroy a database', function () {
-    \Illuminate\Support\Facades\Queue::fake();
+    Queue::fake();
 
     $database = ServerDatabase::factory()->create([
         'server_id' => $this->server->id,
@@ -181,7 +181,7 @@ it('dispatches job to destroy a database', function () {
         ->delete("/{$this->team->slug}/servers/{$this->server->id}/databases/{$database->id}");
 
     $response->assertRedirect();
-    \Illuminate\Support\Facades\Queue::assertPushed(DestroyServerDatabaseJob::class);
+    Queue::assertPushed(DestroyServerDatabaseJob::class);
     $this->assertDatabaseHas('server_databases', ['id' => $database->id]);
 });
 
@@ -197,4 +197,24 @@ it('denies destroy when database belongs to another server', function () {
 
     $response->assertNotFound();
     $this->assertDatabaseHas('server_databases', ['id' => $database->id]);
+});
+
+it('returns not found for the databases page on a server without a database', function () {
+    $server = Server::factory()->forTeam($this->team)->cache()->create(['status' => ServerStatus::Active]);
+
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$server->id}/databases")
+        ->assertNotFound();
+});
+
+it('refuses to create a database on a server without a database', function () {
+    Queue::fake();
+    $server = Server::factory()->forTeam($this->team)->cache()->create(['status' => ServerStatus::Active]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$server->id}/databases", ['name' => 'app_db'])
+        ->assertNotFound();
+
+    $this->assertDatabaseMissing('server_databases', ['server_id' => $server->id]);
+    Queue::assertNothingPushed();
 });

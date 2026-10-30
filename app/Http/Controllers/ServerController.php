@@ -9,6 +9,7 @@ use App\Data\CustomServerData;
 use App\Data\ServerData;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
+use App\Enums\ServerType;
 use App\Enums\ServiceType;
 use App\Http\Requests\StoreCustomServerRequest;
 use App\Http\Requests\StoreServerRequest;
@@ -96,6 +97,12 @@ class ServerController extends Controller
             'regions' => $regions,
             'sizes' => $sizes,
             'generatedName' => $nameGenerator->generate(),
+            'serverTypes' => array_map(fn (ServerType $type): array => [
+                'value' => $type->value,
+                'label' => $type->label(),
+                'description' => $type->description(),
+                'services' => $type->defaultServices(),
+            ], ServerType::selectable()),
         ]);
     }
 

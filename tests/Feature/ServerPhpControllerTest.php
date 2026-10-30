@@ -312,7 +312,7 @@ it('does not dispatch SyncSiteNginxJob when upgrade_sites is false', function ()
 });
 
 it('returns not found for the PHP page on a server without PHP', function (ServerType $type) {
-    $this->server->update(['type' => $type]);
+    $this->server->update(['type' => $type, 'php_version' => null, 'web_server' => null]);
 
     $response = $this->actingAs($this->user)
         ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
@@ -330,6 +330,8 @@ it('refuses PHP changes on a server without PHP', function (string $method, stri
     $this->server->createService(ServiceType::Php, '8.3', true);
     $this->server->update([
         'type' => ServerType::Database,
+        'php_version' => null,
+        'web_server' => null,
         'connection_status' => ConnectionStatus::Successful,
     ]);
 

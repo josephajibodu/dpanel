@@ -10,9 +10,11 @@ use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
 use App\Events\ProvisioningOutput;
 use App\Models\Server;
+use App\Models\Service;
 use App\Services\Remote\SshRemoteCommandRunner;
 use App\Services\Remote\SshRemoteFilesystem;
 use App\Services\Ssh\SshConnection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -85,48 +87,38 @@ class StackInstaller
         $this->logStep($server, ProvisioningStep::InstallingBaseDependencies);
         $this->systemService->installBaseDependencies($context);
 
-        $defaults = $server->type?->defaultServices() ?? [];
-
-        if ($defaults['php'] ?? false) {
-            $this->logStep($server, ProvisioningStep::InstallingPhp);
-            $phpService = $server->createService(ServiceType::Php, $server->php_version, true);
-            $context->service = $phpService;
-            $phpService->install($context);
-            $server->update(['php_version' => $phpService->installed_version ?? $phpService->version]);
+        // Servers created before services were chosen at creation have no
+        // rows yet, so fall back to their type's preset for Redis.
+        if (! $server->installedServices()->exists()) {
+            $server->queueSelectedServices(withRedis: $server->type?->defaultServices()['redis'] ?? true);
         }
 
-        if ($defaults['nginx'] ?? false) {
-            $this->logStep($server, ProvisioningStep::InstallingNginx);
-            $service = $server->createService(ServiceType::Nginx, null, true);
-            $context->service = $service;
-            $service->install($context);
-        }
+        foreach ($this->servicesToInstall($server) as $service) {
+            $step = ProvisioningStep::forServiceType($service->type);
 
-        if ($defaults['database'] ?? false) {
-            $this->logStep($server, ProvisioningStep::InstallingDatabase);
-            $service = $server->createService($server->databaseServiceType(), null, true);
-            $context->service = $service;
-            $service->install($context);
-        }
+            if ($step !== null) {
+                $this->logStep($server, $step);
+            }
 
-        if ($defaults['redis'] ?? false) {
-            $this->logStep($server, ProvisioningStep::InstallingRedis);
-            $service = $server->createService(ServiceType::Redis, null, true);
             $context->service = $service;
             $service->install($context);
+
+            if ($service->type === ServiceType::Php) {
+                $server->update(['php_version' => $service->installed_version ?? $service->version]);
+            }
         }
 
         $server->update(['provisioning_step' => ProvisioningStep::MakingFinalTouches]);
         $this->logStep($server, ProvisioningStep::MakingFinalTouches);
         $this->finalTouchesService->run($context);
 
-        if ($defaults['supervisor'] ?? false) {
-            $supervisor = $server->createService(ServiceType::Supervisor, null, true);
-            $supervisor->update([
-                'unit' => 'supervisor',
-                'status' => ServiceStatus::Active,
-            ]);
-        }
+        // Supervisor is always installed by the final touches.
+        $supervisor = $server->installedServices()->where('type', ServiceType::Supervisor)->first()
+            ?? $server->createService(ServiceType::Supervisor, null, true);
+        $supervisor->update([
+            'unit' => 'supervisor',
+            'status' => ServiceStatus::Active,
+        ]);
 
         $updateData = [
             'status' => ServerStatus::Active,
@@ -138,6 +130,31 @@ class StackInstaller
         $this->appendMetadata($runner, $updateData);
         $server->update($updateData);
         $this->logOutput($server, ProvisioningStep::Finished->label(), 'success');
+    }
+
+    /**
+     * The server's chosen services that aren't installed yet, in install
+     * order. Services already Active are skipped, so a retry resumes where
+     * the last attempt stopped.
+     *
+     * @return Collection<int, Service>
+     */
+    private function servicesToInstall(Server $server): Collection
+    {
+        $order = [
+            ServiceType::Php,
+            ServiceType::Nginx,
+            ServiceType::Mysql,
+            ServiceType::Postgresql,
+            ServiceType::Redis,
+        ];
+
+        return $server->installedServices()
+            ->whereIn('type', $order)
+            ->where('status', '!=', ServiceStatus::Active)
+            ->get()
+            ->sortBy(fn (Service $service): int => array_search($service->type, $order, true))
+            ->values();
     }
 
     /**

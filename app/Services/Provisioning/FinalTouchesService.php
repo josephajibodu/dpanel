@@ -8,11 +8,13 @@ class FinalTouchesService
 {
     public function run(ProvisioningContext $context): void
     {
-        // Composer
-        $context->runner->runQuietly(
-            'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer',
-            300
-        );
+        // Composer (its installer runs on PHP)
+        if ($context->server->hasPhp()) {
+            $context->runner->runQuietly(
+                'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer',
+                300
+            );
+        }
 
         // Node.js
         $nodeVersion = $context->server->node_version ?? NodeVersion::Node24;

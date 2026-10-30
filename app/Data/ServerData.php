@@ -2,6 +2,8 @@
 
 namespace App\Data;
 
+use App\Enums\ServerType;
+
 readonly class ServerData
 {
     public function __construct(
@@ -9,8 +11,11 @@ readonly class ServerData
         public int $providerAccountId,
         public string $region,
         public string $size,
-        public string $phpVersion = '8.3',
-        public string $databaseType = 'mysql',
+        public ServerType $type = ServerType::App,
+        public ?string $phpVersion = '8.3',
+        public ?string $webServer = 'nginx',
+        public ?string $databaseType = 'mysql',
+        public bool $redis = true,
     ) {}
 
     /**
@@ -25,8 +30,11 @@ readonly class ServerData
             providerAccountId: $data['provider_account_id'],
             region: $data['region'],
             size: $data['size'],
-            phpVersion: $data['php_version'] ?? '8.3',
-            databaseType: $data['database_type'] ?? 'mysql',
+            type: ServerType::from($data['type']),
+            phpVersion: $data['php_version'],
+            webServer: $data['web_server'],
+            databaseType: $data['database_type'],
+            redis: (bool) $data['redis'],
         );
     }
 }

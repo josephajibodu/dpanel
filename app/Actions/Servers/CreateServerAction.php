@@ -41,7 +41,7 @@ class CreateServerAction
         $keyPair = $this->keyGenerator->generate();
 
         // Create SSH key at provider
-        $appSlug = \Illuminate\Support\Str::slug((string) config('app.name'), '-');
+        $appSlug = Str::slug((string) config('app.name'), '-');
 
         $providerKeyId = $provider->createSshKey(
             name: $appSlug.'-'.$data->name.'-'.Str::random(8),
@@ -75,11 +75,13 @@ class CreateServerAction
                     'provider_account_id' => $providerAccount->id,
                     'provider' => $providerAccount->provider,
                     'name' => $data->name,
+                    'type' => $data->type,
                     'size' => $data->size,
                     'region' => $data->region,
                     'provider_region_id' => $providerRegion?->id,
                     'provider_size_id' => $providerSize?->id,
                     'php_version' => $data->phpVersion,
+                    'web_server' => $data->webServer,
                     'database_type' => $data->databaseType,
                     'status' => ServerStatus::Pending,
                     'meta' => [
@@ -105,6 +107,8 @@ class CreateServerAction
                         'value' => Str::random(32),
                     ],
                 ]);
+
+                $server->queueSelectedServices(withRedis: $data->redis);
 
                 return $server;
             });

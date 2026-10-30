@@ -2,13 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesServerServices;
 use App\Models\Server;
 use App\Rules\PublicIpAddress;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreCustomServerRequest extends FormRequest
 {
+    use ValidatesServerServices;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', [Server::class, $this->route('team')]);
@@ -28,8 +30,7 @@ class StoreCustomServerRequest extends FormRequest
             ],
             'ip_address' => ['required', 'string', 'max:255', new PublicIpAddress],
             'ssh_port' => ['required', 'integer', 'min:1', 'max:65535'],
-            'php_version' => ['sometimes', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
-            'database_type' => ['sometimes', 'string', Rule::in(['mysql', 'postgresql', 'mariadb'])],
+            ...$this->serviceRules(),
         ];
     }
 
@@ -39,6 +40,7 @@ class StoreCustomServerRequest extends FormRequest
     public function messages(): array
     {
         return [
+            ...$this->serviceMessages(),
             'name.required' => 'Please provide a server name.',
             'name.regex' => 'Server name can only contain letters, numbers, and hyphens.',
             'ip_address.required' => 'Please provide the server\'s public IP address.',

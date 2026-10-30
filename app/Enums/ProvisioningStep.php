@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Models\Server;
+
 enum ProvisioningStep: int
 {
     case Pending = 0;
@@ -75,23 +77,24 @@ enum ProvisioningStep: int
     }
 
     /**
-     * Get all steps that should be displayed in the UI.
+     * Get the steps to display in the UI for this server, leaving out the
+     * install steps for services it won't have.
      *
      * @return array<self>
      */
-    public static function displayableSteps(): array
+    public static function displayableSteps(Server $server): array
     {
-        return [
+        return array_values(array_filter([
             self::WaitingForServer,
             self::PreparingServer,
             self::ConfiguringSwap,
             self::InstallingBaseDependencies,
-            self::InstallingPhp,
-            self::InstallingNginx,
-            self::InstallingDatabase,
-            self::InstallingRedis,
+            $server->hasPhp() ? self::InstallingPhp : null,
+            $server->web_server === 'nginx' ? self::InstallingNginx : null,
+            $server->hasDatabase() ? self::InstallingDatabase : null,
+            $server->hasRedis() ? self::InstallingRedis : null,
             self::MakingFinalTouches,
-        ];
+        ]));
     }
 
     /**

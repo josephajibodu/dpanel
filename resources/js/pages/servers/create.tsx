@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { ProviderRegion, ProviderSize } from '@/types/server';
+import { ProviderRegion, ProviderSize, ServerTypeOption, ServerTypeValue } from '@/types/server';
 
 interface Props {
     providerAccounts: {
@@ -21,6 +22,7 @@ interface Props {
     regions: Record<number, ProviderRegion[]>;
     sizes: Record<number, ProviderSize[]>;
     generatedName: string;
+    serverTypes: ServerTypeOption[];
 }
 
 type Mode = 'provider' | 'custom';
@@ -32,13 +34,49 @@ const phpVersions = [
     { value: '8.1', label: 'PHP 8.1' },
 ];
 
+const webServers = [{ value: 'nginx', label: 'Nginx' }];
+
 const databaseTypes = [
     { value: 'mysql', label: 'MySQL 8' },
     { value: 'postgresql', label: 'PostgreSQL' },
     { value: 'mariadb', label: 'MariaDB' },
 ];
 
-export default function ServersCreate({ providerAccounts, regions, sizes, generatedName }: Props) {
+/** Select value standing in for "don't install this" (Select items can't be empty). */
+const NONE = 'none';
+
+/** The server type and the services chosen for it, as sent to the server. */
+interface Stack {
+    type: ServerTypeValue;
+    php_version: string | null;
+    web_server: string | null;
+    database_type: string | null;
+    redis: boolean;
+}
+
+/**
+ * Apply a type's preset: tick or untick each service, keeping the version or
+ * engine the user already picked for services that stay ticked.
+ */
+function applyPreset(option: ServerTypeOption, current: Stack): Stack {
+    return {
+        type: option.value,
+        php_version: option.services.php ? (current.php_version ?? '8.3') : null,
+        web_server: option.services.web_server ? (current.web_server ?? 'nginx') : null,
+        database_type: option.services.database ? (current.database_type ?? 'mysql') : null,
+        redis: option.services.redis,
+    };
+}
+
+const defaultStack: Stack = {
+    type: 'app',
+    php_version: '8.3',
+    web_server: 'nginx',
+    database_type: 'mysql',
+    redis: true,
+};
+
+export default function ServersCreate({ providerAccounts, regions, sizes, generatedName, serverTypes }: Props) {
     const teamPath = useTeamPath();
     const [mode, setMode] = useState<Mode>('provider');
     const [isGeneratingName, setIsGeneratingName] = useState(false);
@@ -53,16 +91,14 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
         provider_account_id: '',
         region: '',
         size: '',
-        php_version: '8.3',
-        database_type: 'mysql',
+        ...defaultStack,
     });
 
     const customForm = useForm({
         name: generatedName ?? '',
         ip_address: '',
         ssh_port: '22',
-        php_version: '8.3',
-        database_type: 'mysql',
+        ...defaultStack,
     });
 
     const selectedAccountId = providerForm.data.provider_account_id
@@ -112,9 +148,6 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
             size: '',
         });
     };
-
-    const activePhpVersion = mode === 'provider' ? providerForm.data.php_version : customForm.data.php_version;
-    const activeDatabaseType = mode === 'provider' ? providerForm.data.database_type : customForm.data.database_type;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -275,12 +308,10 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
                             </Card>
 
                             <StackConfigCard
-                                phpVersion={providerForm.data.php_version}
-                                databaseType={providerForm.data.database_type}
-                                onPhpChange={(v) => providerForm.setData('php_version', v)}
-                                onDbChange={(v) => providerForm.setData('database_type', v)}
-                                phpError={providerForm.errors.php_version}
-                                dbError={providerForm.errors.database_type}
+                                serverTypes={serverTypes}
+                                stack={providerForm.data}
+                                onChange={(stack) => providerForm.setData({ ...providerForm.data, ...stack })}
+                                errors={providerForm.errors}
                             />
 
                             <div className="flex justify-end gap-3">
@@ -362,12 +393,10 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
                             </Card>
 
                             <StackConfigCard
-                                phpVersion={customForm.data.php_version}
-                                databaseType={customForm.data.database_type}
-                                onPhpChange={(v) => customForm.setData('php_version', v)}
-                                onDbChange={(v) => customForm.setData('database_type', v)}
-                                phpError={customForm.errors.php_version}
-                                dbError={customForm.errors.database_type}
+                                serverTypes={serverTypes}
+                                stack={customForm.data}
+                                onChange={(stack) => customForm.setData({ ...customForm.data, ...stack })}
+                                errors={customForm.errors}
                             />
 
                             <div className="flex justify-end gap-3">
@@ -388,26 +417,51 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
 }
 
 interface StackConfigCardProps {
-    phpVersion: string;
-    databaseType: string;
-    onPhpChange: (value: string) => void;
-    onDbChange: (value: string) => void;
-    phpError?: string;
-    dbError?: string;
+    serverTypes: ServerTypeOption[];
+    stack: Stack;
+    onChange: (stack: Stack) => void;
+    errors: Partial<Record<keyof Stack, string>>;
 }
 
-function StackConfigCard({ phpVersion, databaseType, onPhpChange, onDbChange, phpError, dbError }: StackConfigCardProps) {
+function StackConfigCard({ serverTypes, stack, onChange, errors }: StackConfigCardProps) {
+    const update = (changes: Partial<Stack>) => onChange({ ...stack, ...changes });
+
+    // A web server needs PHP, so turning PHP off turns the web server off too.
+    const handlePhpChange = (value: string) =>
+        value === NONE ? update({ php_version: null, web_server: null }) : update({ php_version: value });
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Stack Configuration</CardTitle>
-                <CardDescription>Choose the software stack to install on your server.</CardDescription>
+                <CardTitle>Server Type</CardTitle>
+                <CardDescription>
+                    Pick a starting point, then adjust which services get installed.
+                </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {serverTypes.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => onChange(applyPreset(option, stack))}
+                            className={`rounded-lg border p-4 text-left transition-colors ${
+                                stack.type === option.value
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                            }`}
+                        >
+                            <p className="font-medium">{option.label}</p>
+                            <p className="text-muted-foreground text-xs">{option.description}</p>
+                        </button>
+                    ))}
+                </div>
+                <InputError message={errors.type} />
+
                 <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                        <Label htmlFor="php_version">PHP Version</Label>
-                        <Select value={phpVersion} onValueChange={onPhpChange}>
+                        <Label htmlFor="php_version">PHP</Label>
+                        <Select value={stack.php_version ?? NONE} onValueChange={handlePhpChange}>
                             <SelectTrigger id="php_version">
                                 <SelectValue />
                             </SelectTrigger>
@@ -417,14 +471,43 @@ function StackConfigCard({ phpVersion, databaseType, onPhpChange, onDbChange, ph
                                         {version.label}
                                     </SelectItem>
                                 ))}
+                                <SelectItem value={NONE}>None</SelectItem>
                             </SelectContent>
                         </Select>
-                        <InputError message={phpError} />
+                        <InputError message={errors.php_version} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="web_server">Web Server</Label>
+                        <Select
+                            value={stack.web_server ?? NONE}
+                            onValueChange={(value) => update({ web_server: value === NONE ? null : value })}
+                            disabled={stack.php_version === null}
+                        >
+                            <SelectTrigger id="web_server">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {webServers.map((server) => (
+                                    <SelectItem key={server.value} value={server.value}>
+                                        {server.label}
+                                    </SelectItem>
+                                ))}
+                                <SelectItem value={NONE}>None</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.web_server} />
+                        {stack.php_version === null && (
+                            <p className="text-muted-foreground text-sm">A web server needs PHP.</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="database_type">Database</Label>
-                        <Select value={databaseType} onValueChange={onDbChange}>
+                        <Select
+                            value={stack.database_type ?? NONE}
+                            onValueChange={(value) => update({ database_type: value === NONE ? null : value })}
+                        >
                             <SelectTrigger id="database_type">
                                 <SelectValue />
                             </SelectTrigger>
@@ -434,21 +517,29 @@ function StackConfigCard({ phpVersion, databaseType, onPhpChange, onDbChange, ph
                                         {db.label}
                                     </SelectItem>
                                 ))}
+                                <SelectItem value={NONE}>None</SelectItem>
                             </SelectContent>
                         </Select>
-                        <InputError message={dbError} />
+                        <InputError message={errors.database_type} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="redis">Redis</Label>
+                        <div className="flex h-9 items-center gap-3">
+                            <Switch id="redis" checked={stack.redis} onCheckedChange={(checked) => update({ redis: checked })} />
+                            <span className="text-muted-foreground text-sm">For caching and queues</span>
+                        </div>
+                        <InputError message={errors.redis} />
                     </div>
                 </div>
 
                 <div className="text-muted-foreground rounded-lg border bg-muted/50 p-4 text-sm">
-                    <p className="font-medium">The following will be installed:</p>
+                    <p className="font-medium">Always installed:</p>
                     <ul className="mt-2 list-inside list-disc space-y-1">
-                        <li>Nginx web server</li>
-                        <li>PHP {phpVersion} with common extensions</li>
-                        <li>{databaseTypes.find((d) => d.value === databaseType)?.label}</li>
-                        <li>Redis cache server</li>
-                        <li>Composer & Node.js 20</li>
-                        <li>Supervisor for queue workers</li>
+                        {stack.php_version !== null && <li>Composer</li>}
+                        <li>Node.js 24</li>
+                        <li>Supervisor for background processes</li>
+                        <li>Firewall (UFW)</li>
                     </ul>
                 </div>
             </CardContent>

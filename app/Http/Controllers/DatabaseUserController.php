@@ -18,6 +18,8 @@ class DatabaseUserController extends Controller
 {
     public function store(StoreDatabaseUserRequest $request, Team $team, Server $server): RedirectResponse
     {
+        abort_unless($server->hasDatabase(), 404);
+
         if (! $server->isReady()) {
             return redirect()
                 ->back()

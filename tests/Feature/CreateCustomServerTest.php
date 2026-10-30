@@ -4,6 +4,9 @@ use App\Actions\Servers\CreateCustomServerAction;
 use App\Data\CustomServerData;
 use App\Enums\Provider;
 use App\Enums\ServerStatus;
+use App\Enums\ServerType;
+use App\Enums\ServiceStatus;
+use App\Enums\ServiceType;
 use App\Jobs\InstallStackJob;
 use App\Models\Server;
 use App\Models\Team;
@@ -290,4 +293,75 @@ it('still rejects hostnames when the self-hosting switch is on', function () {
             'ip_address' => 'example.com',
             'ssh_port' => 22,
         ])->assertInvalid(['ip_address']);
+});
+
+// --- Server type and services ---
+
+it('records only the services a database server preset ticks', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'db-server',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+            'type' => 'database',
+            'database_type' => 'postgresql',
+        ])->assertRedirect();
+
+    $server = Server::where('name', 'db-server')->firstOrFail();
+
+    expect($server)
+        ->type->toBe(ServerType::Database)
+        ->php_version->toBeNull()
+        ->web_server->toBeNull()
+        ->database_type->toBe('postgresql');
+    expect($server->installedServices()->pluck('status', 'type')->all())
+        ->toBe([ServiceType::Postgresql->value => ServiceStatus::Pending]);
+});
+
+it('lets the user untick a service the preset includes', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'app-server',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+            'type' => 'app',
+            'php_version' => '8.4',
+            'web_server' => 'nginx',
+            'database_type' => null,
+            'redis' => false,
+        ])->assertRedirect();
+
+    $server = Server::where('name', 'app-server')->firstOrFail();
+
+    expect($server->database_type)->toBeNull();
+    expect($server->installedServices()->pluck('version', 'type')->all())->toBe([
+        ServiceType::Php->value => '8.4',
+        ServiceType::Nginx->value => null,
+    ]);
+});
+
+it('refuses the load balancer type until load balancing exists', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'lb',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+            'type' => 'loadbalancer',
+        ])->assertInvalid(['type' => 'Please choose an available server type.']);
+
+    $this->assertDatabaseMissing('servers', ['name' => 'lb']);
+});
+
+it('refuses a web server without PHP', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'web',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+            'type' => 'web',
+            'php_version' => null,
+            'web_server' => 'nginx',
+        ])->assertInvalid(['web_server' => 'A web server needs PHP.']);
+
+    $this->assertDatabaseMissing('servers', ['name' => 'web']);
 });

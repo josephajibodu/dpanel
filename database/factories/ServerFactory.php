@@ -8,12 +8,13 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Models\ProviderAccount;
+use App\Models\Server;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Server>
+ * @extends Factory<Server>
  */
 class ServerFactory extends Factory
 {
@@ -45,6 +46,7 @@ class ServerFactory extends Factory
             'provisioning_step' => ProvisioningStep::Finished,
             'connection_status' => ConnectionStatus::Successful,
             'php_version' => '8.3',
+            'web_server' => 'nginx',
             'database_type' => 'mysql',
             'ubuntu_version' => '24.04',
             'timezone' => 'UTC',
@@ -92,6 +94,44 @@ class ServerFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'type' => ServerType::Web,
+            'database_type' => null,
+        ]);
+    }
+
+    public function worker(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ServerType::Worker,
+            'web_server' => null,
+            'database_type' => null,
+        ]);
+    }
+
+    public function database(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ServerType::Database,
+            'php_version' => null,
+            'web_server' => null,
+        ]);
+    }
+
+    public function cache(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ServerType::Cache,
+            'php_version' => null,
+            'web_server' => null,
+            'database_type' => null,
+        ]);
+    }
+
+    public function loadBalancer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ServerType::Loadbalancer,
+            'php_version' => null,
+            'database_type' => null,
         ]);
     }
 

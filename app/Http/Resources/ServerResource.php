@@ -40,7 +40,9 @@ class ServerResource extends JsonResource
                 'label' => $currentProvisioningStep->label(),
                 'description' => $currentProvisioningStep->description(),
             ],
-            'provisioning_steps' => collect(ProvisioningStep::displayableSteps())
+            // Only shown while provisioning, so lists of provisioned servers skip
+            // the per-server service lookup the step list needs.
+            'provisioning_steps' => $this->provisioned_at !== null ? [] : collect(ProvisioningStep::displayableSteps($this->resource))
                 ->map(fn (ProvisioningStep $step): array => [
                     'value' => $step->value,
                     'label' => $step->label(),
@@ -50,7 +52,11 @@ class ServerResource extends JsonResource
                 ->all(),
             'error_message' => $this->error_message,
             'php_version' => $this->php_version,
+            'type' => $this->type?->value,
+            'type_label' => $this->type?->label(),
+            'web_server' => $this->web_server,
             'has_php' => $this->hasPhp(),
+            'supports_sites' => $this->supportsSites(),
             'database_type' => $this->database_type,
             'ssh_port' => $this->ssh_port,
             'sites_count' => $this->whenCounted('sites'),

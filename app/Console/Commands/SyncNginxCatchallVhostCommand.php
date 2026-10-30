@@ -26,8 +26,8 @@ class SyncNginxCatchallVhostCommand extends Command
         }
 
         $servers = $this->option('all')
-            ? Server::query()->where('status', ServerStatus::Active)->get()
-            : Server::query()->whereIn('id', $serverIds)->get();
+            ? Server::query()->where('status', ServerStatus::Active)->where('web_server', 'nginx')->get()
+            : Server::query()->whereIn('id', $serverIds)->where('web_server', 'nginx')->get();
 
         if ($servers->isEmpty()) {
             $this->components->warn('No matching servers found.');

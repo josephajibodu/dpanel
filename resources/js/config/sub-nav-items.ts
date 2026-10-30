@@ -7,7 +7,7 @@ import type { Server } from '@/types/server';
 
 export function getServerSubNavItems(
     teamSlug: string,
-    server: Pick<Server, 'id' | 'has_php'>,
+    server: Pick<Server, 'id' | 'has_php' | 'supports_sites' | 'database_type'>,
 ): SubNavItem[] {
     const base = `/${teamSlug}/servers/${server.id}`;
     const items: SubNavItem[] = [
@@ -27,9 +27,21 @@ export function getServerSubNavItems(
         { title: 'Settings', href: `${base}/settings` },
     ];
 
-    return server.has_php
-        ? items
-        : items.filter((item) => item.title !== 'PHP');
+    const hidden = new Set<string>();
+
+    if (!server.supports_sites) {
+        hidden.add('Sites');
+    }
+
+    if (server.database_type === null) {
+        hidden.add('Databases');
+    }
+
+    if (!server.has_php) {
+        hidden.add('PHP');
+    }
+
+    return items.filter((item) => !hidden.has(item.title));
 }
 
 export function getSiteSubNavItems(

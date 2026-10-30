@@ -44,6 +44,7 @@ class Server extends Model
         'provisioning_step',
         'connection_status',
         'php_version',
+        'web_server',
         'node_version',
         'node_status',
         'database_type',
@@ -319,24 +320,10 @@ class Server extends Model
     }
 
     /**
-     * Create a Service record (no install). Only for types this server type includes.
-     *
-     * Database service types (Mysql, Postgresql) are validated against the generic 'database'
-     * capability key in defaultServices(), since the engine is chosen per server instance.
+     * Create a Service record (no install).
      */
     public function createService(ServiceType $type, ?string $version = null, bool $isDefault = false): Service
     {
-        $defaults = $this->type?->defaultServices() ?? [];
-
-        $capabilityKey = match ($type) {
-            ServiceType::Mysql, ServiceType::Postgresql => 'database',
-            default => $type->value,
-        };
-
-        if (! ($defaults[$capabilityKey] ?? false)) {
-            throw new \InvalidArgumentException("Server type [{$this->type?->value}] does not include service [{$type->value}].");
-        }
-
         $exists = $this->installedServices()
             ->where('type', $type)
             ->when($version !== null && $version !== '', fn ($q) => $q->where('version', $version))
@@ -457,29 +444,59 @@ class Server extends Model
     }
 
     /**
-     * Check if the server supports sites based on its type.
+     * Sites need both a web server and PHP to run on.
      */
     public function supportsSites(): bool
     {
-        return $this->type?->supportsSites() ?? true;
+        return $this->web_server !== null && $this->hasPhp();
     }
 
-    /**
-     * Check if the server has PHP installed based on its type.
-     */
     public function hasPhp(): bool
     {
-        return $this->type?->requiresPhp() ?? true;
+        return $this->php_version !== null;
+    }
+
+    public function hasDatabase(): bool
+    {
+        return $this->database_type !== null;
+    }
+
+    public function hasRedis(): bool
+    {
+        return $this->relationLoaded('installedServices')
+            ? $this->installedServices->contains('type', ServiceType::Redis)
+            : $this->installedServices()->where('type', ServiceType::Redis)->exists();
     }
 
     /**
-     * Get the service types and whether they are enabled for this server type.
-     *
-     * @return array<string, bool>
+     * Record the services chosen for this server as Pending, ready for the
+     * stack installer to install them. Services already recorded are skipped,
+     * so this is safe to call again.
      */
-    public function defaultServiceTypes(): array
+    public function queueSelectedServices(bool $withRedis): void
     {
-        return $this->meta['services'] ?? $this->type?->defaultServices() ?? [];
+        if ($this->hasPhp()) {
+            $this->queueService(ServiceType::Php, $this->php_version);
+        }
+
+        if ($this->web_server === 'nginx') {
+            $this->queueService(ServiceType::Nginx);
+        }
+
+        if ($this->hasDatabase()) {
+            $this->queueService($this->databaseServiceType());
+        }
+
+        if ($withRedis) {
+            $this->queueService(ServiceType::Redis);
+        }
+    }
+
+    private function queueService(ServiceType $type, ?string $version = null): void
+    {
+        if (! $this->installedServices()->where('type', $type)->exists()) {
+            $this->createService($type, $version, true);
+        }
     }
 
     /**

@@ -27,9 +27,11 @@ class CreateCustomServerAction
                 'user_id' => $user->id,
                 'provider' => Provider::Custom,
                 'name' => $data->name,
+                'type' => $data->type,
                 'ip_address' => $data->ipAddress,
                 'ssh_port' => $data->sshPort,
                 'php_version' => $data->phpVersion,
+                'web_server' => $data->webServer,
                 'database_type' => $data->databaseType,
                 'status' => ServerStatus::Pending,
             ]);
@@ -40,6 +42,8 @@ class CreateCustomServerAction
                 ['type' => 'sudo_password', 'value' => Str::random(32)],
                 ['type' => 'database_password', 'value' => Str::random(32)],
             ]);
+
+            $server->queueSelectedServices(withRedis: $data->redis);
 
             return $server;
         });
