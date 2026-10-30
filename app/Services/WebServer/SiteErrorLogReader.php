@@ -47,7 +47,7 @@ class SiteErrorLogReader
             // errors yet (or not resynced since per-site logs were added) has
             // no file, which isn't a failure.
             $escapedPath = escapeshellarg($path);
-            $output = $connection->exec("if sudo test -f {$escapedPath}; then sudo tail -n {$lines} {$escapedPath}; fi");
+            $output = $connection->exec("if sudo test -f {$escapedPath}; then sudo tail -n {$lines} {$escapedPath}; fi", 15);
         } finally {
             if ($shouldDisconnect) {
                 $connection->disconnect();

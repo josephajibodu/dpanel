@@ -7,25 +7,30 @@ use App\Models\Site;
 use App\Notifications\SiteRecovered;
 use App\Notifications\SiteWentDown;
 use App\Services\Nginx\NginxConfigService;
+use App\Services\WebServer\SiteErrorLogReader;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * HTTP-checks a site's primary domain and records the result. The site is
  * only marked down (opening an incident and emailing the owner) after
  * FAILURE_THRESHOLD consecutive failures, so a single blip doesn't alert;
  * the first successful check afterwards resolves the incident and sends a
- * recovery email.
+ * recovery email. The down email includes the site's last few error log
+ * lines when they can be read.
  */
 class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
     public const FAILURE_THRESHOLD = 2;
+
+    public const ALERT_ERROR_LOG_LINES = 10;
 
     public int $tries = 1;
 
@@ -44,7 +49,7 @@ class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
         return (string) $this->site->id;
     }
 
-    public function handle(NginxConfigService $nginxConfig): void
+    public function handle(NginxConfigService $nginxConfig, SiteErrorLogReader $errorLogReader): void
     {
         $domain = $this->site->primaryDomain;
 
@@ -58,7 +63,7 @@ class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
         if ($failureReason === null) {
             $this->recordSuccess();
         } else {
-            $this->recordFailure($failureReason);
+            $this->recordFailure($failureReason, $errorLogReader);
         }
     }
 
@@ -100,7 +105,7 @@ class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
         $this->notifyOwner(new SiteRecovered($openIncident));
     }
 
-    private function recordFailure(string $reason): void
+    private function recordFailure(string $reason, SiteErrorLogReader $errorLogReader): void
     {
         $this->site->update([
             'uptime_checked_at' => now(),
@@ -119,7 +124,24 @@ class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
             'started_at' => now(),
         ]);
 
-        $this->notifyOwner(new SiteWentDown($incident));
+        $this->notifyOwner(new SiteWentDown($incident, $this->recentErrorLogLines($errorLogReader)));
+    }
+
+    /**
+     * The site's last few error log lines, or none when they can't be read,
+     * so a server that's unreachable over SSH never holds up the alert.
+     *
+     * @return array<int, string>
+     */
+    private function recentErrorLogLines(SiteErrorLogReader $errorLogReader): array
+    {
+        try {
+            return $errorLogReader->recentLines($this->site, self::ALERT_ERROR_LOG_LINES);
+        } catch (\Throwable $e) {
+            Log::warning("Couldn't read the error log for the down alert of site {$this->site->id}: {$e->getMessage()}");
+
+            return [];
+        }
     }
 
     private function notifyOwner(Notification $notification): void

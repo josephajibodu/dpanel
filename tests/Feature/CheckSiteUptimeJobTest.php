@@ -10,6 +10,8 @@ use App\Models\Team;
 use App\Models\User;
 use App\Notifications\SiteRecovered;
 use App\Notifications\SiteWentDown;
+use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -24,6 +26,11 @@ beforeEach(function () {
     $this->team = Team::factory()->forUser($this->user)->create();
     $this->server = Server::factory()->forTeam($this->team)->create(['status' => ServerStatus::Active]);
     $this->site = Site::factory()->forServer($this->server)->deployed()->create();
+
+    // Reading the error log for the down email fails unless a test says otherwise.
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andThrow(new RuntimeException('Connection refused'))->byDefault();
+    $this->app->instance(SshService::class, $sshService);
 });
 
 it('marks a site up after a successful check', function () {
@@ -87,6 +94,40 @@ it('marks a site down after two consecutive failures and alerts the team owner',
 
     Notification::assertSentToTimes($this->user, SiteWentDown::class, 1);
     Notification::assertSentTo($this->user, SiteWentDown::class, fn (SiteWentDown $notification) => $notification->incident->is($incident));
+});
+
+it('includes the site\'s recent error log lines in the down alert', function () {
+    $this->site->update(['uptime_status' => UptimeStatus::Up, 'uptime_consecutive_failures' => 1]);
+    Http::fake(['*' => Http::response('Bad Gateway', 502)]);
+
+    $commands = [];
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('exec')->once()->andReturnUsing(function (string $command) use (&$commands) {
+        $commands[] = $command;
+
+        return "upstream sent too big header while reading response header from upstream\n";
+    });
+    $connection->shouldReceive('disconnect')->once();
+    app(SshService::class)->shouldReceive('connect')->once()->andReturn($connection);
+
+    CheckSiteUptimeJob::dispatchSync($this->site);
+
+    expect($commands[0])->toContain('sudo tail -n 10 ');
+
+    Notification::assertSentTo($this->user, SiteWentDown::class, fn (SiteWentDown $notification) => $notification->errorLogLines === [
+        'upstream sent too big header while reading response header from upstream',
+    ]);
+});
+
+it('still sends the down alert when the error log cannot be read', function () {
+    $this->site->update(['uptime_status' => UptimeStatus::Up, 'uptime_consecutive_failures' => 1]);
+    Http::fake(['*' => Http::response('Bad Gateway', 502)]);
+
+    CheckSiteUptimeJob::dispatchSync($this->site);
+
+    expect($this->site->fresh()->uptime_status)->toBe(UptimeStatus::Down);
+
+    Notification::assertSentTo($this->user, SiteWentDown::class, fn (SiteWentDown $notification) => $notification->errorLogLines === []);
 });
 
 it('does not alert again or open another incident while a site stays down', function () {
@@ -167,6 +208,19 @@ it('renders the down and recovery emails', function () {
         ->and($recoveredMail->subject)->toBe("Site recovered: {$this->site->domain}")
         ->and($recoveredMail->introLines)->toContain('It was down for 15 minutes.')
         ->and($recoveredMail->actionUrl)->toBe($siteUrl);
+});
+
+it('escapes error log lines in the down email', function () {
+    $incident = SiteIncident::factory()->forSite($this->site)->create(['reason' => 'HTTP 502 response']);
+
+    $html = (string) (new SiteWentDown($incident, ['GET /<script>alert(1)</script> HTTP/1.1', 'second line']))
+        ->toMail($this->user)
+        ->render();
+
+    expect($html)->toContain('Recent Nginx errors:')
+        ->toContain('<pre style=')
+        ->toContain("GET /&lt;script&gt;alert(1)&lt;/script&gt; HTTP/1.1\nsecond line")
+        ->not->toContain('<script>');
 });
 
 it('is unique per site with a single try', function () {
