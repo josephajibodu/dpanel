@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\Provider;
 use App\Jobs\ValidateProviderJob;
 use App\Models\ProviderAccount;
 use App\Models\Server;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\Providers\AwsProvider;
 use App\Services\Providers\DigitalOceanProvider;
 use App\Services\Providers\ProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,6 +115,52 @@ describe('store', function () {
             ]);
 
         $response->assertSessionHasErrors(['provider']);
+    });
+
+    it('stores an AWS access key pair as the credentials', function () {
+        $mock = Mockery::mock(AwsProvider::class);
+        $mock->shouldReceive('setCredentials')->once()->with([
+            'access_key_id' => 'AKIAIOSFODNN7EXAMPLE',
+            'secret_access_key' => 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+        ]);
+        $mock->shouldReceive('validateCredentials')->once()->andReturn(true);
+
+        $managerMock = Mockery::mock(ProviderManager::class);
+        $managerMock->shouldReceive('driver')->with('aws')->andReturn($mock);
+
+        $this->app->instance(ProviderManager::class, $managerMock);
+
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/provider-accounts", [
+                'provider' => 'aws',
+                'name' => 'My AWS Account',
+                'access_key_id' => 'AKIAIOSFODNN7EXAMPLE',
+                'secret_access_key' => 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            ]);
+
+        $response->assertRedirect("/{$this->team->slug}/provider-accounts");
+        $response->assertSessionHas('success');
+
+        expect($this->team->providerAccounts()->sole())
+            ->provider->toBe(Provider::Aws)
+            ->credentials->toBe([
+                'access_key_id' => 'AKIAIOSFODNN7EXAMPLE',
+                'secret_access_key' => 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            ]);
+    });
+
+    it('requires an access key pair instead of an API token for AWS', function () {
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/provider-accounts", [
+                'provider' => 'aws',
+                'name' => 'My AWS Account',
+            ]);
+
+        $response->assertSessionHasErrors([
+            'access_key_id' => 'Please enter your access key ID.',
+            'secret_access_key' => 'Please enter your secret access key.',
+        ]);
+        $response->assertSessionDoesntHaveErrors('api_token');
     });
 });
 

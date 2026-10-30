@@ -46,6 +46,7 @@ class CreateServerAction
         $providerKeyId = $provider->createSshKey(
             name: $appSlug.'-'.$data->name.'-'.Str::random(8),
             publicKey: $keyPair->publicKey,
+            region: $data->region,
         );
 
         // Look up the provider region and size records

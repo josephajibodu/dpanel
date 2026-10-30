@@ -42,6 +42,7 @@ const providerIcons: Record<string, string> = {
     digitalocean: '🌊',
     hetzner: '🔴',
     vultr: '🦅',
+    aws: '🟠',
 };
 
 export default function ProviderAccountsIndex({ accounts }: Props) {

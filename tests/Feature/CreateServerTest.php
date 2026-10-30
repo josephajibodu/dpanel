@@ -27,6 +27,7 @@ beforeEach(function () {
     $provider->shouldReceive('validateCredentials')->andReturn(true);
     $provider->shouldReceive('createSshKey')->andReturn('ssh-key-123');
     $this->mock(ProviderManager::class)->shouldReceive('forAccount')->andReturn($provider);
+    $this->provider = $provider;
     $this->mock(KeyGenerator::class)->shouldReceive('generate')->andReturn(new KeyPair(
         publicKey: 'ssh-ed25519 AAAA test',
         privateKey: 'private',
@@ -54,6 +55,7 @@ it('creates a provider server of the chosen type with its preset services', func
         ->web_server->toBeNull()
         ->database_type->toBeNull();
     expect($server->installedServices()->pluck('type')->all())->toBe([ServiceType::Redis]);
+    $this->provider->shouldHaveReceived('createSshKey')->with(Mockery::any(), 'ssh-ed25519 AAAA test', 'nyc1');
     Queue::assertPushed(ProvisionServerJob::class, fn (ProvisionServerJob $job) => $job->server->is($server));
 });
 

@@ -160,7 +160,7 @@ class VultrProvider implements ProviderContract
         }
     }
 
-    public function createSshKey(string $name, string $publicKey): string
+    public function createSshKey(string $name, string $publicKey, string $region): string
     {
         $response = $this->http->post('ssh-keys', [
             'name' => $name,

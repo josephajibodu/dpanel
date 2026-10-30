@@ -1,7 +1,7 @@
 export interface ProviderAccount {
     id: number;
     ulid: string;
-    provider: 'digitalocean' | 'hetzner' | 'vultr';
+    provider: 'digitalocean' | 'hetzner' | 'vultr' | 'aws';
     provider_label: string;
     name: string;
     is_valid: boolean;

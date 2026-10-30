@@ -42,9 +42,10 @@ class ProviderAccountController extends Controller
     public function store(Team $team, StoreProviderAccountRequest $request, ProviderManager $providerManager): RedirectResponse
     {
         $validated = $request->validated();
+        $credentials = $request->credentials();
 
         $provider = $providerManager->driver($validated['provider']);
-        $provider->setCredentials(['api_token' => $validated['api_token']]);
+        $provider->setCredentials($credentials);
 
         $isValid = $provider->validateCredentials();
 
@@ -52,7 +53,7 @@ class ProviderAccountController extends Controller
             'user_id' => auth()->id(),
             'provider' => $validated['provider'],
             'name' => $validated['name'],
-            'credentials' => ['api_token' => $validated['api_token']],
+            'credentials' => $credentials,
             'is_valid' => $isValid,
             'validated_at' => $isValid ? now() : null,
         ]);
@@ -60,7 +61,7 @@ class ProviderAccountController extends Controller
         if (! $isValid) {
             return redirect()
                 ->route('provider-accounts.index', $team)
-                ->with('error', 'Provider account created but credentials could not be validated. Please check your API token.');
+                ->with('error', 'Provider account created but credentials could not be validated. Please check your credentials.');
         }
 
         return redirect()

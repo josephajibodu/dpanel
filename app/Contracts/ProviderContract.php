@@ -13,7 +13,7 @@ interface ProviderContract
     /**
      * Set the API credentials for this provider.
      *
-     * @param  array{api_token: string}  $credentials
+     * @param  array<string, string>  $credentials  The fields from Provider::credentialFields()
      */
     public function setCredentials(array $credentials): void;
 
@@ -59,9 +59,12 @@ interface ProviderContract
     /**
      * Create an SSH key at the provider.
      *
+     * The region is the one the server will be created in. Providers whose
+     * SSH keys work in every region ignore it.
+     *
      * @return string The provider's SSH key ID
      */
-    public function createSshKey(string $name, string $publicKey): string;
+    public function createSshKey(string $name, string $publicKey, string $region): string;
 
     /**
      * Delete an SSH key from the provider.

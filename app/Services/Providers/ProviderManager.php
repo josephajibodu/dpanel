@@ -42,6 +42,7 @@ class ProviderManager
             'digitalocean' => app(DigitalOceanProvider::class),
             'hetzner' => app(HetznerProvider::class),
             'vultr' => app(VultrProvider::class),
+            'aws' => app(AwsProvider::class),
             default => throw new InvalidArgumentException("Unknown provider: {$provider}"),
         };
     }
