@@ -40,7 +40,12 @@ class SiteIsolationService
      * Create the site's Linux user, or reuse it when an earlier attempt to
      * set up this same site already created it.
      *
-     * @throws RuntimeException when the name belongs to an account FlitOps didn't create for this site.
+     * A group with the user's name can outlive its user: `userdel` keeps the
+     * group while the web user is still a member, which was the case for
+     * sites deleted before deleteUser() removed it. Such a leftover group is
+     * reused instead of making useradd fail.
+     *
+     * @throws RuntimeException when the name belongs to an account or group FlitOps didn't create for a site.
      */
     public function createUser(SshConnection $connection, Site $site): void
     {
@@ -52,7 +57,9 @@ class SiteIsolationService
         $existingComment = trim($connection->exec("getent passwd {$userEsc} | cut -d: -f5"));
 
         if ($existingComment === '') {
-            $connection->exec("sudo useradd --create-home --home-dir {$home} --shell /bin/bash --user-group --comment ".$this->escapeForShell($comment)." {$userEsc}");
+            $groupOption = $this->isLeftoverSiteGroup($connection, $user) ? "--gid {$userEsc}" : '--user-group';
+
+            $connection->exec("sudo useradd --create-home --home-dir {$home} --shell /bin/bash {$groupOption} --comment ".$this->escapeForShell($comment)." {$userEsc}");
         } elseif ($existingComment !== $comment) {
             throw new RuntimeException("A Linux user named \"{$user}\" already exists on this server and wasn't created by FlitOps for this site.");
         }
@@ -120,6 +127,35 @@ class SiteIsolationService
 
         $connection->exec("sudo pkill -KILL -u {$userEsc} || true");
         $connection->exec("sudo userdel --remove {$userEsc} 2>&1");
+
+        // userdel keeps the user's group while the web user is a member of it.
+        $connection->exec("if getent group {$userEsc} > /dev/null; then sudo groupdel {$userEsc}; fi");
+    }
+
+    /**
+     * Whether a group named after the site user exists and looks like one a
+     * deleted site left behind: a regular (non-system) group whose only
+     * member is the web user. Any other group with that name is refused, as
+     * reusing it would let its members read the site's files.
+     *
+     * @throws RuntimeException when a group with the name exists but isn't a leftover.
+     */
+    private function isLeftoverSiteGroup(SshConnection $connection, string $user): bool
+    {
+        $entry = trim($connection->exec('getent group '.$this->escapeForShell($user).' || true'));
+
+        if ($entry === '') {
+            return false;
+        }
+
+        [, , $gid, $members] = array_pad(explode(':', $entry), 4, '');
+        $otherMembers = array_diff(array_filter(explode(',', $members)), [(string) config('server.web_user')]);
+
+        if ((int) $gid < 1000 || $otherMembers !== []) {
+            throw new RuntimeException("A Linux group named \"{$user}\" already exists on this server and wasn't left behind by a FlitOps site.");
+        }
+
+        return true;
     }
 
     public function poolPath(string $systemUser, string $phpVersion): string

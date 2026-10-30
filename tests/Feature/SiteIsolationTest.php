@@ -49,17 +49,19 @@ uses(RefreshDatabase::class);
  * @param  array<int, string>  $commands
  * @param  array<string, string>  $uploads
  * @param  string  $existingUserComment  What `getent passwd` reports for the site user ('' = no such user).
+ * @param  string  $existingGroup  What `getent group` reports for the site user's group ('' = no such group).
  */
-function isolationConnection(array &$commands, array &$uploads = [], string $existingUserComment = ''): SshConnection
+function isolationConnection(array &$commands, array &$uploads = [], string $existingUserComment = '', string $existingGroup = ''): SshConnection
 {
     $connection = Mockery::mock(SshConnection::class)->makePartial();
-    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands, $existingUserComment) {
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands, $existingUserComment, $existingGroup) {
         $commands[] = $command;
 
         return match (true) {
             $command === 'mktemp -d' => '/tmp/tmp.fleetops',
             str_contains($command, 'nginx -t') => 'syntax is ok',
             str_starts_with($command, 'getent passwd') => $existingUserComment,
+            str_starts_with($command, 'getent group') => $existingGroup,
             str_contains($command, 'test -d') => 'yes',
             default => '',
         };
@@ -139,12 +141,12 @@ it('keeps an unisolated site on the server user when the box is unticked', funct
 // Provisioning
 // --------------------------------------------------------------------------
 
-function provisionIsolationSite(Site $site, array &$commands, array &$uploads, string $existingUserComment = ''): void
+function provisionIsolationSite(Site $site, array &$commands, array &$uploads, string $existingUserComment = '', string $existingGroup = ''): void
 {
     Event::fake([ServerSitesUpdated::class]);
     Queue::fake([DeploySiteJob::class]);
 
-    bindIsolationSsh(isolationConnection($commands, $uploads, $existingUserComment));
+    bindIsolationSsh(isolationConnection($commands, $uploads, $existingUserComment, $existingGroup));
 
     try {
         app(ProvisionSiteAction::class)->execute($site);
@@ -257,6 +259,40 @@ it('reuses the site user when retrying the same site', function () {
     expect($site->fresh()->status)->toBe(SiteStatus::Provisioned)
         ->and(implode("\n", $commands))->not->toContain('useradd');
 });
+
+it('reuses the group a deleted site with the same name left behind', function () {
+    $site = Site::factory()->forServer($this->server)->pending()->isolated('example_com')->create([
+        'repository' => null,
+        'source_control_account_id' => null,
+    ]);
+
+    $commands = [];
+    $uploads = [];
+    provisionIsolationSite($site, $commands, $uploads, existingGroup: 'example_com:x:1003:www-data');
+
+    expect($site->fresh()->status)->toBe(SiteStatus::Provisioned)
+        ->and(implode("\n", $commands))->toContain("sudo useradd --create-home --home-dir '/home/example_com' --shell /bin/bash --gid 'example_com' --comment 'flitops-site {$site->ulid}' 'example_com'");
+});
+
+it('refuses to reuse a group with the site user name that a deleted site did not leave', function (string $group) {
+    $site = Site::factory()->forServer($this->server)->pending()->isolated('example_com')->create([
+        'repository' => null,
+        'source_control_account_id' => null,
+    ]);
+
+    $commands = [];
+    $uploads = [];
+    provisionIsolationSite($site, $commands, $uploads, existingGroup: $group);
+
+    $site->refresh();
+
+    expect($site->status)->toBe(SiteStatus::Failed)
+        ->and($site->error_message)->toContain('A Linux group named "example_com" already exists on this server')
+        ->and(implode("\n", $commands))->not->toContain('useradd');
+})->with([
+    'a group with other members' => 'example_com:x:1003:www-data,alice',
+    'a system group' => 'example_com:x:120:',
+]);
 
 it('removes a pool that fails the php-fpm config check instead of reloading', function () {
     $site = Site::factory()->forServer($this->server)->isolated('example_com')->create(['php_version' => '8.3']);
@@ -603,6 +639,7 @@ it('removes the pool, then the site user and its home, when an isolated site is 
         ->and($userdel)->not->toBeFalse()
         ->and($removePool)->toBeLessThan($userdel)
         ->and($commands)->toContain("sudo pkill -KILL -u 'example_com' || true")
+        ->and(array_search("if getent group 'example_com' > /dev/null; then sudo groupdel 'example_com'; fi", $commands, true))->toBeGreaterThan($userdel)
         ->and(implode("\n", $commands))->not->toContain('artisan')
         ->and(implode("\n", $commands))->not->toContain('rm -rf /home/');
 
