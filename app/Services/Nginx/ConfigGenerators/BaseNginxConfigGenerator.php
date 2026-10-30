@@ -192,6 +192,10 @@ NGINX;
 
     /**
      * Get common PHP-FPM configuration.
+     *
+     * The FastCGI buffers are raised above Nginx's 4–8 KB default so large
+     * response headers (e.g. Laravel's preload Link header) don't fail with
+     * "upstream sent too big header" and a 502.
      */
     protected function getPhpFpmConfig(Site $site, string $phpVersion): string
     {
@@ -202,6 +206,8 @@ NGINX;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
     }
 NGINX;
     }

@@ -1,10 +1,13 @@
 <?php
 
 use App\Enums\ProjectType;
+use App\Enums\WwwRedirect;
+use App\Models\Certificate;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Nginx\NginxConfigService;
+use Illuminate\Support\Facades\Config;
 
 describe('NginxConfigService', function () {
     it('uses single hostname in server_name per domain file', function () {
@@ -264,6 +267,21 @@ describe('NginxConfigService', function () {
         });
     });
 
+    it('raises FastCGI buffers so large response headers do not 502', function (ProjectType $projectType) {
+        $site = Site::factory()->create([
+            'domain' => 'buffers.test',
+            'project_type' => $projectType,
+        ]);
+
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+        expect($config)
+            ->toContain('fastcgi_buffers 16 16k;')
+            ->toContain('fastcgi_buffer_size 32k;');
+    })->with([ProjectType::Laravel, ProjectType::PhpGeneric, ProjectType::WordPress]);
+
     it('does not inline www redirects — they are reserved for a future before/ snippet', function () {
         $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
         $site = Site::factory()->create([
@@ -271,7 +289,7 @@ describe('NginxConfigService', function () {
             'domain' => 'apex.com',
         ]);
         $d = SiteDomain::query()->where('site_id', $site->id)->where('hostname', 'apex.com')->firstOrFail();
-        $d->update(['www_redirect' => \App\Enums\WwwRedirect::FromWww]);
+        $d->update(['www_redirect' => WwwRedirect::FromWww]);
 
         $service = new NginxConfigService;
         $config = $service->generateForSiteDomain($site, $d->fresh());
@@ -297,8 +315,8 @@ describe('NginxConfigService', function () {
         });
 
         it('auto-picks the SSL variant for a free-domain site when a healthy wildcard certificate exists', function () {
-            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
-            \App\Models\Certificate::factory()->create([
+            Config::set('server.free_domain', 'flitops.test');
+            Certificate::factory()->create([
                 'domain' => '*.flitops.test',
                 'expires_at' => now()->addDays(80),
             ]);
@@ -318,7 +336,7 @@ describe('NginxConfigService', function () {
         });
 
         it('falls back to the HTTP variant for a free-domain site when the wildcard certificate is missing', function () {
-            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
+            Config::set('server.free_domain', 'flitops.test');
 
             $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
             $site = Site::factory()->create([
@@ -335,8 +353,8 @@ describe('NginxConfigService', function () {
         });
 
         it('does not auto-enable SSL for custom domains even when a wildcard cert exists', function () {
-            \Illuminate\Support\Facades\Config::set('server.free_domain', 'flitops.test');
-            \App\Models\Certificate::factory()->create([
+            Config::set('server.free_domain', 'flitops.test');
+            Certificate::factory()->create([
                 'domain' => '*.flitops.test',
                 'expires_at' => now()->addDays(80),
             ]);

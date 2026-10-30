@@ -42,6 +42,8 @@ class WordPressNginxConfigGenerator extends BaseNginxConfigGenerator
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
     }
 
 {$this->getHiddenFilesProtection()}
