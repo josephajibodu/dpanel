@@ -180,5 +180,8 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 - [ ] `failed_jobs` and the single `laravel.log` grow forever — schedule `queue:prune-failed` and use `LOG_STACK=daily`.
 - [x] 10 tests were already failing before 2026-10-13 (fixed 2026-10-13): `NginxConfigServiceTest` (×4, PHP-FPM socket path), `SiteManagementTest` env page (deferred prop), `PhpRuntimeResolverTest` and `KeyGeneratorTest` (unit tests not booting the app). The full suite still needs `memory_limit` above 128M: run `php -d memory_limit=1G vendor/bin/pest` (`artisan test` doesn't pass `-d` on to Pest).
 
+## Features to work on next (added 2026-10-30)
+- [ ] **AWS as a server provider** — add AWS (EC2) alongside DigitalOcean, Hetzner, Vultr and Custom in `App\Enums\Provider`, so servers can be created on AWS from Flitops the same way as the other providers.
+
 ## How to use this
 Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-10-13 the code side of item 0 is ready; what's left is carrying out the cutover steps. The custom-domain renewal gap (item 8) and broken rollback (item 3) were fixed the same day; existing custom domains still need "Renew SSL" clicked once to get the renewal hook. After that, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.
