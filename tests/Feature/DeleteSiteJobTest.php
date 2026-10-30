@@ -100,6 +100,23 @@ it('removes the nginx snippet directory for every domain on the site', function 
         ->and($removals->contains(fn ($c) => $c === 'sudo rm -rf '.escapeshellarg("/etc/nginx/flitops-conf/{$site->ulid}/{$extraDomain->hostname}")))->toBeTrue();
 });
 
+it('removes the site\'s Nginx error log and its rotated copies', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create([
+        'server_id' => $server->id,
+        'source_control_account_id' => null,
+    ]);
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForDeleteSiteJob($server, $execCalls));
+
+    (new DeleteSiteJob($site))->handle(app(SshService::class), app(CleanupSiteExternalResourcesAction::class));
+
+    $log = "/var/log/nginx/{$site->ulid}-error.log";
+
+    expect($execCalls)->toContain("sudo rm -f {$log} {$log}.*");
+});
+
 it('deletes the certbot certificate for each custom domain on the site, but not for system domains', function () {
     $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
     $site = Site::factory()->create([

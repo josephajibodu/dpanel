@@ -103,6 +103,34 @@ class SiteNginxSyncService
         $this->syncSslRedirectSnippet($connection, $site, $domain, $usesSsl);
         $this->syncWwwRedirectSnippet($connection, $site, $domain, $usesSsl);
         $this->syncAcmeChallengeSnippet($connection, $site, $domain);
+        $this->syncErrorLogSnippet($connection, $site, $domain);
+    }
+
+    /**
+     * Write server/error_log.conf so the site's errors go to its own log
+     * instead of the server-wide one. Every domain of a site writes to the
+     * same file. It's a snippet rather than part of the main config so it
+     * also reaches configs a user has edited.
+     */
+    protected function syncErrorLogSnippet(SshConnection $connection, Site $site, SiteDomain $domain): void
+    {
+        $dbPath = 'server/error_log.conf';
+        $snippetAbsPath = $domain->nginxSnippetsBasePath().'/'.$dbPath;
+
+        $content = 'error_log '.$site->server->webServer()->errorLogPath($site->ulid).";\n";
+        $escaped = str_replace("'", "'\\''", $content);
+        $connection->exec("echo '{$escaped}' | sudo tee {$snippetAbsPath} > /dev/null");
+
+        $site->nginxFiles()->updateOrCreate(
+            ['site_domain_id' => $domain->id, 'section' => NginxFileSection::Server->value, 'path' => $dbPath],
+            [
+                'content' => $content,
+                'hash' => md5($content),
+                'last_synced_at' => now(),
+                'sync_status' => 'synced',
+                'sync_error' => null,
+            ]
+        );
     }
 
     /**

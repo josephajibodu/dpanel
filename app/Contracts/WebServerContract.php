@@ -52,6 +52,13 @@ interface WebServerContract
     public function snippetsBasePath(string $siteUlid, string $hostname): string;
 
     /**
+     * File the web server writes one site's errors to, or null when it
+     * doesn't keep a log per site. It's outside the site's own folders so
+     * an isolated site's user can't replace it with a link to another file.
+     */
+    public function errorLogPath(string $siteUlid): ?string;
+
+    /**
      * Folder holding a domain's certificate and key when flitops installs them
      * (custom-domain certificates from certbot, and the free-domain wildcard).
      */

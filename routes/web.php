@@ -27,6 +27,7 @@ use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SiteIsolationController;
+use App\Http\Controllers\SiteLogController;
 use App\Http\Controllers\SiteNginxController;
 use App\Http\Controllers\SiteProcessController;
 use App\Http\Controllers\SourceControlAccountController;
@@ -240,6 +241,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 // Processes (site-scoped view; CUD reuses server-scoped routes below since workers/cron rows are server-unique)
                 Route::get('servers/{server}/sites/{site}/processes', [SiteProcessController::class, 'index'])
                     ->name('servers.sites.processes.index');
+
+                // Logs
+                Route::get('servers/{server}/sites/{site}/logs', [SiteLogController::class, 'index'])
+                    ->name('servers.sites.logs.index');
 
                 // Nginx file management
                 Route::get('servers/{server}/sites/{site}/nginx', [SiteNginxController::class, 'index'])

@@ -68,6 +68,15 @@ class NginxWebServer implements WebServerContract
         return "/etc/nginx/flitops-conf/{$siteUlid}/{$hostname}";
     }
 
+    /**
+     * Inside /var/log/nginx, so the nginx package's logrotate rule
+     * (/var/log/nginx/*.log) rotates it with the server's other logs.
+     */
+    public function errorLogPath(string $siteUlid): ?string
+    {
+        return "/var/log/nginx/{$siteUlid}-error.log";
+    }
+
     public function certificateDirectory(int $siteId, int $domainId): string
     {
         return "/etc/nginx/ssl/domains/{$siteId}/{$domainId}";

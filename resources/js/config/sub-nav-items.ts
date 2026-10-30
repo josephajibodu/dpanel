@@ -76,6 +76,7 @@ export function getSiteSubNavItems(
         { title: 'Deploy Script', href: `${base}/deploy-script` },
         { title: 'Web Server', href: `${base}/nginx` },
         { title: 'Domains', href: `${base}/domains` },
+        { title: 'Logs', href: `${base}/logs` },
     ];
 }
 

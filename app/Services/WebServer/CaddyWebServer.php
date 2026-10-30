@@ -108,6 +108,14 @@ class CaddyWebServer implements WebServerContract
         return "/etc/caddy/flitops-conf/{$siteUlid}/{$hostname}";
     }
 
+    /**
+     * Caddy logs errors for every site together in its service journal.
+     */
+    public function errorLogPath(string $siteUlid): ?string
+    {
+        return null;
+    }
+
     public function certificateDirectory(int $siteId, int $domainId): string
     {
         return "/etc/caddy/ssl/domains/{$siteId}/{$domainId}";

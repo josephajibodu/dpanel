@@ -47,6 +47,13 @@ class RemoveSiteFromServerAction
 
         $webServer->reload($connection);
 
+        // After the reload, so the web server has stopped writing to it.
+        // Rotated copies (.1, .2.gz, …) go too.
+        $errorLogPath = $webServer->errorLogPath($footprint->siteUlid);
+        if ($errorLogPath !== null) {
+            $connection->exec("sudo rm -f {$errorLogPath} {$errorLogPath}.*");
+        }
+
         // An isolated site's files live in its user's home, so deleting the
         // user (after its PHP-FPM pool, which would otherwise stop PHP-FPM
         // from starting) removes them too.
