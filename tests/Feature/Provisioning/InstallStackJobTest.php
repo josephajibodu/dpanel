@@ -12,6 +12,7 @@ use App\Services\Provisioning\PhpService;
 use App\Services\Provisioning\RedisService;
 use App\Services\Provisioning\StackInstaller;
 use App\Services\Provisioning\SystemService;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshRetryHandler;
 use App\Services\Ssh\SshService;
 use Illuminate\Support\Facades\Notification;
@@ -54,7 +55,7 @@ it('orchestrates provisioning steps in order', function () {
     });
 
     $this->mock(SshService::class, function (MockInterface $mock) use ($server) {
-        $connection = Mockery::mock(\App\Services\Ssh\SshConnection::class);
+        $connection = Mockery::mock(SshConnection::class);
         $connection->shouldIgnoreMissing();
 
         $mock->shouldReceive('connectAsRoot')
@@ -94,10 +95,10 @@ it('stores the error message and sends a notification when the job fails', funct
     Notification::fake();
 
     $server = Server::factory()->provisioning()->create([
-        'provisioning_step' => ProvisioningStep::InstallingNginx,
+        'provisioning_step' => ProvisioningStep::InstallingWebServer,
     ]);
 
-    $exception = new \RuntimeException('SSH connection timed out');
+    $exception = new RuntimeException('SSH connection timed out');
 
     $job = new InstallStackJob($server);
     $job->failed($exception);
@@ -119,7 +120,7 @@ it('redacts sudo and database passwords from the stored and notified error messa
     Notification::fake();
 
     $server = Server::factory()->provisioning()->create([
-        'provisioning_step' => ProvisioningStep::InstallingNginx,
+        'provisioning_step' => ProvisioningStep::InstallingWebServer,
     ]);
 
     $server->credentials()->createMany([
@@ -127,7 +128,7 @@ it('redacts sudo and database passwords from the stored and notified error messa
         ['type' => 'database_password', 'value' => 'super-secret-db'],
     ]);
 
-    $exception = new \RuntimeException(
+    $exception = new RuntimeException(
         "SSH command failed with exit code 1: echo \"deploy:super-secret-sudo\" | chpasswd\n".
         "STDERR: ALTER USER 'root'@'localhost' IDENTIFIED BY 'super-secret-db';"
     );

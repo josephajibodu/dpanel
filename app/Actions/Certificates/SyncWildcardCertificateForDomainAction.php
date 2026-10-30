@@ -3,10 +3,12 @@
 namespace App\Actions\Certificates;
 
 use App\Actions\Database\EscapesShell;
+use App\Contracts\WebServerContract;
 use App\Models\Certificate;
 use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\StagesFilesPrivately;
+use App\Services\WebServer\NginxWebServer;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -15,7 +17,7 @@ use RuntimeException;
  * `(site_id, domain_id)` folder on the server, over an already-open SSH
  * connection. Returns true if anything was written, false on no-op.
  *
- * Does NOT reload nginx — the caller decides when to do that. This action is
+ * Does NOT reload the web server — the caller decides when to do that. This action is
  * normally invoked from inside the site provisioner, whose nginx step runs
  * `nginx -t` and reloads as part of its own work.
  */
@@ -27,8 +29,13 @@ class SyncWildcardCertificateForDomainAction
         private WildcardCertificateIssuer $issuer,
     ) {}
 
-    public function execute(SshConnection $connection, int $siteId, int $domainId): bool
+    /**
+     * @param  WebServerContract|null  $webServer  The server's web server; Nginx when not given.
+     */
+    public function execute(SshConnection $connection, int $siteId, int $domainId, ?WebServerContract $webServer = null): bool
     {
+        $webServer ??= app(NginxWebServer::class);
+
         $wildcardDomain = '*.'.config('server.free_domain');
         $certificate = $this->currentCertificate($wildcardDomain);
 
@@ -43,7 +50,7 @@ class SyncWildcardCertificateForDomainAction
             throw new RuntimeException("Wildcard certificate files missing on disk for {$wildcardDomain}");
         }
 
-        $directory = "/etc/nginx/ssl/domains/{$siteId}/{$domainId}";
+        $directory = $webServer->certificateDirectory($siteId, $domainId);
         $certPath = "{$directory}/server.crt";
         $keyPath = "{$directory}/server.key";
 
@@ -56,10 +63,18 @@ class SyncWildcardCertificateForDomainAction
         }
 
         $connection->sudo("mkdir -p {$directory}");
-        $connection->sudo("chmod 700 {$directory}");
+        if ($webServer->certificateGroup() === 'root') {
+            $connection->sudo("chmod 700 {$directory}");
+        } else {
+            $connection->sudo("chown root:{$webServer->certificateGroup()} {$directory}");
+            $connection->sudo("chmod 750 {$directory}");
+        }
 
         $this->installAsRoot($connection, $certContent, $certPath, '0644');
-        $this->installAsRoot($connection, $keyContent, $keyPath, '0600');
+        // The key is only readable by the group the web server runs as
+        // (root for Nginx, which reads it before dropping privileges).
+        $keyMode = $webServer->certificateGroup() === 'root' ? '0600' : '0640';
+        $this->installAsRoot($connection, $keyContent, $keyPath, $keyMode, group: $webServer->certificateGroup());
 
         return true;
     }

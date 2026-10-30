@@ -29,14 +29,21 @@ class FinalTouchesService
         // Git
         $context->packages->ensureInstalled('git');
 
-        // Certbot (Let's Encrypt)
-        $context->packages->ensureInstalled('certbot');
+        // Certbot (Let's Encrypt). Caddy gets its own certificates.
+        if ($context->server->web_server !== 'caddy') {
+            $context->packages->ensureInstalled('certbot');
+        }
 
         // Firewall
         $context->packages->ensureInstalled('ufw');
         $context->runner->runQuietly('ufw allow 22', 60);
         $context->runner->runQuietly('ufw allow 80', 60);
         $context->runner->runQuietly('ufw allow 443', 60);
+
+        // Caddy serves HTTP/3, which runs over UDP.
+        if ($context->server->web_server === 'caddy') {
+            $context->runner->runQuietly('ufw allow 443/udp', 60);
+        }
         $context->runner->runQuietly('ufw --force enable', 60);
 
         // Directories

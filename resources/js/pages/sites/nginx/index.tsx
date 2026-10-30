@@ -85,6 +85,7 @@ interface Props {
     nginxHistory: NginxHistoryEntry[];
     sections: NginxSection[];
     domains: SiteDomainData[];
+    webServer: 'Nginx' | 'Caddy';
 }
 
 const SYNC_STATUS_LABELS: Record<string, string> = {
@@ -108,6 +109,7 @@ export default function SiteNginxIndex({
     nginxHistory,
     sections,
     domains,
+    webServer,
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
@@ -148,6 +150,8 @@ export default function SiteNginxIndex({
 
     const editorTheme =
         resolvedAppearance === 'dark' ? 'nginx-dark' : 'nginx-light';
+    // Monaco has no Caddyfile grammar, so Caddy files are shown as plain text.
+    const editorLanguage = webServer === 'Nginx' ? 'nginx' : 'plaintext';
 
     useEffect(() => {
         if (selectedFile) {
@@ -300,7 +304,7 @@ export default function SiteNginxIndex({
             href: teamPath(`/servers/${serverId}/sites/${site.id}`),
         },
         {
-            title: 'Nginx',
+            title: webServer,
             href: teamPath(`/servers/${serverId}/sites/${site.id}/nginx`),
         },
     ];
@@ -314,16 +318,16 @@ export default function SiteNginxIndex({
                 site.id,
             )}
         >
-            <Head title={`Nginx - ${site.domain}`} />
+            <Head title={`${webServer} - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Nginx
+                            {webServer}
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Manage nginx configuration snippets for{' '}
+                            Manage {webServer} configuration snippets for{' '}
                             {site.domain}.
                         </p>
                     </div>
@@ -598,7 +602,7 @@ export default function SiteNginxIndex({
                                 {selectedFile.sync_status === 'failed' &&
                                     selectedFile.sync_error && (
                                         <div className="border-b bg-destructive/10 px-4 py-2 font-mono text-xs text-destructive">
-                                            <strong>Nginx error:</strong>{' '}
+                                            <strong>{webServer} error:</strong>{' '}
                                             {selectedFile.sync_error}
                                         </div>
                                     )}
@@ -606,7 +610,7 @@ export default function SiteNginxIndex({
                                 <div className="flex-1 overflow-hidden [&_.monaco-editor_.line-numbers]:text-right [&_.monaco-editor_.line-numbers]:text-xs">
                                     <Editor
                                         height="100%"
-                                        language="nginx"
+                                        language={editorLanguage}
                                         value={editorContent}
                                         theme={editorTheme}
                                         onChange={(v) =>
@@ -739,10 +743,10 @@ export default function SiteNginxIndex({
             <Dialog open={createDialog} onOpenChange={setCreateDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>New nginx file</DialogTitle>
+                        <DialogTitle>New {webServer} file</DialogTitle>
                         <DialogDescription>
-                            Create a configuration snippet in one of the nginx
-                            include sections.
+                            Create a configuration snippet in one of the{' '}
+                            {webServer} include sections.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
@@ -834,7 +838,7 @@ export default function SiteNginxIndex({
                             <div className="overflow-hidden rounded-md border">
                                 <Editor
                                     height="200px"
-                                    language="nginx"
+                                    language={editorLanguage}
                                     theme={editorTheme}
                                     value={createContent}
                                     onChange={(v) => setCreateContent(v ?? '')}

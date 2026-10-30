@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\SiteDomainType;
+use App\Exceptions\SshCommandException;
 use App\Jobs\IssueSslForDomainJob;
 use App\Models\Server;
 use App\Models\Site;
@@ -32,15 +33,15 @@ function fakeSshForIssueSslJob(
     array &$execCalls = [],
     string $certbotOutput = 'Congratulations! Your certificate has been saved.',
 ): SshService {
-    $connection = \Mockery::mock(SshConnection::class)->makePartial();
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('exec')
         ->with('which certbot 2>/dev/null || true')
         ->andReturn('/usr/bin/certbot');
     $connection->shouldReceive('exec')
-        ->with(\Mockery::on(fn ($cmd) => str_contains($cmd, 'certbot certonly')))
+        ->with(Mockery::on(fn ($cmd) => str_contains($cmd, 'certbot certonly')))
         ->andReturn($certbotOutput);
     $connection->shouldReceive('exec')
-        ->with(\Mockery::on(fn ($cmd) => str_contains($cmd, 'sudo cat') && str_contains($cmd, 'server.crt')))
+        ->with(Mockery::on(fn ($cmd) => str_contains($cmd, 'sudo cat') && str_contains($cmd, 'server.crt')))
         ->andReturn($certPem);
     $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
         $execCalls[] = $cmd;
@@ -49,10 +50,10 @@ function fakeSshForIssueSslJob(
     });
     $connection->shouldReceive('disconnect')->andReturn(null);
 
-    $sshService = \Mockery::mock(SshService::class);
+    $sshService = Mockery::mock(SshService::class);
     $sshService->shouldReceive('connect')
         ->once()
-        ->with(\Mockery::on(fn ($s) => $s->id === $server->id))
+        ->with(Mockery::on(fn ($s) => $s->id === $server->id))
         ->andReturn($connection);
 
     return $sshService;
@@ -159,4 +160,64 @@ it('notifies the server owner when the certificate request fails for good', func
             && str_contains($notification->errorMessage, 'DNS problem')
             && $notification->toMail($owner)->subject === 'SSL certificate request failed: example.com';
     });
+});
+
+it('serves the domain over HTTPS on a Caddy server without running certbot', function () {
+    $server = Server::factory()->create(['web_server' => 'caddy']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'verified_at' => now(),
+        'ssl_enabled_at' => null,
+    ]);
+
+    $execCalls = [];
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
+        $execCalls[] = $cmd;
+
+        return '';
+    });
+    $connection->shouldReceive('disconnect');
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    (new IssueSslForDomainJob($domain, $site))->handle(app(SshService::class));
+
+    expect($domain->fresh()->ssl_enabled_at)->not->toBeNull();
+    expect(implode("\n", $execCalls))
+        ->toContain('| sudo tee /etc/caddy/sites/example-com.conf > /dev/null')
+        ->not->toContain('certbot');
+    expect($site->nginxFiles()->where('path', 'example-com.conf')->value('content'))
+        ->toContain("example.com {\n")
+        ->not->toContain('http://example.com');
+});
+
+it('turns HTTPS back off when the Caddy config fails to apply', function () {
+    $server = Server::factory()->create(['web_server' => 'caddy']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'ssl_enabled_at' => null,
+    ]);
+
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) {
+        if (str_contains($cmd, 'caddy validate')) {
+            throw new SshCommandException(command: $cmd, exitCode: 1, output: 'invalid', stderr: '');
+        }
+
+        return '';
+    });
+    $connection->shouldReceive('disconnect');
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    expect(fn () => (new IssueSslForDomainJob($domain, $site))->handle(app(SshService::class)))
+        ->toThrow(RuntimeException::class, 'Caddy validation failed: invalid');
+    expect($domain->fresh()->ssl_enabled_at)->toBeNull();
 });

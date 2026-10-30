@@ -34,7 +34,10 @@ const phpVersions = [
     { value: '8.1', label: 'PHP 8.1' },
 ];
 
-const webServers = [{ value: 'nginx', label: 'Nginx' }];
+const webServers = [
+    { value: 'nginx', label: 'Nginx' },
+    { value: 'caddy', label: 'Caddy (automatic HTTPS)' },
+];
 
 const databaseTypes = [
     { value: 'mysql', label: 'MySQL 8' },

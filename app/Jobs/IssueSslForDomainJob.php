@@ -32,6 +32,13 @@ class IssueSslForDomainJob implements ShouldQueue
         $this->site->loadMissing('server');
 
         $server = $this->site->server;
+
+        if ($server->webServer()->obtainsCertificates()) {
+            $this->switchToHttps();
+
+            return;
+        }
+
         $hostname = $this->siteDomain->hostname;
         $email = $server->user?->email ?? config('mail.from.address');
 
@@ -44,7 +51,7 @@ class IssueSslForDomainJob implements ShouldQueue
                 $connection->exec('sudo DEBIAN_FRONTEND=noninteractive apt-get install -y certbot', 300);
             }
 
-            $certDir = "/etc/nginx/ssl/domains/{$this->site->id}/{$this->siteDomain->id}";
+            $certDir = $server->webServer()->certificateDirectory($this->site->id, $this->siteDomain->id);
 
             $webRoot = $this->site->acmeChallengeRoot();
             $connection->exec('sudo mkdir -p '.escapeshellarg($webRoot).'/.well-known/acme-challenge');
@@ -110,6 +117,27 @@ class IssueSslForDomainJob implements ShouldQueue
             SyncSiteNginxJob::dispatch($this->site);
         } finally {
             $connection->disconnect();
+        }
+    }
+
+    /**
+     * For a web server that gets its own certificates (Caddy), turning on
+     * HTTPS only means serving the domain over HTTPS: Caddy then obtains the
+     * certificate and renews it. The expiry date is filled in by the daily
+     * certificate check, which reads the certificate the server serves.
+     */
+    private function switchToHttps(): void
+    {
+        $this->siteDomain->update(['ssl_enabled_at' => now()]);
+
+        try {
+            $this->site->server->webServer()->syncSite($this->site);
+        } catch (\Throwable $exception) {
+            $this->siteDomain->update(['ssl_enabled_at' => null]);
+
+            throw $exception;
+        } finally {
+            broadcast(new SiteDomainsUpdated($this->site));
         }
     }
 

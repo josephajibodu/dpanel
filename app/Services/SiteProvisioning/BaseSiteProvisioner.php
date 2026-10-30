@@ -5,7 +5,6 @@ namespace App\Services\SiteProvisioning;
 use App\Actions\Certificates\SyncWildcardCertificateForDomainAction;
 use App\Enums\SiteProvisioningStep;
 use App\Models\Site;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshConnection;
 use Closure;
@@ -45,7 +44,6 @@ abstract class BaseSiteProvisioner
     public function __construct(
         protected SshConnection $connection,
         protected Site $site,
-        protected SiteNginxSyncService $siteNginxSyncService,
         protected SourceControlService $sourceControlService,
     ) {
         $this->serverUser = config('server.user');
@@ -115,11 +113,10 @@ abstract class BaseSiteProvisioner
     {
         $this->site->loadMissing('domains');
 
-        // Free-domain sites have nginx configs that reference the wildcard
-        // cert at /etc/nginx/ssl/domains/{site_id}/{domain_id}/server.{crt,key}.
-        // Ensure those files exist on this server BEFORE SiteNginxSyncService
-        // runs `nginx -t` — otherwise nginx refuses to reload and the whole
-        // provisioning step aborts.
+        // Free-domain sites have web server configs that reference the
+        // wildcard cert in the domain's certificate folder. Ensure those files
+        // exist on this server BEFORE the config is checked — otherwise the
+        // web server refuses to reload and the whole provisioning step aborts.
         $freeSuffix = '.'.config('server.free_domain');
         $syncCert = app(SyncWildcardCertificateForDomainAction::class);
 
@@ -129,11 +126,12 @@ abstract class BaseSiteProvisioner
                     connection: $this->connection,
                     siteId: $this->site->id,
                     domainId: $domain->id,
+                    webServer: $this->site->server->webServer(),
                 );
             }
         }
 
-        $this->siteNginxSyncService->sync($this->site, $this->connection);
+        $this->site->server->webServer()->syncSite($this->site, $this->connection);
     }
 
     protected function cloneOrPlaceholder(): void

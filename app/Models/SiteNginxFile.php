@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\NginxFileSection;
+use Database\Factories\SiteNginxFileFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteNginxFile extends Model
 {
-    /** @use HasFactory<\Database\Factories\SiteNginxFileFactory> */
+    /** @use HasFactory<SiteNginxFileFactory> */
     use HasFactory, HasUlids;
 
     protected $fillable = [
@@ -59,16 +60,27 @@ class SiteNginxFile extends Model
 
     public function absolutePath(): string
     {
+        return $this->absolutePathFor($this->path);
+    }
+
+    /**
+     * Where a file at the given path (relative to its section's folder) lives
+     * on the server.
+     */
+    public function absolutePathFor(string $path): string
+    {
         if ($this->section === NginxFileSection::Main) {
-            return '/etc/nginx/sites-available/'.$this->path;
+            $this->loadMissing('site.server');
+
+            return $this->site->server->webServer()->siteConfigPaths($path)[0];
         }
 
         $this->loadMissing('domain.site');
 
         if ($this->domain === null) {
-            return $this->path;
+            return $path;
         }
 
-        return $this->domain->nginxSnippetsBasePath().'/'.$this->path;
+        return $this->domain->nginxSnippetsBasePath().'/'.$path;
     }
 }

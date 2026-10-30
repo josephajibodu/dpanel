@@ -16,6 +16,7 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteNginxFile;
 use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -78,7 +79,8 @@ class SiteNginxController extends Controller
             'nginxFiles' => $files,
             'nginxHistory' => $history,
             'domains' => $domains,
-            'sections' => collect(NginxFileSection::cases())->map(fn ($s) => [
+            'webServer' => $server->webServer()->label(),
+            'sections' => collect($server->webServer()->fileSections())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
                 'description' => $s->description(),
@@ -95,6 +97,10 @@ class SiteNginxController extends Controller
 
         if ($request->validated('section') === NginxFileSection::Main->value) {
             return redirect()->back()->with('error', 'Main configuration files are auto-generated and cannot be created manually.');
+        }
+
+        if (! in_array(NginxFileSection::from($request->validated('section')), $server->webServer()->fileSections(), true)) {
+            return redirect()->back()->withErrors(['section' => "{$server->webServer()->label()} doesn't support this section."]);
         }
 
         $domain = $site->domains()->findOrFail($request->validated('domain_id'));
@@ -217,7 +223,7 @@ class SiteNginxController extends Controller
         return redirect()->back()->with('success', 'Nginx file deleted.');
     }
 
-    public function history(Request $request, Team $team, Server $server, Site $site, int $historyId): \Illuminate\Http\JsonResponse
+    public function history(Request $request, Team $team, Server $server, Site $site, int $historyId): JsonResponse
     {
         $this->authorize('view', $site);
 

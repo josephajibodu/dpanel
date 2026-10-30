@@ -6,6 +6,7 @@ use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Enums\SiteDomainType;
 use App\Events\ServerSitesUpdated;
 use App\Models\CronJob;
+use App\Models\Server;
 use App\Models\Site;
 use App\Models\Worker;
 use App\Services\Nginx\NginxConfigService;
@@ -95,10 +96,9 @@ class DeleteSiteJob implements ShouldQueue
             ->pluck('id')
             ->values()
             ->all();
-        // Mirrors SiteDomain::nginxSnippetsBasePath() without touching the
-        // relation, since the site row may be gone by the time the job runs.
+        // Worked out now, since the site row may be gone by the time the job runs.
         $this->nginxSnippetBasePaths = $site->domains
-            ->map(fn ($d) => "/etc/nginx/flitops-conf/{$site->ulid}/{$d->hostname}")
+            ->map(fn ($d) => $site->server->webServer()->snippetsBasePath($site->ulid, $d->hostname))
             ->values()
             ->all();
         $this->customHostnames = $site->domains
@@ -115,7 +115,7 @@ class DeleteSiteJob implements ShouldQueue
         Log::info("Deleting site {$this->domain}");
 
         $site = Site::find($this->siteId);
-        $server = \App\Models\Server::find($this->serverId);
+        $server = Server::find($this->serverId);
 
         $cleanupAction->execute(
             cloudflareDnsRecordIds: $this->cloudflareDnsRecordIds,
@@ -158,12 +158,12 @@ class DeleteSiteJob implements ShouldQueue
 
         try {
             $connection = $sshService->connect($server);
+            $webServer = $server->webServer();
 
             foreach ($this->nginxConfigBasenames as $basename) {
-                $configPath = "/etc/nginx/sites-available/{$basename}";
-                $enabledPath = "/etc/nginx/sites-enabled/{$basename}";
-                $connection->exec("sudo rm -f {$enabledPath}");
-                $connection->exec("sudo rm -f {$configPath}");
+                foreach (array_reverse($webServer->siteConfigPaths($basename)) as $configPath) {
+                    $connection->exec("sudo rm -f {$configPath}");
+                }
             }
 
             foreach ($this->nginxSnippetBasePaths as $snippetsBasePath) {
@@ -171,7 +171,7 @@ class DeleteSiteJob implements ShouldQueue
             }
 
             foreach ($this->siteDomainIds as $domainId) {
-                $certDir = "/etc/nginx/ssl/domains/{$this->siteId}/{$domainId}";
+                $certDir = $webServer->certificateDirectory($this->siteId, $domainId);
                 $connection->exec("sudo rm -rf {$certDir}");
                 $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
             }
@@ -180,7 +180,7 @@ class DeleteSiteJob implements ShouldQueue
                 $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($hostname).' 2>&1 || true');
             }
 
-            $connection->exec('sudo systemctl reload nginx');
+            $webServer->reload($connection);
 
             // An isolated site's files live in its user's home, so deleting the
             // user (after its PHP-FPM pool, which would otherwise stop PHP-FPM

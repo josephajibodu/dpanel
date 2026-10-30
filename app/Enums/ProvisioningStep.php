@@ -12,7 +12,7 @@ enum ProvisioningStep: int
     case ConfiguringSwap = 3;
     case InstallingBaseDependencies = 4;
     case InstallingPhp = 5;
-    case InstallingNginx = 6;
+    case InstallingWebServer = 6;
     case InstallingDatabase = 7;
     case InstallingRedis = 8;
     case MakingFinalTouches = 9;
@@ -27,7 +27,7 @@ enum ProvisioningStep: int
             self::ConfiguringSwap => 'Configuring swap',
             self::InstallingBaseDependencies => 'Installing base dependencies',
             self::InstallingPhp => 'Installing PHP',
-            self::InstallingNginx => 'Installing Nginx',
+            self::InstallingWebServer => 'Installing web server',
             self::InstallingDatabase => 'Installing database',
             self::InstallingRedis => 'Installing Redis',
             self::MakingFinalTouches => 'Making final touches',
@@ -44,7 +44,7 @@ enum ProvisioningStep: int
             self::ConfiguringSwap => 'Setting up swap space for better memory management.',
             self::InstallingBaseDependencies => 'Installing the basic dependencies required to provision your server. It will be updated to the latest Ubuntu patch version.',
             self::InstallingPhp => 'PHP will be installed along with common extensions required for Laravel applications.',
-            self::InstallingNginx => 'Nginx will be installed. We will also configure gzip, PHP-FPM and other PHP related Nginx settings.',
+            self::InstallingWebServer => 'Nginx or Caddy will be installed and set up to serve your PHP sites.',
             self::InstallingDatabase => 'Installing and configuring your selected database server.',
             self::InstallingRedis => 'Redis will be installed for caching and queues.',
             self::MakingFinalTouches => 'Installing Composer, Node.js, Supervisor, and configuring the firewall.',
@@ -90,7 +90,7 @@ enum ProvisioningStep: int
             self::ConfiguringSwap,
             self::InstallingBaseDependencies,
             $server->hasPhp() ? self::InstallingPhp : null,
-            $server->web_server === 'nginx' ? self::InstallingNginx : null,
+            $server->web_server !== null ? self::InstallingWebServer : null,
             $server->hasDatabase() ? self::InstallingDatabase : null,
             $server->hasRedis() ? self::InstallingRedis : null,
             self::MakingFinalTouches,
@@ -106,7 +106,7 @@ enum ProvisioningStep: int
     {
         return match ($type) {
             ServiceType::Php => self::InstallingPhp,
-            ServiceType::Nginx => self::InstallingNginx,
+            ServiceType::Nginx, ServiceType::Caddy => self::InstallingWebServer,
             ServiceType::Mysql, ServiceType::Postgresql => self::InstallingDatabase,
             ServiceType::Redis => self::InstallingRedis,
             default => null,

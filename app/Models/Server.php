@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Contracts\WebServerContract;
 use App\Enums\ConnectionStatus;
 use App\Enums\NodeVersion;
 use App\Enums\Provider;
@@ -11,6 +12,8 @@ use App\Enums\ServerType;
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
 use App\Events\ServerStatusChanged;
+use App\Services\WebServer\CaddyWebServer;
+use App\Services\WebServer\NginxWebServer;
 use Database\Factories\ServerFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -444,6 +447,18 @@ class Server extends Model
     }
 
     /**
+     * The web server this server runs. Servers without one are treated as
+     * Nginx, which is only reached by code that never runs for them.
+     */
+    public function webServer(): WebServerContract
+    {
+        return match ($this->web_server) {
+            'caddy' => app(CaddyWebServer::class),
+            default => app(NginxWebServer::class),
+        };
+    }
+
+    /**
      * Sites need both a web server and PHP to run on.
      */
     public function supportsSites(): bool
@@ -479,8 +494,8 @@ class Server extends Model
             $this->queueService(ServiceType::Php, $this->php_version);
         }
 
-        if ($this->web_server === 'nginx') {
-            $this->queueService(ServiceType::Nginx);
+        if ($this->web_server !== null) {
+            $this->queueService($this->webServer()->serviceType());
         }
 
         if ($this->hasDatabase()) {

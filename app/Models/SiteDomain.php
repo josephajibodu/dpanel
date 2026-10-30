@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
+use Database\Factories\SiteDomainFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteDomain extends Model
 {
-    /** @use HasFactory<\Database\Factories\SiteDomainFactory> */
+    /** @use HasFactory<SiteDomainFactory> */
     use HasFactory, HasUlids;
 
     protected $fillable = [
@@ -76,10 +77,14 @@ class SiteDomain extends Model
         return $this->hasMany(SiteNginxFile::class);
     }
 
+    /**
+     * Folder holding the snippet files users add for this domain, on the
+     * site's server's web server.
+     */
     public function nginxSnippetsBasePath(): string
     {
-        $this->loadMissing('site');
+        $this->loadMissing('site.server');
 
-        return "/etc/nginx/flitops-conf/{$this->site->ulid}/{$this->hostname}";
+        return $this->site->server->webServer()->snippetsBasePath($this->site->ulid, $this->hostname);
     }
 }

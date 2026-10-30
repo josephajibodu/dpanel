@@ -21,7 +21,7 @@ beforeEach(function () {
 
 it('retries a failed provision by re-dispatching InstallStackJob and clearing the error', function () {
     $server = Server::factory()->forTeam($this->team)->error()->create([
-        'provisioning_step' => ProvisioningStep::InstallingNginx,
+        'provisioning_step' => ProvisioningStep::InstallingWebServer,
         'error_message' => 'apt-get failed',
     ]);
 

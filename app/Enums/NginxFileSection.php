@@ -24,7 +24,7 @@ enum NginxFileSection: string
     public function description(): string
     {
         return match ($this) {
-            self::Main => 'Auto-generated per-domain nginx site configuration',
+            self::Main => 'Auto-generated per-domain site configuration',
             self::Before => 'Loaded before the server block',
             self::Server => 'Injected inside the server block',
             self::Locations => 'Injected as location directives',

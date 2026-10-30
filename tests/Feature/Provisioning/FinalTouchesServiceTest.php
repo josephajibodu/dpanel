@@ -25,7 +25,9 @@ function runFinalTouches(Server $server): array
     });
 
     $packages = Mockery::mock(PackageManager::class);
-    $packages->shouldReceive('ensureInstalled');
+    $packages->shouldReceive('ensureInstalled')->andReturnUsing(function (string $package) use (&$commands) {
+        $commands[] = "install {$package}";
+    });
     $services = Mockery::mock(ServiceManager::class);
     $services->shouldReceive('enable', 'start');
 
@@ -53,4 +55,20 @@ it('skips composer on servers without PHP', function () {
     $commands = runFinalTouches(Server::factory()->cache()->make());
 
     expect(implode("\n", $commands))->not->toContain('getcomposer.org');
+});
+
+it('installs certbot and opens only TCP 443 on Nginx servers', function () {
+    $commands = runFinalTouches(Server::factory()->make(['web_server' => 'nginx']));
+
+    expect($commands)
+        ->toContain('install certbot')
+        ->not->toContain('ufw allow 443/udp');
+});
+
+it('skips certbot and opens UDP 443 for HTTP/3 on Caddy servers', function () {
+    $commands = runFinalTouches(Server::factory()->make(['web_server' => 'caddy']));
+
+    expect($commands)
+        ->toContain('ufw allow 443/udp')
+        ->not->toContain('install certbot');
 });

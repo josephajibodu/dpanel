@@ -3,6 +3,7 @@
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
 use App\Models\Server;
+use App\Services\Provisioning\CaddyService;
 use App\Services\Provisioning\DatabaseService;
 use App\Services\Provisioning\FinalTouchesService;
 use App\Services\Provisioning\NginxService;
@@ -21,6 +22,7 @@ beforeEach(function () {
 
     $this->php = $this->mock(PhpService::class);
     $this->nginx = $this->mock(NginxService::class);
+    $this->caddy = $this->mock(CaddyService::class);
     $this->database = $this->mock(DatabaseService::class);
     $this->redis = $this->mock(RedisService::class);
 
@@ -71,4 +73,19 @@ it('falls back to the type preset for servers created before services were recor
 
     expect($server->installedServices()->pluck('type')->all())
         ->toEqualCanonicalizing([ServiceType::Php, ServiceType::Redis, ServiceType::Supervisor]);
+});
+
+it('installs Caddy instead of Nginx when Caddy was chosen', function () {
+    $server = Server::factory()->pending()->create(['web_server' => 'caddy', 'database_type' => null]);
+    $server->queueSelectedServices(withRedis: false);
+
+    $this->php->shouldReceive('install', 'configureFpmPool')->once();
+    $this->caddy->shouldReceive('install')->once();
+    $this->nginx->shouldNotReceive('install');
+
+    app(StackInstaller::class)->install($server, $this->connection);
+
+    expect($server->installedServices()->where('type', ServiceType::Caddy)->sole())
+        ->status->toBe(ServiceStatus::Active)
+        ->unit->toBe('caddy');
 });

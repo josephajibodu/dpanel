@@ -711,6 +711,11 @@ function ServerMetricsOverview({
     );
 }
 
+const webServerLabels: Record<NonNullable<Server['web_server']>, string> = {
+    nginx: 'Nginx',
+    caddy: 'Caddy',
+};
+
 const databaseLabels: Record<NonNullable<Server['database_type']>, string> = {
     mysql: 'MySQL',
     postgresql: 'PostgreSQL',
@@ -721,7 +726,7 @@ const databaseLabels: Record<NonNullable<Server['database_type']>, string> = {
 function runtimeSummary(server: Server): string {
     const parts = [
         server.php_version ? `PHP ${server.php_version}` : null,
-        server.web_server === 'nginx' ? 'Nginx' : null,
+        server.web_server ? webServerLabels[server.web_server] : null,
         server.database_type ? databaseLabels[server.database_type] : null,
     ].filter((part): part is string => part !== null);
 

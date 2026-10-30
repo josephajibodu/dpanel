@@ -4,6 +4,7 @@ use App\Actions\Certificates\SyncWildcardCertificateForDomainAction;
 use App\Models\Certificate;
 use App\Services\Certificates\WildcardCertificateIssuer;
 use App\Services\Ssh\SshConnection;
+use App\Services\WebServer\CaddyWebServer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 
@@ -161,4 +162,25 @@ it('throws instead of installing a certificate when renewal fails and the existi
 
     expect(fn () => (new SyncWildcardCertificateForDomainAction($issuer))->execute($connection, siteId: 1, domainId: 1))
         ->toThrow(RuntimeException::class, 'already expired');
+});
+
+it('installs the certificate where Caddy reads it, with the key readable by the web user', function () {
+    Config::set('server.web_user', 'www-data');
+    $execCalls = [];
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
+        $execCalls[] = $cmd;
+
+        return $cmd === 'mktemp -d' ? '/tmp/tmp.fleetops' : '';
+    });
+    $connection->shouldReceive('upload');
+
+    $result = syncWildcardCertificateAction()->execute($connection, 42, 7, app(CaddyWebServer::class));
+
+    expect($result)->toBeTrue();
+    expect($execCalls)
+        ->toContain('sudo chown root:www-data /etc/caddy/ssl/domains/42/7')
+        ->toContain('sudo chmod 750 /etc/caddy/ssl/domains/42/7')
+        ->toContain("sudo install -o root -g www-data -m '0640' '/tmp/tmp.fleetops/staged' '/etc/caddy/ssl/domains/42/7/server.key'");
 });

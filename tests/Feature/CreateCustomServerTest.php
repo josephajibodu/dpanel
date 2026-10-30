@@ -365,3 +365,20 @@ it('refuses a web server without PHP', function () {
 
     $this->assertDatabaseMissing('servers', ['name' => 'web']);
 });
+
+it('records Caddy as the web server when chosen', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'caddy-server',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+            'type' => 'web',
+            'web_server' => 'caddy',
+        ])->assertRedirect();
+
+    $server = Server::where('name', 'caddy-server')->firstOrFail();
+
+    expect($server->web_server)->toBe('caddy');
+    expect($server->installedServices()->pluck('type')->all())
+        ->toEqualCanonicalizing([ServiceType::Php, ServiceType::Caddy]);
+});

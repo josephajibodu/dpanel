@@ -27,6 +27,7 @@ class StackInstaller
         private SystemService $systemService,
         private PhpService $phpService,
         private NginxService $nginxService,
+        private CaddyService $caddyService,
         private DatabaseService $databaseService,
         private RedisService $redisService,
         private FinalTouchesService $finalTouchesService,
@@ -57,6 +58,7 @@ class StackInstaller
         $installationRunner = new ServiceInstallationRunner(
             phpService: $this->phpService,
             nginxService: $this->nginxService,
+            caddyService: $this->caddyService,
             databaseService: $this->databaseService,
             redisService: $this->redisService,
         );
@@ -144,6 +146,7 @@ class StackInstaller
         $order = [
             ServiceType::Php,
             ServiceType::Nginx,
+            ServiceType::Caddy,
             ServiceType::Mysql,
             ServiceType::Postgresql,
             ServiceType::Redis,

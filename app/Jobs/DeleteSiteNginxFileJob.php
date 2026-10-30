@@ -40,7 +40,7 @@ class DeleteSiteNginxFileJob implements ShouldQueue
 
             try {
                 $connection->exec("sudo rm -f {$this->absolutePath}");
-                $connection->exec('sudo systemctl reload nginx');
+                $this->site->server->webServer()->reload($connection);
             } finally {
                 $connection->disconnect();
             }

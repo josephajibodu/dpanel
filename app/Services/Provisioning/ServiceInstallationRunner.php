@@ -12,6 +12,7 @@ class ServiceInstallationRunner
     public function __construct(
         private PhpService $phpService,
         private NginxService $nginxService,
+        private CaddyService $caddyService,
         private DatabaseService $databaseService,
         private RedisService $redisService,
     ) {}
@@ -26,6 +27,7 @@ class ServiceInstallationRunner
         return match ($type) {
             ServiceType::Php => $this->installPhp($context),
             ServiceType::Nginx => $this->installNginx($context),
+            ServiceType::Caddy => $this->installCaddy($context),
             ServiceType::Mysql, ServiceType::Postgresql => $this->installDatabase($context),
             ServiceType::Redis => $this->installRedis($context),
             default => throw new \InvalidArgumentException("Unknown service type for installation: {$type->value}"),
@@ -56,6 +58,19 @@ class ServiceInstallationRunner
 
         return [
             'unit' => 'nginx',
+            'installed_version' => null,
+        ];
+    }
+
+    /**
+     * @return array{unit: string, installed_version: string|null}
+     */
+    private function installCaddy(ProvisioningContext $context): array
+    {
+        $this->caddyService->install($context);
+
+        return [
+            'unit' => 'caddy',
             'installed_version' => null,
         ];
     }

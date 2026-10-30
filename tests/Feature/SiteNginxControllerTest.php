@@ -3,6 +3,7 @@
 use App\Enums\ConnectionStatus;
 use App\Enums\NginxFileSection;
 use App\Enums\NginxHistoryEvent;
+use App\Enums\ServerStatus;
 use App\Jobs\ApplySiteNginxFileJob;
 use App\Jobs\DeleteSiteNginxFileJob;
 use App\Jobs\SyncSiteNginxFilesJob;
@@ -22,7 +23,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $this->team = Team::factory()->forUser($this->user)->create();
     $this->server = Server::factory()->forTeam($this->team)->create([
-        'status' => \App\Enums\ServerStatus::Active,
+        'status' => ServerStatus::Active,
         'connection_status' => ConnectionStatus::Successful,
     ]);
     $this->site = Site::factory()->forServer($this->server)->create();
@@ -304,5 +305,35 @@ it('blocks refresh when server is not ready', function () {
         ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx/refresh")
         ->assertRedirect()->assertSessionHas('error');
 
+    Queue::assertNothingPushed();
+});
+
+it('offers only the sections Caddy supports on a Caddy server', function () {
+    $this->server->update(['web_server' => 'caddy']);
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx");
+
+    $response->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('webServer', 'Caddy')
+            ->where('sections', fn ($sections) => collect($sections)->pluck('value')->all() === ['main', 'server', 'after'])
+        );
+});
+
+it('refuses a section Caddy does not support', function () {
+    Queue::fake();
+    $this->server->update(['web_server' => 'caddy']);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx", [
+            'domain_id' => $this->domain->id,
+            'section' => 'before',
+            'name' => 'redirect.conf',
+            'content' => 'redir / /home',
+        ]);
+
+    $response->assertSessionHasErrors(['section' => "Caddy doesn't support this section."]);
+    $this->assertDatabaseMissing('site_nginx_files', ['site_id' => $this->site->id, 'path' => 'before/redirect.conf']);
     Queue::assertNothingPushed();
 });

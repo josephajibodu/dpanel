@@ -39,16 +39,17 @@ trait StagesFilesPrivately
     /**
      * Write content to a system path as a root-owned file with the given mode,
      * staged through a private directory. `install` sets the owner and mode
-     * and moves the file into place in one step.
+     * and moves the file into place in one step. The group is a system group
+     * name from code or config, never user input.
      */
-    private function installAsRoot(SshConnection $connection, string $content, string $destination, string $mode = '644', int $timeout = 30): void
+    private function installAsRoot(SshConnection $connection, string $content, string $destination, string $mode = '644', int $timeout = 30, string $group = 'root'): void
     {
-        $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $content, $destination, $mode, $timeout): void {
+        $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $content, $destination, $mode, $timeout, $group): void {
             $staged = "{$directory}/staged";
 
             $connection->upload($content, $staged);
             $connection->sudo(
-                'install -o root -g root -m '.$this->escapeForShell($mode).' '.$this->escapeForShell($staged).' '.$this->escapeForShell($destination),
+                "install -o root -g {$group} -m ".$this->escapeForShell($mode).' '.$this->escapeForShell($staged).' '.$this->escapeForShell($destination),
                 $timeout,
             );
         });

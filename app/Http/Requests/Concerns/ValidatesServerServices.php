@@ -43,7 +43,7 @@ trait ValidatesServerServices
         return [
             'type' => ['required', 'string', Rule::in(array_map(fn (ServerType $type) => $type->value, ServerType::selectable()))],
             'php_version' => ['nullable', 'string', Rule::in(['8.1', '8.2', '8.3', '8.4'])],
-            'web_server' => ['nullable', 'string', Rule::in(['nginx']), Rule::prohibitedIf(fn (): bool => $this->input('php_version') === null)],
+            'web_server' => ['nullable', 'string', Rule::in(['nginx', 'caddy']), Rule::prohibitedIf(fn (): bool => $this->input('php_version') === null)],
             'database_type' => ['nullable', 'string', Rule::in(['mysql', 'postgresql', 'mariadb'])],
             'redis' => ['required', 'boolean'],
         ];

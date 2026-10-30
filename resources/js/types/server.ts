@@ -33,7 +33,7 @@ export interface Server {
     provisioning_steps: ProvisioningStep[];
     type: ServerTypeValue | null;
     type_label: string | null;
-    web_server: 'nginx' | null;
+    web_server: 'nginx' | 'caddy' | null;
     php_version: string | null;
     has_php: boolean;
     supports_sites: boolean;

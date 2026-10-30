@@ -60,6 +60,7 @@ class RestartServiceJob implements ShouldQueue
     {
         return match ($this->service) {
             ServiceType::Nginx => 'systemctl restart nginx',
+            ServiceType::Caddy => 'systemctl restart caddy',
             ServiceType::Php => "systemctl restart php{$this->server->php_version}-fpm",
             ServiceType::Mysql => 'systemctl restart mysql',
             ServiceType::Postgresql => 'systemctl restart postgresql',

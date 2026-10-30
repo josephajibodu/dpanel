@@ -2,10 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Enums\NginxFileSection;
 use App\Enums\NginxHistoryEvent;
 use App\Events\SiteNginxUpdated;
-use App\Exceptions\SshCommandException;
 use App\Models\SiteNginxFile;
 use App\Models\SiteNginxHistory;
 use App\Services\Ssh\SshService;
@@ -43,6 +41,7 @@ class ApplySiteNginxFileJob implements ShouldQueue
 
         try {
             $connection = $sshService->connect($site->server);
+            $webServer = $site->server->webServer();
 
             try {
                 $newAbsPath = $this->nginxFile->absolutePath();
@@ -59,10 +58,10 @@ class ApplySiteNginxFileJob implements ShouldQueue
                     $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
 
                     try {
-                        $connection->exec('sudo nginx -t 2>&1');
-                    } catch (SshCommandException $testException) {
+                        $webServer->validate($connection);
+                    } catch (\RuntimeException $validationException) {
                         $connection->exec("sudo mv -f {$backupPath} {$newAbsPath} 2>/dev/null || true");
-                        throw new \RuntimeException('Nginx validation failed: '.$testException->output);
+                        throw $validationException;
                     }
 
                     $connection->exec("sudo rm -f {$backupPath}");
@@ -70,26 +69,26 @@ class ApplySiteNginxFileJob implements ShouldQueue
                     $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
 
                     try {
-                        $connection->exec('sudo nginx -t 2>&1');
-                    } catch (SshCommandException $testException) {
+                        $webServer->validate($connection);
+                    } catch (\RuntimeException $validationException) {
                         $connection->exec("sudo rm -f {$newAbsPath}");
-                        throw new \RuntimeException('Nginx validation failed: '.$testException->output);
+                        throw $validationException;
                     }
 
-                    $oldAbsPath = $this->oldAbsPath();
+                    $oldAbsPath = $this->nginxFile->absolutePathFor($this->oldPath);
                     $connection->exec("sudo rm -f {$oldAbsPath}");
                 } else {
                     $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
 
                     try {
-                        $connection->exec('sudo nginx -t 2>&1');
-                    } catch (SshCommandException $testException) {
+                        $webServer->validate($connection);
+                    } catch (\RuntimeException $validationException) {
                         $connection->exec("sudo rm -f {$newAbsPath}");
-                        throw new \RuntimeException('Nginx validation failed: '.$testException->output);
+                        throw $validationException;
                     }
                 }
 
-                $connection->exec('sudo systemctl reload nginx');
+                $webServer->reload($connection);
             } finally {
                 $connection->disconnect();
             }
@@ -121,20 +120,5 @@ class ApplySiteNginxFileJob implements ShouldQueue
         } finally {
             broadcast(new SiteNginxUpdated($site));
         }
-    }
-
-    private function oldAbsPath(): string
-    {
-        if ($this->nginxFile->section === NginxFileSection::Main) {
-            return '/etc/nginx/sites-available/'.$this->oldPath;
-        }
-
-        $this->nginxFile->loadMissing('domain.site');
-
-        if ($this->nginxFile->domain === null) {
-            return $this->oldPath;
-        }
-
-        return $this->nginxFile->domain->nginxSnippetsBasePath().'/'.$this->oldPath;
     }
 }

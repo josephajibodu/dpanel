@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Site;
-use App\Services\Nginx\SiteNginxSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,9 +19,9 @@ class SyncSiteNginxJob implements ShouldQueue
 
     public function __construct(public Site $site) {}
 
-    public function handle(SiteNginxSyncService $sync): void
+    public function handle(): void
     {
         $this->site->loadMissing('server', 'domains');
-        $sync->sync($this->site);
+        $this->site->server->webServer()->syncSite($this->site);
     }
 }

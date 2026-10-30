@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Fans the wildcard certificate out to every free-domain `(site_id, domain_id)`
- * folder on the given server, then reloads nginx once at the end iff anything
+ * folder on the given server, then reloads its web server once at the end iff anything
  * actually changed. Idempotent.
  *
  * Pass an existing SshConnection to reuse it (avoids opening a second SSH
@@ -53,16 +53,11 @@ class DistributeWildcardCertificateToServerAction
 
         try {
             foreach ($domains as $domain) {
-                $changedAny = $this->sync->execute($connection, $domain->site_id, $domain->id) || $changedAny;
+                $changedAny = $this->sync->execute($connection, $domain->site_id, $domain->id, $server->webServer()) || $changedAny;
             }
 
             if ($changedAny) {
-                // Both halves of `&&` must run under sudo. `&&` is parsed by
-                // the outer shell, so a single `sudo` prefix only applies to
-                // the first command; the second would otherwise run as the
-                // SSH user, which polkit rejects with "Interactive
-                // authentication required".
-                $connection->exec('sudo nginx -t && sudo systemctl reload nginx');
+                $server->webServer()->validateAndReload($connection);
             }
         } finally {
             if ($ownsConnection) {

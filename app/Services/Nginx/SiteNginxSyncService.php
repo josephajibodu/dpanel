@@ -152,7 +152,7 @@ NGINX;
     /**
      * Keep APP_URL in sync with the primary domain when .env exists.
      */
-    protected function synchronizeAppUrl(SshConnection $connection, Site $site): void
+    public function synchronizeAppUrl(SshConnection $connection, Site $site): void
     {
         $site->loadMissing('domains');
         $primary = $site->domains()->where('is_primary', true)->first();

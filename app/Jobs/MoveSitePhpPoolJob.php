@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Site;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SiteProvisioning\SiteIsolationService;
 use App\Services\Ssh\SshService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +26,7 @@ class MoveSitePhpPoolJob implements ShouldQueue
         public ?string $previousPhpVersion,
     ) {}
 
-    public function handle(SshService $sshService, SiteIsolationService $isolation, SiteNginxSyncService $nginx): void
+    public function handle(SshService $sshService, SiteIsolationService $isolation): void
     {
         $site = $this->site;
         $newVersion = $site->php_version ?? '8.4';
@@ -36,7 +35,7 @@ class MoveSitePhpPoolJob implements ShouldQueue
 
         try {
             $isolation->writePool($connection, $site, $newVersion);
-            $nginx->sync($site, $connection);
+            $site->server->webServer()->syncSite($site, $connection);
 
             if ($this->previousPhpVersion !== null && $this->previousPhpVersion !== $newVersion) {
                 $isolation->removePool($connection, $site->system_user, $this->previousPhpVersion);

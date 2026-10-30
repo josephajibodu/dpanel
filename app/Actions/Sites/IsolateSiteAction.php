@@ -12,7 +12,6 @@ use App\Jobs\IsolateSiteJob;
 use App\Models\CronJob;
 use App\Models\Site;
 use App\Models\Worker;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SiteProvisioning\SiteIsolationService;
 use App\Services\SiteUserNameGenerator;
 use App\Services\Ssh\SshConnection;
@@ -98,7 +97,6 @@ class IsolateSiteAction
         private SshService $sshService,
         private SiteUserNameGenerator $names,
         private SiteIsolationService $isolation,
-        private SiteNginxSyncService $nginx,
     ) {}
 
     /**
@@ -313,7 +311,7 @@ class IsolateSiteAction
             $file->update(['content' => $content, 'hash' => md5($content)]);
         }
 
-        $this->nginx->sync($this->site, $this->connection);
+        $this->site->server->webServer()->syncSite($this->site, $this->connection);
     }
 
     /**
@@ -444,7 +442,7 @@ class IsolateSiteAction
         $this->site->system_user = null;
 
         try {
-            $this->nginx->sync($this->site, $this->connection);
+            $this->site->server->webServer()->syncSite($this->site, $this->connection);
         } finally {
             $this->site->system_user = $this->systemUser;
         }

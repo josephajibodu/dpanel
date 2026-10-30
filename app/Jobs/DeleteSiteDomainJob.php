@@ -75,13 +75,15 @@ class DeleteSiteDomainJob implements ShouldQueue
 
         try {
             $connection = $sshService->connect($server);
+            $webServer = $server->webServer();
 
-            $connection->exec("sudo rm -f /etc/nginx/sites-enabled/{$this->configFileName}");
-            $connection->exec("sudo rm -f /etc/nginx/sites-available/{$this->configFileName}");
+            foreach (array_reverse($webServer->siteConfigPaths($this->configFileName)) as $configPath) {
+                $connection->exec("sudo rm -f {$configPath}");
+            }
             $connection->exec('sudo rm -rf '.escapeshellarg($this->snippetsBasePath));
 
             if ($this->hasSsl) {
-                $certDir = "/etc/nginx/ssl/domains/{$this->siteId}/{$this->domainId}";
+                $certDir = $webServer->certificateDirectory($this->siteId, $this->domainId);
                 $connection->exec("sudo rm -rf {$certDir}");
             }
 
@@ -91,12 +93,10 @@ class DeleteSiteDomainJob implements ShouldQueue
                 $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($this->hostname).' 2>&1 || true');
             }
 
-            $testResult = $connection->exec('sudo nginx -t 2>&1');
-
-            if (str_contains($testResult, 'syntax is ok')) {
-                $connection->exec('sudo systemctl reload nginx');
-            } else {
-                Log::error("Nginx config invalid after domain deletion ({$this->hostname}): {$testResult}");
+            try {
+                $webServer->validateAndReload($connection);
+            } catch (\RuntimeException $exception) {
+                Log::error("Web server config invalid after domain deletion ({$this->hostname}): {$exception->getMessage()}");
             }
 
             $connection->disconnect();

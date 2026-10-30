@@ -6,7 +6,6 @@ use App\Enums\ProjectType;
 use App\Enums\SiteStatus;
 use App\Events\ServerSitesUpdated;
 use App\Models\Site;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\SiteProvisioning\SiteProvisionerFactory;
 use App\Services\SourceControlService;
 use App\Services\Ssh\SshService;
@@ -16,7 +15,6 @@ class ProvisionSiteAction
 {
     public function __construct(
         private SshService $sshService,
-        private SiteNginxSyncService $siteNginxSyncService,
         private SourceControlService $sourceControlService,
         private TriggerDeploymentAction $triggerDeployment,
     ) {}
@@ -37,7 +35,6 @@ class ProvisionSiteAction
                 $site->project_type ?? ProjectType::Laravel,
                 $connection,
                 $site,
-                $this->siteNginxSyncService,
                 $this->sourceControlService,
             );
 

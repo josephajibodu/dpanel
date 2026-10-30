@@ -62,7 +62,7 @@ export function getSiteSubNavItems(
         },
         { title: 'Backups', href: `${base}/backups` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },
-        { title: 'Nginx', href: `${base}/nginx` },
+        { title: 'Web Server', href: `${base}/nginx` },
         { title: 'Domains', href: `${base}/domains` },
     ];
 }
