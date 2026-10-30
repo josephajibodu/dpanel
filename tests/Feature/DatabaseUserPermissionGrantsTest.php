@@ -6,6 +6,7 @@ use App\Actions\Database\UpdateDatabaseUser;
 use App\Enums\ServerStatus;
 use App\Models\DatabaseUser;
 use App\Models\Server;
+use App\Models\ServerConnection;
 use App\Models\ServerCredential;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -232,4 +233,29 @@ it('hands a deleted Postgres user\'s tables to postgres and clears their grants 
         ->and($commands[0])->toContain("REASSIGN OWNED BY %I TO postgres', 'app_owner'")
         ->and($commands[0])->toContain("DROP OWNED BY %I', 'app_owner'")
         ->and($commands[2])->toBe('DROP USER IF EXISTS "app_owner";'."\n");
+});
+
+it('gives a new MySQL user an account other servers can use while servers are connected', function () {
+    $server = Server::factory()->create(['database_type' => 'mysql', 'status' => ServerStatus::Active]);
+    ServerCredential::create(['server_id' => $server->id, 'type' => 'database_password', 'value' => 'rootsecret']);
+    ServerConnection::factory()->create(['server_id' => $server->id, 'client_server_id' => Server::factory()->web()->create()->id]);
+
+    $user = DatabaseUser::factory()->create([
+        'server_id' => $server->id,
+        'username' => 'app',
+        'databases' => ['app_db'],
+        'permission' => 'readonly',
+    ]);
+
+    $commands = [];
+    $connection = mockConnectionRecordingCommands($commands);
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    app(CreateDatabaseUser::class)->execute($user);
+
+    expect(implode("\n", $commands))
+        ->toContain("GRANT SELECT ON `app_db`.* TO 'app'@'localhost'")
+        ->toContain("GRANT SELECT ON `app_db`.* TO 'app'@'%'");
 });

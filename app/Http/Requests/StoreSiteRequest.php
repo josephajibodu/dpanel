@@ -7,6 +7,7 @@ use App\Enums\RepositoryProvider;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ class StoreSiteRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -72,7 +73,7 @@ class StoreSiteRequest extends FormRequest
             'server_database_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('server_databases', 'id')->where('server_id', $this->input('server_id')),
+                Rule::exists('server_databases', 'id')->whereIn('server_id', $this->reachableDatabaseServerIds()),
             ],
             'php_version' => ['sometimes', 'string', Rule::in($this->getServerInstalledPhpVersions())],
             'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
@@ -125,9 +126,24 @@ class StoreSiteRequest extends FormRequest
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
-            'server_database_id.exists' => 'The selected database does not belong to this server.',
+            'server_database_id.exists' => 'The selected database is not on this server or a server connected to it.',
             'isolated.boolean' => 'Choose whether to isolate this site.',
         ];
+    }
+
+    /**
+     * Servers whose databases the site may use: its own server and the ones
+     * it's connected to (only within the team).
+     *
+     * @return array<int, int>
+     */
+    private function reachableDatabaseServerIds(): array
+    {
+        $server = Server::query()
+            ->where('team_id', $this->route('team')->id)
+            ->find($this->input('server_id'));
+
+        return $server?->reachableDatabaseServerIds() ?? [];
     }
 
     /**

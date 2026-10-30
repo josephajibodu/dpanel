@@ -58,6 +58,7 @@ class ServerResource extends JsonResource
             'has_php' => $this->hasPhp(),
             'supports_sites' => $this->supportsSites(),
             'database_type' => $this->database_type,
+            'accepts_connections' => $this->acceptsConnections(),
             'ssh_port' => $this->ssh_port,
             'sites_count' => $this->whenCounted('sites'),
             'sites' => SiteResource::collection($this->whenLoaded('sites')),

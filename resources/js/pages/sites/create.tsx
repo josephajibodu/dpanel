@@ -922,6 +922,9 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                                 {readyDatabases.map((db) => (
                                                     <SelectItem key={db.id} value={String(db.id)}>
                                                         {db.name}
+                                                        {db.server_id !== serverData.id && db.server_name && (
+                                                            <span className="text-muted-foreground text-xs"> (on {db.server_name})</span>
+                                                        )}
                                                     </SelectItem>
                                                 ))}
                                                 {pendingDatabases.map((db) => (
@@ -933,12 +936,14 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                                         </span>
                                                     </SelectItem>
                                                 ))}
-                                                <SelectItem value="__create__">
-                                                    <span className="flex items-center gap-1 text-primary">
-                                                        <PlusIcon className="h-3.5 w-3.5" />
-                                                        Create database
-                                                    </span>
-                                                </SelectItem>
+                                                {serverData.database_type !== null && (
+                                                    <SelectItem value="__create__">
+                                                        <span className="flex items-center gap-1 text-primary">
+                                                            <PlusIcon className="h-3.5 w-3.5" />
+                                                            Create database
+                                                        </span>
+                                                    </SelectItem>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         {form.errors.server_database_id && (
@@ -957,10 +962,16 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                     )}
                                     {readyDatabases.length === 0 && pendingDatabases.length === 0 && (
                                         <div className="rounded-lg border border-dashed p-4 text-center">
-                                            <p className="text-muted-foreground text-sm">No databases available on this server.</p>
-                                            <Button type="button" variant="link" className="mt-1 h-auto p-0" onClick={() => setCreateDbOpen(true)}>
-                                                Create one now
-                                            </Button>
+                                            <p className="text-muted-foreground text-sm">
+                                                {serverData.database_type !== null
+                                                    ? 'No databases available on this server.'
+                                                    : 'This server has no database. Connect it to a database server from that server\'s Connections page.'}
+                                            </p>
+                                            {serverData.database_type !== null && (
+                                                <Button type="button" variant="link" className="mt-1 h-auto p-0" onClick={() => setCreateDbOpen(true)}>
+                                                    Create one now
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
                                 </CardContent>

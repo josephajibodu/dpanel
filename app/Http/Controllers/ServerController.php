@@ -37,7 +37,7 @@ class ServerController extends Controller
     public function index(Team $team): Response
     {
         $servers = $team->servers()
-            ->with('providerAccount')
+            ->with('providerAccount', 'installedServices')
             ->withCount('sites')
             ->latest()
             ->paginate(20);

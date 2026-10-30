@@ -11,7 +11,7 @@ use RuntimeException;
 
 class CreateDatabaseUser
 {
-    use EscapesShell, GrantsPostgresPrivileges, QuotesMysql, RunsSqlPrivately;
+    use EscapesShell, GrantsPostgresPrivileges, ManagesRemoteMysqlAccounts, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -90,6 +90,10 @@ class CreateDatabaseUser
 
         foreach ($databaseUser->databases as $dbName) {
             $statements[] = "GRANT {$privilege} ON {$this->mysqlIdentifier($dbName)}.* TO {$account}";
+        }
+
+        if ($this->needsRemoteMysqlAccount($databaseUser)) {
+            array_push($statements, ...$this->remoteMysqlAccountStatements($databaseUser));
         }
 
         $statements[] = 'FLUSH PRIVILEGES';

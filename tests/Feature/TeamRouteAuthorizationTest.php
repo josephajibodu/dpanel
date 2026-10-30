@@ -6,6 +6,7 @@ use App\Models\DatabaseUser;
 use App\Models\Deployment;
 use App\Models\ProviderAccount;
 use App\Models\Server;
+use App\Models\ServerConnection;
 use App\Models\ServerDatabase;
 use App\Models\Site;
 use App\Models\SiteNginxFile;
@@ -93,6 +94,10 @@ function teamRouteParameters(Team $team, User $viewer): array
             'storage_provider_id' => $storageProvider->id,
         ]),
         'database_user' => DatabaseUser::factory()->for($server)->create(),
+        'hosted_connection' => ServerConnection::factory()->create([
+            'server_id' => $server->id,
+            'client_server_id' => Server::factory()->create(['team_id' => $team->id])->id,
+        ]),
         'worker' => Worker::factory()->for($server)->create(),
         'cron_job' => CronJob::factory()->for($server)->create(),
         'providerAccount' => $providerAccount,

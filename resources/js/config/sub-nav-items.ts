@@ -7,13 +7,21 @@ import type { Server } from '@/types/server';
 
 export function getServerSubNavItems(
     teamSlug: string,
-    server: Pick<Server, 'id' | 'has_php' | 'supports_sites' | 'database_type'>,
+    server: Pick<
+        Server,
+        | 'id'
+        | 'has_php'
+        | 'supports_sites'
+        | 'database_type'
+        | 'accepts_connections'
+    >,
 ): SubNavItem[] {
     const base = `/${teamSlug}/servers/${server.id}`;
     const items: SubNavItem[] = [
         { title: 'Overview', href: base, exactMatch: true },
         { title: 'Sites', href: `${base}/sites` },
         { title: 'Databases', href: `${base}/databases` },
+        { title: 'Connections', href: `${base}/connections` },
         { title: 'PHP', href: `${base}/php` },
         { title: 'Storage', href: `${base}/storage` },
         { title: 'Processes', href: `${base}/processes` },
@@ -35,6 +43,10 @@ export function getServerSubNavItems(
 
     if (server.database_type === null) {
         hidden.add('Databases');
+    }
+
+    if (!server.accepts_connections) {
+        hidden.add('Connections');
     }
 
     if (!server.has_php) {

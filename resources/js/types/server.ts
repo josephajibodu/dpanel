@@ -38,6 +38,7 @@ export interface Server {
     has_php: boolean;
     supports_sites: boolean;
     database_type: 'mysql' | 'postgresql' | 'mariadb' | null;
+    accepts_connections: boolean;
     ssh_port: number;
     sites_count?: number;
     provisioned_at: string | null;
@@ -84,6 +85,7 @@ export interface ProviderSize {
 export interface ServerDatabase {
     id: number;
     server_id: number;
+    server_name?: string;
     name: string;
     collation: string | null;
     charset: string | null;

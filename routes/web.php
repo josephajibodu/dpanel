@@ -13,6 +13,7 @@ use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\RealtimeDiagnosticsController;
+use App\Http\Controllers\ServerConnectionController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerHostKeyController;
@@ -305,6 +306,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.runtime.index');
                 Route::put('servers/{server}/runtime/node', [ServerRuntimeController::class, 'updateNodeVersion'])
                     ->name('servers.runtime.node.update');
+
+                // Connections from other servers to this server's database and Redis
+                Route::get('servers/{server}/connections', [ServerConnectionController::class, 'index'])
+                    ->name('servers.connections.index');
+                Route::post('servers/{server}/connections', [ServerConnectionController::class, 'store'])
+                    ->name('servers.connections.store');
+                Route::delete('servers/{server}/connections/{hosted_connection}', [ServerConnectionController::class, 'destroy'])
+                    ->name('servers.connections.destroy');
 
                 // Processes (workers and cron jobs)
                 Route::get('servers/{server}/processes', [ServerProcessController::class, 'index'])

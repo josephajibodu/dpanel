@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ServerDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\ServerDatabase
+ * @mixin ServerDatabase
  */
 class ServerDatabaseResource extends JsonResource
 {
@@ -20,6 +21,7 @@ class ServerDatabaseResource extends JsonResource
         return [
             'id' => $this->id,
             'server_id' => $this->server_id,
+            'server_name' => $this->whenLoaded('server', fn () => $this->server->name),
             'name' => $this->name,
             'collation' => $this->collation,
             'charset' => $this->charset,

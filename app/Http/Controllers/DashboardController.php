@@ -18,6 +18,7 @@ class DashboardController extends Controller
     public function index(Team $team): Response
     {
         $recentServers = $team->servers()
+            ->with('installedServices')
             ->withCount('sites')
             ->latest()
             ->take(5)

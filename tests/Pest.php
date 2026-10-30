@@ -1,5 +1,13 @@
 <?php
 
+use App\Models\Server;
+use App\Models\ServerConnection;
+use App\Models\ServerCredential;
+use App\Services\Ssh\SshConnection;
+use App\Services\Ssh\SshService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -11,8 +19,8 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -56,9 +64,9 @@ function something()
  * @param  array<int, string>  $commands
  * @param  (Closure(string): void)|null  $onExec
  */
-function mockDatabaseConnection(array &$uploads = [], array &$commands = [], ?Closure $onExec = null): App\Services\Ssh\SshConnection
+function mockDatabaseConnection(array &$uploads = [], array &$commands = [], ?Closure $onExec = null): SshConnection
 {
-    $connection = Mockery::mock(App\Services\Ssh\SshConnection::class)->makePartial();
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
     $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands, $onExec) {
         $commands[] = $command;
 
@@ -74,4 +82,53 @@ function mockDatabaseConnection(array &$uploads = [], array &$commands = [], ?Cl
     $connection->shouldReceive('disconnect')->andReturn(null);
 
     return $connection;
+}
+
+/**
+ * Fake the SSH connection to the host, recording commands and uploaded files.
+ *
+ * @param  array<int, string>  $commands
+ * @param  array<string, string>  $uploads
+ * @param  array<string, string>  $outputs  Output to return for commands containing the key.
+ */
+function fakeHostSsh(array &$commands, array &$uploads, array $outputs = []): void
+{
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) use (&$commands, $outputs) {
+        $commands[] = $command;
+
+        if ($command === 'mktemp -d') {
+            return '/tmp/tmp.fleetops';
+        }
+
+        foreach ($outputs as $needle => $output) {
+            if (str_contains($command, $needle)) {
+                return $output;
+            }
+        }
+
+        return '';
+    });
+    $connection->shouldReceive('upload')->andReturnUsing(function (string $content, string $path) use (&$uploads) {
+        $uploads[$path] = ($uploads[$path] ?? '').$content;
+    });
+    $connection->shouldReceive('disconnect');
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturn($connection);
+    app()->instance(SshService::class, $sshService);
+}
+
+/**
+ * A pending connection from a new web server to the host, which gets a database root password.
+ */
+function connectionTo(Server $host): ServerConnection
+{
+    ServerCredential::create(['server_id' => $host->id, 'type' => 'database_password', 'value' => 'root-secret']);
+
+    return ServerConnection::factory()->pending()->create([
+        'server_id' => $host->id,
+        'client_server_id' => Server::factory()->web()->create()->id,
+        'client_address' => '10.10.0.3',
+    ]);
 }

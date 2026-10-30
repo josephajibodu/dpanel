@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<string, StatusColor> = {
     failed: 'red',
     error: 'red',
     deleting: 'orange',
+    removing: 'orange',
 };
 
 const PULSING_STATUSES = new Set([
@@ -35,6 +36,7 @@ const PULSING_STATUSES = new Set([
     'restarting',
     'pending',
     'deleting',
+    'removing',
     'dumping',
     'verifying',
     'uploading',

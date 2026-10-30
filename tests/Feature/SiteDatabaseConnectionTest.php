@@ -7,6 +7,7 @@ use App\Events\ServerSitesUpdated;
 use App\Jobs\CreateSiteJob;
 use App\Models\DatabaseUser;
 use App\Models\Server;
+use App\Models\ServerConnection;
 use App\Models\ServerDatabase;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -244,7 +245,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         $site->deployScript()->create(['script' => 'echo "test"']);
 
         $execCalls = [];
-        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
         $mockConnection->shouldReceive('exec')
             ->andReturnUsing(function (string $cmd) use (&$execCalls) {
                 $execCalls[] = $cmd;
@@ -253,7 +254,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             });
         $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-        $sshService = \Mockery::mock(SshService::class);
+        $sshService = Mockery::mock(SshService::class);
         $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
         $this->app->instance(SshService::class, $sshService);
 
@@ -300,7 +301,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         $site->deployScript()->create(['script' => 'echo "test"']);
 
         $execCalls = [];
-        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
         $mockConnection->shouldReceive('exec')
             ->andReturnUsing(function (string $cmd) use (&$execCalls) {
                 $execCalls[] = $cmd;
@@ -309,7 +310,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             });
         $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-        $sshService = \Mockery::mock(SshService::class);
+        $sshService = Mockery::mock(SshService::class);
         $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
         $this->app->instance(SshService::class, $sshService);
 
@@ -334,7 +335,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         $site->deployScript()->create(['script' => 'echo "test"']);
 
         $execCalls = [];
-        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
         $mockConnection->shouldReceive('exec')
             ->andReturnUsing(function (string $cmd) use (&$execCalls) {
                 $execCalls[] = $cmd;
@@ -343,7 +344,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             });
         $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-        $sshService = \Mockery::mock(SshService::class);
+        $sshService = Mockery::mock(SshService::class);
         $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
         $this->app->instance(SshService::class, $sshService);
 
@@ -393,7 +394,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         $site->deployScript()->create(['script' => 'echo "test"']);
 
         $execCalls = [];
-        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
         $mockConnection->shouldReceive('exec')
             ->andReturnUsing(function (string $cmd) use (&$execCalls) {
                 $execCalls[] = $cmd;
@@ -402,7 +403,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             });
         $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-        $sshService = \Mockery::mock(SshService::class);
+        $sshService = Mockery::mock(SshService::class);
         $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
         $this->app->instance(SshService::class, $sshService);
 
@@ -427,7 +428,7 @@ describe('LaravelSiteProvisioner env injection', function () {
         $site->deployScript()->create(['script' => 'echo "test"']);
 
         $execCalls = [];
-        $mockConnection = \Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
         $mockConnection->shouldReceive('exec')
             ->andReturnUsing(function (string $cmd) use (&$execCalls) {
                 $execCalls[] = $cmd;
@@ -436,7 +437,7 @@ describe('LaravelSiteProvisioner env injection', function () {
             });
         $mockConnection->shouldReceive('disconnect')->andReturn(null);
 
-        $sshService = \Mockery::mock(SshService::class);
+        $sshService = Mockery::mock(SshService::class);
         $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
         $this->app->instance(SshService::class, $sshService);
 
@@ -448,5 +449,101 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($appUrlCall)->not->toBeNull();
         expect($appUrlCall)->toContain('APP_URL=https://app.flitops.xyz');
         expect($appUrlCall)->not->toContain('\\/');
+    });
+});
+
+// --------------------------------------------------------------------------
+// Databases on a connected server
+// --------------------------------------------------------------------------
+
+describe('databases on a connected server', function () {
+    beforeEach(function () {
+        $this->databaseServer = Server::factory()->forTeam($this->team)->database()->create([
+            'status' => ServerStatus::Active,
+            'database_type' => 'postgresql',
+        ]);
+    });
+
+    it('accepts a database on a server this one is connected to', function () {
+        Queue::fake();
+        ServerConnection::factory()->create(['server_id' => $this->databaseServer->id, 'client_server_id' => $this->server->id]);
+        $database = ServerDatabase::factory()->create(['server_id' => $this->databaseServer->id, 'status' => 'ready']);
+
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'domain' => 'example.com',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+                'server_database_id' => $database->id,
+            ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('sites', ['server_id' => $this->server->id, 'server_database_id' => $database->id]);
+    });
+
+    it('refuses a database on a server this one is not connected to', function () {
+        Queue::fake();
+        $database = ServerDatabase::factory()->create(['server_id' => $this->databaseServer->id, 'status' => 'ready']);
+
+        $response = $this->actingAs($this->user)
+            ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+                'server_id' => $this->server->id,
+                'domain' => 'example.com',
+                'directory' => '/public',
+                'project_type' => 'laravel',
+                'php_version' => '8.3',
+                'branch' => 'main',
+                'repository_provider' => 'github',
+                'server_database_id' => $database->id,
+            ]);
+
+        $response->assertSessionHasErrors(['server_database_id' => 'The selected database is not on this server or a server connected to it.']);
+        $this->assertDatabaseMissing('sites', ['server_database_id' => $database->id]);
+    });
+
+    it('points the site at the database server over the connection', function () {
+        Event::fake([ServerSitesUpdated::class]);
+        ServerConnection::factory()->create([
+            'server_id' => $this->databaseServer->id,
+            'client_server_id' => $this->server->id,
+            'host_address' => '10.10.0.2',
+        ]);
+        $database = ServerDatabase::factory()->create(['server_id' => $this->databaseServer->id, 'name' => 'pg_db', 'status' => 'ready']);
+        DatabaseUser::factory()->create([
+            'server_id' => $this->databaseServer->id,
+            'username' => 'remote_app',
+            'databases' => ['pg_db'],
+        ]);
+        $site = Site::factory()->forServer($this->server)->pending()->create([
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::Laravel,
+            'server_database_id' => $database->id,
+            'domain' => 'remote.example.com',
+        ]);
+        $site->deployScript()->create(['script' => 'echo "test"']);
+
+        $execCalls = [];
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
+            $execCalls[] = $cmd;
+
+            return str_contains($cmd, 'nginx -t') ? 'syntax is ok' : '';
+        });
+        $mockConnection->shouldReceive('disconnect')->andReturn(null);
+        $sshService = Mockery::mock(SshService::class);
+        $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
+        $this->app->instance(SshService::class, $sshService);
+
+        app(ProvisionSiteAction::class)->execute($site);
+
+        $sedCalls = collect($execCalls)->filter(fn ($c) => str_contains($c, 'sed'));
+        expect($sedCalls->contains(fn ($c) => str_contains($c, 'DB_HOST=10.10.0.2')))->toBeTrue()
+            ->and($sedCalls->contains(fn ($c) => str_contains($c, 'DB_CONNECTION=pgsql')))->toBeTrue()
+            ->and($sedCalls->contains(fn ($c) => str_contains($c, 'DB_USERNAME=remote_app')))->toBeTrue();
     });
 });

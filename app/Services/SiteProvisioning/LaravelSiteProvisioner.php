@@ -47,9 +47,10 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
             return;
         }
 
-        $server = $this->site->server;
+        // The database may live on another server this one is connected to.
+        $databaseServer = $serverDatabase->server;
         $dbUser = DatabaseUser::query()
-            ->where('server_id', $server->id)
+            ->where('server_id', $databaseServer->id)
             ->whereJsonContains('databases', $serverDatabase->name)
             ->first();
 
@@ -57,7 +58,13 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
             return;
         }
 
-        $dbType = $server->database_type;
+        $dbHost = $databaseServer->is($this->site->server)
+            ? '127.0.0.1'
+            : $databaseServer->hostedConnections()
+                ->where('client_server_id', $this->site->server_id)
+                ->value('host_address');
+
+        $dbType = $databaseServer->database_type;
         $connection = match ($dbType) {
             'postgresql' => 'pgsql',
             default => 'mysql',
@@ -68,7 +75,7 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
         };
 
         $this->sedEnv($envPath, 'DB_CONNECTION', $connection);
-        $this->sedEnv($envPath, 'DB_HOST', '127.0.0.1');
+        $this->sedEnv($envPath, 'DB_HOST', $dbHost);
         $this->sedEnv($envPath, 'DB_PORT', $port);
         $this->sedEnv($envPath, 'DB_DATABASE', $serverDatabase->name);
         $this->sedEnv($envPath, 'DB_USERNAME', $dbUser->username);

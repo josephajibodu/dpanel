@@ -17,10 +17,12 @@ use App\Http\Resources\SourceControlAccountResource;
 use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
+use App\Models\ServerDatabase;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -48,7 +50,7 @@ class SiteController extends Controller
 
         $server->load('providerAccount');
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, SourceControlAccount> $sourceControlAccounts */
+        /** @var Collection<int, SourceControlAccount> $sourceControlAccounts */
         $sourceControlAccounts = auth()->user()
             ->sourceControlAccounts()
             ->get();
@@ -83,7 +85,13 @@ class SiteController extends Controller
                 'label' => $provider->label(),
             ]),
             'phpVersions' => $phpVersions,
-            'databases' => ServerDatabaseResource::collection($server->databases),
+            'databases' => ServerDatabaseResource::collection(
+                ServerDatabase::query()
+                    ->with('server:id,name')
+                    ->whereIn('server_id', $server->reachableDatabaseServerIds())
+                    ->orderBy('name')
+                    ->get()
+            ),
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],

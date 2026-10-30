@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DestroyDatabaseUser
 {
-    use EscapesShell, QuotesMysql, RunsSqlPrivately;
+    use EscapesShell, ManagesRemoteMysqlAccounts, QuotesMysql, RunsSqlPrivately;
 
     public function __construct(
         private SshService $sshService
@@ -63,10 +63,16 @@ class DestroyDatabaseUser
         $user = $databaseUser->username;
         $host = $databaseUser->host ?? 'localhost';
 
-        $this->runMysqlAsRoot($connection, $rootPassword, [
-            "DROP USER IF EXISTS {$this->mysqlString($user)}@{$this->mysqlString($host)}",
-            'FLUSH PRIVILEGES',
-        ]);
+        $statements = ["DROP USER IF EXISTS {$this->mysqlString($user)}@{$this->mysqlString($host)}"];
+
+        // The account other servers sign in with while they're connected.
+        if ($this->needsRemoteMysqlAccount($databaseUser)) {
+            $statements[] = "DROP USER IF EXISTS {$this->remoteMysqlAccount($databaseUser)}";
+        }
+
+        $statements[] = 'FLUSH PRIVILEGES';
+
+        $this->runMysqlAsRoot($connection, $rootPassword, $statements);
     }
 
     /**

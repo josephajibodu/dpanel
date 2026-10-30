@@ -7,6 +7,7 @@ use App\Enums\ConnectionStatus;
 use App\Enums\NodeVersion;
 use App\Enums\Provider;
 use App\Enums\ProvisioningStep;
+use App\Enums\ServerConnectionStatus;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Enums\ServiceStatus;
@@ -398,7 +399,7 @@ class Server extends Model
     public function secretValues(): array
     {
         return $this->credentials()
-            ->whereIn('type', ['sudo_password', 'database_password'])
+            ->whereIn('type', ['sudo_password', 'database_password', 'redis_password'])
             ->pluck('value')
             ->filter()
             ->values()
@@ -456,6 +457,89 @@ class Server extends Model
             'caddy' => app(CaddyWebServer::class),
             default => app(NginxWebServer::class),
         };
+    }
+
+    /**
+     * Connections letting other servers reach this server's database and Redis.
+     *
+     * @return HasMany<ServerConnection, $this>
+     */
+    public function hostedConnections(): HasMany
+    {
+        return $this->hasMany(ServerConnection::class, 'server_id');
+    }
+
+    /**
+     * Connections letting this server reach other servers' databases and Redis.
+     *
+     * @return HasMany<ServerConnection, $this>
+     */
+    public function clientConnections(): HasMany
+    {
+        return $this->hasMany(ServerConnection::class, 'client_server_id');
+    }
+
+    /**
+     * The services other servers can connect to, by label, with their ports.
+     * Redis is only shared from servers without sites: sharing it means
+     * setting a password, which would break sites using it with none.
+     *
+     * @return array<string, int>
+     */
+    public function sharedServicePorts(): array
+    {
+        $ports = [];
+
+        if ($this->hasDatabase()) {
+            $label = match ($this->database_type) {
+                'postgresql' => 'PostgreSQL',
+                'mariadb' => 'MariaDB',
+                default => 'MySQL',
+            };
+            $ports[$label] = $this->database_type === 'postgresql' ? 5432 : 3306;
+        }
+
+        if ($this->sharesRedis()) {
+            $ports['Redis'] = 6379;
+        }
+
+        return $ports;
+    }
+
+    public function sharesRedis(): bool
+    {
+        return ! $this->supportsSites() && $this->hasRedis();
+    }
+
+    public function acceptsConnections(): bool
+    {
+        return $this->sharedServicePorts() !== [];
+    }
+
+    /**
+     * IDs of the servers whose databases this server's sites can use: itself,
+     * plus every server it has an active connection to.
+     *
+     * @return array<int, int>
+     */
+    public function reachableDatabaseServerIds(): array
+    {
+        return [
+            $this->id,
+            ...$this->clientConnections()
+                ->where('status', ServerConnectionStatus::Active)
+                ->pluck('server_id')
+                ->all(),
+        ];
+    }
+
+    /**
+     * Whether other servers may be connecting to this server's database, so
+     * database users need an account other servers can sign in with.
+     */
+    public function hasRemoteDatabaseClients(): bool
+    {
+        return $this->hostedConnections()->exists();
     }
 
     /**
