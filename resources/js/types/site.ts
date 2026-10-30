@@ -25,6 +25,7 @@ export interface Site {
     status_label: string;
     status_color: 'gray' | 'blue' | 'teal' | 'green' | 'yellow' | 'red' | 'orange';
     error_message: string | null;
+    creation_failed: boolean;
     uptime_status: 'up' | 'down' | null;
     uptime_status_label: string | null;
     uptime_status_color: 'green' | 'red' | null;

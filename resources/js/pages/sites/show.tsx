@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { retry } from '@/actions/App/Http/Controllers/SiteController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
@@ -78,6 +79,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
     const [isDeploying, setIsDeploying] = useState(false);
     const [isolateDialogOpen, setIsolateDialogOpen] = useState(false);
     const [isIsolating, setIsIsolating] = useState(false);
+    const retryForm = useForm({});
 
     if (!siteData?.id) {
         return (
@@ -135,6 +137,16 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                     setIsolateDialogOpen(false);
                 },
             },
+        );
+    };
+
+    const handleRetryCreation = () => {
+        retryForm.post(
+            retry.url({
+                team: currentTeam?.slug ?? '',
+                server: Number(serverId),
+                site: siteData.id,
+            }),
         );
     };
 
@@ -300,6 +312,20 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                                             'An unexpected error occurred while creating this site.'}
                                     </p>
                                 </div>
+                                {siteData.creation_failed &&
+                                    can('manage_sites') && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleRetryCreation}
+                                            disabled={retryForm.processing}
+                                        >
+                                            {retryForm.processing && (
+                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                            )}
+                                            Retry
+                                        </Button>
+                                    )}
                             </div>
                         )}
 

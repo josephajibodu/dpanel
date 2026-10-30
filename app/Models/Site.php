@@ -9,6 +9,7 @@ use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
 use App\Enums\UptimeStatus;
+use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class Site extends Model
 {
     use EscapesShell;
 
-    /** @use HasFactory<\Database\Factories\SiteFactory> */
+    /** @use HasFactory<SiteFactory> */
     use HasFactory, HasUlids;
 
     protected $fillable = [
@@ -82,6 +83,16 @@ class Site extends Model
             'uptime_status' => UptimeStatus::class,
             'uptime_checked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether creating this site on its server failed. A failed deploy also
+     * marks the site failed, but only a failed creation stores an error
+     * message.
+     */
+    public function creationFailed(): bool
+    {
+        return $this->status === SiteStatus::Failed && $this->error_message !== null;
     }
 
     /**

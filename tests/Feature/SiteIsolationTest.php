@@ -9,6 +9,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\ProjectType;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
+use App\Enums\SiteProvisioningStep;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentOutput;
 use App\Events\DeploymentStatusChanged;
@@ -17,6 +18,7 @@ use App\Jobs\CreateSiteJob;
 use App\Jobs\DeleteSiteJob;
 use App\Jobs\DeploySiteJob;
 use App\Jobs\MoveSitePhpPoolJob;
+use App\Jobs\RetryCreateSiteJob;
 use App\Jobs\RollbackSiteJob;
 use App\Jobs\SyncEnvironmentJob;
 use App\Jobs\SyncSiteNginxJob;
@@ -686,4 +688,109 @@ it('deletes an unisolated site directory as before', function () {
     expect($commands)->toContain('rm -rf /home/artisan/example.com')
         ->and(implode("\n", $commands))->not->toContain('userdel')
         ->and(implode("\n", $commands))->not->toContain('pool.d');
+});
+
+// --------------------------------------------------------------------------
+// Retrying a failed creation
+// --------------------------------------------------------------------------
+
+function failedIsolatedSite(Server $server): Site
+{
+    $site = isolatedLaravelSite($server);
+    $site->update([
+        'status' => SiteStatus::Failed,
+        'provisioning_step' => SiteProvisioningStep::Initializing,
+        'error_message' => 'useradd: group example_com exists',
+    ]);
+
+    return $site;
+}
+
+it('clears the error and queues the retry, keeping the site and its settings', function () {
+    Queue::fake();
+    $site = failedIsolatedSite($this->server);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/retry")
+        ->assertRedirect("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+    $site->refresh();
+
+    expect($site->status)->toBe(SiteStatus::Pending)
+        ->and($site->error_message)->toBeNull()
+        ->and($site->provisioning_step)->toBeNull()
+        ->and($site->system_user)->toBe('example_com')
+        ->and($site->repository)->toBe('acme/app')
+        ->and($site->php_version)->toBe('8.3')
+        ->and($site->domains()->pluck('hostname')->all())->toBe(['example.com']);
+
+    Queue::assertPushed(RetryCreateSiteJob::class, fn (RetryCreateSiteJob $job) => $job->site->is($site));
+});
+
+it('does not retry a site whose creation did not fail', function (SiteStatus $status, ?string $errorMessage) {
+    Queue::fake();
+    $site = isolatedLaravelSite($this->server);
+    $site->update(['status' => $status, 'error_message' => $errorMessage]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/retry")
+        ->assertRedirect();
+
+    expect($site->refresh()->status)->toBe($status);
+    Queue::assertNotPushed(RetryCreateSiteJob::class);
+})->with([
+    'provisioned' => [SiteStatus::Provisioned, null],
+    'still installing' => [SiteStatus::Installing, null],
+    'failed deploy' => [SiteStatus::Failed, null],
+]);
+
+it('does not let a team member without site permissions retry', function () {
+    Queue::fake();
+    $site = failedIsolatedSite($this->server);
+    $viewer = User::factory()->viewerOf($this->team)->create();
+
+    $this->actingAs($viewer)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/retry")
+        ->assertForbidden();
+
+    expect($site->refresh()->status)->toBe(SiteStatus::Failed);
+    Queue::assertNotPushed(RetryCreateSiteJob::class);
+});
+
+it('removes what the failed attempt left on the server, then creates the site again', function () {
+    Queue::fake();
+    $site = failedIsolatedSite($this->server);
+
+    $commands = [];
+    bindIsolationSsh(isolationConnection($commands, existingUserComment: SiteIsolationService::accountComment($site->ulid)));
+
+    app()->call([new RetryCreateSiteJob($site), 'handle']);
+
+    expect($commands)->toContain("sudo rm -f '/etc/php/8.3/fpm/pool.d/example_com.conf'")
+        ->and($commands)->toContain("sudo userdel --remove 'example_com' 2>&1")
+        ->and($commands)->toContain("if getent group 'example_com' > /dev/null; then sudo groupdel 'example_com'; fi")
+        ->and(implode("\n", $commands))->toContain('sites-enabled');
+
+    $this->assertDatabaseHas('sites', ['id' => $site->id]);
+    Queue::assertPushed(CreateSiteJob::class, fn (CreateSiteJob $job) => $job->site->is($site));
+});
+
+it('does not create the site again when the cleanup fails, and shows why', function () {
+    Queue::fake();
+    Event::fake([ServerSitesUpdated::class]);
+    $site = failedIsolatedSite($this->server);
+    $site->update(['status' => SiteStatus::Pending, 'error_message' => null]);
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andThrow(new RuntimeException('Connection timed out'));
+    app()->instance(SshService::class, $sshService);
+
+    $job = new RetryCreateSiteJob($site);
+
+    expect(fn () => app()->call([$job, 'handle']))->toThrow(RuntimeException::class, 'Connection timed out');
+    $job->failed(new RuntimeException('Connection timed out'));
+
+    expect($site->refresh()->status)->toBe(SiteStatus::Failed)
+        ->and($site->error_message)->toBe('Connection timed out');
+    Queue::assertNotPushed(CreateSiteJob::class);
 });

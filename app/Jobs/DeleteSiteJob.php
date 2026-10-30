@@ -3,14 +3,13 @@
 namespace App\Jobs;
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
-use App\Enums\SiteDomainType;
+use App\Actions\Sites\RemoveSiteFromServerAction;
+use App\Data\SiteServerFootprint;
 use App\Events\ServerSitesUpdated;
 use App\Models\CronJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\Worker;
-use App\Services\Nginx\NginxConfigService;
-use App\Services\SiteProvisioning\SiteIsolationService;
 use App\Services\Ssh\SshService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,21 +28,9 @@ class DeleteSiteJob implements ShouldQueue
 
     protected string $domain;
 
-    protected string $siteRoot;
-
-    protected ?string $systemUser;
-
-    protected string $siteUlid;
-
-    protected string $phpVersion;
-
     protected int $serverId;
 
     protected int $siteId;
-
-    protected ?string $repository;
-
-    protected ?int $sourceControlAccountId;
 
     /**
      * @var array<int, string>
@@ -51,61 +38,23 @@ class DeleteSiteJob implements ShouldQueue
     protected array $cloudflareDnsRecordIds;
 
     /**
-     * @var array<int, string>
+     * Worked out now, since the site row may be gone by the time the job runs.
      */
-    protected array $nginxConfigBasenames;
-
-    /**
-     * @var array<int, int>
-     */
-    protected array $siteDomainIds;
-
-    /**
-     * @var array<int, string>
-     */
-    protected array $nginxSnippetBasePaths;
-
-    /**
-     * @var array<int, string>
-     */
-    protected array $customHostnames;
+    protected SiteServerFootprint $footprint;
 
     public function __construct(Site $site)
     {
         $site->loadMissing('domains');
         $this->domain = $site->domain;
-        $this->siteRoot = $site->rootPath();
-        $this->systemUser = $site->system_user;
-        $this->siteUlid = $site->ulid;
-        $this->phpVersion = $site->php_version ?? '8.4';
         $this->serverId = $site->server_id;
         $this->siteId = $site->id;
-        $this->repository = $site->repository;
-        $this->sourceControlAccountId = $site->source_control_account_id;
         $this->cloudflareDnsRecordIds = $site->domains
             ->pluck('cloudflare_dns_record_id')
             ->filter()
             ->unique()
             ->values()
             ->all();
-        $this->nginxConfigBasenames = $site->domains
-            ->map(fn ($d) => NginxConfigService::configFileName($site, $d))
-            ->values()
-            ->all();
-        $this->siteDomainIds = $site->domains
-            ->pluck('id')
-            ->values()
-            ->all();
-        // Worked out now, since the site row may be gone by the time the job runs.
-        $this->nginxSnippetBasePaths = $site->domains
-            ->map(fn ($d) => $site->server->webServer()->snippetsBasePath($site->ulid, $d->hostname))
-            ->values()
-            ->all();
-        $this->customHostnames = $site->domains
-            ->filter(fn ($d) => $d->type === SiteDomainType::Custom)
-            ->pluck('hostname')
-            ->values()
-            ->all();
+        $this->footprint = SiteServerFootprint::fromSite($site);
     }
 
     public function handle(
@@ -158,46 +107,7 @@ class DeleteSiteJob implements ShouldQueue
 
         try {
             $connection = $sshService->connect($server);
-            $webServer = $server->webServer();
-
-            foreach ($this->nginxConfigBasenames as $basename) {
-                foreach (array_reverse($webServer->siteConfigPaths($basename)) as $configPath) {
-                    $connection->exec("sudo rm -f {$configPath}");
-                }
-            }
-
-            foreach ($this->nginxSnippetBasePaths as $snippetsBasePath) {
-                $connection->exec('sudo rm -rf '.escapeshellarg($snippetsBasePath));
-            }
-
-            foreach ($this->siteDomainIds as $domainId) {
-                $certDir = $webServer->certificateDirectory($this->siteId, $domainId);
-                $connection->exec("sudo rm -rf {$certDir}");
-                $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
-            }
-
-            foreach ($this->customHostnames as $hostname) {
-                $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($hostname).' 2>&1 || true');
-            }
-
-            $webServer->reload($connection);
-
-            // An isolated site's files live in its user's home, so deleting the
-            // user (after its PHP-FPM pool, which would otherwise stop PHP-FPM
-            // from starting) removes them too.
-            if ($this->systemUser !== null) {
-                $isolation = app(SiteIsolationService::class);
-                $isolation->removePool($connection, $this->systemUser, $this->phpVersion);
-                $isolation->deleteUser($connection, $this->systemUser, $this->siteUlid);
-                Log::info("Removed site user {$this->systemUser} and its home directory");
-            }
-
-            $serverUser = config('server.user');
-            if ($this->systemUser === null && $this->siteRoot && str_starts_with($this->siteRoot, "/home/{$serverUser}/")) {
-                $connection->exec("rm -rf {$this->siteRoot}");
-                Log::info("Removed site directory: {$this->siteRoot}");
-            }
-
+            app(RemoveSiteFromServerAction::class)->execute($connection, $server, $this->footprint);
             $connection->disconnect();
 
             Log::info("Site {$this->domain} deleted successfully");

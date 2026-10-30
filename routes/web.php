@@ -172,6 +172,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.update');
                 Route::delete('servers/{server}/sites/{site}', [SiteController::class, 'destroy'])
                     ->name('servers.sites.destroy');
+                Route::post('servers/{server}/sites/{site}/retry', [SiteController::class, 'retry'])
+                    ->name('servers.sites.retry');
                 Route::post('servers/{server}/sites/{site}/isolate', [SiteIsolationController::class, 'store'])
                     ->name('servers.sites.isolate');
 

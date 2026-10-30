@@ -2,13 +2,15 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\ProjectType;
 use App\Enums\SiteProvisioningStep;
+use App\Models\Site;
 use App\Models\SiteIncident;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Site
+ * @mixin Site
  */
 class SiteResource extends JsonResource
 {
@@ -46,6 +48,7 @@ class SiteResource extends JsonResource
             'status_label' => $this->status->label(),
             'status_color' => $this->status->color(),
             'error_message' => $this->error_message,
+            'creation_failed' => $this->creationFailed(),
             'uptime_status' => $this->uptime_status?->value,
             'uptime_status_label' => $this->uptime_status?->label(),
             'uptime_status_color' => $this->uptime_status?->color(),
@@ -59,7 +62,7 @@ class SiteResource extends JsonResource
                 'label' => $this->provisioning_step->label(),
                 'description' => $this->provisioning_step->description(),
             ] : null,
-            'provisioning_steps' => SiteProvisioningStep::stepsForProjectType($this->project_type ?? \App\Enums\ProjectType::Laravel),
+            'provisioning_steps' => SiteProvisioningStep::stepsForProjectType($this->project_type ?? ProjectType::Laravel),
             'auto_deploy' => $this->auto_deploy,
             'server' => new ServerResource($this->whenLoaded('server')),
             'latest_deployment' => new DeploymentResource($this->whenLoaded('latestDeployment')),

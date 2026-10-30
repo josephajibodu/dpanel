@@ -7,6 +7,7 @@ use App\Actions\Sites\DeleteSiteAction;
 use App\Data\SiteData;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
+use App\Enums\SiteStatus;
 use App\Http\Requests\CheckSiteNameRequest;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
@@ -15,6 +16,7 @@ use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Http\Resources\SourceControlAccountResource;
 use App\Jobs\MoveSitePhpPoolJob;
+use App\Jobs\RetryCreateSiteJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -214,5 +216,29 @@ class SiteController extends Controller
         return redirect()
             ->route('servers.sites.index', [$team, $server])
             ->with('success', 'Site deletion initiated.');
+    }
+
+    /**
+     * Retry creating a site whose creation failed, keeping its settings.
+     */
+    public function retry(Team $team, Server $server, Site $site): RedirectResponse
+    {
+        $this->authorize('update', $site);
+
+        if (! $site->creationFailed()) {
+            return redirect()->route('servers.sites.show', [$team, $server, $site]);
+        }
+
+        $site->update([
+            'status' => SiteStatus::Pending,
+            'provisioning_step' => null,
+            'error_message' => null,
+        ]);
+
+        RetryCreateSiteJob::dispatch($site);
+
+        return redirect()
+            ->route('servers.sites.show', [$team, $server, $site])
+            ->with('success', 'Retrying site creation...');
     }
 }
