@@ -11,6 +11,7 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\Worker;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -161,6 +162,30 @@ it('swaps current to the target release and marks the rollback finished', functi
 
     expect($rollback->status)->toBe(DeploymentStatus::Finished)
         ->and($this->site->status)->toBe(SiteStatus::Deployed);
+});
+
+it('restarts the site workers marked to restart after a rollback', function () {
+    $worker = Worker::factory()->forSite($this->site)->create(['status' => 'active', 'restart_on_deploy' => true]);
+
+    $target = Deployment::factory()->finished()->forSite($this->site)->create();
+    $rollback = Deployment::factory()->pending()->forSite($this->site)->create([
+        'triggered_by' => 'rollback',
+        'rollback_of_deployment_id' => $target->id,
+        'release_path' => $target->ulid,
+    ]);
+
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('exec')->andReturn('');
+    $connection->shouldReceive('sudo')->once()->with("supervisorctl restart flitops-worker-{$worker->id}:*", 60)->andReturn('');
+    $connection->shouldReceive('disconnect')->once();
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+
+    (new RollbackSiteJob($rollback))->handle($sshService, app(DeploymentStrategy::class));
+
+    expect($rollback->fresh()->status)->toBe(DeploymentStatus::Finished);
 });
 
 /**

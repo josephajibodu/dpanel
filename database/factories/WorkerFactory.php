@@ -4,10 +4,11 @@ namespace Database\Factories;
 
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Worker;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Worker>
+ * @extends Factory<Worker>
  */
 class WorkerFactory extends Factory
 {
@@ -27,6 +28,7 @@ class WorkerFactory extends Factory
             'auto_restart' => true,
             'numprocs' => 1,
             'redirect_stderr' => true,
+            'restart_on_deploy' => false,
             'status' => 'active',
             'name' => 'worker-'.fake()->randomNumber(3),
         ];

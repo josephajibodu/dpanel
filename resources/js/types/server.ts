@@ -123,6 +123,7 @@ export interface Worker {
     auto_start: boolean;
     auto_restart: boolean;
     redirect_stderr: boolean | null;
+    restart_on_deploy: boolean;
     site?: WorkerSite | null;
     created_at: string;
     updated_at: string;

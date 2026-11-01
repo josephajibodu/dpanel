@@ -87,6 +87,8 @@ class RollbackSiteJob implements ShouldQueue
                 if ($site->isIsolated()) {
                     $connection->exec($preamble.$strategy->reloadPhpFpm($site), 60);
                 }
+
+                $this->restartWorkersAfterDeploy($connection, $site);
                 $this->logOutput('Rollback complete.', 'info');
             } finally {
                 $connection->disconnect();

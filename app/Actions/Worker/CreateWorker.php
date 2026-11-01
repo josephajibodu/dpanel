@@ -36,6 +36,7 @@ class CreateWorker
             'auto_start' => $input['auto_start'] ?? true,
             'auto_restart' => $input['auto_restart'] ?? true,
             'redirect_stderr' => $input['redirect_stderr'] ?? true,
+            'restart_on_deploy' => ($input['restart_on_deploy'] ?? false) && ($input['site_id'] ?? null) !== null,
             'status' => 'pending',
         ]);
 

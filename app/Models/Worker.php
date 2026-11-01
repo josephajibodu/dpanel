@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Rules\AllowedProcessUser;
 use App\Rules\NoControlCharacters;
+use Database\Factories\WorkerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use RuntimeException;
 
 class Worker extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkerFactory> */
+    /** @use HasFactory<WorkerFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -24,6 +25,7 @@ class Worker extends Model
         'auto_restart',
         'numprocs',
         'redirect_stderr',
+        'restart_on_deploy',
         'status',
         'name',
     ];
@@ -37,6 +39,7 @@ class Worker extends Model
             'auto_start' => 'boolean',
             'auto_restart' => 'boolean',
             'redirect_stderr' => 'boolean',
+            'restart_on_deploy' => 'boolean',
         ];
     }
 

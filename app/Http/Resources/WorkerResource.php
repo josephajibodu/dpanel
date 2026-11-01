@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Worker;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Worker
+ * @mixin Worker
  */
 class WorkerResource extends JsonResource
 {
@@ -29,6 +30,7 @@ class WorkerResource extends JsonResource
             'auto_start' => $this->auto_start,
             'auto_restart' => $this->auto_restart,
             'redirect_stderr' => $this->redirect_stderr,
+            'restart_on_deploy' => $this->restart_on_deploy,
             'site' => $this->whenLoaded('site', fn () => [
                 'id' => $this->site->id,
                 'domain' => $this->site->domain,

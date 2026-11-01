@@ -6,8 +6,11 @@ use App\Enums\DeploymentStatus;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentOutput as DeploymentOutputEvent;
 use App\Events\DeploymentStatusChanged;
+use App\Events\ServerProcessesUpdated;
 use App\Models\Site;
+use App\Models\Worker;
 use App\Services\PhpRuntimeResolver;
+use App\Services\Ssh\SshConnection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -81,6 +84,40 @@ trait ManagesDeploymentLifecycle
             deployment: $this->deployment,
             event: $event,
         ));
+    }
+
+    /**
+     * Restart the site's workers marked "restart on deploy", so they pick up
+     * the release that just went live. Stopped workers stay stopped. A failed
+     * restart is logged but doesn't fail the deployment, because the new code
+     * is already live by this point.
+     */
+    private function restartWorkersAfterDeploy(SshConnection $connection, Site $site): void
+    {
+        $workers = Worker::query()
+            ->where('site_id', $site->id)
+            ->where('restart_on_deploy', true)
+            ->whereIn('status', ['active', 'crashed'])
+            ->get();
+
+        if ($workers->isEmpty()) {
+            return;
+        }
+
+        $prefix = config('supervisor.file_prefix');
+
+        foreach ($workers as $worker) {
+            $this->logOutput("Restarting worker \"{$worker->name}\"...", 'info');
+
+            try {
+                $connection->sudo("supervisorctl restart {$prefix}-{$worker->id}:*", 60);
+                $worker->update(['status' => 'active']);
+            } catch (\Throwable $e) {
+                $this->logOutput("[WARNING] Could not restart worker \"{$worker->name}\": {$e->getMessage()}", 'error');
+            }
+        }
+
+        event(new ServerProcessesUpdated($site->server_id));
     }
 
     /**

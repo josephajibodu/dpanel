@@ -6,6 +6,7 @@ use App\Jobs\CreateWorkerJob;
 use App\Jobs\DestroyWorkerJob;
 use App\Jobs\UpdateWorkerJob;
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
@@ -54,6 +55,30 @@ it('stores a new worker and dispatches job', function () {
     Queue::assertPushed(CreateWorkerJob::class);
 });
 
+it('saves restart after deploy only for workers that belong to a site', function () {
+    Queue::fake([CreateWorkerJob::class]);
+
+    $site = Site::factory()->forServer($this->server)->create();
+
+    $payload = [
+        'command' => 'php artisan queue:work',
+        'user' => config('server.user'),
+        'numprocs' => 1,
+        'restart_on_deploy' => true,
+    ];
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [...$payload, 'name' => 'site-worker', 'site_id' => $site->id])
+        ->assertRedirect();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [...$payload, 'name' => 'server-worker', 'site_id' => null])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('workers', ['name' => 'site-worker', 'restart_on_deploy' => true]);
+    $this->assertDatabaseHas('workers', ['name' => 'server-worker', 'restart_on_deploy' => false]);
+});
+
 it('validates worker name and command are required', function () {
     $response = $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/{$this->server->id}/workers", [
@@ -69,7 +94,7 @@ it('validates worker name and command are required', function () {
 
 it('validates worker site_id belongs to server', function () {
     $otherServer = Server::factory()->forTeam($this->team)->create();
-    $site = \App\Models\Site::factory()->create([
+    $site = Site::factory()->create([
         'server_id' => $otherServer->id,
     ]);
 

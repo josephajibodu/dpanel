@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Server;
 use App\Rules\AllowedProcessUser;
 use App\Rules\NoControlCharacters;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,7 +17,7 @@ class StoreWorkerRequest extends FormRequest
     }
 
     /**
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -36,6 +37,7 @@ class StoreWorkerRequest extends FormRequest
             'auto_start' => ['boolean'],
             'auto_restart' => ['boolean'],
             'redirect_stderr' => ['nullable', 'boolean'],
+            'restart_on_deploy' => ['boolean'],
         ];
     }
 

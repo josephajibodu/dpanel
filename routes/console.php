@@ -6,6 +6,7 @@ use App\Jobs\CollectAllServerMetricsJob;
 use App\Jobs\CollectDueBackupsJob;
 use App\Jobs\IssueWildcardCertificateJob;
 use App\Jobs\SendSchedulerHeartbeatJob;
+use App\Jobs\SyncAllWorkerStatusesJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -26,6 +27,10 @@ Schedule::job(new CheckCertificateExpiryJob)->dailyAt('09:00');
 
 // Poll CPU/memory/disk stats for every active server.
 Schedule::job(new CollectAllServerMetricsJob)->everyTenMinutes();
+
+// Match each worker's status to what Supervisor is really running, catching
+// workers stopped, started or crashed outside of FlitOps.
+Schedule::job(new SyncAllWorkerStatusesJob)->everyFiveMinutes();
 
 // Run any database backups that are due.
 Schedule::job(new CollectDueBackupsJob)->hourly();

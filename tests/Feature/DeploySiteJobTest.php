@@ -6,12 +6,14 @@ use App\Enums\ServerStatus;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentOutput;
 use App\Events\DeploymentStatusChanged;
+use App\Events\ServerProcessesUpdated;
 use App\Exceptions\DeploymentFailedException;
 use App\Jobs\DeploySiteJob;
 use App\Models\Deployment;
 use App\Models\DeployScript;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Worker;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -421,4 +423,51 @@ it('removes the private script directory even when the run throws', function () 
         ->toThrow(RuntimeException::class, 'SSH timed out');
 
     expect($execCommands)->toContain("rm -rf '/tmp/tmp.fleetops'");
+});
+
+it('restarts the site workers marked to restart after a deploy, but not stopped ones', function () {
+    $running = Worker::factory()->forSite($this->site)->create(['status' => 'active', 'restart_on_deploy' => true]);
+    $crashed = Worker::factory()->forSite($this->site)->create(['status' => 'crashed', 'restart_on_deploy' => true]);
+    $stopped = Worker::factory()->forSite($this->site)->create(['status' => 'stopped', 'restart_on_deploy' => true]);
+    $notMarked = Worker::factory()->forSite($this->site)->create(['status' => 'active', 'restart_on_deploy' => false]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $sudoCommands = [];
+    $connection = deployConnectionMock();
+    $connection->shouldReceive('sudo')->andReturnUsing(function (string $command) use (&$sudoCommands) {
+        $sudoCommands[] = $command;
+
+        return '';
+    });
+
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class, ServerProcessesUpdated::class]);
+
+    (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
+
+    expect($sudoCommands)->toBe([
+        "supervisorctl restart flitops-worker-{$running->id}:*",
+        "supervisorctl restart flitops-worker-{$crashed->id}:*",
+    ]);
+    expect($crashed->fresh()->status)->toBe('active');
+    expect($stopped->fresh()->status)->toBe('stopped');
+
+    Event::assertDispatched(ServerProcessesUpdated::class, fn (ServerProcessesUpdated $event) => $event->serverId === $this->server->id);
+});
+
+it('finishes the deployment and logs a warning when a worker cannot be restarted', function () {
+    $worker = Worker::factory()->forSite($this->site)->create(['name' => 'queue', 'status' => 'active', 'restart_on_deploy' => true]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $connection = deployConnectionMock();
+    $connection->shouldReceive('sudo')->andThrow(new RuntimeException('no such process'));
+
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class, ServerProcessesUpdated::class]);
+
+    (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
+
+    expect($deployment->fresh()->status)->toBe(DeploymentStatus::Finished);
+    expect($deployment->logs()->where('type', 'error')->pluck('message')->all())
+        ->toBe(['[WARNING] Could not restart worker "queue": no such process']);
 });

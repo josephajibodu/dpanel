@@ -22,6 +22,7 @@ const STATUS_COLORS: Record<string, StatusColor> = {
     stopped: 'gray',
     disabled: 'gray',
     failed: 'red',
+    crashed: 'red',
     error: 'red',
     deleting: 'orange',
     removing: 'orange',

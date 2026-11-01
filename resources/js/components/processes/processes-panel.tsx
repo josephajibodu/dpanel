@@ -166,6 +166,7 @@ export function ProcessesPanel({
         numprocs: 1,
         auto_start: true,
         auto_restart: true,
+        restart_on_deploy: false,
     });
     const [cronForm, setCronForm] = useState({
         command: '',
@@ -216,6 +217,7 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
+                restart_on_deploy: workerForm.restart_on_deploy,
             },
             {
                 preserveScroll: true,
@@ -229,6 +231,7 @@ export function ProcessesPanel({
                         numprocs: 1,
                         auto_start: true,
                         auto_restart: true,
+                        restart_on_deploy: false,
                     });
                 },
                 onFinish: () => setIsSubmitting(false),
@@ -250,6 +253,7 @@ export function ProcessesPanel({
                 numprocs: workerForm.numprocs,
                 auto_start: workerForm.auto_start,
                 auto_restart: workerForm.auto_restart,
+                restart_on_deploy: workerForm.restart_on_deploy,
             },
             {
                 preserveScroll: true,
@@ -272,6 +276,7 @@ export function ProcessesPanel({
             numprocs: w.numprocs,
             auto_start: w.auto_start,
             auto_restart: w.auto_restart,
+            restart_on_deploy: w.restart_on_deploy,
         });
         setEditWorkerOpen(true);
     };
@@ -959,6 +964,26 @@ export function ProcessesPanel({
                                 Auto restart
                             </Label>
                         </div>
+                        {resolveSiteId(workerForm.site_id) !== null && (
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="worker-restart-on-deploy"
+                                    checked={workerForm.restart_on_deploy}
+                                    onCheckedChange={(checked) =>
+                                        setWorkerForm((p) => ({
+                                            ...p,
+                                            restart_on_deploy: checked === true,
+                                        }))
+                                    }
+                                />
+                                <Label
+                                    htmlFor="worker-restart-on-deploy"
+                                    className="font-normal"
+                                >
+                                    Restart after each deployment
+                                </Label>
+                            </div>
+                        )}
                         <SheetFooter>
                             <Button
                                 type="button"
@@ -1145,6 +1170,26 @@ export function ProcessesPanel({
                                 Auto restart
                             </Label>
                         </div>
+                        {resolveSiteId(workerForm.site_id) !== null && (
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="edit-worker-restart-on-deploy"
+                                    checked={workerForm.restart_on_deploy}
+                                    onCheckedChange={(checked) =>
+                                        setWorkerForm((p) => ({
+                                            ...p,
+                                            restart_on_deploy: checked === true,
+                                        }))
+                                    }
+                                />
+                                <Label
+                                    htmlFor="edit-worker-restart-on-deploy"
+                                    className="font-normal"
+                                >
+                                    Restart after each deployment
+                                </Label>
+                            </div>
+                        )}
                         <SheetFooter>
                             <Button
                                 type="button"

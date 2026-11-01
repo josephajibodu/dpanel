@@ -89,6 +89,8 @@ class DeploySiteJob implements ShouldQueue
                         ]);
                     }
 
+                    $this->restartWorkersAfterDeploy($connection, $site);
+
                     app(ReleaseManager::class)->pruneOldReleases($connection, $site, config('server.releases_to_keep'));
                 }
             }
