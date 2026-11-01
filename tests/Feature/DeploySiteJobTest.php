@@ -281,6 +281,33 @@ it('prunes old releases after a successful deploy', function () {
     expect($lsCalled)->toBeTrue();
 });
 
+it('finishes the deployment and logs a warning when old releases cannot be removed', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+    config(['server.releases_to_keep' => 1]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('directoryExists')->andReturnTrue();
+    $connection->shouldReceive('upload')->andReturnNull();
+    $connection->shouldReceive('execWithOutput')->andReturn(0);
+    $connection->shouldReceive('disconnect')->andReturnNull();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $command) {
+        return match (true) {
+            $command === 'mktemp -d' => '/tmp/tmp.fleetops',
+            str_contains($command, 'ls -1') => "01aaaaaaaaaaaaaaaaaaaaaaaa\n01bbbbbbbbbbbbbbbbbbbbbbbb",
+            str_starts_with($command, 'rm -rf') && str_contains($command, '/releases/') => throw new RuntimeException('Permission denied'),
+            default => '',
+        };
+    });
+
+    (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
+
+    expect($deployment->fresh()->status)->toBe(DeploymentStatus::Finished);
+    expect($deployment->logs()->where('type', 'error')->pluck('message')->all())
+        ->toBe(['[WARNING] Could not remove old releases: Permission denied']);
+});
+
 it('marks the deployment and site failed when the deploy script exits non-zero', function () {
     Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
 

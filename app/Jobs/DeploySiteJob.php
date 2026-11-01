@@ -91,7 +91,12 @@ class DeploySiteJob implements ShouldQueue
 
                     $this->restartWorkersAfterDeploy($connection, $site);
 
-                    app(ReleaseManager::class)->pruneOldReleases($connection, $site, config('server.releases_to_keep'));
+                    // The new release is already live, so a failed cleanup must not fail the deployment.
+                    try {
+                        app(ReleaseManager::class)->pruneOldReleases($connection, $site, config('server.releases_to_keep'));
+                    } catch (\Throwable $e) {
+                        $this->logOutput("[WARNING] Could not remove old releases: {$e->getMessage()}", 'error');
+                    }
                 }
             }
 

@@ -58,6 +58,9 @@ class IssueSslForDomainJob implements ShouldQueue
 
             if ($this->site->isIsolated()) {
                 $connection->exec('sudo chmod 755 '.escapeshellarg($webRoot).' '.escapeshellarg($webRoot.'/.well-known').' '.escapeshellarg($webRoot.'/.well-known/acme-challenge'));
+            } else {
+                // The web root lives inside the current release, so a root-owned folder here would stop that release from being pruned later.
+                $connection->exec('sudo chown -R '.escapeshellarg($this->site->systemUser().':').' '.escapeshellarg($webRoot.'/.well-known'));
             }
             $connection->exec("sudo mkdir -p {$certDir}");
 

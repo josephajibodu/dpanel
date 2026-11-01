@@ -145,6 +145,25 @@ it('installs a certbot deploy hook that copies renewals into the nginx path and 
     'renew clicked before the certificate is due' => 'Certificate not yet due for renewal; no action taken.',
 ]);
 
+it('hands the challenge folder back to the site user so the release can still be pruned', function () {
+    Queue::fake();
+
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'verified_at' => now(),
+    ]);
+
+    $execCalls = [];
+    $this->app->instance(SshService::class, fakeSshForIssueSslJob($server, generateSelfSignedTestCertificate(), $execCalls));
+
+    (new IssueSslForDomainJob($domain, $site))->handle(app(SshService::class));
+
+    expect($execCalls)->toContain("sudo chown -R '{$site->systemUser()}:' '{$site->webRoot()}/.well-known'");
+});
+
 it('notifies the server owner when the certificate request fails for good', function () {
     Notification::fake();
 
