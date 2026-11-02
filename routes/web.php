@@ -355,8 +355,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::delete('servers/{server}/host-key', [ServerHostKeyController::class, 'destroy'])
                     ->name('servers.host-key.destroy');
 
-                // Terminal (asks for the password again if it was last confirmed over 15 minutes ago)
-                Route::middleware(['password.confirm:,900'])->group(function () {
+                // Terminal (refuses users who can't open it before asking for the password again if it was last confirmed over 15 minutes ago)
+                Route::middleware(['can:openTerminal,server', 'password.confirm:,900'])->group(function () {
                     Route::get('servers/{server}/terminal', [ServerTerminalController::class, 'show'])
                         ->name('servers.terminal.show');
                     Route::post('servers/{server}/terminal-sessions', [ServerTerminalController::class, 'store'])

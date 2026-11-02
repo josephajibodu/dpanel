@@ -44,6 +44,18 @@ it('refuses developers on the terminal endpoints', function () {
     expect(TerminalSession::count())->toBe(0);
 });
 
+it('refuses developers before asking for their password', function () {
+    $developer = User::factory()->memberOf($this->team, TeamRoleKey::Developer)->create();
+
+    $this->actingAs($developer)
+        ->get(route('servers.terminal.show', [$this->team, $this->server]))
+        ->assertForbidden();
+
+    $this->actingAs($developer)
+        ->postJson(route('servers.terminal-sessions.store', [$this->team, $this->server]))
+        ->assertForbidden();
+});
+
 it('does not let another team open a terminal on the server', function () {
     $otherTeam = Team::factory()->create();
 
