@@ -112,7 +112,13 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
      * files, writable storage, uploads, ...) into the freshly cloned
      * release. Optional targets that were never created (e.g. the sqlite
      * file when the site uses a real server database instead) are skipped
-     * rather than left as dangling symlinks.
+     * rather than left as dangling symlinks, but a missing env file stops
+     * the deploy: without it the framework silently falls back to its
+     * defaults and fails later with a misleading error.
+     *
+     * Whatever the repository committed at a shared path is removed first,
+     * since `ln -sfn` onto an existing directory would create the link
+     * inside it instead of replacing it.
      */
     private function symlinkSharedPaths(Site $site): string
     {
@@ -133,7 +139,11 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
                 $lines[] = "mkdir -p \"\$RELEASE_PATH/{$releaseDir}\"";
             }
 
-            $lines[] = "if [ -e '{$sharedAbsolute}' ]; then ln -sfn '{$sharedAbsolute}' \"\$RELEASE_PATH/{$releaseRelative}\"; fi";
+            if (str_starts_with($releaseRelative, '.env')) {
+                $lines[] = "if [ ! -e '{$sharedAbsolute}' ]; then echo \"[ERROR] {$sharedAbsolute} is missing. Save the site's environment before deploying.\"; exit 1; fi";
+            }
+
+            $lines[] = "if [ -e '{$sharedAbsolute}' ]; then rm -rf \"\$RELEASE_PATH/{$releaseRelative}\" && ln -sfn '{$sharedAbsolute}' \"\$RELEASE_PATH/{$releaseRelative}\"; fi";
         }
 
         return implode("\n", $lines);

@@ -214,6 +214,25 @@ function uploadedDeployScriptFor(Site $site): string
     return $uploaded;
 }
 
+it('stops the deploy before linking when the shared env file is missing', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $uploaded = uploadedDeployScriptFor($this->site);
+    $sharedEnv = $this->site->sharedPath().'/.env';
+
+    expect($uploaded)->toContain("if [ ! -e '{$sharedEnv}' ]; then echo \"[ERROR] {$sharedEnv} is missing.")
+        ->and($uploaded)->toContain('exit 1; fi');
+});
+
+it('replaces a directory the repository committed at a shared path instead of linking inside it', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $uploaded = uploadedDeployScriptFor($this->site);
+    $sharedStorage = $this->site->sharedPath().'/storage';
+
+    expect($uploaded)->toContain("rm -rf \"\$RELEASE_PATH/storage\" && ln -sfn '{$sharedStorage}' \"\$RELEASE_PATH/storage\"");
+});
+
 it('restarts queue workers, Horizon and Reverb only after current is swapped onto the new release', function () {
     Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
 
