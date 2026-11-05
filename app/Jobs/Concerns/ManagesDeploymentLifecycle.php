@@ -104,13 +104,11 @@ trait ManagesDeploymentLifecycle
             return;
         }
 
-        $prefix = config('supervisor.file_prefix');
-
         foreach ($workers as $worker) {
             $this->logOutput("Restarting worker \"{$worker->name}\"...", 'info');
 
             try {
-                $connection->sudo("supervisorctl restart {$prefix}-{$worker->id}:*", 60);
+                $this->restartWorker($connection, $worker);
                 $worker->update(['status' => 'active']);
             } catch (\Throwable $e) {
                 $this->logOutput("[WARNING] Could not restart worker \"{$worker->name}\": {$e->getMessage()}", 'error');
@@ -118,6 +116,30 @@ trait ManagesDeploymentLifecycle
         }
 
         event(new ServerProcessesUpdated($site->server_id));
+    }
+
+    /**
+     * Restart a worker without cutting off the job it's running. SIGTERM asks
+     * it to finish that job and exit, then Supervisor's auto restart starts it
+     * again from the new release. `start` only affects a worker that wasn't
+     * running, such as a crashed one.
+     *
+     * A worker with auto restart off wouldn't come back by itself, so it gets
+     * a full restart, where Supervisor force-kills it if it takes too long to
+     * stop.
+     */
+    private function restartWorker(SshConnection $connection, Worker $worker): void
+    {
+        $processes = config('supervisor.file_prefix')."-{$worker->id}:*";
+
+        if (! $worker->auto_restart) {
+            $connection->sudo("supervisorctl restart {$processes}", 60);
+
+            return;
+        }
+
+        $connection->sudo("supervisorctl signal TERM {$processes}", 60);
+        $connection->sudo("supervisorctl start {$processes}", 60);
     }
 
     /**

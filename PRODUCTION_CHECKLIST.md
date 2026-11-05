@@ -174,7 +174,7 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 ## Open, lower priority (found 2026-10-13)
 - [ ] **Security:** `.env.example` (committed) contains what looks like a real `GITHUB_CLIENT_SECRET` — rotate it in GitHub and blank it in the file. Don't copy the laptop `.env` to the server as-is either (it has commented-out provider tokens and a server password).
 - [ ] Production Horizon also runs the shared-defaults `supervisor-1` (auto-scaling to 10 processes) — remove it or size the server for ~26 PHP processes at peak.
-- [ ] Workers have no `stopwaitsecs` (Horizon recommends ≥ the longest job, 3600s).
+- [ ] Workers have no `stopwaitsecs` (Horizon recommends ≥ the longest job, 3600s). Since 2026-11-05 deploy and rollback restarts don't depend on it (they send SIGTERM and let the job finish), unless the worker has auto restart off. The Restart and Stop buttons, editing and deleting a worker, and "restart all" still force-kill after Supervisor's default 10 seconds. Raising it alone isn't safe: `supervisorctl stop`, `restart` and `update` then wait for the job, those calls have 30–60 second SSH limits, and if the connection drops mid-`restart` or `update` the worker stays stopped.
 - [ ] `horizon:terminate` waits for the longest running job (up to an hour for a backup) with `fast_termination` off — consider enabling it.
 - [ ] Editing a site's environment only runs `queue:restart`; Horizon's master and Reverb keep old values — reuse `postActivationScript()`.
 - [ ] `failed_jobs` and the single `laravel.log` grow forever — schedule `queue:prune-failed` and use `LOG_STACK=daily`.

@@ -492,13 +492,35 @@ it('restarts the site workers marked to restart after a deploy, but not stopped 
     (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
 
     expect($sudoCommands)->toBe([
-        "supervisorctl restart flitops-worker-{$running->id}:*",
-        "supervisorctl restart flitops-worker-{$crashed->id}:*",
+        "supervisorctl signal TERM flitops-worker-{$running->id}:*",
+        "supervisorctl start flitops-worker-{$running->id}:*",
+        "supervisorctl signal TERM flitops-worker-{$crashed->id}:*",
+        "supervisorctl start flitops-worker-{$crashed->id}:*",
     ]);
     expect($crashed->fresh()->status)->toBe('active');
     expect($stopped->fresh()->status)->toBe('stopped');
 
     Event::assertDispatched(ServerProcessesUpdated::class, fn (ServerProcessesUpdated $event) => $event->serverId === $this->server->id);
+});
+
+it('fully restarts a worker with auto restart off after a deploy, because it would not come back after exiting', function () {
+    $worker = Worker::factory()->forSite($this->site)->create(['status' => 'active', 'restart_on_deploy' => true, 'auto_restart' => false]);
+
+    $deployment = Deployment::factory()->pending()->forSite($this->site)->create();
+
+    $sudoCommands = [];
+    $connection = deployConnectionMock();
+    $connection->shouldReceive('sudo')->andReturnUsing(function (string $command) use (&$sudoCommands) {
+        $sudoCommands[] = $command;
+
+        return '';
+    });
+
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class, ServerProcessesUpdated::class]);
+
+    (new DeploySiteJob($deployment))->handle(deploySshServiceMock($connection));
+
+    expect($sudoCommands)->toBe(["supervisorctl restart flitops-worker-{$worker->id}:*"]);
 });
 
 it('finishes the deployment and logs a warning when a worker cannot be restarted', function () {

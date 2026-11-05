@@ -177,7 +177,8 @@ it('restarts the site workers marked to restart after a rollback', function () {
     $connection = Mockery::mock(SshConnection::class);
     $connection->shouldReceive('directoryExists')->andReturnTrue();
     $connection->shouldReceive('exec')->andReturn('');
-    $connection->shouldReceive('sudo')->once()->with("supervisorctl restart flitops-worker-{$worker->id}:*", 60)->andReturn('');
+    $connection->shouldReceive('sudo')->once()->with("supervisorctl signal TERM flitops-worker-{$worker->id}:*", 60)->andReturn('');
+    $connection->shouldReceive('sudo')->once()->with("supervisorctl start flitops-worker-{$worker->id}:*", 60)->andReturn('');
     $connection->shouldReceive('disconnect')->once();
 
     $sshService = Mockery::mock(SshService::class);
