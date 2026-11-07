@@ -92,7 +92,7 @@ export default function Welcome({
                 <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-sm">
                     <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                            <div className="flex size-7 items-center justify-center rounded-md bg-brand text-white">
                                 <AppLogoIcon className="size-4 fill-current" />
                             </div>
                             <span className="font-semibold tracking-tight">
@@ -284,7 +284,7 @@ export default function Welcome({
                 <footer className="border-t border-border px-6 py-10">
                     <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
                         <div className="flex items-center gap-2">
-                            <AppLogoIcon className="size-4 fill-foreground" />
+                            <AppLogoIcon className="size-4 fill-brand" />
                             <span>FlitOps</span>
                         </div>
                         <p>

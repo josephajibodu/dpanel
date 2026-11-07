@@ -84,9 +84,9 @@ export function AppSidebar() {
                     <Link
                         href={teamPath('/dashboard')}
                         prefetch
-                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground transition-opacity hover:opacity-80"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white transition-opacity hover:opacity-80"
                     >
-                        <AppLogoIcon className="size-4 fill-current text-white dark:text-black" />
+                        <AppLogoIcon className="size-4 fill-current" />
                     </Link>
                     <TeamSwitcher />
                 </div>
