@@ -28,6 +28,7 @@ class HetznerProvider implements ProviderContract
     public function setCredentials(array $credentials): void
     {
         $this->apiToken = $credentials['api_token'] ?? '';
+        $this->pricing = null;
         $this->http = Http::baseUrl('https://api.hetzner.cloud/v1')
             ->timeout(30)
             ->retry(3, 100)
@@ -45,6 +46,23 @@ class HetznerProvider implements ProviderContract
         }
     }
 
+    /**
+     * Labels for Hetzner's server type categories, as its console names them.
+     */
+    private const array CATEGORY_LABELS = [
+        'cost_optimized' => 'Cost-optimized',
+        'regular_purpose' => 'Regular performance',
+        'general_purpose' => 'General purpose (dedicated vCPU)',
+    ];
+
+    /**
+     * Hetzner's price list, fetched once per instance: it holds the account's
+     * currency and the per-location price of a public IPv4 address.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $pricing = null;
+
     public function getRegions(): Collection
     {
         $response = $this->http->get('locations');
@@ -57,14 +75,26 @@ class HetznerProvider implements ProviderContract
             );
         }
 
+        $ipv4Prices = collect($this->pricing()['primary_ips'] ?? [])
+            ->firstWhere('type', 'ipv4')['prices'] ?? [];
+
         return collect($response->json('locations'))
-            ->map(fn ($l) => new ProviderRegion(
-                slug: $l['name'],
-                name: $l['description'].' ('.$l['city'].')',
-            ))
+            ->map(function ($l) use ($ipv4Prices) {
+                $ipv4Price = collect($ipv4Prices)->firstWhere('location', $l['name'])['price_monthly']['net'] ?? null;
+
+                return new ProviderRegion(
+                    slug: $l['name'],
+                    name: $l['description'].' ('.$l['city'].')',
+                    ipv4PriceMonthly: $ipv4Price === null ? null : (float) $ipv4Price,
+                );
+            })
             ->values();
     }
 
+    /**
+     * Each size carries the locations it can be created in today and its
+     * price in each, before tax, which is how Hetzner's console shows it.
+     */
     public function getSizes(): Collection
     {
         $response = $this->http->get('server_types');
@@ -77,22 +107,62 @@ class HetznerProvider implements ProviderContract
             );
         }
 
+        $currency = $this->pricing()['currency'] ?? 'EUR';
+
         return collect($response->json('server_types'))
-            ->filter(fn ($s) => ! $s['deprecated'])
-            ->map(function ($s) {
-                $priceMonthly = collect($s['prices'] ?? [])
-                    ->firstWhere('location', 'fsn1')['price_monthly']['gross'] ?? 0;
+            ->filter(fn ($s) => ($s['deprecation'] ?? null) === null && ! ($s['deprecated'] ?? false))
+            ->map(function ($s) use ($currency) {
+                $regions = collect($s['locations'] ?? [])
+                    ->filter(fn ($l) => ($l['available'] ?? true) && ($l['deprecation'] ?? null) === null)
+                    ->pluck('name');
+
+                $regionPrices = collect($s['prices'] ?? [])
+                    ->filter(fn ($p) => $regions->contains($p['location']))
+                    ->mapWithKeys(fn ($p) => [$p['location'] => (float) $p['price_monthly']['net']]);
+
+                $category = self::CATEGORY_LABELS[$s['category'] ?? ''] ?? null;
+                if ($category !== null && ($s['architecture'] ?? null) === 'arm') {
+                    $category .= ' (Arm)';
+                }
 
                 return new ProviderSize(
                     slug: $s['name'],
                     vcpus: $s['cores'],
-                    memory: $s['memory'] * 1024, // Convert GB to MB
+                    memory: (int) round($s['memory'] * 1024), // Convert GB to MB
                     disk: $s['disk'],
-                    priceMonthly: (float) $priceMonthly,
+                    priceMonthly: (float) ($regionPrices->min() ?? 0),
+                    label: $s['description'] ?? null,
+                    category: $category,
+                    regions: $regions->values()->all(),
+                    regionPrices: $regionPrices->all(),
+                    currency: $currency,
                 );
             })
+            ->filter(fn (ProviderSize $size) => $size->regions !== [])
             ->sortBy('priceMonthly')
             ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function pricing(): array
+    {
+        if ($this->pricing !== null) {
+            return $this->pricing;
+        }
+
+        $response = $this->http->get('pricing');
+
+        if (! $response->successful()) {
+            throw new ProviderApiException(
+                'Failed to fetch pricing: '.$response->body(),
+                'hetzner',
+                $response->status()
+            );
+        }
+
+        return $this->pricing = $response->json('pricing') ?? [];
     }
 
     public function createServer(

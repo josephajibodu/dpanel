@@ -84,7 +84,9 @@ class VultrProvider implements ProviderContract
                 vcpus: $p['vcpu_count'],
                 memory: $p['ram'],
                 disk: $p['disk'],
-                priceMonthly: $p['monthly_cost'],
+                priceMonthly: (float) $p['monthly_cost'],
+                label: $p['id'],
+                regions: $p['locations'] ?? null,
             ))
             ->sortBy('priceMonthly')
             ->values();

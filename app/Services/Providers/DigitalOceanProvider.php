@@ -85,9 +85,12 @@ class DigitalOceanProvider implements ProviderContract
                 vcpus: $s['vcpus'],
                 memory: $s['memory'],
                 disk: $s['disk'],
-                priceMonthly: $s['price_monthly'],
+                priceMonthly: (float) $s['price_monthly'],
+                label: $s['slug'],
+                category: $s['description'] ?? null,
+                regions: $s['regions'] ?? null,
             ))
-            ->sortBy('price_monthly')
+            ->sortBy('priceMonthly')
             ->values();
     }
 
