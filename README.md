@@ -1,8 +1,8 @@
 # ServerForge - Laravel Forge MVP Clone
 
-A server management and application deployment platform inspired by [Laravel Forge](https://forge.laravel.com/), built with Laravel 12, Inertia v2, React, and Shadcn UI.
+A server management and application deployment platform inspired by [Laravel Forge](https://forge.laravel.com/), built with Laravel 13, Inertia v3, React, and Shadcn UI.
 
-See **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** for a checklist of features thay must be completed before full production use. 
+See **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** for what must be completed before full production use. To run FlitOps itself on a server, follow its item 0, "Cutover steps".
 
 ## 📋 Documentation
 
@@ -48,8 +48,8 @@ See **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** for a checklist of fe
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Laravel 12 |
-| **Frontend** | React 18 + Inertia v2 |
+| **Backend** | Laravel 13 |
+| **Frontend** | React 19 + Inertia v3 |
 | **UI Components** | Shadcn UI (Radix + Tailwind) |
 | **Database** | PostgreSQL |
 | **Cache/Queue** | Redis |
@@ -205,7 +205,7 @@ See **[docs/FREE_SSL.md](docs/FREE_SSL.md)** for architecture, provisioning flow
 
 Sites on the free domain (`*.<FREE_DOMAIN>`) are served over HTTPS using a single Let's Encrypt **wildcard certificate** issued via the Cloudflare DNS-01 challenge and distributed to each server in the Forge-style ID-based layout `/etc/nginx/ssl/domains/{site_id}/{domain_id}/server.{crt,key}`.
 
-**One-time setup on the FlitOps host (the machine running the queue worker):**
+**One-time setup on the FlitOps host (the machine running the queue worker), as the user that runs Horizon** (in production, the FlitOps site's user — see cutover step 8 in [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)):
 
 ```bash
 # Install acme.sh
@@ -219,7 +219,7 @@ CLOUDFLARE_API_TOKEN=...
 CLOUDFLARE_ZONE_ID=...
 FREE_DOMAIN=flitops.xyz
 # Optional override; defaults to "acme.sh" on PATH
-ACME_BINARY=/root/.acme.sh/acme.sh
+ACME_BINARY=/home/<user>/.acme.sh/acme.sh
 ```
 
 **Issuance happens automatically** on a daily schedule (`Schedule::job(...)` in `routes/console.php`) and is idempotent — it only fires acme.sh when the existing cert is missing or within 30 days of expiry. The issuance job then dispatches a per-server distribution job for every server hosting at least one free-domain site.

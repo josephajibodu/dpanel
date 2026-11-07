@@ -3,7 +3,7 @@
 
 This checklist covers what a deployment platform needs beyond basic provisioning, so that Flitops does not become the weak link under a billing system that depends on it running correctly every hour of every day.
 
-Last reviewed: 2026-10-13 (heartbeat, uptime alerts, SSL expiry alerts, self-hosting readiness). Originally ordered on 2026-09-14, after a real incident (an expired wildcard certificate broke a live site's HTTPS because Flitops's own scheduler had never actually run). Ordered by priority based on what that incident revealed, not the original draft order.
+Last reviewed: 2026-11-07 (cutover steps re-checked for isolated sites, lower-priority items). Before that: 2026-10-13 (heartbeat, uptime alerts, SSL expiry alerts, self-hosting readiness). Originally ordered on 2026-09-14, after a real incident (an expired wildcard certificate broke a live site's HTTPS because Flitops's own scheduler had never actually run). Ordered by priority based on what that incident revealed, not the original draft order.
 
 ---
 
@@ -17,34 +17,38 @@ Flitops itself currently runs as a foreground dev process on the operator's lapt
 - [x] Heartbeat so a dead scheduler or queue is noticed (2026-10-13) — `SendSchedulerHeartbeatJob` runs via the scheduler on the queue every 5 minutes and pings `SCHEDULER_HEARTBEAT_URL` (Healthchecks.io, Better Stack, …). The external monitor alerts when pings stop. **Set `SCHEDULER_HEARTBEAT_URL` on the real install** (period 5 min, grace 5–10 min) or nothing is watched.
 
 ### Cutover steps (laptop → server)
-Verified against the code on 2026-10-13. `flitops.example.com`, user `artisan` and PHP 8.4 are placeholders.
+Verified against the code on 2026-11-07. `flitops.example.com` and PHP 8.4 are placeholders.
 
-1. **Provision** (from the laptop Flitops): a dedicated Ubuntu 24.04 server (≥ 2 vCPU / 4 GB) with PostgreSQL and Redis; database + user `flitops`. Lower the DNS TTL in advance.
-2. **Site**: Laravel site for `flitops.example.com` on the Flitops repo, branch `main`. Point DNS, issue SSL. Don't deploy yet.
+**Who runs what.** New sites are isolated by default: FlitOps creates a Linux user for the site (shown on the site's page, e.g. `flitops_example_com`), and the site's files (`/home/<site user>/flitops.example.com`), PHP, deploys, workers and cron all run as that user. `<site user>` below means that user. You SSH in as `artisan` (the server user, with `sudo`), so run the site's own commands as `sudo -u <site user> -H bash -c '…'`, or open a shell with `sudo -iu <site user>`. If you untick isolation instead, `<site user>` is `artisan` and commands run directly.
+
+1. **Provision** (from the laptop Flitops): a dedicated Ubuntu 24.04 server (≥ 2 vCPU / 4 GB) with **Nginx** (step 5 is an Nginx snippet), PostgreSQL and Redis; database + user `flitops`. Lower the DNS TTL in advance.
+2. **Site**: Laravel site for `flitops.example.com` on the Flitops repo, branch `main`, isolation left on. Point DNS, issue SSL. Don't deploy yet.
 3. **Environment** (before the first deploy — the build bakes in `VITE_*`):
    - `APP_KEY` = **the laptop's key exactly** (otherwise copied SSH keys/tokens can't be decrypted); `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://flitops.example.com`, `SESSION_SECURE_COOKIE=true`, `LOG_STACK=daily`
    - `DB_CONNECTION=pgsql` + server DB credentials; `QUEUE_CONNECTION=redis`, `REDIS_HOST=127.0.0.1`, `BROADCAST_CONNECTION=reverb`, `CACHE_STORE=database`, `SESSION_DRIVER=database`
    - Reverb: `REVERB_SERVER_HOST=127.0.0.1`, `REVERB_SERVER_PORT=8080`, `REVERB_HOST=127.0.0.1`, `REVERB_PORT=8080`, `REVERB_SCHEME=http`, `VITE_REVERB_HOST=flitops.example.com`, `VITE_REVERB_PORT=443`, `VITE_REVERB_SCHEME=https`, `REVERB_ALLOWED_ORIGINS=flitops.example.com`, fresh app id/key/secret, `VITE_REALTIME_DEBUG=false`
    - `HORIZON_ADMINS=<you>` (else `/horizon` is 403), real SMTP, `ALERT_EMAIL=<you>`, `SCHEDULER_HEARTBEAT_URL=<monitor ping url>`
-   - `FREE_DOMAIN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `ACME_BINARY=/home/artisan/.acme.sh/acme.sh`
-   - GitHub/GitLab/Bitbucket client id/secret; leave `*_REDIRECT_URI` unset or point at the new host. Leave `SERVER_USER` unset (must match the laptop).
+   - `FREE_DOMAIN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `ACME_BINARY=/home/<site user>/.acme.sh/acme.sh`
+   - GitHub/GitLab/Bitbucket client id/secret; leave `*_REDIRECT_URI` unset or point at the new host. Leave `SERVER_USER` unset (must match the laptop) and `SERVER_ALLOW_PRIVATE_ADDRESSES` unset.
+   - Leave `TERMINAL_GATEWAY_URL` and `TERMINAL_GATEWAY_SECRET` empty to launch with the browser terminal off (see step 8b to turn it on).
 4. **Deploy** from the laptop; `https://flitops.example.com/up` returns 200.
 5. **Reverb proxy**: add a Locations nginx file for the domain:
    `location ^~ /app/ { proxy_http_version 1.1; proxy_set_header Host $http_host; proxy_set_header Scheme $scheme; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "Upgrade"; proxy_pass http://127.0.0.1:8080; }`
-6. **Workers** (user `artisan`, 1 process, autostart/autorestart, with a log file): `php8.4 artisan horizon` and `php8.4 artisan reverb:start --host=127.0.0.1 --port=8080`.
-7. **Cron** (user `artisan`, `* * * * *`): `php8.4 artisan schedule:run >> /dev/null 2>&1`.
-8. **acme.sh** as `artisan`: `curl https://get.acme.sh | sh -s email=<you>`.
+6. **Workers**, tied to the site (so they run in its `current` folder, as `<site user>`), 1 process, auto start and auto restart on, **restart on deploy off** (every deploy already runs `horizon:terminate` and `reverb:restart`): `php8.4 artisan horizon` and `php8.4 artisan reverb:start --host=127.0.0.1 --port=8080`. FlitOps keeps their logs in `/var/log/supervisor`.
+7. **Cron**, tied to the site (runs in `current`, as `<site user>`), every minute: `php8.4 artisan schedule:run`.
+8. **acme.sh** as `<site user>`: `sudo -u <site user> -H bash -c 'curl https://get.acme.sh | sh -s email=<you>'`.
+   - 8b. *(Optional)* **Browser terminal**: follow README → "Browser terminal" → "Production" (a Go binary run as a third worker, plus an nginx `/terminal` proxy), then set `TERMINAL_GATEWAY_URL` and `TERMINAL_GATEWAY_SECRET` and redeploy. Can be done any time after the cutover.
 9. **Cutover window**:
    1. Laptop: wait until `/horizon` shows nothing pending/running (the laptop Redis isn't migrated), then `php artisan down`, stop the dev stack, and confirm `pgrep -fl "artisan (horizon|queue|schedule|reverb)"` prints nothing.
-   2. Server: `php8.4 artisan down` in `current` (pauses its Horizon/scheduler).
-   3. Laptop: `pg_dump --no-owner --no-acl -Fp -f flitops-cutover.sql <db>` (laptop `pg_dump` major ≤ server `psql`) and `tar czf certs.tgz -C storage/app certificates`; `scp` both to the server.
-   4. Server: `dropdb`/`createdb -O flitops flitops`, load the dump with `psql`; untar certs into `shared/storage/app` and `chmod -R go-rwx` them; `php8.4 artisan migrate --force`.
+   2. Server, as `<site user>` in `current`: `php8.4 artisan down` (pauses its Horizon/scheduler).
+   3. Laptop: `pg_dump --no-owner --no-acl -Fp -f flitops-cutover.sql <db>` (laptop `pg_dump` major ≤ server `psql`) and `tar czf certs.tgz -C storage/app certificates`; `scp` both to the server (they land in `artisan`'s home).
+   4. Server: as `artisan`, `dropdb`/`createdb -O flitops flitops` and load the dump with `psql`; then `sudo tar xzf certs.tgz -C /home/<site user>/flitops.example.com/shared/storage/app && sudo chown -R <site user>: /home/<site user>/flitops.example.com/shared/storage/app/certificates && sudo chmod -R go-rwx /home/<site user>/flitops.example.com/shared/storage/app/certificates`; then, as `<site user>` in `current`, `php8.4 artisan migrate --force`.
    5. Repoint the copied wildcard `Certificate` rows at server paths (`WildcardCertificateIssuer::pathsFor()`), or delete the row and let `IssueWildcardCertificateJob` reissue — which also proves acme.sh works.
-   6. Server: `php8.4 artisan up && php8.4 artisan horizon:terminate`.
-   7. Laptop: rename the old database (e.g. `flitops_pre_cutover`) and point the laptop `.env` at a fresh dev DB, so a stray `composer run dev` can't run a second scheduler/queue against real servers. Delete both dump files once confident (they hold encrypted secrets).
+   6. Server, as `<site user>` in `current`: `php8.4 artisan up && php8.4 artisan horizon:terminate`.
+   7. Laptop: rename the old database (e.g. `flitops_pre_cutover`) and point the laptop `.env` at a fresh dev DB, so a stray `composer run dev` can't run a second scheduler/queue against real servers. Delete both dump files, on the laptop and in `artisan`'s home on the server, once confident (they hold encrypted secrets).
    8. Update each OAuth app's callback to `https://flitops.example.com/auth/{provider}/callback` and any repo webhooks pointing at the old URL.
 10. **Verify**: `/up` 200 and login works; `horizon:status` running and both workers RUNNING in `supervisorctl status`; exactly one `schedule:run` cron; heartbeat monitor goes green; websocket to `wss://…/app/` returns 101; server "Test connection" updates live; an on-demand backup completes; a throwaway free-domain site gets the wildcard cert; a self-deploy ends with the three restart lines; a team invite email arrives.
-11. **If a self-deploy breaks Flitops**: open the last good deployment and "Rollback to this" — it swaps `current`, reloads FPM and restarts queue workers, Horizon and Reverb from that release. If Flitops is too broken to run the rollback (web UI or Horizon down), do the same by hand: `cd ~/flitops.example.com && ln -sfn releases/<previous> current && sudo service php8.4-fpm reload && cd current && php8.4 artisan horizon:terminate && php8.4 artisan reverb:restart`.
+11. **If a self-deploy breaks Flitops**: open the last good deployment and "Rollback to this" — it swaps `current` and restarts queue workers, Horizon and Reverb from that release. If Flitops is too broken to run the rollback (web UI or Horizon down), do the same by hand as `artisan`: `sudo -u <site user> -H bash -c 'cd ~/flitops.example.com && ln -sfn releases/<previous> current && cd current && php8.4 artisan horizon:terminate && php8.4 artisan reverb:restart'` (with isolation off, run it directly and add `sudo service php8.4-fpm reload` after the swap).
 
 ---
 
@@ -114,15 +118,16 @@ Verified against the code on 2026-10-13. `flitops.example.com`, user `artisan` a
 - [x] Alert before expiry if renewal fails (2026-10-13) — `CheckCertificateExpiryJob` runs daily at 09:00, reads the expiry of the certificate each server *actually serves* (TLS handshake to the server IP with the hostname as SNI) and emails at 14/7/3/1/0 days left, once per threshold. Custom domains alert the team owner; the wildcard alerts `ALERT_EMAIL` (**set it**, otherwise wildcard alerts are only logged). Issuance/renewal failures also email now.
 - [x] SSL expiry visible in the UI + manual "Renew SSL" action
 - [x] Custom-domain renewals reach nginx (2026-10-13): every issuance and "Renew SSL" installs a certbot deploy hook (`/etc/letsencrypt/renewal-hooks/deploy/flitops-domain-<id>.sh`) that copies the renewed cert into `/etc/nginx/ssl/domains/...` and reloads nginx; domain/site deletion removes it and runs `certbot delete` for the certificate. **Custom domains issued before this need "Renew SSL" clicked once** to get the hook.
-- [ ] No way to re-push the wildcard cert to a server whose copy failed (`DistributeWildcardCertificateJob` only runs on reissue; the daily expiry check does flag a stale copy)
+- [x] A server whose copy of the wildcard cert failed kept serving the old one (`DistributeWildcardCertificateJob` only ran on reissue) — fixed 2026-11-07: the daily expiry check now re-sends the current certificate to every server still serving an older copy.
+- [x] acme.sh would have failed under supervisord (fixed 2026-11-07): supervisord doesn't set `HOME` for the user it runs Horizon as, and acme.sh keeps its state in `$HOME/.acme.sh`. The issuer now passes the running account's own home folder.
 
 *Why it matters: a silently expired cert breaks every incoming webhook from Nomba/Stripe with no warning — this is a subtle, high-impact failure mode, and the one that already happened.*
 
 ---
 
-## 9. Log Access — not done
+## 9. Log Access — partially done
 - [ ] Application logs visible from dashboard
-- [ ] Server logs visible from dashboard
+- [ ] Server logs visible from dashboard — partly: each Nginx site has its own error log, shown on the site's Logs tab (2026-10-30)
 - [ ] Searchable/filterable logs (not just a raw tail)
 - [ ] No SSH required for routine debugging
 
@@ -172,16 +177,19 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 - Scheduled backup failures now email the team owner (previously sent to no one because the lookup used a non-existent `Team::user` relation).
 
 ## Open, lower priority (found 2026-10-13)
-- [ ] **Security:** `.env.example` (committed) contains what looks like a real `GITHUB_CLIENT_SECRET` — rotate it in GitHub and blank it in the file. Don't copy the laptop `.env` to the server as-is either (it has commented-out provider tokens and a server password).
+- [ ] **Security:** `.env.example` (committed) contained what looks like a real `GITHUB_CLIENT_SECRET`. Blanked in the file (4921b63, 2026-10-30), but the old value stays in git history, so it still has to be rotated in GitHub. Don't copy the laptop `.env` to the server as-is either (it has commented-out provider tokens and a server password).
 - [x] Production Horizon also ran the shared-defaults `supervisor-1` (auto-scaling to 10 processes) — fixed 2026-11-07: `defaults` is now empty, so production runs only its own four supervisors. `HorizonProductionConfigTest` guards this.
 - [ ] Workers have no `stopwaitsecs` (Horizon recommends ≥ the longest job, 3600s). Since 2026-11-05 deploy and rollback restarts don't depend on it (they send SIGTERM and let the job finish), unless the worker has auto restart off. The Restart and Stop buttons, editing and deleting a worker, and "restart all" still force-kill after Supervisor's default 10 seconds. Raising it alone isn't safe: `supervisorctl stop`, `restart` and `update` then wait for the job, those calls have 30–60 second SSH limits, and if the connection drops mid-`restart` or `update` the worker stays stopped.
-- [ ] `horizon:terminate` waits for the longest running job (up to an hour for a backup) with `fast_termination` off — consider enabling it.
+- [x] `horizon:terminate` waited for the longest running job (up to an hour for a backup), stalling every queue meanwhile — fixed 2026-11-07: `fast_termination` is on, so the new Horizon starts right away while the old workers finish their jobs.
 - [x] Editing a site's environment only ran `queue:restart`, so Horizon's master and Reverb kept the old values — fixed 2026-11-07: "Restart queue workers" now runs `postActivationScript()` from the live release (and nothing for non-Laravel sites, which have no artisan).
 - [x] `failed_jobs` and the single `laravel.log` grew forever — fixed 2026-11-07: `queue:prune-failed --hours=168` runs daily (the same 7 days Horizon keeps failed jobs). The log is covered by `LOG_STACK=daily` in cutover step 3.
 - [x] 10 tests were already failing before 2026-10-13 (fixed 2026-10-13): `NginxConfigServiceTest` (×4, PHP-FPM socket path), `SiteManagementTest` env page (deferred prop), `PhpRuntimeResolverTest` and `KeyGeneratorTest` (unit tests not booting the app). The full suite still needs `memory_limit` above 128M: run `php -d memory_limit=1G vendor/bin/pest` (`artisan test` doesn't pass `-d` on to Pest).
 
 ## Features to work on next (added 2026-10-30)
-- [ ] **AWS as a server provider** — code done 2026-10-30 (`AwsProvider`: root login via cloud-init, shared `flitops` security group per region, Elastic IP per server released on delete, region-prefixed IDs, curated instance sizes). **Still to do:** one real run on an AWS account — create a `t3.small`, let it provision, delete it, and confirm no instance, Elastic IP or key pair is left behind.
+- [ ] **AWS as a server provider** — code done 2026-10-30 (`AwsProvider`: root login via cloud-init, shared `flitops` security group per region, Elastic IP per server released on delete, region-prefixed IDs, curated instance sizes). **Still to do:** one real run on an AWS account — create a `t3.small`, let it provision, delete it, and confirm no instance, Elastic IP or key pair is left behind. As of 2026-11-07 no AWS server has been created.
+
+## Security hardening: what has run on real servers (checked 2026-11-07)
+From the FlitOps database: 4 isolated sites (Bouclay included) with 30 successful deploys, 29 completed backups since the secrets-off-the-command-line change, and 1 SSH key synced to a site user. Not yet seen for real: converting an existing site with "Isolate this site", and a restore.
 
 ## How to use this
-Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-10-13 the code side of item 0 is ready; what's left is carrying out the cutover steps. The custom-domain renewal gap (item 8) and broken rollback (item 3) were fixed the same day; existing custom domains still need "Renew SSL" clicked once to get the renewal hook. After that, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.
+Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-11-07 the code side of item 0 is ready; what's left is carrying out the cutover steps (re-checked that day for isolated sites). The custom-domain renewal gap (item 8) and broken rollback (item 3) were fixed the same day; existing custom domains still need "Renew SSL" clicked once to get the renewal hook. After that, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.
