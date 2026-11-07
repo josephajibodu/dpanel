@@ -80,18 +80,6 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
         }
     }, [flash?.deployment_started]);
 
-    if (!deployment || !site) {
-        return (
-            <AppLayout breadcrumbs={[]}>
-                <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                    <div className="text-center">
-                        <p className="text-muted-foreground">Loading deployment...</p>
-                    </div>
-                </div>
-            </AppLayout>
-        );
-    }
-
     const initialLogLines: LogLine[] = (initialLogs ?? []).map((log) => ({
         id: log.id,
         type: log.type as LogLine['type'],
