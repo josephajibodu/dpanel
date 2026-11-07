@@ -8,7 +8,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { Button } from '@/components/ui/button';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
-import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { type LogLine, useLogStream } from '@/hooks/use-log-stream';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -92,14 +92,14 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
         );
     }
 
-    const initialLogLines: DeploymentLogLine[] = (initialLogs ?? []).map((log) => ({
+    const initialLogLines: LogLine[] = (initialLogs ?? []).map((log) => ({
         id: log.id,
-        type: log.type as DeploymentLogLine['type'],
+        type: log.type as LogLine['type'],
         message: log.message,
         timestamp: log.created_at,
     }));
 
-    const logs = useDeploymentLogs(deployment.id, initialLogLines);
+    const logs = useLogStream(`deployments.${deployment.id}`, '.output', initialLogLines);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },

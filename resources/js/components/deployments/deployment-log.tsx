@@ -1,15 +1,15 @@
 import { cn } from '@/lib/utils';
-import { DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { type LogLine } from '@/hooks/use-log-stream';
 import { useEffect, useMemo, useRef } from 'react';
 import { AnsiUp } from 'ansi_up';
 
-const PLACEHOLDER_LOGS: DeploymentLogLine[] = [
+const PLACEHOLDER_LOGS: LogLine[] = [
     { type: 'info', message: '=> Warming up deployment workers' },
     { type: 'info', message: '=> Preparing to build site...' },
 ];
 
 interface DeploymentLogProps {
-    logs: DeploymentLogLine[];
+    logs: LogLine[];
     /** When true and logs are empty, show placeholder lines (Forge-style) */
     isDeploying?: boolean;
     className?: string;

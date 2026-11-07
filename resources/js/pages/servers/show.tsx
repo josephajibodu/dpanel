@@ -28,11 +28,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
-import { type DeploymentLogLine } from '@/hooks/use-deployment-logs';
+import { type LogLine, useLogStream } from '@/hooks/use-log-stream';
 import { usePermission } from '@/hooks/use-permission';
 import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useServerMetrics } from '@/hooks/use-server-metrics';
-import { useServerProvisioningLogs } from '@/hooks/use-server-provisioning-logs';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -98,14 +97,18 @@ export default function ServersShow({
         previousStatus.current = data.status;
     }, [data.status, data.name, data.error_message]);
 
-    const initialLogLines: DeploymentLogLine[] = (provisioningLogs ?? []).map(
+    const initialLogLines: LogLine[] = (provisioningLogs ?? []).map(
         (log) => ({
-            type: log.type as DeploymentLogLine['type'],
+            type: log.type as LogLine['type'],
             message: log.message,
             timestamp: log.created_at,
         }),
     );
-    const logs = useServerProvisioningLogs(data.id, initialLogLines);
+    const logs = useLogStream(
+        `server.${data.id}`,
+        '.provisioning.output',
+        initialLogLines,
+    );
 
     const retryForm = useForm({});
     const handleRetryProvisioning = () => {
