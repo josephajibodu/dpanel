@@ -1,5 +1,4 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useEcho } from '@laravel/echo-react';
 import { ArrowLeftIcon, CheckIcon, EyeIcon, EyeOffIcon, Loader2Icon, PlusIcon, XCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -136,10 +135,6 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
     const dbList = databases?.data ?? [];
     const readyDatabases = dbList.filter((db) => db.status === 'ready');
     const pendingDatabases = dbList.filter((db) => db.status === 'pending');
-
-    useEcho(`server.${serverData.id}`, '.server.databases.updated', () => {
-        router.reload({ only: ['databases'], preserveScroll: true });
-    });
 
     useEffect(() => {
         if (pendingDbNameRef.current) {

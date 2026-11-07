@@ -57,6 +57,22 @@ it('shows PHP index for the server without SSH on initial load', function () {
         );
 });
 
+it('refreshes the PHP versions and settings when this server broadcasts a PHP change', function () {
+    $listener = "private:server.{$this->server->id} server.php.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/php");
+
+    expect(liveProps($response))->toBe([
+        'phpServices' => [$listener],
+        'installedVersions' => [$listener],
+        'defaultVersion' => [$listener],
+        'settings' => [$listener],
+        'settingsSyncStatus' => [$listener],
+        'settingsSyncError' => [$listener],
+    ]);
+});
+
 it('derives installed versions from database services without SSH', function () {
     $this->server->createService(ServiceType::Php, '8.3', true);
     $this->server->createService(ServiceType::Php, '8.1', false);

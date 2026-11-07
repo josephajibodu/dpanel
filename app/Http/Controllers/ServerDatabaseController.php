@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Database\CreateServerDatabase;
 use App\Actions\Database\DestroyServerDatabase;
+use App\Events\ServerDatabasesUpdated;
 use App\Http\Requests\StoreServerDatabaseRequest;
 use App\Http\Resources\DatabaseUserResource;
 use App\Http\Resources\ServerDatabaseResource;
@@ -24,11 +25,13 @@ class ServerDatabaseController extends Controller
 
         $server->load(['databases', 'databaseUsers']);
 
+        $databasesUpdated = new ServerDatabasesUpdated($server);
+
         return Inertia::render('servers/databases/index', [
             'server' => new ServerResource($server),
             'serverIsReady' => $server->isReady(),
-            'databases' => ServerDatabaseResource::collection($server->databases),
-            'databaseUsers' => DatabaseUserResource::collection($server->databaseUsers),
+            'databases' => Inertia::live(ServerDatabaseResource::collection($server->databases), on: $databasesUpdated),
+            'databaseUsers' => Inertia::live(DatabaseUserResource::collection($server->databaseUsers), on: $databasesUpdated),
             'sshUser' => config('server.user'),
             'hasSshKey' => $server->sshKeys()->where('user_id', auth()->id())->exists(),
         ]);

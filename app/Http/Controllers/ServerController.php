@@ -11,6 +11,8 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Enums\ServiceType;
+use App\Events\ServerDeleted;
+use App\Events\ServerStatusChanged;
 use App\Http\Requests\StoreCustomServerRequest;
 use App\Http\Requests\StoreServerRequest;
 use App\Http\Resources\ProviderAccountResource;
@@ -25,6 +27,7 @@ use App\Models\Server;
 use App\Models\Team;
 use App\Services\Providers\ProviderManager;
 use App\Services\ServerNameGenerator;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +46,11 @@ class ServerController extends Controller
             ->paginate(20);
 
         return Inertia::render('servers/index', [
-            'servers' => ServerResource::collection($servers),
+            'servers' => Inertia::live(
+                ServerResource::collection($servers),
+                on: [ServerStatusChanged::class, ServerDeleted::class],
+                channel: new PrivateChannel("servers.{$team->id}"),
+            ),
         ]);
     }
 

@@ -6,6 +6,7 @@ use App\Models\ServerCredential;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -131,4 +132,23 @@ function connectionTo(Server $host): ServerConnection
         'client_server_id' => Server::factory()->web()->create()->id,
         'client_address' => '10.10.0.3',
     ]);
+}
+
+/**
+ * The live props a page declares, read from the raw page object because the
+ * Inertia test helpers leave them out. Each listener becomes one
+ * "type:channel event" string, such as "private:server.5 server.php.updated".
+ *
+ * @return array<string, array<int, string>>
+ */
+function liveProps(TestResponse $response): array
+{
+    return collect($response->viewData('page')['liveProps'] ?? [])
+        ->map(fn (array $prop): array => collect($prop['listeners'])
+            ->flatMap(fn (array $listener): array => array_map(
+                fn (string $event): string => "{$listener['channel']['type']}:{$listener['channel']['name']} {$event}",
+                $listener['events'],
+            ))
+            ->all())
+        ->all();
 }

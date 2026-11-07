@@ -53,6 +53,15 @@ describe('site creation', function () {
             );
     });
 
+    it('refreshes the databases to pick from when the server broadcasts a database change', function () {
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/create");
+
+        expect(liveProps($response))->toBe([
+            'databases' => ["private:server.{$this->server->id} server.databases.updated"],
+        ]);
+    });
+
     it('can create a site with minimal data', function () {
         Queue::fake();
 
@@ -302,6 +311,15 @@ describe('sites index (under server)', function () {
             );
     });
 
+    it('refreshes the sites list when the server broadcasts a site change', function () {
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites");
+
+        expect(liveProps($response))->toBe([
+            'sites' => ["private:server.{$this->server->id} server.sites.updated"],
+        ]);
+    });
+
     it('cannot view sites index for other users server', function () {
         $otherUser = User::factory()->create();
         $otherTeam = Team::factory()->forUser($otherUser)->create();
@@ -378,6 +396,19 @@ describe('site viewing', function () {
                 ->has('cronJobs.data', 1)
                 ->where('cronJobs.data.0.id', $siteCronJob->id)
             );
+    });
+
+    it('refreshes the site workers and cron jobs when its server broadcasts a process change', function () {
+        $site = Site::factory()->create(['server_id' => $this->server->id]);
+        $listener = "private:server.{$this->server->id} server.processes.updated";
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+        expect(liveProps($response))->toBe([
+            'workers' => [$listener],
+            'cronJobs' => [$listener],
+        ]);
     });
 
     it('shows the connection details of the database the site uses, taken from the server the database lives on', function () {

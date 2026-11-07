@@ -6,6 +6,7 @@ use App\Actions\ServerConnections\AllowServerConnection;
 use App\Actions\ServerConnections\RevokeServerConnection;
 use App\Enums\ServerConnectionStatus;
 use App\Enums\ServerStatus;
+use App\Events\ServerConnectionsUpdated;
 use App\Http\Requests\StoreServerConnectionRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
@@ -39,6 +40,8 @@ class ServerConnectionController extends Controller
             ->values()
             ->all();
 
+        $connectionsUpdated = new ServerConnectionsUpdated($server);
+
         return Inertia::render('servers/connections/index', [
             'server' => new ServerResource($server),
             'serverIsReady' => $server->isReady(),
@@ -46,7 +49,7 @@ class ServerConnectionController extends Controller
                 ->map(fn (int $port, string $label): array => ['label' => $label, 'port' => $port])
                 ->values()
                 ->all(),
-            'connections' => $connections->map(fn (ServerConnection $connection): array => [
+            'connections' => Inertia::live($connections->map(fn (ServerConnection $connection): array => [
                 'id' => $connection->id,
                 'client_name' => $connection->client->name,
                 'host_address' => $connection->host_address,
@@ -55,11 +58,14 @@ class ServerConnectionController extends Controller
                 'status' => $connection->status->value,
                 'status_label' => $connection->status->label(),
                 'error_message' => $connection->error_message,
-            ])->all(),
-            'availableServers' => $availableServers,
-            'redisPassword' => $server->sharesRedis() && auth()->user()->can('viewSecrets', $server)
-                ? $server->credential('redis_password')?->value
-                : null,
+            ])->all(), on: $connectionsUpdated),
+            'availableServers' => Inertia::live($availableServers, on: $connectionsUpdated),
+            'redisPassword' => Inertia::live(
+                $server->sharesRedis() && auth()->user()->can('viewSecrets', $server)
+                    ? $server->credential('redis_password')?->value
+                    : null,
+                on: $connectionsUpdated,
+            ),
         ]);
     }
 

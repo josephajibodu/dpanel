@@ -1,6 +1,5 @@
 import { ProcessesPanel } from '@/components/processes/processes-panel';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
-import { useServerProcessesUpdates } from '@/hooks/use-server-processes-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -29,8 +28,6 @@ export default function SiteProcessesIndex({
     const site = siteProp && 'data' in siteProp ? siteProp.data : siteProp;
     const teamPath = useTeamPath();
     const { currentTeam } = usePage<SharedData>().props;
-
-    useServerProcessesUpdates(server.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },

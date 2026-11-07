@@ -42,6 +42,18 @@ it('shows databases index for the server', function () {
         );
 });
 
+it('refreshes the databases and their users when this server broadcasts a database change', function () {
+    $listener = "private:server.{$this->server->id} server.databases.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/databases");
+
+    expect(liveProps($response))->toBe([
+        'databases' => [$listener],
+        'databaseUsers' => [$listener],
+    ]);
+});
+
 it('denies guest access to databases index', function () {
     $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/databases");
 

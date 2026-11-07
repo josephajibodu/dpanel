@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerSitesListUpdates } from '@/hooks/use-server-sites-list-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -51,7 +50,6 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
     const server = serverProp?.data ?? serverProp;
     const canManageSites =
         usePermission()('manage_sites') && server.supports_sites;
-    useServerSitesListUpdates(server.id);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);
     const [deletingIds, setDeletingIds] = useState<number[]>([]);

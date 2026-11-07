@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BackupStatusChanged;
 use App\Http\Resources\BackupResource;
 use App\Http\Resources\BackupScheduleResource;
 use App\Http\Resources\DatabaseConnectionResource;
@@ -33,14 +34,16 @@ class SiteDatabaseController extends Controller
             ->latest()
             ->paginate(20);
 
+        $backupStatusChanged = new BackupStatusChanged($database ? $database->server : $server);
+
         return Inertia::render('sites/database/show', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'usesSqlite' => $site->usesSqlite(),
             'sqlitePath' => $site->usesSqlite() ? $site->sqliteDatabasePath() : null,
             'databaseConnection' => $database ? DatabaseConnectionResource::make($database)->resolve() : null,
-            'schedule' => $schedule ? new BackupScheduleResource($schedule) : null,
-            'backups' => BackupResource::collection($backups),
+            'schedule' => Inertia::live($schedule ? new BackupScheduleResource($schedule) : null, on: $backupStatusChanged),
+            'backups' => Inertia::live(BackupResource::collection($backups), on: $backupStatusChanged),
             'storageProviders' => StorageProviderResource::collection(
                 $team->storageProviders()->where('is_valid', true)->get()
             ),

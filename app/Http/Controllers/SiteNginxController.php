@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\NginxFileSection;
 use App\Enums\NginxHistoryEvent;
+use App\Events\SiteNginxUpdated;
 use App\Http\Requests\RenameNginxFileRequest;
 use App\Http\Requests\StoreNginxFileRequest;
 use App\Http\Requests\UpdateNginxFileRequest;
@@ -73,11 +74,13 @@ class SiteNginxController extends Controller
             ->values()
             ->all();
 
+        $nginxUpdated = new SiteNginxUpdated($site);
+
         return Inertia::render('sites/nginx/index', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
-            'nginxFiles' => $files,
-            'nginxHistory' => $history,
+            'nginxFiles' => Inertia::live($files, on: $nginxUpdated),
+            'nginxHistory' => Inertia::live($history, on: $nginxUpdated),
             'domains' => $domains,
             'webServer' => $server->webServer()->label(),
             'sections' => collect($server->webServer()->fileSections())->map(fn ($s) => [

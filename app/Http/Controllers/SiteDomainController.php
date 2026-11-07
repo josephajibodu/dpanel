@@ -37,7 +37,7 @@ class SiteDomainController extends Controller
         return Inertia::render('sites/domains/index', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
-            'domains' => SiteDomainResource::collection($site->domains),
+            'domains' => Inertia::live(SiteDomainResource::collection($site->domains), on: new SiteDomainsUpdated($site)),
             'freeDomain' => config('server.free_domain'),
         ]);
     }

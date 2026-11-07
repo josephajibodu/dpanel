@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerPhpUpdates } from '@/hooks/use-server-php-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -96,8 +95,6 @@ export default function ServerPhpIndex({
     const { errors } = phpPageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
     const canManagePhp = usePermission()('manage_php');
-
-    useServerPhpUpdates(server.id);
 
     const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
     const [isSubmittingInstall, setIsSubmittingInstall] = useState(false);

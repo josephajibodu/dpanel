@@ -9,7 +9,6 @@ import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { Button } from '@/components/ui/button';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useDeploymentLogs, type DeploymentLogLine } from '@/hooks/use-deployment-logs';
-import { useDeploymentUpdates } from '@/hooks/use-deployment-updates';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -101,7 +100,6 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
     }));
 
     const logs = useDeploymentLogs(deployment.id, initialLogLines);
-    useDeploymentUpdates(deployment.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },

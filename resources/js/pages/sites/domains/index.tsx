@@ -1,7 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { useSiteDomainsUpdates } from '@/hooks/use-site-domains-updates';
 import {
     CheckIcon,
     ChevronDownIcon,
@@ -74,8 +73,6 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
     const { flash, currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const canManageDomains = usePermission()('manage_sites');
-
-    useSiteDomainsUpdates(site.id);
 
     const [newHostname, setNewHostname] = useState('');
     const [hostnameError, setHostnameError] = useState<string | null>(null);

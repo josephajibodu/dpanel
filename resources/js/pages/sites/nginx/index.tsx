@@ -38,7 +38,6 @@ import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useAppearance } from '@/hooks/use-appearance';
 import { usePermission } from '@/hooks/use-permission';
-import { useSiteNginxUpdates } from '@/hooks/use-site-nginx-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -118,8 +117,6 @@ export default function SiteNginxIndex({
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
-
-    useSiteNginxUpdates(site.id);
 
     const [selectedFile, setSelectedFile] = useState<NginxFile | null>(null);
     const [editorContent, setEditorContent] = useState('');

@@ -39,6 +39,18 @@ it('shows processes index with workers and cron jobs', function () {
         );
 });
 
+it('refreshes the workers and cron jobs when this server broadcasts a process change', function () {
+    $listener = "private:server.{$this->server->id} server.processes.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/processes");
+
+    expect(liveProps($response))->toBe([
+        'workers' => [$listener],
+        'cronJobs' => [$listener],
+    ]);
+});
+
 it('denies guest access to processes index', function () {
     $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/processes");
 

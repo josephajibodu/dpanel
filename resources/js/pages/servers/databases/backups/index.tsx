@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerBackupsUpdates } from '@/hooks/use-server-backups-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -47,8 +46,6 @@ export default function ServerDatabaseBackupsIndex({
             ? serverDatabaseProp.data
             : serverDatabaseProp;
     const schedule = scheduleProp?.data ?? null;
-
-    useServerBackupsUpdates(server.id);
 
     const basePath = `/servers/${server.id}/databases/${serverDatabase.id}/backups`;
     const schedulePath = `/servers/${server.id}/databases/${serverDatabase.id}/backup-schedule`;

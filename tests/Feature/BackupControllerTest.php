@@ -10,6 +10,7 @@ use App\Models\ServerDatabase;
 use App\Models\StorageProvider;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\Storage\CloudflareR2Driver;
 use App\Services\Storage\StorageProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -42,6 +43,17 @@ describe('index', function () {
                 ->has('backups.data', 1)
                 ->has('storageProviders')
             );
+    });
+
+    it('refreshes the schedule and backups when this server broadcasts a backup status change', function () {
+        $listener = "private:server.{$this->server->id} backup.status.changed";
+
+        $response = $this->actingAs($this->user)->get($this->basePath);
+
+        expect(liveProps($response))->toBe([
+            'schedule' => [$listener],
+            'backups' => [$listener],
+        ]);
     });
 
     it('denies access to another teams database', function () {
@@ -88,7 +100,7 @@ describe('destroy', function () {
         ]);
 
         $storageManager = Mockery::mock(StorageProviderManager::class);
-        $driver = Mockery::mock(\App\Services\Storage\CloudflareR2Driver::class);
+        $driver = Mockery::mock(CloudflareR2Driver::class);
         $driver->shouldReceive('delete')->once()->with($backup->storage_path);
         $storageManager->shouldReceive('forAccount')->andReturn($driver);
         $this->app->instance(StorageProviderManager::class, $storageManager);
@@ -155,7 +167,7 @@ describe('download', function () {
         ]);
 
         $storageManager = Mockery::mock(StorageProviderManager::class);
-        $driver = Mockery::mock(\App\Services\Storage\CloudflareR2Driver::class);
+        $driver = Mockery::mock(CloudflareR2Driver::class);
         $driver->shouldReceive('temporaryUrl')->once()->andReturn('https://example.com/signed-url');
         $storageManager->shouldReceive('forAccount')->andReturn($driver);
         $this->app->instance(StorageProviderManager::class, $storageManager);

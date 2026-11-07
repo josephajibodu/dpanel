@@ -60,6 +60,18 @@ it('shows site processes index scoped to this site only', function () {
         );
 });
 
+it('refreshes the site workers and cron jobs when its server broadcasts a process change', function () {
+    $listener = "private:server.{$this->server->id} server.processes.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/processes");
+
+    expect(liveProps($response))->toBe([
+        'workers' => [$listener],
+        'cronJobs' => [$listener],
+    ]);
+});
+
 it('returns 404 when the site does not belong to the server in the URL', function () {
     $otherServer = Server::factory()->forTeam($this->team)->create([
         'status' => ServerStatus::Active,

@@ -13,7 +13,6 @@ import { type PaginationMeta } from '@/components/ui/pagination';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerBackupsUpdates } from '@/hooks/use-server-backups-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -77,8 +76,6 @@ export default function SiteDatabaseShow({
     const site = siteProp.data;
     const schedule = scheduleProp?.data ?? null;
     const database = databaseConnection?.database ?? null;
-
-    useServerBackupsUpdates(databaseConnection?.server.id ?? server.id);
 
     const sitePath = `/servers/${server.id}/sites/${site.id}`;
     const databasePath = database

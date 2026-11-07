@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     BookOpenIcon,
@@ -34,10 +34,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { usePermission } from '@/hooks/use-permission';
-import { useServersListUpdates } from '@/hooks/use-servers-list-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
 
 interface Props {
@@ -51,11 +50,8 @@ interface Props {
 const DOCS_URL = 'https://laravel.com/docs/starter-kits#react';
 
 export default function ServersIndex({ servers }: Props) {
-    const { currentTeam } = usePage<SharedData>().props;
-    const teamId = currentTeam?.id ?? 0;
     const teamPath = useTeamPath();
     const canManageServers = usePermission()('manage_servers');
-    useServersListUpdates(teamId);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {

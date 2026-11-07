@@ -9,6 +9,7 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
 
@@ -41,6 +42,23 @@ it('triggers a deployment and redirects to the new deployment', function () {
     $response->assertSessionHas('deployment_started');
 
     Queue::assertPushed(DeploySiteJob::class);
+});
+
+it('refreshes the deployment only when that deployment broadcasts a status change', function () {
+    $deployment = Deployment::factory()->forSite($this->site)->running()->create();
+
+    $response = $this->actingAs($this->user)
+        ->get(route('servers.sites.deployments.show', [$this->team, $this->server, $this->site, $deployment]));
+
+    $response->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('deployments/show')
+            ->where('deployment.id', $deployment->id)
+            ->etc()
+        );
+    expect(liveProps($response))->toBe([
+        'deployment' => ["private:deployments.{$deployment->id} deployment.status.changed"],
+    ]);
 });
 
 it('redirects back with an error instead of failing when a deployment is already in progress', function () {

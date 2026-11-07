@@ -18,7 +18,7 @@ interface DeploymentOutputEvent {
  * Hook to listen for deployment log output via WebSocket.
  * Logs are streamed incrementally, so we append them to the existing logs.
  *
- * For status changes, we rely on useDeploymentUpdates to trigger partial reloads.
+ * Status changes refresh the page's `deployment` prop, which the controller marks as live.
  */
 export function useDeploymentLogs(deploymentId: number | string, initialLogs: DeploymentLogLine[] = []) {
     const [logs, setLogs] = useState<DeploymentLogLine[]>(initialLogs);

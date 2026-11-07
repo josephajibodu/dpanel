@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Backups\RestoreDatabaseBackup;
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Events\BackupStatusChanged;
 use App\Http\Resources\BackupResource;
 use App\Http\Resources\BackupScheduleResource;
 use App\Http\Resources\ServerDatabaseResource;
@@ -31,13 +32,16 @@ class BackupController extends Controller
             ->latest()
             ->paginate(20);
 
+        $backupStatusChanged = new BackupStatusChanged($server);
+
         return Inertia::render('servers/databases/backups/index', [
             'server' => new ServerResource($server),
             'serverDatabase' => new ServerDatabaseResource($server_database),
-            'schedule' => $server_database->backupSchedule
-                ? new BackupScheduleResource($server_database->backupSchedule)
-                : null,
-            'backups' => BackupResource::collection($backups),
+            'schedule' => Inertia::live(
+                $server_database->backupSchedule ? new BackupScheduleResource($server_database->backupSchedule) : null,
+                on: $backupStatusChanged,
+            ),
+            'backups' => Inertia::live(BackupResource::collection($backups), on: $backupStatusChanged),
             'storageProviders' => StorageProviderResource::collection(
                 $team->storageProviders()->where('is_valid', true)->get()
             ),

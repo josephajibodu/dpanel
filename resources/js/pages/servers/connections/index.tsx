@@ -18,7 +18,6 @@ import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerConnectionsUpdates } from '@/hooks/use-server-connections-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -69,8 +68,6 @@ export default function ServerConnectionsIndex({
     const { errors } = pageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
     const canManageConnections = usePermission()('manage_servers');
-
-    useServerConnectionsUpdates(server.id);
 
     const [clientServerId, setClientServerId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);

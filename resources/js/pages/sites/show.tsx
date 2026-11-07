@@ -41,7 +41,6 @@ import {
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
-import { useServerProcessesUpdates } from '@/hooks/use-server-processes-updates';
 import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
@@ -84,7 +83,6 @@ export default function SitesShow({
         siteData?.status ?? '',
     );
     useServerDeploymentUpdates(Number(serverId ?? 0), siteData?.id, ['site']);
-    useServerProcessesUpdates(Number(serverId ?? 0));
     useSiteProvisioningUpdates(
         Number(serverId ?? 0),
         siteData?.id,

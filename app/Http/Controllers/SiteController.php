@@ -8,6 +8,9 @@ use App\Data\SiteData;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
+use App\Events\ServerDatabasesUpdated;
+use App\Events\ServerProcessesUpdated;
+use App\Events\ServerSitesUpdated;
 use App\Http\Requests\CheckSiteNameRequest;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
@@ -45,7 +48,7 @@ class SiteController extends Controller
 
         return Inertia::render('servers/sites/index', [
             'server' => new ServerResource($server),
-            'sites' => SiteResource::collection($sites),
+            'sites' => Inertia::live(SiteResource::collection($sites), on: new ServerSitesUpdated($server)),
         ]);
     }
 
@@ -90,13 +93,13 @@ class SiteController extends Controller
                 'label' => $provider->label(),
             ]),
             'phpVersions' => $phpVersions,
-            'databases' => ServerDatabaseResource::collection(
+            'databases' => Inertia::live(ServerDatabaseResource::collection(
                 ServerDatabase::query()
                     ->with('server:id,name')
                     ->whereIn('server_id', $server->reachableDatabaseServerIds())
                     ->orderBy('name')
                     ->get()
-            ),
+            ), on: new ServerDatabasesUpdated($server)),
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],
@@ -148,11 +151,13 @@ class SiteController extends Controller
             'serverDatabase.server',
         ]);
 
+        $processesUpdated = new ServerProcessesUpdated($server->id);
+
         return Inertia::render('sites/show', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
-            'workers' => WorkerResource::collection($server->workers()->where('site_id', $site->id)->get()),
-            'cronJobs' => CronJobResource::collection($server->cronJobs()->where('site_id', $site->id)->get()),
+            'workers' => Inertia::live(WorkerResource::collection($server->workers()->where('site_id', $site->id)->get()), on: $processesUpdated),
+            'cronJobs' => Inertia::live(CronJobResource::collection($server->cronJobs()->where('site_id', $site->id)->get()), on: $processesUpdated),
             'databaseConnection' => $site->serverDatabase
                 ? DatabaseConnectionResource::make($site->serverDatabase)->resolve()
                 : null,

@@ -6,6 +6,7 @@ use App\Actions\Sites\CancelDeploymentAction;
 use App\Actions\Sites\RollbackDeploymentAction;
 use App\Actions\Sites\TriggerDeploymentAction;
 use App\Enums\DeploymentStatus;
+use App\Events\DeploymentStatusChanged;
 use App\Http\Resources\DeploymentResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
@@ -13,6 +14,7 @@ use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\Team;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -113,7 +115,11 @@ class DeploymentController extends Controller
         $deploymentResource->wrap(null);
 
         return Inertia::render('deployments/show', [
-            'deployment' => $deploymentResource,
+            'deployment' => Inertia::live(
+                $deploymentResource,
+                on: DeploymentStatusChanged::class,
+                channel: new PrivateChannel("deployments.{$deployment->id}"),
+            ),
             'server' => new ServerResource($server),
             'site' => new SiteResource($site->load('server')),
             'logs' => $deployment->logs()->orderBy('created_at')->get()->map(fn ($log) => [

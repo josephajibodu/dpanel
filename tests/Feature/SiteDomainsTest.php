@@ -39,6 +39,15 @@ it('shows domains page', function () {
             ->has('freeDomain'));
 });
 
+it('refreshes the domains when the site broadcasts a domain change', function () {
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains");
+
+    expect(liveProps($response))->toBe([
+        'domains' => ["private:site.{$this->site->id} site.domains.updated"],
+    ]);
+});
+
 it('validates a new hostname', function () {
     $response = $this->actingAs($this->user)
         ->postJson("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/validate", [
@@ -81,7 +90,7 @@ it('stores a custom domain with a verification token and dispatches nginx sync',
 
     $response->assertRedirect();
 
-    $domain = \App\Models\SiteDomain::query()->where('hostname', 'my-custom.com')->first();
+    $domain = SiteDomain::query()->where('hostname', 'my-custom.com')->first();
 
     expect($domain)->not->toBeNull()
         ->and($domain->site_id)->toBe($this->site->id)

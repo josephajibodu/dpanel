@@ -60,7 +60,6 @@ import {
 } from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerDatabasesUpdates } from '@/hooks/use-server-databases-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -91,8 +90,6 @@ export default function ServerDatabasesIndex({
     const { errors } = pageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
     const canManageDatabases = usePermission()('manage_databases');
-
-    useServerDatabasesUpdates(server.id);
 
     const [createDbOpen, setCreateDbOpen] = useState(false);
     const [createUserOpen, setCreateUserOpen] = useState(false);

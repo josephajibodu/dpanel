@@ -50,6 +50,18 @@ it('renders the nginx index page with files and history', function () {
         );
 });
 
+it('refreshes the nginx files and history when the site broadcasts an nginx change', function () {
+    $listener = "private:site.{$this->site->id} site.nginx.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx");
+
+    expect(liveProps($response))->toBe([
+        'nginxFiles' => [$listener],
+        'nginxHistory' => [$listener],
+    ]);
+});
+
 it('denies guest access to nginx index', function () {
     $this->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx")
         ->assertRedirect();

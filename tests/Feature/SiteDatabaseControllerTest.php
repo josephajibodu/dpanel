@@ -75,6 +75,34 @@ it('shows the sqlite file and the sites own schedule and backups when the site h
         );
 });
 
+it('refreshes the schedule and backups from the server the site database lives on', function () {
+    $databaseServer = Server::factory()->forTeam($this->team)->database()->create();
+    $database = ServerDatabase::factory()->create(['server_id' => $databaseServer->id]);
+    $site = Site::factory()->forServer($this->server)->create(['server_database_id' => $database->id]);
+    $listener = "private:server.{$databaseServer->id} backup.status.changed";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/database");
+
+    expect(liveProps($response))->toBe([
+        'schedule' => [$listener],
+        'backups' => [$listener],
+    ]);
+});
+
+it('refreshes the schedule and backups from the sites own server when it has no server database', function () {
+    $site = Site::factory()->forServer($this->server)->create(['server_database_id' => null]);
+    $listener = "private:server.{$this->server->id} backup.status.changed";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}/database");
+
+    expect(liveProps($response))->toBe([
+        'schedule' => [$listener],
+        'backups' => [$listener],
+    ]);
+});
+
 it('shows no database for a site that has neither a server database nor sqlite', function () {
     $site = Site::factory()->forServer($this->server)->create([
         'project_type' => ProjectType::StaticHtml,

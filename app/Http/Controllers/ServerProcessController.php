@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ServerProcessesUpdated;
 use App\Http\Resources\CronJobResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\WorkerResource;
@@ -28,11 +29,13 @@ class ServerProcessController extends Controller
             'system_user' => $site->systemUser(),
         ])->values()->all();
 
+        $processesUpdated = new ServerProcessesUpdated($server->id);
+
         return Inertia::render('servers/processes/index', [
             'server' => new ServerResource($server),
             'serverIsReady' => $server->isReady(),
-            'workers' => WorkerResource::collection($server->workers),
-            'cronJobs' => CronJobResource::collection($server->cronJobs),
+            'workers' => Inertia::live(WorkerResource::collection($server->workers), on: $processesUpdated),
+            'cronJobs' => Inertia::live(CronJobResource::collection($server->cronJobs), on: $processesUpdated),
             'sites' => $sites,
             'defaultUser' => config('server.user'),
         ]);

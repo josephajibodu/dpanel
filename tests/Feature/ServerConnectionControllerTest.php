@@ -50,6 +50,19 @@ it('lists connections and the team servers that can still be connected', functio
         );
 });
 
+it('refreshes the connections, connectable servers and Redis password when this server broadcasts a connection change', function () {
+    $listener = "private:server.{$this->host->id} server.connections.updated";
+
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->host->id}/connections");
+
+    expect(liveProps($response))->toBe([
+        'connections' => [$listener],
+        'availableServers' => [$listener],
+        'redisPassword' => [$listener],
+    ]);
+});
+
 it('connects a server over the private network when both share one', function () {
     Queue::fake();
 

@@ -7,6 +7,7 @@ use App\Actions\ServerPhp\SetDefaultPhpVersion;
 use App\Enums\PhpExtension;
 use App\Enums\ServiceStatus;
 use App\Enums\ServiceType;
+use App\Events\ServerPhpUpdated;
 use App\Http\Requests\ChangePhpExtensionRequest;
 use App\Http\Requests\InstallPhpVersionRequest;
 use App\Http\Requests\SetDefaultPhpVersionRequest;
@@ -65,16 +66,18 @@ class ServerPhpController extends Controller
         $settingsSyncStatus = $defaultService?->type_data['settings_sync_status'] ?? null;
         $settingsSyncError = $defaultService?->type_data['settings_sync_error'] ?? null;
 
+        $phpUpdated = new ServerPhpUpdated($server);
+
         return Inertia::render('servers/php/index', [
             'server' => new ServerResource($server),
             'serverIsReady' => $server->isReady(),
-            'phpServices' => $phpServices,
-            'installedVersions' => $installedVersions,
-            'defaultVersion' => $defaultVersion,
+            'phpServices' => Inertia::live($phpServices, on: $phpUpdated),
+            'installedVersions' => Inertia::live($installedVersions, on: $phpUpdated),
+            'defaultVersion' => Inertia::live($defaultVersion, on: $phpUpdated),
             'availableVersions' => self::AVAILABLE_VERSIONS,
-            'settings' => $settings,
-            'settingsSyncStatus' => $settingsSyncStatus,
-            'settingsSyncError' => $settingsSyncError,
+            'settings' => Inertia::live($settings, on: $phpUpdated),
+            'settingsSyncStatus' => Inertia::live($settingsSyncStatus, on: $phpUpdated),
+            'settingsSyncError' => Inertia::live($settingsSyncError, on: $phpUpdated),
             'availableExtensions' => collect(PhpExtension::cases())
                 ->map(fn (PhpExtension $extension): array => [
                     'value' => $extension->value,
