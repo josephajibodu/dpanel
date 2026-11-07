@@ -5,10 +5,12 @@ namespace App\Actions\Backups;
 use App\Actions\Database\GrantsPostgresPrivileges;
 use App\Actions\Database\RunsSqlPrivately;
 use App\Exceptions\BackupFailedException;
+use App\Exceptions\SshCommandException;
 use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Services\Ssh\SshConnection;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -36,12 +38,41 @@ trait ImportsForeignDumps
         $databaseName = $this->escapeForShell($serverDatabase->name);
         $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
 
+        $this->ensureClientCanRunDumpsSafely($connection, $server);
+
         return match ($server->database_type) {
-            'mysql' => $download.' | gunzip -cf | '.$this->mysqlImportFilter()." | sudo mysql {$credentialsOption} {$databaseName}",
-            'mariadb' => $download.' | gunzip -cf | '.$this->mysqlImportFilter()." | sudo mariadb {$credentialsOption} {$databaseName}",
+            'mysql' => $download.' | gunzip -cf | '.$this->mysqlImportFilter()." | sudo mysql {$credentialsOption} --commands=OFF {$databaseName}",
+            'mariadb' => $download.' | gunzip -cf | '.$this->mysqlImportFilter()." | sudo mariadb {$credentialsOption} --sandbox {$databaseName}",
             'postgresql' => $this->buildPostgresImportPipeline($connection, $directory, $serverDatabase, $download),
             default => throw new RuntimeException("Importing a dump isn't supported for {$server->database_type}."),
         };
+    }
+
+    /**
+     * The database command-line clients run "client commands" found in the
+     * file they load, and some of those reach the server's shell or files
+     * (`\!`, `source`). A dump from elsewhere can't be trusted not to contain
+     * them, so the import only runs with a client that can switch them off:
+     * MySQL 8.0.43+ (`--commands=OFF`), MariaDB 10.5.25/10.6.18/10.11.8/11.4.2+
+     * (`--sandbox`) or psql from the August 2025 releases on (`\restrict`).
+     */
+    private function ensureClientCanRunDumpsSafely(SshConnection $connection, Server $server): void
+    {
+        [$check, $requirement] = match ($server->database_type) {
+            'mysql' => ['mysql --commands=OFF --help', 'MySQL 8.0.43 or newer'],
+            'mariadb' => ['mariadb --sandbox --help', 'MariaDB 10.11.8 or newer'],
+            'postgresql' => [
+                "printf '%s\\n' ".$this->escapeForShell('\\restrict flitopscheck').' | sudo -u postgres psql -X -q -v ON_ERROR_STOP=1 -d postgres',
+                'a PostgreSQL release from August 2025 or later (for example 16.10 or 17.6)',
+            ],
+            default => throw new RuntimeException("Importing a dump isn't supported for {$server->database_type}."),
+        };
+
+        try {
+            $connection->exec($check.' >/dev/null 2>&1', 30);
+        } catch (SshCommandException) {
+            throw new BackupFailedException("This server's database client is too old to load a dump from elsewhere safely: it can't switch off the commands a dump could use to reach the server's shell. Update it to {$requirement} (for example with `sudo apt update && sudo apt upgrade`), then try again.");
+        }
     }
 
     /**
@@ -67,13 +98,17 @@ trait ImportsForeignDumps
 
     /**
      * Drops the `CREATE DATABASE`/`USE` lines that would send the data to the
-     * database the dump came from. Anchored to the start of the line so a row
+     * database the dump came from, and the sandbox line newer mariadb-dump
+     * writes first, which a MySQL client rejects (the client is sandboxed by
+     * its own option instead). Anchored to the start of the line so a row
      * that merely mentions them is kept. `|| [ $? -eq 1 ]` lets an empty
      * result through: grep exits 1 when nothing is left.
      */
     private function mysqlImportFilter(): string
     {
-        return "{ grep -Eiv '^(CREATE DATABASE|USE )' || [ \$? -eq 1 ]; }";
+        return <<<'SH'
+            { grep -Eiv '^(CREATE DATABASE|USE |/\*M!999999\\- )' || [ $? -eq 1 ]; }
+            SH;
     }
 
     /**
@@ -100,7 +135,11 @@ trait ImportsForeignDumps
         $filter = "{$directory}/filter.awk";
         $postlude = "{$directory}/postlude.sql";
 
-        $connection->upload("BEGIN;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n", $prelude);
+        // Restricted mode refuses every psql command but `\unrestrict` with
+        // this key, which the dump can't know.
+        $restrictKey = Str::random(32);
+
+        $connection->upload("\\restrict {$restrictKey}\nBEGIN;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n", $prelude);
         $connection->upload($this->postgresImportFilter(), $filter);
         $connection->upload($this->postgresOwnershipTransfer($owner->username)."\nCOMMIT;\n", $postlude);
 
@@ -114,9 +153,9 @@ trait ImportsForeignDumps
     /**
      * Skips what can't or shouldn't run inside the target database: switching
      * or recreating databases, `DROP`s (the schema was just emptied), and
-     * owner and privilege lines naming roles from the old host. psql's
-     * `\restrict` lines are dropped too, since older servers' psql doesn't
-     * know them. COPY data is passed through untouched, so a row that starts
+     * owner and privilege lines naming roles from the old host. The dump's
+     * own psql `\restrict` lines are dropped too: Flitops restricts psql
+     * itself, with a key the dump can't know. COPY data is passed through untouched, so a row that starts
      * with one of these words is never lost.
      */
     private function postgresImportFilter(): string

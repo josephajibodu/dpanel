@@ -135,6 +135,7 @@ it('loads an imported dump into the chosen database, dropping the lines that nam
     expect($importCommand)
         ->toContain('gunzip -cf')
         ->toContain('CREATE DATABASE|USE ')
+        ->toContain('--commands=OFF')
         ->toContain('app_production')
         ->and($backup->fresh()->restore_status)->toBe('completed');
 });
@@ -222,7 +223,7 @@ it('imports a dump into Postgres in one transaction and hands the tables to the 
         ->toContain('prelude.sql')
         ->toContain('postlude.sql')
         ->toContain('app_production')
-        ->and($uploads['/tmp/tmp.fleetops/prelude.sql'])->toStartWith('BEGIN;')
+        ->and($uploads['/tmp/tmp.fleetops/prelude.sql'])->toMatch('/^\\\\restrict [A-Za-z0-9]{32}\nBEGIN;/')
         ->and($uploads['/tmp/tmp.fleetops/postlude.sql'])
         ->toContain("owner_name text := 'app_owner'")
         ->toEndWith("COMMIT;\n")
@@ -262,3 +263,48 @@ it('refuses a Postgres import when the database has no read-write user', functio
 
     expect($backup->fresh()->restore_error)->toContain('Add a database user with read-write access to app_production');
 });
+
+it('refuses to import with a database client that cannot switch off its shell commands', function (string $databaseType, string $check) {
+    $this->server->update(['database_type' => $databaseType]);
+    DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'databases' => ['app_production'],
+    ]);
+
+    $commands = [];
+    $uploads = [];
+    $connection = mockDatabaseConnection($uploads, $commands, function (string $command) use ($check) {
+        if (str_contains($command, $check)) {
+            throw new SshCommandException($command, 7, '', 'unknown option');
+        }
+    });
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('bucket')->andReturn('test-bucket');
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
+    $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
+
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    $this->app->instance(StorageProviderManager::class, $storageManager);
+
+    $backup = Backup::factory()->completed()->create([
+        'server_database_id' => $this->serverDatabase->id,
+        'storage_provider_id' => $this->storageProvider->id,
+        'triggered_by' => 'import',
+    ]);
+
+    expect(fn () => app(RestoreDatabaseBackup::class)->execute($backup))
+        ->toThrow(BackupFailedException::class);
+
+    expect($backup->fresh()->restore_error)->toContain('too old to load a dump from elsewhere safely')
+        ->and(collect($commands)->contains(fn (string $command) => str_contains($command, 'aws s3 cp')))->toBeFalse();
+})->with([
+    'mysql' => ['mysql', 'mysql --commands=OFF --help'],
+    'mariadb' => ['mariadb', 'mariadb --sandbox --help'],
+    'postgresql' => ['postgresql', 'restrict flitopscheck'],
+]);
