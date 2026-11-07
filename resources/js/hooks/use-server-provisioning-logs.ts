@@ -13,7 +13,7 @@ interface ProvisioningOutputEvent {
  * Hook to listen for provisioning log output via WebSocket.
  * Logs are streamed incrementally, so we append them to the existing logs.
  *
- * For status/step changes, we rely on useServerProvisioningUpdates to trigger partial reloads.
+ * Status and step changes refresh the page's `server` prop, which the controller marks as live.
  */
 export function useServerProvisioningLogs(serverId: number, initialLogs: DeploymentLogLine[] = []) {
     const [logs, setLogs] = useState<DeploymentLogLine[]>(initialLogs);

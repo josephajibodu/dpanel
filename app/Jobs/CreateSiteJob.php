@@ -53,7 +53,7 @@ class CreateSiteJob implements ShouldQueue
         $server = $this->site->server()->with(['sites' => fn ($q) => $q->with('latestDeployment')->latest()])->first();
 
         if ($server) {
-            broadcast(new ServerSitesUpdated($server));
+            broadcast(new ServerSitesUpdated($server, $this->site));
         }
     }
 }

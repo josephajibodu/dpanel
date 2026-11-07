@@ -23,7 +23,7 @@ it('marks the site as failed with the exception message when the job fails outsi
     expect($site->status)->toBe(SiteStatus::Failed);
     expect($site->error_message)->toBe('Job timed out');
 
-    Event::assertDispatched(ServerSitesUpdated::class);
+    Event::assertDispatched(ServerSitesUpdated::class, fn (ServerSitesUpdated $event) => $event->site->is($site));
 });
 
 it('does not overwrite an error already recorded by the provisioning action', function () {

@@ -159,7 +159,7 @@ class SiteController extends Controller
             'server' => new ServerResource($server),
             'site' => Inertia::live(
                 new SiteResource($site),
-                on: DeploymentStatusChanged::class,
+                on: [DeploymentStatusChanged::class, ServerSitesUpdated::class],
                 channel: new PrivateChannel("site.{$site->id}"),
             ),
             'workers' => Inertia::live(WorkerResource::collection($server->workers()->where('site_id', $site->id)->get()), on: $processesUpdated),

@@ -27,7 +27,7 @@ class ProvisionSiteAction
 
         try {
             $site->update(['status' => SiteStatus::Installing, 'error_message' => null]);
-            $this->broadcastServerSitesUpdated($server);
+            $this->broadcastServerSitesUpdated($site);
 
             $connection = $this->sshService->connect($server);
 
@@ -48,7 +48,7 @@ class ProvisionSiteAction
 
             Log::info("Site {$site->domain} created successfully");
 
-            $this->broadcastServerSitesUpdated($server);
+            $this->broadcastServerSitesUpdated($site);
 
             // Provisioning is now infra-only. The first install/build/migrate run
             // happens through the standard deployment path so failures surface in
@@ -61,7 +61,7 @@ class ProvisionSiteAction
 
             $site->update(['status' => SiteStatus::Failed, 'error_message' => $e->getMessage()]);
 
-            $this->broadcastServerSitesUpdated($server);
+            $this->broadcastServerSitesUpdated($site);
 
             throw $e;
         }
@@ -70,12 +70,13 @@ class ProvisionSiteAction
     private function setStepAndBroadcast(Site $site, $step): void
     {
         $site->update(['provisioning_step' => $step]);
-        $this->broadcastServerSitesUpdated($site->server);
+        $this->broadcastServerSitesUpdated($site);
     }
 
-    private function broadcastServerSitesUpdated($server): void
+    private function broadcastServerSitesUpdated(Site $site): void
     {
+        $server = $site->server;
         $server->load(['sites' => fn ($q) => $q->with('latestDeployment')->latest()]);
-        broadcast(new ServerSitesUpdated($server));
+        broadcast(new ServerSitesUpdated($server, $site));
     }
 }

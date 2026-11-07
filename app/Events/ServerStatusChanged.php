@@ -5,8 +5,8 @@ namespace App\Events;
 use App\Concerns\QueuesBroadcasts;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
-use App\Http\Resources\ServerResource;
 use App\Models\Server;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -29,7 +29,7 @@ class ServerStatusChanged implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
@@ -40,14 +40,15 @@ class ServerStatusChanged implements ShouldBroadcast
     }
 
     /**
-     * Get the data to broadcast.
+     * Broadcast only the change; pages reload the server they show, so the
+     * payload stays small however many sites and databases the server has.
      *
-     * @return array<string, mixed>
+     * @return array{server_id: int, previous_status: string, current_status: string, previous_provisioning_step: int|null, current_provisioning_step: int|null}
      */
     public function broadcastWith(): array
     {
         return [
-            'server' => new ServerResource($this->server),
+            'server_id' => $this->server->id,
             'previous_status' => $this->previousStatus->value,
             'current_status' => $this->server->status->value,
             'previous_provisioning_step' => $this->previousProvisioningStep?->value,

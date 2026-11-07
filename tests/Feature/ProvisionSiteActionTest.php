@@ -84,6 +84,27 @@ it('provisions a placeholder StaticHtml site and sets status to provisioned', fu
     expect($site->provisioning_step)->toBeNull();
 });
 
+it('sends every provisioning update to the site being provisioned', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()
+        ->forServer($server)
+        ->pending()
+        ->create([
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::StaticHtml,
+            'directory' => '/',
+        ]);
+    $site->deployScript()->create(['script' => 'echo "placeholder"']);
+    $this->app->instance(SshService::class, mockSshService(mockSshConnection(), $server->id));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    $updates = Event::dispatched(ServerSitesUpdated::class)->map(fn (array $dispatch) => $dispatch[0]);
+    expect($updates)->not->toBeEmpty()
+        ->and($updates->every(fn (ServerSitesUpdated $event) => $event->site?->is($site)))->toBeTrue();
+});
+
 it('provisions a Laravel site through the infra-only steps', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
 

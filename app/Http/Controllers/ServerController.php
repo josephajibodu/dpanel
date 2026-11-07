@@ -11,7 +11,9 @@ use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Enums\ServiceType;
+use App\Events\DeploymentStatusChanged;
 use App\Events\ServerDeleted;
+use App\Events\ServerSitesUpdated;
 use App\Events\ServerStatusChanged;
 use App\Http\Requests\StoreCustomServerRequest;
 use App\Http\Requests\StoreServerRequest;
@@ -230,7 +232,11 @@ class ServerController extends Controller
         $provisioningLifecycle = [ServerStatus::Pending, ServerStatus::Creating, ServerStatus::Provisioning, ServerStatus::Error];
 
         return Inertia::render('servers/show', [
-            'server' => new ServerResource($server),
+            'server' => Inertia::live(
+                new ServerResource($server),
+                on: [ServerStatusChanged::class, ServerSitesUpdated::class, DeploymentStatusChanged::class],
+                channel: new PrivateChannel("server.{$server->id}"),
+            ),
             'provisioningLogs' => in_array($server->status, $provisioningLifecycle, true)
                 ? $server->provisioningLogs()->orderBy('id')->get()->map(fn ($log) => [
                     'type' => $log->type,

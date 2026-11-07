@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
+import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -81,11 +81,7 @@ export default function SitesShow({
     const isProvisioning = ['pending', 'installing'].includes(
         siteData?.status ?? '',
     );
-    useSiteProvisioningUpdates(
-        Number(serverId ?? 0),
-        siteData?.id,
-        isProvisioning,
-    );
+    useRealtimeFallback(['site'], isProvisioning);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);

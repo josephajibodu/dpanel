@@ -6,6 +6,8 @@ import {
     PlusIcon,
     RefreshCwIcon,
 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { EmptyState } from '@/components/empty-state';
@@ -28,9 +30,9 @@ import {
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { type DeploymentLogLine } from '@/hooks/use-deployment-logs';
 import { usePermission } from '@/hooks/use-permission';
+import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useServerMetrics } from '@/hooks/use-server-metrics';
 import { useServerProvisioningLogs } from '@/hooks/use-server-provisioning-logs';
-import { useServerProvisioningUpdates } from '@/hooks/use-server-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -67,9 +69,7 @@ export default function ServersShow({
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const can = usePermission();
-    const { server: data, connectionState } = useServerProvisioningUpdates(
-        server.data,
-    );
+    const data = server.data;
     const sites = data.sites ?? [];
     const canCreateSite =
         data.status === 'active' && data.supports_sites && can('manage_sites');
@@ -79,6 +79,24 @@ export default function ServersShow({
         'creating',
         'provisioning',
     ].includes(data.status);
+    const connectionState = useRealtimeFallback(
+        ['server'],
+        isProvisioningLifecycle,
+    );
+    const previousStatus = useRef(data.status);
+
+    useEffect(() => {
+        if (data.status === 'error' && previousStatus.current !== 'error') {
+            toast.error(`Server provisioning failed: ${data.name}`, {
+                description:
+                    data.error_message ??
+                    'An unexpected error occurred during provisioning.',
+                duration: 10000,
+            });
+        }
+
+        previousStatus.current = data.status;
+    }, [data.status, data.name, data.error_message]);
 
     const initialLogLines: DeploymentLogLine[] = (provisioningLogs ?? []).map(
         (log) => ({

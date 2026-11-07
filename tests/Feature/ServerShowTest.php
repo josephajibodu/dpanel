@@ -77,3 +77,19 @@ it('tells the page whether the server can host sites', function (string $state, 
     'worker server' => ['worker', false],
     'database server' => ['database', false],
 ]);
+
+it('refreshes the server when its status, its sites or a deployment on it changes', function () {
+    $server = Server::factory()->forTeam($this->team)->active()->create();
+    $channel = "private:server.{$server->id}";
+
+    $response = $this->actingAs($this->user)
+        ->get(route('servers.show', [$this->team, $server]));
+
+    expect(liveProps($response))->toBe([
+        'server' => [
+            "{$channel} server.status.changed",
+            "{$channel} server.sites.updated",
+            "{$channel} deployment.status.changed",
+        ],
+    ]);
+});

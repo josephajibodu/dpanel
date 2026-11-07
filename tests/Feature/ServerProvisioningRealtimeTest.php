@@ -89,3 +89,20 @@ it('dispatches server status changed event when status changes', function () {
             && $event->server->status === ServerStatus::Creating;
     });
 });
+
+it('broadcasts the status change without the whole server', function () {
+    $server = Server::factory()->provisioning()->create([
+        'status' => ServerStatus::Provisioning,
+        'provisioning_step' => ProvisioningStep::ConfiguringSwap,
+    ]);
+
+    $payload = (new ServerStatusChanged($server, ServerStatus::Pending, ProvisioningStep::PreparingServer))->broadcastWith();
+
+    expect($payload)->toBe([
+        'server_id' => $server->id,
+        'previous_status' => 'pending',
+        'current_status' => 'provisioning',
+        'previous_provisioning_step' => ProvisioningStep::PreparingServer->value,
+        'current_provisioning_step' => ProvisioningStep::ConfiguringSwap->value,
+    ]);
+});
