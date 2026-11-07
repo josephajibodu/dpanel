@@ -8,6 +8,7 @@ use App\Data\SiteData;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
+use App\Events\DeploymentStatusChanged;
 use App\Events\ServerDatabasesUpdated;
 use App\Events\ServerProcessesUpdated;
 use App\Events\ServerSitesUpdated;
@@ -30,6 +31,7 @@ use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -155,7 +157,11 @@ class SiteController extends Controller
 
         return Inertia::render('sites/show', [
             'server' => new ServerResource($server),
-            'site' => new SiteResource($site),
+            'site' => Inertia::live(
+                new SiteResource($site),
+                on: DeploymentStatusChanged::class,
+                channel: new PrivateChannel("site.{$site->id}"),
+            ),
             'workers' => Inertia::live(WorkerResource::collection($server->workers()->where('site_id', $site->id)->get()), on: $processesUpdated),
             'cronJobs' => Inertia::live(CronJobResource::collection($server->cronJobs()->where('site_id', $site->id)->get()), on: $processesUpdated),
             'databaseConnection' => $site->serverDatabase

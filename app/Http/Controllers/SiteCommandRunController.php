@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Sites\RunSiteCommand;
+use App\Events\SiteCommandRunStatusChanged;
 use App\Http\Requests\StoreSiteCommandRunRequest;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteCommandRunResource;
@@ -11,6 +12,7 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteCommandRun;
 use App\Models\Team;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +33,11 @@ class SiteCommandRunController extends Controller
         return Inertia::render('sites/commands/index', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site->load('server')),
-            'commandRuns' => SiteCommandRunResource::collection($commandRuns),
+            'commandRuns' => Inertia::live(
+                SiteCommandRunResource::collection($commandRuns),
+                on: SiteCommandRunStatusChanged::class,
+                channel: new PrivateChannel("site.{$site->id}"),
+            ),
         ]);
     }
 

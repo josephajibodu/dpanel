@@ -46,7 +46,6 @@ import {
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerCommandRunUpdates } from '@/hooks/use-server-command-run-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -99,10 +98,6 @@ export default function SiteCommandsIndex({
     const site = siteProp?.data ?? siteProp;
     const serverId = server?.id ?? site?.server?.id;
     const siteId = site?.id;
-    useServerCommandRunUpdates(
-        Number(serverId ?? 0),
-        siteId ? Number(siteId) : undefined,
-    );
 
     const [runSheetOpen, setRunSheetOpen] = useState(false);
     const [commandInput, setCommandInput] = useState('');

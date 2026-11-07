@@ -40,7 +40,11 @@ class DeploymentController extends Controller
         return Inertia::render('sites/deployments/index', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site->load('server')),
-            'deployments' => DeploymentResource::collection($deployments),
+            'deployments' => Inertia::live(
+                DeploymentResource::collection($deployments),
+                on: DeploymentStatusChanged::class,
+                channel: new PrivateChannel("site.{$site->id}"),
+            ),
         ]);
     }
 

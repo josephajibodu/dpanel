@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Concerns\QueuesBroadcasts;
 use App\Models\SiteCommandRun;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -24,12 +25,12 @@ class SiteCommandRunStatusChanged implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel("server.{$this->run->site->server_id}"),
+            new PrivateChannel("site.{$this->run->site_id}"),
         ];
     }
 

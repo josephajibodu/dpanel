@@ -61,6 +61,15 @@ it('refreshes the deployment only when that deployment broadcasts a status chang
     ]);
 });
 
+it('refreshes the deployments list when one of this site deployments changes status', function () {
+    $response = $this->actingAs($this->user)
+        ->get(storeDeploymentUrl($this->team, $this->server, $this->site));
+
+    expect(liveProps($response))->toBe([
+        'deployments' => ["private:site.{$this->site->id} deployment.status.changed"],
+    ]);
+});
+
 it('redirects back with an error instead of failing when a deployment is already in progress', function () {
     Deployment::factory()->running()->forSite($this->site)->create();
 

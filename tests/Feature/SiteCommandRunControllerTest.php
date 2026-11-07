@@ -40,6 +40,15 @@ it('shows command runs index for the site', function () {
     );
 });
 
+it('refreshes the command runs when one of this site runs changes status', function () {
+    $response = $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
+
+    expect(liveProps($response))->toBe([
+        'commandRuns' => ["private:site.{$this->site->id} site.command-run.status.changed"],
+    ]);
+});
+
 it('denies guest access to command runs index', function () {
     $response = $this->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/command-runs");
 

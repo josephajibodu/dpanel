@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Concerns\QueuesBroadcasts;
 use App\Models\Deployment;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -25,12 +26,13 @@ class DeploymentStatusChanged implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
         return [
             new PrivateChannel("deployments.{$this->deployment->id}"),
+            new PrivateChannel("site.{$this->deployment->site_id}"),
             new PrivateChannel("server.{$this->deployment->site->server_id}"),
         ];
     }

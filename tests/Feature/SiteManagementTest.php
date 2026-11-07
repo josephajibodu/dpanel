@@ -398,16 +398,17 @@ describe('site viewing', function () {
             );
     });
 
-    it('refreshes the site workers and cron jobs when its server broadcasts a process change', function () {
+    it('refreshes the site when one of its deployments changes status, and its workers and cron jobs on server process changes', function () {
         $site = Site::factory()->create(['server_id' => $this->server->id]);
-        $listener = "private:server.{$this->server->id} server.processes.updated";
+        $processesListener = "private:server.{$this->server->id} server.processes.updated";
 
         $response = $this->actingAs($this->user)
             ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
 
         expect(liveProps($response))->toBe([
-            'workers' => [$listener],
-            'cronJobs' => [$listener],
+            'site' => ["private:site.{$site->id} deployment.status.changed"],
+            'workers' => [$processesListener],
+            'cronJobs' => [$processesListener],
         ]);
     });
 

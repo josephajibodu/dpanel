@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -65,7 +64,6 @@ export default function SiteDeploymentsIndex({
     const server = serverProp?.data ?? serverProp;
     const site = siteProp.data;
     const serverId = server?.id ?? site.server?.id;
-    useServerDeploymentUpdates(Number(serverId ?? 0), site.id, ['deployments']);
     const [isDeploying, setIsDeploying] = useState(false);
     const [rollbackTarget, setRollbackTarget] = useState<Deployment | null>(
         null,
