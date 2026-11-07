@@ -1,9 +1,10 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { LinkIcon, PlusIcon } from 'lucide-react';
+import { LinkIcon, PlusIcon, UploadIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { BackupHistory } from '@/components/backups/backup-history';
 import { BackupScheduleCard } from '@/components/backups/backup-schedule-card';
+import { ImportDumpDialog } from '@/components/backups/import-dump-dialog';
 import { RestoreBackupDialog } from '@/components/backups/restore-backup-dialog';
 import { CopyButton } from '@/components/copy-button';
 import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
@@ -88,6 +89,7 @@ export default function SiteDatabaseShow({
     const [isBackingUp, setIsBackingUp] = useState(false);
     const [connectOpen, setConnectOpen] = useState(false);
     const [backupToRestore, setBackupToRestore] = useState<Backup | null>(null);
+    const [isImportOpen, setIsImportOpen] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -129,15 +131,26 @@ export default function SiteDatabaseShow({
                             The database this site uses, and its backups.
                         </p>
                     </div>
-                    {hasDatabase && can('run_backups') && (
-                        <Button
-                            onClick={handleBackupNow}
-                            disabled={!schedule || isBackingUp}
-                        >
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            {isBackingUp ? 'Starting…' : 'Backup now'}
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {database && can('restore_backups') && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsImportOpen(true)}
+                            >
+                                <UploadIcon className="mr-2 h-4 w-4" />
+                                Import dump
+                            </Button>
+                        )}
+                        {hasDatabase && can('run_backups') && (
+                            <Button
+                                onClick={handleBackupNow}
+                                disabled={!schedule || isBackingUp}
+                            >
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                {isBackingUp ? 'Starting…' : 'Backup now'}
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {databaseConnection && database ? (
@@ -268,6 +281,18 @@ export default function SiteDatabaseShow({
                     initialDatabase={database.name}
                     teamPath={teamPath}
                     onOpenChange={setConnectOpen}
+                />
+            )}
+
+            {isImportOpen && database && (
+                <ImportDumpDialog
+                    databaseName={database.name}
+                    importUrl={teamPath(`${databasePath}/imports`)}
+                    storageProviders={storageProviders.data}
+                    defaultStorageProviderId={
+                        schedule?.storage_provider_id ?? null
+                    }
+                    onClose={() => setIsImportOpen(false)}
                 />
             )}
 

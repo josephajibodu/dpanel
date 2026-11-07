@@ -33,7 +33,8 @@ trait ManagesBackupLifecycle
 
     /**
      * Keep only the newest completed backups of the same target, per its
-     * schedule's retention count (7 when no schedule exists).
+     * schedule's retention count (7 when no schedule exists). Imported dumps
+     * aren't backups Flitops made, so they neither count nor get pruned.
      */
     private function pruneOldBackups(Backup $backup, StorageProviderContract $driver): void
     {
@@ -42,6 +43,7 @@ trait ManagesBackupLifecycle
 
         $completed = $target->backups()
             ->where('status', 'completed')
+            ->where('triggered_by', '!=', 'import')
             ->orderByDesc('finished_at')
             ->get();
 

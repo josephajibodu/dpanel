@@ -5,6 +5,7 @@ use App\Http\Controllers\BackupScheduleController;
 use App\Http\Controllers\CronJobController;
 use App\Http\Controllers\CurrentTeamController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DatabaseImportController;
 use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeploymentWebhookController;
@@ -298,6 +299,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.databases.backups.restore');
                 Route::get('servers/{server}/databases/{server_database}/backups/{backup}/download', [BackupController::class, 'download'])
                     ->name('servers.databases.backups.download');
+                Route::post('servers/{server}/databases/{server_database}/imports', [DatabaseImportController::class, 'store'])
+                    ->name('servers.databases.imports.store');
 
                 // PHP
                 Route::get('servers/{server}/php', [ServerPhpController::class, 'index'])

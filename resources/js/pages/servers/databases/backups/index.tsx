@@ -1,9 +1,10 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, UploadIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { BackupHistory } from '@/components/backups/backup-history';
 import { BackupScheduleCard } from '@/components/backups/backup-schedule-card';
+import { ImportDumpDialog } from '@/components/backups/import-dump-dialog';
 import { RestoreBackupDialog } from '@/components/backups/restore-backup-dialog';
 import { Button } from '@/components/ui/button';
 import { type PaginationMeta } from '@/components/ui/pagination';
@@ -51,6 +52,7 @@ export default function ServerDatabaseBackupsIndex({
     const schedulePath = `/servers/${server.id}/databases/${serverDatabase.id}/backup-schedule`;
 
     const [backupToRestore, setBackupToRestore] = useState<Backup | null>(null);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [isBackingUp, setIsBackingUp] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -96,15 +98,26 @@ export default function ServerDatabaseBackupsIndex({
                             .
                         </p>
                     </div>
-                    {can('run_backups') && (
-                        <Button
-                            onClick={handleBackupNow}
-                            disabled={!schedule || isBackingUp}
-                        >
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            {isBackingUp ? 'Starting…' : 'Backup now'}
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {can('restore_backups') && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsImportOpen(true)}
+                            >
+                                <UploadIcon className="mr-2 h-4 w-4" />
+                                Import dump
+                            </Button>
+                        )}
+                        {can('run_backups') && (
+                            <Button
+                                onClick={handleBackupNow}
+                                disabled={!schedule || isBackingUp}
+                            >
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                {isBackingUp ? 'Starting…' : 'Backup now'}
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <BackupScheduleCard
@@ -123,6 +136,20 @@ export default function ServerDatabaseBackupsIndex({
                     }
                 />
             </div>
+
+            {isImportOpen && (
+                <ImportDumpDialog
+                    databaseName={serverDatabase.name}
+                    importUrl={teamPath(
+                        `/servers/${server.id}/databases/${serverDatabase.id}/imports`,
+                    )}
+                    storageProviders={storageProviders.data}
+                    defaultStorageProviderId={
+                        schedule?.storage_provider_id ?? null
+                    }
+                    onClose={() => setIsImportOpen(false)}
+                />
+            )}
 
             {backupToRestore && (
                 <RestoreBackupDialog

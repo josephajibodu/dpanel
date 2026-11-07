@@ -76,6 +76,14 @@ class Backup extends Model
     }
 
     /**
+     * Whether this is a dump uploaded from elsewhere rather than one Flitops made.
+     */
+    public function isImport(): bool
+    {
+        return $this->triggered_by === 'import';
+    }
+
+    /**
      * The server the backed-up data lives on.
      */
     public function targetServer(): Server

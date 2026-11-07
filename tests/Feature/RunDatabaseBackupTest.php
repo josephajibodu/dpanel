@@ -4,6 +4,7 @@ use App\Actions\Backups\RunDatabaseBackup;
 use App\Exceptions\SshCommandException;
 use App\Jobs\RunBackupJob;
 use App\Models\Backup;
+use App\Models\BackupSchedule;
 use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
@@ -134,7 +135,7 @@ it('prunes completed backups beyond the schedule retention count', function () {
     $driver->shouldReceive('delete')->times(2); // the 2 pruned backups
     bindMockedBackupServices($connection, $driver);
 
-    \App\Models\BackupSchedule::factory()->create([
+    BackupSchedule::factory()->create([
         'server_database_id' => $this->serverDatabase->id,
         'storage_provider_id' => $this->storageProvider->id,
         'retention_count' => 2,
@@ -149,6 +150,14 @@ it('prunes completed backups beyond the schedule retention count', function () {
         ]);
     }
 
+    // An imported dump is not one of the backups retention counts.
+    $import = Backup::factory()->completed()->create([
+        'server_database_id' => $this->serverDatabase->id,
+        'storage_provider_id' => $this->storageProvider->id,
+        'triggered_by' => 'import',
+        'finished_at' => now()->subDays(10),
+    ]);
+
     $newBackup = Backup::factory()->create([
         'server_database_id' => $this->serverDatabase->id,
         'storage_provider_id' => $this->storageProvider->id,
@@ -157,10 +166,12 @@ it('prunes completed backups beyond the schedule retention count', function () {
 
     app(RunDatabaseBackup::class)->execute($newBackup);
 
+    expect($import->fresh())->not->toBeNull();
+
     // Retention 2 means only the 2 most recent completed backups survive
     // (the new one plus the newest of the 3 pre-existing ones); the 2
     // oldest pre-existing ones are pruned.
-    expect($this->serverDatabase->backups()->count())->toBe(2);
+    expect($this->serverDatabase->backups()->where('triggered_by', '!=', 'import')->count())->toBe(2);
 });
 
 it('notifies the team owner when a scheduled backup without a user fails', function () {

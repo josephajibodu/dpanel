@@ -16,7 +16,7 @@ export interface Backup {
         | 'uploading'
         | 'completed'
         | 'failed';
-    triggered_by: 'scheduled' | 'manual';
+    triggered_by: 'scheduled' | 'manual' | 'import';
     triggered_by_user: string | null;
     size_bytes: number | null;
     verified_at: string | null;

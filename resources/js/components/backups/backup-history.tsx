@@ -135,10 +135,12 @@ export function BackupHistory({
                                             )}
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
-                                        {backup.triggered_by === 'manual'
-                                            ? (backup.triggered_by_user ??
-                                              'Manual')
-                                            : 'Scheduled'}
+                                        {backup.triggered_by === 'scheduled'
+                                            ? 'Scheduled'
+                                            : backup.triggered_by === 'import'
+                                              ? `Imported${backup.triggered_by_user ? ` by ${backup.triggered_by_user}` : ''}`
+                                              : (backup.triggered_by_user ??
+                                                'Manual')}
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
                                         {formatBytes(backup.size_bytes)}
