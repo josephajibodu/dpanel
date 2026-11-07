@@ -294,7 +294,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                         />
                                         <span className="flex flex-1 flex-wrap items-center gap-2">
                                             <span className="font-medium">{opt.label}</span>
-                                            {opt.recommended && (
+                                            {'recommended' in opt && opt.recommended && (
                                                 <span className="bg-primary/15 text-primary rounded px-1.5 py-0.5 text-xs">
                                                     Recommended
                                                 </span>
