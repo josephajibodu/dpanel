@@ -208,7 +208,7 @@ export default function Welcome({
                         href={features()}
                         className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 py-1 pr-3 pl-1 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur transition-colors hover:text-foreground"
                     >
-                        <span className="rounded-full bg-brand px-2 py-0.5 text-white">
+                        <span className="rounded-full bg-brand-accent px-2 py-0.5 text-neutral-950">
                             New
                         </span>
                         Provision servers on AWS

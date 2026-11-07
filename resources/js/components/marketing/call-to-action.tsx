@@ -25,6 +25,10 @@ export default function CallToAction({
                     aria-hidden="true"
                     className="absolute -bottom-40 left-1/2 h-80 w-[640px] -translate-x-1/2 rounded-full bg-brand/50 blur-[120px]"
                 />
+                <div
+                    aria-hidden="true"
+                    className="absolute -right-24 -bottom-32 h-64 w-[420px] rounded-full bg-brand-accent/35 blur-[120px]"
+                />
 
                 <div className="relative">
                     <h2 className="mx-auto max-w-2xl text-3xl font-semibold tracking-[-0.025em] text-balance sm:text-5xl">
