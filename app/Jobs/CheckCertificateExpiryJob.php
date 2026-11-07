@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Models\Certificate;
+use App\Models\Server;
 use App\Models\SiteDomain;
 use App\Notifications\SslCertificateExpiring;
 use App\Notifications\WildcardCertificateExpiring;
@@ -12,6 +13,7 @@ use App\Services\Certificates\TlsCertificateProbe;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
@@ -23,7 +25,8 @@ use Illuminate\Support\Facades\Notification;
  * Expiry is read from what each server actually serves (TlsCertificateProbe),
  * because the stored expiry is only written at issuance and the served copy
  * can lag behind it. The stored value is the fallback when a server can't be
- * reached.
+ * reached. A server still serving an older copy of the wildcard certificate
+ * is sent the current one again.
  *
  * Alerts escalate through ALERT_THRESHOLDS: each certificate is emailed once
  * per threshold it crosses, not daily, and the marker clears once a renewed
@@ -86,8 +89,9 @@ class CheckCertificateExpiryJob implements ShouldQueue
     /**
      * The wildcard certificate is renewed on the Flitops host and copied to
      * every server with a free-domain site. A failed copy or nginx reload
-     * leaves that server serving the old certificate, so the earliest expiry
-     * seen across the copies counts, alerted once to the operator.
+     * leaves that server serving the old certificate, so that server is sent
+     * the current one again, and the earliest expiry seen across the copies
+     * counts, alerted once to the operator.
      */
     private function checkWildcardCertificate(TlsCertificateProbe $probe): void
     {
@@ -97,17 +101,22 @@ class CheckCertificateExpiryJob implements ShouldQueue
             return;
         }
 
-        $earliestServed = SiteDomain::query()
+        $servedCopies = SiteDomain::query()
             ->where('type', SiteDomainType::System)
             ->where('status', SiteDomainStatus::Active)
             ->where('is_enabled', true)
             ->with('site.server')
             ->get()
             ->map(fn (SiteDomain $domain) => [
+                'server' => $domain->site->server,
                 'hostname' => $domain->hostname,
                 'expires_at' => $this->servedExpiry($probe, $domain->site->server->ip_address, $domain->hostname),
             ])
-            ->filter(fn (array $served) => $served['expires_at'] !== null)
+            ->filter(fn (array $served) => $served['expires_at'] !== null);
+
+        $this->resendToServersWithOlderCopies($servedCopies, $certificate);
+
+        $earliestServed = $servedCopies
             ->sortBy(fn (array $served) => $served['expires_at']->getTimestamp())
             ->first();
 
@@ -123,6 +132,17 @@ class CheckCertificateExpiryJob implements ShouldQueue
         }
 
         $certificate->update(['expiry_alert_threshold' => $threshold]);
+    }
+
+    /**
+     * @param  Collection<int, array{server: Server, hostname: string, expires_at: CarbonInterface}>  $servedCopies
+     */
+    private function resendToServersWithOlderCopies(Collection $servedCopies, Certificate $certificate): void
+    {
+        $servedCopies
+            ->filter(fn (array $served) => $served['expires_at']->isBefore($certificate->expires_at))
+            ->unique(fn (array $served) => $served['server']->id)
+            ->each(fn (array $served) => DistributeWildcardCertificateJob::dispatch($served['server']));
     }
 
     private function alertOperator(WildcardCertificateExpiring $notification): void

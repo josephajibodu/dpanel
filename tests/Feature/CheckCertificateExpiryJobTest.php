@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CheckCertificateExpiryJob;
+use App\Jobs\DistributeWildcardCertificateJob;
 use App\Models\Certificate;
 use App\Models\Server;
 use App\Models\Site;
@@ -14,6 +15,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     Notification::fake();
@@ -179,6 +181,7 @@ describe('wildcard certificate', function () {
     });
 
     it('alerts with the hostname when a server still serves an older copy than the renewed certificate', function () {
+        Queue::fake([DistributeWildcardCertificateJob::class]);
         Certificate::factory()->freeDomainWildcard()->create(['expires_at' => now()->addDays(80)]);
         $servedExpiry = CarbonImmutable::now()->addDays(5);
         fakeServedCertificateExpiries(['app.flitops.test' => $servedExpiry]);
@@ -190,6 +193,25 @@ describe('wildcard certificate', function () {
                 && $notification->expiresAt->getTimestamp() === $servedExpiry->getTimestamp()
                 && str_contains(implode(' ', $notification->toMail($notifiable)->introLines), 'app.flitops.test');
         });
+    });
+
+    it('sends the current certificate again, once, to a server still serving an older copy', function () {
+        Queue::fake([DistributeWildcardCertificateJob::class]);
+        Site::factory()->forServer($this->server)->create(['domain' => 'blog.flitops.test']);
+        $upToDateServer = Server::factory()->forTeam($this->team)->create(['ip_address' => '203.0.113.20']);
+        Site::factory()->forServer($upToDateServer)->create(['domain' => 'docs.flitops.test']);
+        $expiresAt = CarbonImmutable::now()->addDays(80);
+        Certificate::factory()->freeDomainWildcard()->create(['expires_at' => $expiresAt]);
+        fakeServedCertificateExpiries([
+            'app.flitops.test' => CarbonImmutable::now()->addDays(20),
+            'blog.flitops.test' => CarbonImmutable::now()->addDays(20),
+            'docs.flitops.test' => $expiresAt,
+        ]);
+
+        runCertificateExpiryCheck();
+
+        Queue::assertPushedTimes(DistributeWildcardCertificateJob::class, 1);
+        Queue::assertPushed(DistributeWildcardCertificateJob::class, fn (DistributeWildcardCertificateJob $job) => $job->server->is($this->server));
     });
 
     it('does not alert when the certificate and served copies are outside the warning window', function () {
