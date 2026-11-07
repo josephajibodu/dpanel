@@ -104,7 +104,7 @@ class DigitalOceanProvider implements ProviderContract
             'name' => $name,
             'region' => $region,
             'size' => $size,
-            'image' => 'ubuntu-22-04-x64',
+            'image' => 'ubuntu-24-04-x64',
             'ssh_keys' => [$sshKeyId],
             'backups' => false,
             'ipv6' => false,

@@ -175,7 +175,7 @@ class HetznerProvider implements ProviderContract
             'name' => $name,
             'server_type' => $size,
             'location' => $region,
-            'image' => 'ubuntu-22.04',
+            'image' => 'ubuntu-24.04',
             'ssh_keys' => [$sshKeyId],
             'start_after_create' => true,
             'labels' => ['app' => 'serverforge'],

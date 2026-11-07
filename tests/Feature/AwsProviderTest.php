@@ -72,7 +72,7 @@ it('imports the SSH key into the server region and prefixes the ID with it', fun
         ->args->KeyName->toBe('flitops-web-1');
 });
 
-it('creates a server with the newest Ubuntu image, a security group and root login enabled', function () {
+it('creates a server with the newest Ubuntu 24.04 image, a security group and root login enabled', function () {
     $provider = fakeAws([
         'DescribeImages' => ['Images' => [
             ['ImageId' => 'ami-old', 'CreationDate' => '2026-01-01T00:00:00.000Z'],
@@ -87,6 +87,9 @@ it('creates a server with the newest Ubuntu image, a security group and root log
     $result = $provider->createServer('web-1', 't3.small', 'eu-west-2', 'eu-west-2:flitops-web-1');
 
     expect($result->id)->toBe('eu-west-2:i-abc');
+
+    expect(firstCall($calls, 'DescribeImages')['args']['Filters'][0]['Values'])
+        ->toBe(['ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*']);
 
     $run = firstCall($calls, 'RunInstances');
     expect($run['region'])->toBe('eu-west-2');

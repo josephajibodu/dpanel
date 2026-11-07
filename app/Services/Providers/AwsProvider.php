@@ -26,7 +26,7 @@ class AwsProvider implements ProviderContract
      */
     private const string CANONICAL_OWNER_ID = '099720109477';
 
-    private const string UBUNTU_IMAGE_NAME = 'ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*';
+    private const string UBUNTU_IMAGE_NAME = 'ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*';
 
     private const string SECURITY_GROUP_NAME = 'flitops';
 
@@ -290,7 +290,7 @@ class AwsProvider implements ProviderContract
     }
 
     /**
-     * Find the newest official Ubuntu 22.04 image in the client's region.
+     * Find the newest official Ubuntu 24.04 image in the client's region.
      */
     private function ubuntuImageId(Ec2Client $client): string
     {
@@ -306,7 +306,7 @@ class AwsProvider implements ProviderContract
         $image = collect($result['Images'])->sortByDesc('CreationDate')->first();
 
         if (! $image) {
-            throw new ProviderApiException('No Ubuntu 22.04 image found in this region.', 'aws');
+            throw new ProviderApiException('No Ubuntu 24.04 image found in this region.', 'aws');
         }
 
         return $image['ImageId'];

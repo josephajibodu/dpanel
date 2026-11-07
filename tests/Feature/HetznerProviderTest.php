@@ -1,7 +1,22 @@
 <?php
 
 use App\Services\Providers\HetznerProvider;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+
+it('creates servers on Ubuntu 24.04', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.hetzner.cloud/v1/servers' => Http::response(['server' => ['id' => 42, 'name' => 'web-1', 'status' => 'initializing']], 201),
+    ]);
+    $provider = new HetznerProvider;
+    $provider->setCredentials(['api_token' => 'test-token']);
+
+    $provider->createServer('web-1', 'cx23', 'nbg1', '123');
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://api.hetzner.cloud/v1/servers'
+        && $request['image'] === 'ubuntu-24.04');
+});
 
 it('lists sizes without the retired ones, now that Hetzner no longer sends a deprecated flag', function () {
     Http::preventStrayRequests();

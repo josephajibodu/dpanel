@@ -98,13 +98,13 @@ class VultrProvider implements ProviderContract
         string $region,
         string $sshKeyId,
     ): ProviderServerResult {
-        // Ubuntu 22.04 LTS image ID for Vultr
+        // Ubuntu 24.04 LTS image ID for Vultr
         $response = $this->http->post('instances', [
             'label' => $name,
             'hostname' => $name,
             'plan' => $size,
             'region' => $region,
-            'os_id' => 1743, // Ubuntu 22.04 LTS x64
+            'os_id' => 2284, // Ubuntu 24.04 LTS x64
             'sshkey_id' => [$sshKeyId],
             'tags' => ['serverforge'],
         ]);
