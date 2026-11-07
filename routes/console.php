@@ -17,6 +17,10 @@ Artisan::command('inspire', function () {
 
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
+// Keep failed jobs as long as Horizon's dashboard does (`trim.failed`: 7
+// days); nothing else ever clears the failed_jobs table.
+Schedule::command('queue:prune-failed', ['--hours' => 168])->daily();
+
 // Issue/renew the free-domain wildcard certificate. Idempotent — the issuer
 // short-circuits when the existing cert isn't due for renewal.
 Schedule::job(new IssueWildcardCertificateJob)->dailyAt('03:30');
