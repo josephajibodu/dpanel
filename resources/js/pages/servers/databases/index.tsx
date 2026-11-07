@@ -98,7 +98,10 @@ export default function ServerDatabasesIndex({
     const [createUserOpen, setCreateUserOpen] = useState(false);
     const [editUserOpen, setEditUserOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<DatabaseUser | null>(null);
-    const [connectUser, setConnectUser] = useState<DatabaseUser | null>(null);
+    const [connectTarget, setConnectTarget] = useState<{
+        database: string;
+        userId?: number;
+    } | null>(null);
     const [resetPasswordUser, setResetPasswordUser] =
         useState<DatabaseUser | null>(null);
     const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -362,7 +365,7 @@ export default function ServerDatabasesIndex({
                                     <TableHead>Charset</TableHead>
                                     <TableHead>Collation</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead className="w-[70px]" />
+                                    <TableHead className="w-[140px]" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -406,55 +409,77 @@ export default function ServerDatabasesIndex({
                                                     />
                                                 </TableCell>
                                                 <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                className="h-8 w-8"
-                                                                disabled={
-                                                                    isDeleting
-                                                                }
-                                                            >
-                                                                <MoreVerticalIcon className="h-4 w-4" />
-                                                                <span className="sr-only">
-                                                                    Actions
-                                                                </span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {db.status ===
+                                                            'ready' &&
+                                                            !isDeleting && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="text-xs"
+                                                                    onClick={() =>
+                                                                        setConnectTarget(
+                                                                            {
+                                                                                database:
+                                                                                    db.name,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <LinkIcon className="mr-2 h-4 w-4" />
+                                                                    Connect
+                                                                </Button>
+                                                            )}
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
                                                                 asChild
                                                             >
-                                                                <Link
-                                                                    href={teamPath(
-                                                                        `/servers/${server.id}/databases/${db.id}/backups`,
-                                                                    )}
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    disabled={
+                                                                        isDeleting
+                                                                    }
                                                                 >
-                                                                    <DatabaseBackupIcon className="mr-2 h-4 w-4" />
-                                                                    Backups
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            {canManageDatabases && (
+                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                    <span className="sr-only">
+                                                                        Actions
+                                                                    </span>
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onClick={() => {
-                                                                        setDbToDelete(
-                                                                            db,
-                                                                        );
-                                                                        setDeleteDbOpen(
-                                                                            true,
-                                                                        );
-                                                                    }}
+                                                                    asChild
                                                                 >
-                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                                                    Delete
+                                                                    <Link
+                                                                        href={teamPath(
+                                                                            `/servers/${server.id}/databases/${db.id}/backups`,
+                                                                        )}
+                                                                    >
+                                                                        <DatabaseBackupIcon className="mr-2 h-4 w-4" />
+                                                                        Backups
+                                                                    </Link>
                                                                 </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                                {canManageDatabases && (
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive focus:text-destructive"
+                                                                        onClick={() => {
+                                                                            setDbToDelete(
+                                                                                db,
+                                                                            );
+                                                                            setDeleteDbOpen(
+                                                                                true,
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -575,8 +600,14 @@ export default function ServerDatabasesIndex({
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem
                                                                 onClick={() =>
-                                                                    setConnectUser(
-                                                                        user,
+                                                                    setConnectTarget(
+                                                                        {
+                                                                            database:
+                                                                                user
+                                                                                    .databases[0] ??
+                                                                                '',
+                                                                            userId: user.id,
+                                                                        },
                                                                     )
                                                                 }
                                                             >
@@ -1131,17 +1162,19 @@ export default function ServerDatabasesIndex({
                 </DialogContent>
             </Dialog>
 
-            {connectUser && (
+            {connectTarget && (
                 <ConnectionInfoDialog
-                    key={connectUser.id}
                     server={server}
                     sshUser={sshUser}
                     hasSshKey={hasSshKey}
-                    databaseUser={connectUser}
+                    databases={dbList}
+                    databaseUsers={userList}
+                    initialDatabase={connectTarget.database}
+                    initialUserId={connectTarget.userId}
                     teamPath={teamPath}
                     onOpenChange={(open) => {
                         if (!open) {
-                            setConnectUser(null);
+                            setConnectTarget(null);
                         }
                     }}
                 />
