@@ -185,7 +185,10 @@ return [
     |
     */
 
-    'fast_termination' => false,
+    // On, so a deploy's `horizon:terminate` doesn't stop every queue until the
+    // longest running job (up to an hour for a backup) finishes: the new
+    // Horizon starts right away while the old workers finish their jobs.
+    'fast_termination' => true,
 
     /*
     |--------------------------------------------------------------------------
