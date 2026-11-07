@@ -99,6 +99,24 @@ it('invokes acme.sh with the right command + Cloudflare env when issuing for the
     });
 });
 
+it('runs acme.sh with the home folder of the account running it, not the HOME it inherited', function () {
+    $issuer = new WildcardCertificateIssuer(storageDirectory: $this->tmpDir, acmeBinary: '/fake/acme.sh');
+    $paths = $issuer->pathsFor('*.example.test');
+    $pem = selfSignedCertPem(80);
+    $accountHome = posix_getpwuid(posix_geteuid())['dir'];
+
+    Process::fake(function () use ($paths, $pem) {
+        @mkdir(dirname($paths['certificate']), 0700, true);
+        file_put_contents($paths['certificate'], $pem);
+
+        return Process::result(exitCode: 0);
+    });
+
+    $issuer->issueOrRenew('*.example.test');
+
+    Process::assertRan(fn ($process) => ($process->environment['HOME'] ?? null) === $accountHome);
+});
+
 it('renews when the existing certificate is within the renewal window', function () {
     $issuer = new WildcardCertificateIssuer(storageDirectory: $this->tmpDir);
     $paths = $issuer->pathsFor('*.example.test');

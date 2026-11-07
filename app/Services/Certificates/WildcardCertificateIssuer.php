@@ -118,6 +118,9 @@ class WildcardCertificateIssuer
         $result = Process::env([
             'CF_Token' => $cloudflareToken,
             'CF_Zone_ID' => $cloudflareZoneId,
+            // acme.sh keeps its state under $HOME/.acme.sh, and supervisord
+            // passes its own HOME on when it runs Horizon as another user.
+            'HOME' => posix_getpwuid(posix_geteuid())['dir'],
         ])
             ->timeout($this->timeoutSeconds)
             ->run($command);
