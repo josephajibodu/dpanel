@@ -80,8 +80,13 @@ class SyncEnvironmentJob implements ShouldQueue
                 $connection->exec($site->commandAsSystemUser("cd {$currentPath} && {$phpBinary} artisan config:cache"));
             }
 
-            if ($this->restartQueue) {
-                $connection->exec($site->commandAsSystemUser("cd {$currentPath} && {$phpBinary} artisan queue:restart"));
+            // The same restarts a deploy runs, since daemons only read .env
+            // when they boot: `queue:restart` alone leaves Horizon's master
+            // and Reverb on the old values.
+            $restartScript = $site->project_type->postActivationScript();
+
+            if ($this->restartQueue && $restartScript !== '') {
+                $connection->exec($site->commandAsSystemUser("set -e\ncd {$currentPath}\nPHP={$phpBinary}\n{$restartScript}"));
             }
 
             $connection->disconnect();

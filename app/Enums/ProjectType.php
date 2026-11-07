@@ -68,7 +68,8 @@ SCRIPT;
      * in the editable deploy script: that runs before the swap, so a daemon
      * restarted there comes straight back up on the old release — and Horizon
      * always respawns its workers from the release its master booted from,
-     * which `queue:restart` alone never changes.
+     * which `queue:restart` alone never changes. Environment edits run them
+     * too (SyncEnvironmentJob), from the live release.
      */
     public function postActivationScript(): string
     {
