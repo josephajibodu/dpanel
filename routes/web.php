@@ -51,6 +51,15 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Public marketing and legal pages
+Route::inertia('features', 'marketing/features')->name('features');
+Route::inertia('pricing', 'marketing/pricing')->name('pricing');
+Route::inertia('security', 'marketing/security')->name('security');
+Route::inertia('about', 'marketing/about')->name('about');
+Route::inertia('contact', 'marketing/contact')->name('contact');
+Route::inertia('terms', 'marketing/terms')->name('terms');
+Route::inertia('privacy', 'marketing/privacy')->name('privacy');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // Legacy redirects — send old global URLs to the user's current team context
     Route::get('dashboard', fn () => redirect()->route('dashboard', auth()->user()->currentTeamOrFail()));
