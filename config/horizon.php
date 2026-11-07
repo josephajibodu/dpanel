@@ -211,27 +211,15 @@ return [
     |
     */
 
-    'defaults' => [
-        'supervisor-1' => [
-            'connection' => 'redis',
-            'queue' => ['provisioning', 'deploy', 'ssh', 'default'],
-            'balance' => 'auto',
-            'autoScalingStrategy' => 'time',
-            'maxProcesses' => 10,
-            'maxTime' => 0,
-            'maxJobs' => 0,
-            'memory' => 128,
-            'tries' => 1,
-            'timeout' => 1900,
-            'nice' => 0,
-        ],
-    ],
+    // Left empty on purpose: Horizon adds every supervisor listed here to every
+    // environment, so a default supervisor would run in production on top of
+    // the production ones below.
+    'defaults' => [],
 
     'environments' => [
-        // `defaults` above only merges into supervisors with the same name, so
-        // every production supervisor sets `tries` itself — left unset, Horizon
-        // retries a failing job forever (e.g. every queued broadcast while
-        // Reverb is down) and never calls its failed() hook.
+        // Every supervisor sets `tries` itself — left unset, Horizon retries a
+        // failing job forever (e.g. every queued broadcast while Reverb is
+        // down) and never calls its failed() hook.
         'production' => [
             'supervisor-broadcasts' => [
                 'connection' => 'redis',
@@ -283,6 +271,7 @@ return [
                 'balance' => 'auto',
                 'autoScalingStrategy' => 'time',
                 'maxProcesses' => 5,
+                'tries' => 1,
                 'timeout' => 3600,
             ],
         ],

@@ -71,6 +71,11 @@ it('consumes every queue the app dispatches to', function () {
     }
 });
 
+it('runs no supervisor beyond the ones production defines', function () {
+    expect(array_keys(horizonProductionSupervisors()))
+        ->toBe(array_keys(config('horizon.environments.production')));
+});
+
 it('gives up on a failing job instead of retrying it forever', function () {
     foreach (horizonProductionSupervisors() as $name => $supervisor) {
         expect($supervisor->maxTries)->toBeGreaterThan(0, "{$name} retries failing jobs forever");
