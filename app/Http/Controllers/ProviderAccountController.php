@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Servers\FetchProviderCatalogAction;
 use App\Enums\Provider;
+use App\Exceptions\ProviderApiException;
 use App\Http\Requests\StoreProviderAccountRequest;
 use App\Http\Resources\ProviderAccountResource;
 use App\Jobs\ValidateProviderJob;
 use App\Models\ProviderAccount;
 use App\Models\Team;
 use App\Services\Providers\ProviderManager;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class ProviderAccountController extends Controller
 {
@@ -107,5 +112,32 @@ class ProviderAccountController extends Controller
         return redirect()
             ->route('provider-accounts.index', $team)
             ->with('success', 'Credentials validation started.');
+    }
+
+    /**
+     * Return the regions and sizes this account can create servers with.
+     *
+     * The create-server page calls this after it has loaded, once the user
+     * picks an account, so a slow provider API never blocks the page itself.
+     */
+    public function catalog(Team $team, ProviderAccount $providerAccount, FetchProviderCatalogAction $fetchCatalog): JsonResponse
+    {
+        $this->authorize('view', $providerAccount);
+
+        try {
+            return response()->json($fetchCatalog->execute($providerAccount));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $label = $providerAccount->provider->label();
+            $status = $exception instanceof ProviderApiException ? $exception->statusCode : null;
+            $status ??= $exception instanceof RequestException ? $exception->response->status() : null;
+
+            return response()->json([
+                'message' => in_array($status, [401, 403], true)
+                    ? "{$label} rejected this account's API key. Update the key in Provider accounts, then try again."
+                    : "Couldn't load regions and sizes from {$label}. Try again in a moment.",
+            ], 502);
+        }
     }
 }

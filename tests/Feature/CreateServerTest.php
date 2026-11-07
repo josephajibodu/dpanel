@@ -34,6 +34,15 @@ beforeEach(function () {
     ));
 });
 
+it('shows the create page without waiting on any provider', function () {
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/create")
+        ->assertOk();
+
+    $this->provider->shouldNotHaveReceived('getRegions');
+    $this->provider->shouldNotHaveReceived('getSizes');
+});
+
 it('creates a provider server of the chosen type with its preset services', function () {
     Queue::fake();
 

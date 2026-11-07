@@ -1,26 +1,38 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, CloudIcon, Loader2Icon, ServerIcon } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeftIcon, Loader2Icon, RefreshCwIcon } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { ProviderAccount } from '@/types/provider-account';
-import { ProviderRegion, ProviderSize, ServerTypeOption, ServerTypeValue } from '@/types/server';
+import {
+    ProviderRegion,
+    ProviderSize,
+    ServerTypeOption,
+    ServerTypeValue,
+} from '@/types/server';
 
 interface Props {
     providerAccounts: {
         data: ProviderAccount[];
     };
-    regions: Record<number, ProviderRegion[]>;
-    sizes: Record<number, ProviderSize[]>;
     generatedName: string;
     serverTypes: ServerTypeOption[];
 }
@@ -64,9 +76,15 @@ interface Stack {
 function applyPreset(option: ServerTypeOption, current: Stack): Stack {
     return {
         type: option.value,
-        php_version: option.services.php ? (current.php_version ?? '8.3') : null,
-        web_server: option.services.web_server ? (current.web_server ?? 'nginx') : null,
-        database_type: option.services.database ? (current.database_type ?? 'mysql') : null,
+        php_version: option.services.php
+            ? (current.php_version ?? '8.3')
+            : null,
+        web_server: option.services.web_server
+            ? (current.web_server ?? 'nginx')
+            : null,
+        database_type: option.services.database
+            ? (current.database_type ?? 'mysql')
+            : null,
         redis: option.services.redis,
     };
 }
@@ -79,10 +97,130 @@ const defaultStack: Stack = {
     redis: true,
 };
 
-export default function ServersCreate({ providerAccounts, regions, sizes, generatedName, serverTypes }: Props) {
+/** The state of fetching one provider account's regions and sizes. */
+type Catalog =
+    | { status: 'loading' }
+    | { status: 'ready'; regions: ProviderRegion[]; sizes: ProviderSize[] }
+    | { status: 'error'; message: string };
+
+/**
+ * Fetch each provider account's regions and sizes the first time it's picked,
+ * and keep the answer so switching back to that account is instant.
+ */
+function useProviderCatalogs() {
     const teamPath = useTeamPath();
-    const [mode, setMode] = useState<Mode>('provider');
+    const [catalogs, setCatalogs] = useState<Record<number, Catalog>>({});
+
+    const load = useCallback(
+        async (accountId: number) => {
+            setCatalogs((current) => ({
+                ...current,
+                [accountId]: { status: 'loading' },
+            }));
+
+            let catalog: Catalog;
+            try {
+                const response = await fetch(
+                    teamPath(`/provider-accounts/${accountId}/catalog`),
+                    {
+                        headers: { Accept: 'application/json' },
+                    },
+                );
+                const body = (await response.json().catch(() => ({}))) as {
+                    regions?: ProviderRegion[];
+                    sizes?: ProviderSize[];
+                    message?: string;
+                };
+
+                catalog = response.ok
+                    ? {
+                          status: 'ready',
+                          regions: body.regions ?? [],
+                          sizes: body.sizes ?? [],
+                      }
+                    : {
+                          status: 'error',
+                          message:
+                              body.message ??
+                              'Could not load regions and sizes.',
+                      };
+            } catch {
+                catalog = {
+                    status: 'error',
+                    message:
+                        'Could not reach FlitOps. Check your connection and try again.',
+                };
+            }
+
+            setCatalogs((current) => ({ ...current, [accountId]: catalog }));
+        },
+        [teamPath],
+    );
+
+    return { catalogs, load };
+}
+
+function formatMemory(megabytes: number): string {
+    if (megabytes < 1024) {
+        return `${megabytes} MB`;
+    }
+
+    const gigabytes = megabytes / 1024;
+
+    return `${Number.isInteger(gigabytes) ? gigabytes : gigabytes.toFixed(1)} GB`;
+}
+
+function formatPrice(price: number, currency: string): string {
+    return new Intl.NumberFormat('en', { style: 'currency', currency }).format(
+        price,
+    );
+}
+
+/** Whether the provider offers this size in the given region. */
+function isSizeAvailableIn(size: ProviderSize, regionSlug: string): boolean {
+    return size.regions === null || size.regions.includes(regionSlug);
+}
+
+/** The size's monthly price before tax in the given region. */
+function sizePriceIn(size: ProviderSize, regionSlug: string): number {
+    return size.region_prices[regionSlug] ?? size.price_monthly;
+}
+
+/** What each provider leaves out of, or folds into, the prices shown here. */
+const providerPricing: Record<
+    ProviderAccount['provider'],
+    { note: string; url: string }
+> = {
+    hetzner: {
+        note: 'Prices exclude VAT. Traffic beyond the included amount is billed by Hetzner.',
+        url: 'https://www.hetzner.com/cloud/',
+    },
+    digitalocean: {
+        note: 'Includes a public IPv4 address. Bandwidth beyond the included amount is billed by DigitalOcean.',
+        url: 'https://www.digitalocean.com/pricing/droplets',
+    },
+    vultr: {
+        note: 'Includes a public IPv4 address. Bandwidth beyond the included amount is billed by Vultr.',
+        url: 'https://www.vultr.com/pricing/',
+    },
+    aws: {
+        note: 'An estimate from us-east-1 prices, including a 30 GB disk and a fixed public IP. Other regions and data transfer can cost more.',
+        url: 'https://aws.amazon.com/ec2/pricing/on-demand/',
+    },
+};
+
+export default function ServersCreate({
+    providerAccounts,
+    generatedName,
+    serverTypes,
+}: Props) {
+    const teamPath = useTeamPath();
+    const accounts = providerAccounts.data;
+    const [mode, setMode] = useState<Mode>(
+        accounts.length > 0 ? 'provider' : 'custom',
+    );
     const [isGeneratingName, setIsGeneratingName] = useState(false);
+    const { catalogs, load: loadCatalog } = useProviderCatalogs();
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -91,7 +229,8 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
 
     const providerForm = useForm({
         name: generatedName ?? '',
-        provider_account_id: '',
+        provider_account_id:
+            accounts.length === 1 ? accounts[0].id.toString() : '',
         region: '',
         size: '',
         ...defaultStack,
@@ -107,8 +246,42 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
     const selectedAccountId = providerForm.data.provider_account_id
         ? parseInt(providerForm.data.provider_account_id)
         : null;
-    const availableRegions = selectedAccountId ? regions[selectedAccountId] || [] : [];
-    const availableSizes = selectedAccountId ? sizes[selectedAccountId] || [] : [];
+    const selectedAccount =
+        accounts.find((account) => account.id === selectedAccountId) ?? null;
+    const catalog = selectedAccountId ? catalogs[selectedAccountId] : undefined;
+
+    // Load the chosen account's regions and sizes once the page is on screen.
+    useEffect(() => {
+        if (selectedAccountId && !catalogs[selectedAccountId]) {
+            void loadCatalog(selectedAccountId);
+        }
+    }, [selectedAccountId, catalogs, loadCatalog]);
+
+    const regions = catalog?.status === 'ready' ? catalog.regions : [];
+    const sizes = catalog?.status === 'ready' ? catalog.sizes : [];
+    const selectedRegion =
+        regions.find((region) => region.slug === providerForm.data.region) ??
+        null;
+    const selectedSize =
+        sizes.find((size) => size.slug === providerForm.data.size) ?? null;
+    const sizePrice =
+        selectedSize && selectedRegion
+            ? sizePriceIn(selectedSize, selectedRegion.slug)
+            : null;
+    const ipv4Price = selectedRegion?.ipv4_price_monthly ?? null;
+
+    // Keep the chosen size only if the new region offers it too.
+    const handleRegionChange = (regionSlug: string) => {
+        const sizeStillAvailable =
+            selectedSize !== null &&
+            isSizeAvailableIn(selectedSize, regionSlug);
+
+        providerForm.setData({
+            ...providerForm.data,
+            region: regionSlug,
+            size: sizeStillAvailable ? providerForm.data.size : '',
+        });
+    };
 
     const handleProviderSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -143,409 +316,1005 @@ export default function ServersCreate({ providerAccounts, regions, sizes, genera
         }
     };
 
-    const handleProviderChange = (value: string) => {
+    const handleAccountChange = (accountId: number) => {
+        if (accountId === selectedAccountId) {
+            return;
+        }
+
         providerForm.setData({
             ...providerForm.data,
-            provider_account_id: value,
+            provider_account_id: accountId.toString(),
             region: '',
             size: '',
         });
     };
 
+    const activeForm = mode === 'provider' ? providerForm : customForm;
+    const stackType = serverTypes.find(
+        (option) => option.value === activeForm.data.type,
+    );
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Server" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={teamPath('/servers')}>
-                            <ArrowLeftIcon className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Create Server</h1>
-                        <p className="text-muted-foreground text-sm">Provision a new server with your preferred configuration.</p>
+            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" asChild>
+                            <Link
+                                href={teamPath('/servers')}
+                                aria-label="Back to servers"
+                            >
+                                <ArrowLeftIcon className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <h1 className="text-xl font-semibold tracking-tight">
+                            Create Server
+                        </h1>
                     </div>
+
+                    <SegmentedControl
+                        label="How to add the server"
+                        value={mode}
+                        onChange={setMode}
+                        options={[
+                            { value: 'provider', label: 'New server' },
+                            { value: 'custom', label: 'Existing server' },
+                        ]}
+                    />
                 </div>
 
-                <div className="mx-auto w-full max-w-2xl space-y-6">
-                    {/* Mode selector */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setMode('provider')}
-                            className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
-                                mode === 'provider'
-                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            }`}
-                        >
-                            <CloudIcon className="h-5 w-5 shrink-0 text-primary" />
-                            <div>
-                                <p className="font-medium">New Server</p>
-                                <p className="text-muted-foreground text-xs">Create via a provider</p>
-                            </div>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode('custom')}
-                            className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
-                                mode === 'custom'
-                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            }`}
-                        >
-                            <ServerIcon className="h-5 w-5 shrink-0 text-primary" />
-                            <div>
-                                <p className="font-medium">Existing Server</p>
-                                <p className="text-muted-foreground text-xs">Connect your own server</p>
-                            </div>
-                        </button>
-                    </div>
-
-                    {mode === 'provider' ? (
-                        <form onSubmit={handleProviderSubmit} className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Server Details</CardTitle>
-                                    <CardDescription>Configure the basic settings for your new server.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="name">Server Name</Label>
-                                            <button
-                                                type="button"
-                                                onClick={handleGenerateName}
-                                                disabled={isGeneratingName}
-                                                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50"
-                                            >
-                                                {isGeneratingName && <Loader2Icon className="h-3.5 w-3.5 animate-spin" />}
-                                                Generate new name
-                                            </button>
-                                        </div>
-                                        <Input
-                                            id="name"
-                                            type="text"
-                                            value={providerForm.data.name}
-                                            onChange={(e) => providerForm.setData('name', e.target.value)}
-                                            placeholder="e.g., production-api"
-                                        />
-                                        <InputError message={providerForm.errors.name} />
-                                        <p className="text-muted-foreground text-sm">
-                                            Only letters, numbers, and hyphens. This will be used as the server hostname.
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="provider_account_id">Provider Account</Label>
-                                        <Select value={providerForm.data.provider_account_id} onValueChange={handleProviderChange}>
-                                            <SelectTrigger id="provider_account_id">
-                                                <SelectValue placeholder="Select a provider account" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {providerAccounts.data.map((account) => (
-                                                    <SelectItem key={account.id} value={account.id.toString()}>
-                                                        {account.name} ({account.provider_label})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <InputError message={providerForm.errors.provider_account_id} />
-                                        {providerAccounts.data.length === 0 && (
-                                            <p className="text-muted-foreground text-sm">
-                                                No provider accounts found.{' '}
-                                                <Link href={teamPath('/provider-accounts/create')} className="text-primary underline">
-                                                    Connect one first
+                {mode === 'provider' ? (
+                    <form
+                        onSubmit={handleProviderSubmit}
+                        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+                    >
+                        <Card className="gap-0 divide-y py-0">
+                            <FormSection
+                                title="Provider"
+                                description="The cloud account the server is created in."
+                            >
+                                {accounts.length === 0 ? (
+                                    <EmptyState
+                                        title="No provider accounts connected"
+                                        description="Connect a DigitalOcean, Hetzner, Vultr or AWS account to create servers here."
+                                        action={
+                                            <Button asChild size="sm">
+                                                <Link
+                                                    href={teamPath(
+                                                        '/provider-accounts/create',
+                                                    )}
+                                                >
+                                                    Connect a provider
                                                 </Link>
-                                                .
-                                            </p>
-                                        )}
-                                    </div>
+                                            </Button>
+                                        }
+                                    />
+                                ) : (
+                                    <Select
+                                        value={
+                                            providerForm.data
+                                                .provider_account_id
+                                        }
+                                        onValueChange={(value) =>
+                                            handleAccountChange(parseInt(value))
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            aria-label="Provider account"
+                                            className="w-full sm:max-w-sm"
+                                        >
+                                            <SelectValue placeholder="Select a provider account" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {accounts.map((account) => (
+                                                <SelectItem
+                                                    key={account.id}
+                                                    value={account.id.toString()}
+                                                >
+                                                    {account.name}
+                                                    <span className="text-muted-foreground">
+                                                        {account.provider_label}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                <InputError
+                                    message={
+                                        providerForm.errors.provider_account_id
+                                    }
+                                />
+                            </FormSection>
 
-                                    <div className="grid gap-6 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="region">Region</Label>
-                                            <Select
-                                                value={providerForm.data.region}
-                                                onValueChange={(value) => providerForm.setData('region', value)}
-                                                disabled={!selectedAccountId}
-                                            >
-                                                <SelectTrigger id="region">
-                                                    <SelectValue placeholder="Select a region" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableRegions.map((region) => (
-                                                        <SelectItem key={region.slug} value={region.slug}>
-                                                            {region.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError message={providerForm.errors.region} />
-                                        </div>
+                            <FormSection title="Region and size">
+                                <CatalogSection
+                                    account={selectedAccount}
+                                    catalog={catalog}
+                                    onRetry={() =>
+                                        selectedAccountId &&
+                                        void loadCatalog(selectedAccountId)
+                                    }
+                                    region={providerForm.data.region}
+                                    size={providerForm.data.size}
+                                    onRegionChange={handleRegionChange}
+                                    onSizeChange={(value) =>
+                                        providerForm.setData('size', value)
+                                    }
+                                    regionError={providerForm.errors.region}
+                                    sizeError={providerForm.errors.size}
+                                />
+                            </FormSection>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="size">Server Size</Label>
-                                            <Select
-                                                value={providerForm.data.size}
-                                                onValueChange={(value) => providerForm.setData('size', value)}
-                                                disabled={!selectedAccountId}
-                                            >
-                                                <SelectTrigger id="size">
-                                                    <SelectValue placeholder="Select a size" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableSizes.map((size) => (
-                                                        <SelectItem key={size.slug} value={size.slug}>
-                                                            {size.description}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError message={providerForm.errors.size} />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <FormSection
+                                title="Name"
+                                description="Also used as the server's hostname."
+                            >
+                                <NameField
+                                    id="name"
+                                    value={providerForm.data.name}
+                                    onChange={(value) =>
+                                        providerForm.setData('name', value)
+                                    }
+                                    onGenerate={handleGenerateName}
+                                    isGenerating={isGeneratingName}
+                                    error={providerForm.errors.name}
+                                />
+                            </FormSection>
 
-                            <StackConfigCard
+                            <StackSection
                                 serverTypes={serverTypes}
                                 stack={providerForm.data}
-                                onChange={(stack) => providerForm.setData({ ...providerForm.data, ...stack })}
+                                onChange={(stack) =>
+                                    providerForm.setData({
+                                        ...providerForm.data,
+                                        ...stack,
+                                    })
+                                }
                                 errors={providerForm.errors}
                             />
+                        </Card>
 
-                            <div className="flex justify-end gap-3">
-                                <Button variant="outline" asChild>
-                                    <Link href={teamPath('/servers')}>Cancel</Link>
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={providerForm.processing || providerAccounts.data.length === 0}
-                                >
-                                    {providerForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                    Create Server
-                                </Button>
-                            </div>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleCustomSubmit} className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Server Details</CardTitle>
-                                    <CardDescription>
-                                        Enter your server details. You'll be shown how to connect FlitOps on the next step.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="custom-name">Server Name</Label>
-                                            <button
-                                                type="button"
-                                                onClick={handleGenerateName}
-                                                disabled={isGeneratingName}
-                                                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50"
-                                            >
-                                                {isGeneratingName && <Loader2Icon className="h-3.5 w-3.5 animate-spin" />}
-                                                Generate new name
-                                            </button>
-                                        </div>
-                                        <Input
-                                            id="custom-name"
-                                            type="text"
-                                            value={customForm.data.name}
-                                            onChange={(e) => customForm.setData('name', e.target.value)}
-                                            placeholder="e.g., production-api"
-                                        />
-                                        <InputError message={customForm.errors.name} />
-                                        <p className="text-muted-foreground text-sm">
-                                            Only letters, numbers, and hyphens. This will be used as the server hostname.
-                                        </p>
-                                    </div>
-
+                        <SummaryCard
+                            rows={[
+                                {
+                                    label: 'Provider',
+                                    value:
+                                        selectedAccount?.provider_label ?? null,
+                                },
+                                {
+                                    label: 'Region',
+                                    value: selectedRegion?.name ?? null,
+                                },
+                                {
+                                    label: 'Size',
+                                    value: selectedSize
+                                        ? (selectedSize.label ??
+                                          selectedSize.slug)
+                                        : null,
+                                },
+                                {
+                                    label: 'Type',
+                                    value: stackType?.label ?? null,
+                                },
+                            ]}
+                            costs={
+                                selectedAccount && selectedSize && sizePrice
+                                    ? {
+                                          currency: selectedSize.currency,
+                                          lines: [
+                                              {
+                                                  label: 'Server',
+                                                  amount: sizePrice,
+                                              },
+                                              ...(ipv4Price
+                                                  ? [
+                                                        {
+                                                            label: 'Public IPv4',
+                                                            amount: ipv4Price,
+                                                        },
+                                                    ]
+                                                  : []),
+                                          ],
+                                          ...providerPricing[
+                                              selectedAccount.provider
+                                          ],
+                                      }
+                                    : null
+                            }
+                            submitLabel="Create server"
+                            processing={providerForm.processing}
+                            disabled={accounts.length === 0}
+                            cancelHref={teamPath('/servers')}
+                        />
+                    </form>
+                ) : (
+                    <form
+                        onSubmit={handleCustomSubmit}
+                        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+                    >
+                        <Card className="gap-0 divide-y py-0">
+                            <FormSection
+                                title="Connection"
+                                description="Any fresh Ubuntu server. The next step shows how to give FlitOps access."
+                            >
+                                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_120px]">
                                     <div className="space-y-2">
                                         <Label htmlFor="ip_address">
-                                            IP address <span className="text-destructive">*</span>
+                                            IP address
                                         </Label>
                                         <Input
                                             id="ip_address"
                                             type="text"
                                             value={customForm.data.ip_address}
-                                            onChange={(e) => customForm.setData('ip_address', e.target.value)}
-                                            placeholder="Enter a public IPv4 or IPv6 address"
+                                            onChange={(e) =>
+                                                customForm.setData(
+                                                    'ip_address',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="e.g., 203.0.113.10"
+                                            required
                                         />
-                                        <InputError message={customForm.errors.ip_address} />
+                                        <InputError
+                                            message={
+                                                customForm.errors.ip_address
+                                            }
+                                        />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="ssh_port">SSH port</Label>
+                                        <Label htmlFor="ssh_port">
+                                            SSH port
+                                        </Label>
                                         <Input
                                             id="ssh_port"
                                             type="number"
                                             min={1}
                                             max={65535}
                                             value={customForm.data.ssh_port}
-                                            onChange={(e) => customForm.setData('ssh_port', e.target.value)}
+                                            onChange={(e) =>
+                                                customForm.setData(
+                                                    'ssh_port',
+                                                    e.target.value,
+                                                )
+                                            }
                                         />
-                                        <InputError message={customForm.errors.ssh_port} />
+                                        <InputError
+                                            message={customForm.errors.ssh_port}
+                                        />
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </FormSection>
 
-                            <StackConfigCard
+                            <FormSection
+                                title="Name"
+                                description="Also used as the server's hostname."
+                            >
+                                <NameField
+                                    id="custom-name"
+                                    value={customForm.data.name}
+                                    onChange={(value) =>
+                                        customForm.setData('name', value)
+                                    }
+                                    onGenerate={handleGenerateName}
+                                    isGenerating={isGeneratingName}
+                                    error={customForm.errors.name}
+                                />
+                            </FormSection>
+
+                            <StackSection
                                 serverTypes={serverTypes}
                                 stack={customForm.data}
-                                onChange={(stack) => customForm.setData({ ...customForm.data, ...stack })}
+                                onChange={(stack) =>
+                                    customForm.setData({
+                                        ...customForm.data,
+                                        ...stack,
+                                    })
+                                }
                                 errors={customForm.errors}
                             />
+                        </Card>
 
-                            <div className="flex justify-end gap-3">
-                                <Button variant="outline" asChild>
-                                    <Link href={teamPath('/servers')}>Cancel</Link>
-                                </Button>
-                                <Button type="submit" disabled={customForm.processing}>
-                                    {customForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                    Connect & Provision
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                        <SummaryCard
+                            rows={[
+                                {
+                                    label: 'IP address',
+                                    value: customForm.data.ip_address || null,
+                                },
+                                {
+                                    label: 'SSH port',
+                                    value: customForm.data.ssh_port || null,
+                                },
+                                {
+                                    label: 'Type',
+                                    value: stackType?.label ?? null,
+                                },
+                            ]}
+                            costs={null}
+                            submitLabel="Connect server"
+                            processing={customForm.processing}
+                            disabled={false}
+                            cancelHref={teamPath('/servers')}
+                        />
+                    </form>
+                )}
             </div>
         </AppLayout>
     );
 }
 
-interface StackConfigCardProps {
+interface SegmentedControlProps<T extends string> {
+    label: string;
+    value: T;
+    onChange: (value: T) => void;
+    options: { value: T; label: string }[];
+}
+
+/** A small two-or-more-way switch, styled like the appearance tabs in settings. */
+function SegmentedControl<T extends string>({
+    label,
+    value,
+    onChange,
+    options,
+}: SegmentedControlProps<T>) {
+    return (
+        <div
+            role="radiogroup"
+            aria-label={label}
+            className="inline-flex gap-1 rounded-lg bg-muted p-1"
+        >
+            {options.map((option) => (
+                <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={value === option.value}
+                    onClick={() => onChange(option.value)}
+                    className={cn(
+                        'rounded-md px-3 py-1 text-sm transition-colors',
+                        value === option.value
+                            ? 'bg-background text-foreground shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+interface FormSectionProps {
+    title: string;
+    description?: string;
+    children: React.ReactNode;
+}
+
+/** One block of the form, separated from the next by a thin line. */
+function FormSection({ title, description, children }: FormSectionProps) {
+    return (
+        <section className="space-y-4 p-5">
+            <div className="space-y-0.5">
+                <h2 className="text-sm font-medium">{title}</h2>
+                {description && (
+                    <p className="text-sm text-muted-foreground">
+                        {description}
+                    </p>
+                )}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+/** The small circle used by every radio-style choice on this page. */
+function RadioDot({ selected }: { selected: boolean }) {
+    return (
+        <span
+            aria-hidden
+            className={cn(
+                'flex size-4 shrink-0 items-center justify-center rounded-full border',
+                selected && 'border-primary',
+            )}
+        >
+            {selected && <span className="size-2 rounded-full bg-primary" />}
+        </span>
+    );
+}
+
+interface RadioOptionProps {
+    selected: boolean;
+    onSelect: () => void;
+    title: string;
+    description: string;
+}
+
+/** A compact, clickable option that behaves like a radio button. */
+function RadioOption({
+    selected,
+    onSelect,
+    title,
+    description,
+}: RadioOptionProps) {
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={onSelect}
+            className={cn(
+                'flex items-start gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                selected ? 'border-primary bg-muted/50' : 'hover:bg-muted/40',
+            )}
+        >
+            <span className="mt-0.5">
+                <RadioDot selected={selected} />
+            </span>
+            <span className="min-w-0">
+                <span className="block truncate font-medium">{title}</span>
+                <span className="block text-xs text-muted-foreground">
+                    {description}
+                </span>
+            </span>
+        </button>
+    );
+}
+
+interface NameFieldProps {
+    id: string;
+    value: string;
+    onChange: (value: string) => void;
+    onGenerate: () => void;
+    isGenerating: boolean;
+    error?: string;
+}
+
+function NameField({
+    id,
+    value,
+    onChange,
+    onGenerate,
+    isGenerating,
+    error,
+}: NameFieldProps) {
+    return (
+        <div className="space-y-2">
+            <div className="flex gap-2">
+                <Input
+                    id={id}
+                    type="text"
+                    aria-label="Server name"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder="e.g., production-api"
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onGenerate}
+                    disabled={isGenerating}
+                    aria-label="Generate a new name"
+                >
+                    {isGenerating ? (
+                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <RefreshCwIcon className="h-4 w-4" />
+                    )}
+                </Button>
+            </div>
+            <InputError message={error} />
+        </div>
+    );
+}
+
+interface CatalogSectionProps {
+    account: ProviderAccount | null;
+    catalog: Catalog | undefined;
+    onRetry: () => void;
+    region: string;
+    size: string;
+    onRegionChange: (value: string) => void;
+    onSizeChange: (value: string) => void;
+    regionError?: string;
+    sizeError?: string;
+}
+
+/**
+ * The region picker and size list, with clear loading, error and empty states
+ * while the provider's options are fetched.
+ */
+function CatalogSection({
+    account,
+    catalog,
+    onRetry,
+    region,
+    size,
+    onRegionChange,
+    onSizeChange,
+    regionError,
+    sizeError,
+}: CatalogSectionProps) {
+    if (!account) {
+        return (
+            <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                    Choose a provider to see its regions and sizes.
+                </p>
+                <InputError message={regionError} />
+                <InputError message={sizeError} />
+            </div>
+        );
+    }
+
+    if (!catalog || catalog.status === 'loading') {
+        return (
+            <div className="space-y-3" aria-busy="true">
+                <p
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                    role="status"
+                >
+                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                    Loading from {account.provider_label}…
+                </p>
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-32 w-full" />
+            </div>
+        );
+    }
+
+    if (catalog.status === 'error') {
+        return (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
+                <p className="text-sm text-destructive">{catalog.message}</p>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onRetry}
+                >
+                    <RefreshCwIcon className="h-4 w-4" />
+                    Try again
+                </Button>
+            </div>
+        );
+    }
+
+    // Only offer regions where at least one size can actually be created.
+    const regions = catalog.regions.filter((option) =>
+        catalog.sizes.some((sizeOption) =>
+            isSizeAvailableIn(sizeOption, option.slug),
+        ),
+    );
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Select value={region} onValueChange={onRegionChange}>
+                    <SelectTrigger id="region" className="w-full sm:max-w-sm">
+                        <SelectValue placeholder="Select a region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {regions.map((option) => (
+                            <SelectItem key={option.slug} value={option.slug}>
+                                {option.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <InputError message={regionError} />
+            </div>
+
+            <div className="space-y-2">
+                <Label id="size-label">Size</Label>
+                {region === '' ? (
+                    <p className="text-sm text-muted-foreground">
+                        Choose a region to see the sizes{' '}
+                        {account.provider_label} offers there.
+                    </p>
+                ) : (
+                    <SizeTable
+                        sizes={catalog.sizes.filter((option) =>
+                            isSizeAvailableIn(option, region),
+                        )}
+                        region={region}
+                        selected={size}
+                        onSelect={onSizeChange}
+                    />
+                )}
+                <InputError message={sizeError} />
+            </div>
+        </div>
+    );
+}
+
+interface SizeTableProps {
+    sizes: ProviderSize[];
+    region: string;
+    selected: string;
+    onSelect: (slug: string) => void;
+}
+
+/**
+ * The sizes offered in one region, grouped by the provider's own families
+ * (e.g. Hetzner's "Cost-optimized") and priced for that region.
+ */
+function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
+    if (sizes.length === 0) {
+        return (
+            <p className="text-sm text-muted-foreground">
+                No sizes are available in this region.
+            </p>
+        );
+    }
+
+    // Sizes arrive cheapest first, so each group starts with its cheapest size.
+    const groups = new Map<string | null, ProviderSize[]>();
+    for (const option of sizes) {
+        groups.set(option.category, [
+            ...(groups.get(option.category) ?? []),
+            option,
+        ]);
+    }
+
+    const columns =
+        'grid grid-cols-[1rem_minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)] items-center gap-3 px-3';
+
+    return (
+        <div
+            role="radiogroup"
+            aria-labelledby="size-label"
+            className="max-h-96 overflow-y-auto rounded-md border text-sm [&>div:last-child>button:last-child]:border-b-0"
+        >
+            <div
+                className={cn(
+                    columns,
+                    'sticky top-0 z-10 border-b bg-card py-2 text-xs text-muted-foreground',
+                )}
+                aria-hidden
+            >
+                <span />
+                <span>Name</span>
+                <span>vCPU</span>
+                <span>RAM</span>
+                <span>Disk</span>
+                <span className="text-right">Price</span>
+            </div>
+
+            {[...groups.entries()].map(([category, options]) => (
+                <div key={category ?? 'all'}>
+                    {category && (
+                        <div className="border-b bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                            {category}
+                        </div>
+                    )}
+                    {options.map((option) => {
+                        const isSelected = option.slug === selected;
+                        const price = sizePriceIn(option, region);
+
+                        return (
+                            <button
+                                key={option.slug}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => onSelect(option.slug)}
+                                className={cn(
+                                    columns,
+                                    'w-full border-b py-2 text-left transition-colors focus-visible:bg-muted focus-visible:outline-none',
+                                    isSelected
+                                        ? 'bg-muted/60'
+                                        : 'hover:bg-muted/40',
+                                )}
+                            >
+                                <RadioDot selected={isSelected} />
+                                <span className="truncate font-medium">
+                                    {option.label ?? option.slug}
+                                </span>
+                                <span>{option.vcpus}</span>
+                                <span>{formatMemory(option.memory)}</span>
+                                <span>{option.disk} GB</span>
+                                <span className="text-right whitespace-nowrap">
+                                    {price > 0 ? (
+                                        <>
+                                            {formatPrice(
+                                                price,
+                                                option.currency,
+                                            )}
+                                            <span className="text-muted-foreground">
+                                                /mo
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="text-muted-foreground">
+                                            —
+                                        </span>
+                                    )}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** The monthly cost lines for the chosen size, plus what they leave out. */
+interface Costs {
+    currency: string;
+    lines: { label: string; amount: number }[];
+    note: string;
+    url: string;
+}
+
+interface SummaryCardProps {
+    rows: { label: string; value: string | null }[];
+    costs: Costs | null;
+    submitLabel: string;
+    processing: boolean;
+    disabled: boolean;
+    cancelHref: string;
+}
+
+/** A sticky recap of the choices so far, holding the submit button. */
+function SummaryCard({
+    rows,
+    costs,
+    submitLabel,
+    processing,
+    disabled,
+    cancelHref,
+}: SummaryCardProps) {
+    return (
+        <Card className="py-0 lg:sticky lg:top-4">
+            <CardContent className="space-y-4 p-5">
+                <dl className="space-y-2 text-sm">
+                    {rows.map((row) => (
+                        <div
+                            key={row.label}
+                            className="flex justify-between gap-4"
+                        >
+                            <dt className="shrink-0 text-muted-foreground">
+                                {row.label}
+                            </dt>
+                            <dd
+                                className={cn(
+                                    'truncate text-right',
+                                    !row.value && 'text-muted-foreground',
+                                )}
+                            >
+                                {row.value ?? '—'}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+
+                {costs !== null && (
+                    <div className="space-y-2 border-t pt-4 text-sm">
+                        {costs.lines.length > 1 &&
+                            costs.lines.map((line) => (
+                                <div
+                                    key={line.label}
+                                    className="flex justify-between gap-4"
+                                >
+                                    <span className="text-muted-foreground">
+                                        {line.label}
+                                    </span>
+                                    <span>
+                                        {formatPrice(
+                                            line.amount,
+                                            costs.currency,
+                                        )}
+                                        <span className="text-muted-foreground">
+                                            /mo
+                                        </span>
+                                    </span>
+                                </div>
+                            ))}
+                        <div className="flex items-baseline justify-between gap-4">
+                            <span className="text-muted-foreground">
+                                Estimated total
+                            </span>
+                            <span>
+                                <span className="font-semibold">
+                                    {formatPrice(
+                                        costs.lines.reduce(
+                                            (total, line) =>
+                                                total + line.amount,
+                                            0,
+                                        ),
+                                        costs.currency,
+                                    )}
+                                </span>
+                                <span className="text-muted-foreground">
+                                    /mo
+                                </span>
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {costs.note}{' '}
+                            <a
+                                href={costs.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline underline-offset-2 hover:text-foreground"
+                            >
+                                Pricing details
+                            </a>
+                        </p>
+                    </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                    <Button type="submit" disabled={processing || disabled}>
+                        {processing && (
+                            <Loader2Icon className="h-4 w-4 animate-spin" />
+                        )}
+                        {submitLabel}
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href={cancelHref}>Cancel</Link>
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+interface StackSectionProps {
     serverTypes: ServerTypeOption[];
     stack: Stack;
     onChange: (stack: Stack) => void;
     errors: Partial<Record<keyof Stack, string>>;
 }
 
-function StackConfigCard({ serverTypes, stack, onChange, errors }: StackConfigCardProps) {
-    const update = (changes: Partial<Stack>) => onChange({ ...stack, ...changes });
+function StackSection({
+    serverTypes,
+    stack,
+    onChange,
+    errors,
+}: StackSectionProps) {
+    const update = (changes: Partial<Stack>) =>
+        onChange({ ...stack, ...changes });
 
     // A web server needs PHP, so turning PHP off turns the web server off too.
     const handlePhpChange = (value: string) =>
-        value === NONE ? update({ php_version: null, web_server: null }) : update({ php_version: value });
+        value === NONE
+            ? update({ php_version: null, web_server: null })
+            : update({ php_version: value });
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Server Type</CardTitle>
-                <CardDescription>
-                    Pick a starting point, then adjust which services get installed.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid gap-3 sm:grid-cols-2">
-                    {serverTypes.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => onChange(applyPreset(option, stack))}
-                            className={`rounded-lg border p-4 text-left transition-colors ${
-                                stack.type === option.value
-                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            }`}
-                        >
-                            <p className="font-medium">{option.label}</p>
-                            <p className="text-muted-foreground text-xs">{option.description}</p>
-                        </button>
-                    ))}
-                </div>
-                <InputError message={errors.type} />
+        <FormSection
+            title="Server type"
+            description="Pick a starting point, then adjust what gets installed."
+        >
+            <div
+                role="radiogroup"
+                aria-label="Server type"
+                className="grid gap-2 sm:grid-cols-2"
+            >
+                {serverTypes.map((option) => (
+                    <RadioOption
+                        key={option.value}
+                        selected={stack.type === option.value}
+                        onSelect={() => onChange(applyPreset(option, stack))}
+                        title={option.label}
+                        description={option.description}
+                    />
+                ))}
+            </div>
+            <InputError message={errors.type} />
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="php_version">PHP</Label>
-                        <Select value={stack.php_version ?? NONE} onValueChange={handlePhpChange}>
-                            <SelectTrigger id="php_version">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {phpVersions.map((version) => (
-                                    <SelectItem key={version.value} value={version.value}>
-                                        {version.label}
-                                    </SelectItem>
-                                ))}
-                                <SelectItem value={NONE}>None</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.php_version} />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="web_server">Web Server</Label>
-                        <Select
-                            value={stack.web_server ?? NONE}
-                            onValueChange={(value) => update({ web_server: value === NONE ? null : value })}
-                            disabled={stack.php_version === null}
-                        >
-                            <SelectTrigger id="web_server">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {webServers.map((server) => (
-                                    <SelectItem key={server.value} value={server.value}>
-                                        {server.label}
-                                    </SelectItem>
-                                ))}
-                                <SelectItem value={NONE}>None</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.web_server} />
-                        {stack.php_version === null && (
-                            <p className="text-muted-foreground text-sm">A web server needs PHP.</p>
-                        )}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="database_type">Database</Label>
-                        <Select
-                            value={stack.database_type ?? NONE}
-                            onValueChange={(value) => update({ database_type: value === NONE ? null : value })}
-                        >
-                            <SelectTrigger id="database_type">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {databaseTypes.map((db) => (
-                                    <SelectItem key={db.value} value={db.value}>
-                                        {db.label}
-                                    </SelectItem>
-                                ))}
-                                <SelectItem value={NONE}>None</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.database_type} />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="redis">Redis</Label>
-                        <div className="flex h-9 items-center gap-3">
-                            <Switch id="redis" checked={stack.redis} onCheckedChange={(checked) => update({ redis: checked })} />
-                            <span className="text-muted-foreground text-sm">For caching and queues</span>
-                        </div>
-                        <InputError message={errors.redis} />
-                    </div>
+            <div className="grid gap-4 pt-2 sm:grid-cols-2">
+                <div className="space-y-2">
+                    <Label htmlFor="php_version">PHP</Label>
+                    <Select
+                        value={stack.php_version ?? NONE}
+                        onValueChange={handlePhpChange}
+                    >
+                        <SelectTrigger id="php_version">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {phpVersions.map((version) => (
+                                <SelectItem
+                                    key={version.value}
+                                    value={version.value}
+                                >
+                                    {version.label}
+                                </SelectItem>
+                            ))}
+                            <SelectItem value={NONE}>None</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.php_version} />
                 </div>
 
-                <div className="text-muted-foreground rounded-lg border bg-muted/50 p-4 text-sm">
-                    <p className="font-medium">Always installed:</p>
-                    <ul className="mt-2 list-inside list-disc space-y-1">
-                        {stack.php_version !== null && <li>Composer</li>}
-                        <li>Node.js 24</li>
-                        <li>Supervisor for background processes</li>
-                        <li>Firewall (UFW)</li>
-                    </ul>
+                <div className="space-y-2">
+                    <Label htmlFor="web_server">Web server</Label>
+                    <Select
+                        value={stack.web_server ?? NONE}
+                        onValueChange={(value) =>
+                            update({
+                                web_server: value === NONE ? null : value,
+                            })
+                        }
+                        disabled={stack.php_version === null}
+                    >
+                        <SelectTrigger id="web_server">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {webServers.map((server) => (
+                                <SelectItem
+                                    key={server.value}
+                                    value={server.value}
+                                >
+                                    {server.label}
+                                </SelectItem>
+                            ))}
+                            <SelectItem value={NONE}>None</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.web_server} />
+                    {stack.php_version === null && (
+                        <p className="text-xs text-muted-foreground">
+                            A web server needs PHP.
+                        </p>
+                    )}
                 </div>
-            </CardContent>
-        </Card>
+
+                <div className="space-y-2">
+                    <Label htmlFor="database_type">Database</Label>
+                    <Select
+                        value={stack.database_type ?? NONE}
+                        onValueChange={(value) =>
+                            update({
+                                database_type: value === NONE ? null : value,
+                            })
+                        }
+                    >
+                        <SelectTrigger id="database_type">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {databaseTypes.map((db) => (
+                                <SelectItem key={db.value} value={db.value}>
+                                    {db.label}
+                                </SelectItem>
+                            ))}
+                            <SelectItem value={NONE}>None</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.database_type} />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="redis">Redis</Label>
+                    <div className="flex h-9 items-center gap-3">
+                        <Switch
+                            id="redis"
+                            checked={stack.redis}
+                            onCheckedChange={(checked) =>
+                                update({ redis: checked })
+                            }
+                        />
+                        <span className="text-sm text-muted-foreground">
+                            For caching and queues
+                        </span>
+                    </div>
+                    <InputError message={errors.redis} />
+                </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+                Always installed: {stack.php_version !== null && 'Composer, '}
+                Node.js 24, Supervisor and the UFW firewall.
+            </p>
+        </FormSection>
     );
 }

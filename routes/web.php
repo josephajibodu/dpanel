@@ -131,6 +131,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->except(['edit', 'update']);
             Route::post('provider-accounts/{providerAccount}/validate', [ProviderAccountController::class, 'validate'])
                 ->name('provider-accounts.validate');
+            Route::get('provider-accounts/{providerAccount}/catalog', [ProviderAccountController::class, 'catalog'])
+                ->scopeBindings()
+                ->name('provider-accounts.catalog');
 
             // Storage Providers
             Route::resource('storage-providers', StorageProviderController::class)

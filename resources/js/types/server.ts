@@ -71,14 +71,26 @@ export interface ServerTypeOption {
 export interface ProviderRegion {
     slug: string;
     name: string;
+    /** Monthly price of the public IPv4 address, when the provider bills it separately. */
+    ipv4_price_monthly: number | null;
 }
 
 export interface ProviderSize {
     slug: string;
+    /** The provider's own name for the size, e.g. "CPX 22". */
+    label: string | null;
+    /** The family the size belongs to, e.g. "Regular performance". */
+    category: string | null;
     vcpus: number;
     memory: number;
     disk: number;
+    /** Lowest monthly price before tax; used when a region has no price of its own. */
     price_monthly: number;
+    /** Monthly price before tax per region slug, where it differs by region. */
+    region_prices: Record<string, number>;
+    /** Region slugs the size can be created in; null means every region. */
+    regions: string[] | null;
+    currency: string;
     description: string;
 }
 

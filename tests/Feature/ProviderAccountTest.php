@@ -1,6 +1,10 @@
 <?php
 
+use App\Contracts\ProviderContract;
+use App\Data\ProviderRegion;
+use App\Data\ProviderSize;
 use App\Enums\Provider;
+use App\Exceptions\ProviderApiException;
 use App\Jobs\ValidateProviderJob;
 use App\Models\ProviderAccount;
 use App\Models\Server;
@@ -248,5 +252,79 @@ describe('validate', function () {
             ->post("/{$otherTeam->slug}/provider-accounts/{$account->id}/validate");
 
         $response->assertForbidden();
+    });
+});
+
+describe('catalog', function () {
+    beforeEach(function () {
+        $this->account = ProviderAccount::factory()->forTeam($this->team)->digitalocean()->create();
+        $this->provider = Mockery::mock(ProviderContract::class);
+        $this->mock(ProviderManager::class)->shouldReceive('forAccount')->andReturn($this->provider);
+    });
+
+    it('returns the regions and sizes, cheapest size first, and saves them', function () {
+        $this->provider->shouldReceive('getRegions')->once()->andReturn(collect([
+            new ProviderRegion(slug: 'nyc1', name: 'New York 1'),
+        ]));
+        $this->provider->shouldReceive('getSizes')->once()->andReturn(collect([
+            new ProviderSize(slug: 's-2vcpu-4gb', vcpus: 2, memory: 4096, disk: 80, priceMonthly: 24.0),
+            new ProviderSize(slug: 's-1vcpu-1gb', vcpus: 1, memory: 1024, disk: 25, priceMonthly: 6.0),
+        ]));
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/{$this->team->slug}/provider-accounts/{$this->account->id}/catalog");
+
+        $response->assertOk()
+            ->assertJsonPath('regions', [['slug' => 'nyc1', 'name' => 'New York 1', 'ipv4_price_monthly' => null]])
+            ->assertJsonPath('sizes.*.slug', ['s-1vcpu-1gb', 's-2vcpu-4gb']);
+        $this->assertDatabaseHas('provider_regions', ['provider' => 'digitalocean', 'code' => 'nyc1']);
+        $this->assertDatabaseHas('provider_sizes', ['provider' => 'digitalocean', 'code' => 's-1vcpu-1gb', 'memory' => '1 GB']);
+    });
+
+    it('answers repeat requests without asking the provider again', function () {
+        $this->provider->shouldReceive('getRegions')->once()->andReturn(collect());
+        $this->provider->shouldReceive('getSizes')->once()->andReturn(collect());
+
+        $url = "/{$this->team->slug}/provider-accounts/{$this->account->id}/catalog";
+        $this->actingAs($this->user)->getJson($url)->assertOk();
+        $this->actingAs($this->user)->getJson($url)->assertOk();
+    });
+
+    it('explains a provider failure and tries again on the next request', function () {
+        $this->provider->shouldReceive('getRegions')->twice()->andThrow(new RuntimeException('Undefined array key'));
+
+        $url = "/{$this->team->slug}/provider-accounts/{$this->account->id}/catalog";
+        $this->actingAs($this->user)->getJson($url)
+            ->assertStatus(502)
+            ->assertJsonPath('message', "Couldn't load regions and sizes from DigitalOcean. Try again in a moment.");
+        $this->actingAs($this->user)->getJson($url)->assertStatus(502);
+    });
+
+    it('says when the provider rejects the API key', function () {
+        $this->provider->shouldReceive('getRegions')
+            ->andThrow(new ProviderApiException('Unauthorized', 'digitalocean', 401));
+
+        $this->actingAs($this->user)
+            ->getJson("/{$this->team->slug}/provider-accounts/{$this->account->id}/catalog")
+            ->assertStatus(502)
+            ->assertJsonPath('message', "DigitalOcean rejected this account's API key. Update the key in Provider accounts, then try again.");
+    });
+
+    it('does not expose another team\'s account through this team', function () {
+        $otherTeam = Team::factory()->forUser(User::factory()->create())->create();
+        $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
+
+        $this->actingAs($this->user)
+            ->getJson("/{$this->team->slug}/provider-accounts/{$account->id}/catalog")
+            ->assertNotFound();
+    });
+
+    it('does not allow loading other teams accounts', function () {
+        $otherTeam = Team::factory()->forUser(User::factory()->create())->create();
+        $account = ProviderAccount::factory()->forTeam($otherTeam)->create();
+
+        $this->actingAs($this->user)
+            ->getJson("/{$otherTeam->slug}/provider-accounts/{$account->id}/catalog")
+            ->assertForbidden();
     });
 });

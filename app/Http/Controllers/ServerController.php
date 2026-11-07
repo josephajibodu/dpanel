@@ -23,11 +23,8 @@ use App\Jobs\CollectServerMetricsJob;
 use App\Jobs\InstallStackJob;
 use App\Jobs\RestartServiceJob;
 use App\Jobs\TestServerConnectionJob;
-use App\Models\ProviderRegion;
-use App\Models\ProviderSize;
 use App\Models\Server;
 use App\Models\Team;
-use App\Services\Providers\ProviderManager;
 use App\Services\ServerNameGenerator;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Http\JsonResponse;
@@ -56,7 +53,7 @@ class ServerController extends Controller
         ]);
     }
 
-    public function create(Team $team, ProviderManager $providerManager, ServerNameGenerator $nameGenerator): Response
+    public function create(Team $team, ServerNameGenerator $nameGenerator): Response
     {
         $this->authorize('create', [Server::class, $team]);
 
@@ -64,47 +61,8 @@ class ServerController extends Controller
             ->where('is_valid', true)
             ->get();
 
-        $regions = [];
-        $sizes = [];
-
-        foreach ($providerAccounts as $account) {
-            try {
-                $provider = $providerManager->forAccount($account);
-
-                $providerRegions = $provider->getRegions();
-                foreach ($providerRegions as $regionDto) {
-                    ProviderRegion::updateOrCreate(
-                        ['provider' => $account->provider, 'code' => $regionDto->slug],
-                        ['name' => $regionDto->name]
-                    );
-                }
-
-                $providerSizes = $provider->getSizes();
-                foreach ($providerSizes as $sizeDto) {
-                    ProviderSize::updateOrCreate(
-                        ['provider' => $account->provider, 'code' => $sizeDto->slug],
-                        [
-                            'name' => $sizeDto->description(),
-                            'memory' => $this->formatMemory($sizeDto->memory),
-                            'disk' => $sizeDto->disk.' GB',
-                            'cpus' => $sizeDto->vcpus,
-                            'price_monthly' => $sizeDto->priceMonthly,
-                        ]
-                    );
-                }
-
-                $regions[$account->id] = $providerRegions->map->toArray()->all();
-                $sizes[$account->id] = $providerSizes->map->toArray()->all();
-            } catch (\Exception) {
-                $regions[$account->id] = [];
-                $sizes[$account->id] = [];
-            }
-        }
-
         return Inertia::render('servers/create', [
             'providerAccounts' => ProviderAccountResource::collection($providerAccounts),
-            'regions' => $regions,
-            'sizes' => $sizes,
             'generatedName' => $nameGenerator->generate(),
             'serverTypes' => array_map(fn (ServerType $type): array => [
                 'value' => $type->value,
@@ -121,11 +79,6 @@ class ServerController extends Controller
     public function generateName(ServerNameGenerator $generator): JsonResponse
     {
         return response()->json(['name' => $generator->generate()]);
-    }
-
-    private function formatMemory(int $mb): string
-    {
-        return $mb >= 1024 ? ($mb / 1024).' GB' : $mb.' MB';
     }
 
     public function store(Team $team, StoreServerRequest $request, CreateServerAction $action): RedirectResponse
