@@ -15,7 +15,6 @@ import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
-import { useServerRuntimeUpdates } from '@/hooks/use-server-runtime-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -52,8 +51,6 @@ export default function ServerRuntimeIndex({
     const { errors } = pageProps as { errors?: Record<string, string> };
     const teamPath = useTeamPath();
     const canManageRuntime = usePermission()('manage_php');
-
-    useServerRuntimeUpdates(server.id);
 
     const [selectedVersion, setSelectedVersion] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);

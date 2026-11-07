@@ -39,6 +39,19 @@ it('shows the installed Node.js version and the versions to switch to', function
         );
 });
 
+it('tells the page to refresh the Node.js runtime when this server broadcasts a runtime update', function () {
+    $response = $this->actingAs($this->user)->get($this->path);
+
+    expect($response->viewData('page')['liveProps'])->toBe([
+        'node' => [
+            'listeners' => [[
+                'channel' => ['name' => "server.{$this->server->id}", 'type' => 'private'],
+                'events' => ['server.runtime.updated'],
+            ]],
+        ],
+    ]);
+});
+
 it('records new servers as Node.js 24', function () {
     $server = Server::factory()->forTeam($this->team)->create();
 

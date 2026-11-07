@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\NodeVersion;
 use App\Enums\ServiceStatus;
+use App\Events\ServerRuntimeUpdated;
 use App\Http\Requests\UpdateNodeVersionRequest;
 use App\Http\Resources\ServerResource;
 use App\Jobs\InstallNodeVersionJob;
@@ -22,12 +23,12 @@ class ServerRuntimeController extends Controller
         return Inertia::render('servers/runtime/index', [
             'server' => new ServerResource($server),
             'serverIsReady' => $server->isReady(),
-            'node' => [
+            'node' => Inertia::live(fn (): array => [
                 'version' => $server->node_version->value,
                 'label' => $server->node_version->label(),
                 'is_end_of_life' => $server->node_version->isEndOfLife(),
                 'status' => $server->node_status->value,
-            ],
+            ], on: new ServerRuntimeUpdated($server)),
             'availableNodeVersions' => collect(NodeVersion::cases())
                 ->map(fn (NodeVersion $version): array => [
                     'value' => $version->value,
