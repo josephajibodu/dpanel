@@ -24,7 +24,7 @@ beforeEach(function () {
     $this->path = "/{$this->team->slug}/servers/{$this->server->id}/runtime";
 });
 
-it('shows the installed Node.js version and the versions to switch to', function () {
+it('shows the installed Node.js version and every version newest first', function () {
     $response = $this->actingAs($this->user)->get($this->path);
 
     $response->assertOk()
@@ -32,10 +32,14 @@ it('shows the installed Node.js version and the versions to switch to', function
             ->component('servers/runtime/index')
             ->where('serverIsReady', true)
             ->where('node.version', '20')
-            ->where('node.label', 'Node.js 20 (end of life)')
+            ->where('node.label', 'Node.js 20')
             ->where('node.is_end_of_life', true)
             ->where('node.status', 'active')
-            ->where('availableNodeVersions.2', ['value' => '24', 'label' => 'Node.js 24'])
+            ->where('availableNodeVersions', [
+                ['value' => '24', 'label' => 'Node.js 24', 'is_end_of_life' => false],
+                ['value' => '22', 'label' => 'Node.js 22', 'is_end_of_life' => false],
+                ['value' => '20', 'label' => 'Node.js 20', 'is_end_of_life' => true],
+            ])
         );
 });
 

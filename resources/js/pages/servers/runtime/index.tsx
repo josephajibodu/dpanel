@@ -1,18 +1,21 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
+import { updateNodeVersion } from '@/actions/App/Http/Controllers/ServerRuntimeController';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -30,6 +33,7 @@ interface NodeRuntime {
 interface NodeVersionOption {
     value: string;
     label: string;
+    is_end_of_life: boolean;
 }
 
 interface Props {
@@ -52,11 +56,14 @@ export default function ServerRuntimeIndex({
     const teamPath = useTeamPath();
     const canManageRuntime = usePermission()('manage_php');
 
-    const [selectedVersion, setSelectedVersion] = useState('');
+    const [versionToSwitchTo, setVersionToSwitchTo] =
+        useState<NodeVersionOption | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isChanging =
+    const isSwitching =
         node.status === 'pending' || node.status === 'installing';
+    const hasFailed = node.status === 'failed';
+    const isReinstall = versionToSwitchTo?.value === node.version;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -64,19 +71,42 @@ export default function ServerRuntimeIndex({
         { title: 'Runtime', href: teamPath(`/servers/${server.id}/runtime`) },
     ];
 
-    const handleSwitchVersion = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedVersion) return;
+    const handleSwitchVersion = () => {
+        if (!versionToSwitchTo) {
+            return;
+        }
+
         setIsSubmitting(true);
         router.put(
-            teamPath(`/servers/${server.id}/runtime/node`),
-            { version: selectedVersion },
+            updateNodeVersion.url({
+                team: pageProps.currentTeam?.slug ?? '',
+                server: server.id,
+            }),
+            { version: versionToSwitchTo.value },
             {
                 preserveScroll: true,
-                onSuccess: () => setSelectedVersion(''),
-                onFinish: () => setIsSubmitting(false),
+                onFinish: () => {
+                    setIsSubmitting(false);
+                    setVersionToSwitchTo(null);
+                },
             },
         );
+    };
+
+    const switchDescription = (target: NodeVersionOption | null): string => {
+        if (!target) {
+            return '';
+        }
+
+        if (target.value === node.version) {
+            return `This installs ${target.label} on ${server.name} again, to repair the failed switch. Sites use it from their next deploy.`;
+        }
+
+        const endOfLifeWarning = target.is_end_of_life
+            ? `${target.label} no longer gets security updates. `
+            : '';
+
+        return `${endOfLifeWarning}Sites on ${server.name} start using ${target.label} from their next deploy. Processes already running stay on ${node.label} until they restart.`;
     };
 
     return (
@@ -102,107 +132,141 @@ export default function ServerRuntimeIndex({
                 <StatGroup>
                     <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
                         <div className="border-b px-6 py-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-4">
                                 <CardTitle>Node.js</CardTitle>
-                                <AutoStatusBadge status={node.status} />
+                                {isSwitching && (
+                                    <AutoStatusBadge
+                                        status={node.status}
+                                        label="Switching"
+                                    />
+                                )}
+                                {hasFailed && (
+                                    <AutoStatusBadge status="failed" />
+                                )}
                             </div>
                             <CardDescription className="mt-1">
-                                Used by every site on this server when a deploy
-                                runs <span className="font-mono">npm</span>{' '}
-                                commands, such as building front-end assets.
+                                Every site on this server uses this version when
+                                a deploy runs{' '}
+                                <span className="font-mono">npm</span> commands,
+                                such as building front-end assets.
                             </CardDescription>
                         </div>
                         <div className="flex flex-col gap-4 p-6">
-                            <div className="space-y-1">
+                            {hasFailed && (
+                                <p className="text-sm text-destructive">
+                                    The last switch failed, so the server may
+                                    still be on {node.label}. Try again.
+                                </p>
+                            )}
+                            {node.is_end_of_life && !hasFailed && (
+                                <p className="text-sm text-destructive">
+                                    {node.label} no longer gets security
+                                    updates. Switch to a newer version.
+                                </p>
+                            )}
+                            {canManageRuntime && !serverIsReady && (
                                 <p className="text-sm text-muted-foreground">
-                                    Installed version
+                                    You can switch versions once the server is
+                                    active and connected.
                                 </p>
-                                <p className="font-mono text-lg font-medium">
-                                    {node.label}
-                                </p>
-                                {node.is_end_of_life && (
-                                    <p className="text-sm text-destructive">
-                                        This version no longer gets security
-                                        updates. Switch to a newer version.
-                                    </p>
-                                )}
-                                {node.status === 'failed' && (
-                                    <p className="text-sm text-destructive">
-                                        The last version change failed. The
-                                        server may still be on the version
-                                        above; try switching again.
-                                    </p>
-                                )}
-                            </div>
+                            )}
 
-                            {canManageRuntime && (
-                                <form
-                                    onSubmit={handleSwitchVersion}
-                                    className="flex flex-col gap-2"
-                                >
-                                    <Label htmlFor="node-version">
-                                        Switch version
-                                    </Label>
-                                    <div className="flex flex-col gap-2 sm:flex-row">
-                                        <Select
-                                            value={selectedVersion}
-                                            onValueChange={setSelectedVersion}
-                                            disabled={
-                                                !serverIsReady || isChanging
-                                            }
-                                        >
-                                            <SelectTrigger
-                                                id="node-version"
-                                                className="sm:w-64"
-                                            >
-                                                <SelectValue placeholder="Select a version" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {availableNodeVersions
-                                                    .filter(
-                                                        (v) =>
-                                                            v.value !==
-                                                            node.version,
-                                                    )
-                                                    .map((v) => (
-                                                        <SelectItem
-                                                            key={v.value}
-                                                            value={v.value}
-                                                        >
-                                                            {v.label}
-                                                        </SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <Button
-                                            type="submit"
-                                            disabled={
-                                                !serverIsReady ||
-                                                isChanging ||
-                                                isSubmitting ||
-                                                !selectedVersion
-                                            }
-                                        >
-                                            {isChanging
-                                                ? 'Switching…'
-                                                : 'Switch version'}
-                                        </Button>
-                                    </div>
-                                    {errors?.version && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.version}
-                                        </p>
-                                    )}
-                                    <p className="text-sm text-muted-foreground">
-                                        Takes effect from the next deploy.
-                                        Processes already running keep the old
-                                        version until they restart.
-                                    </p>
-                                </form>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Version</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        {canManageRuntime && (
+                                            <TableHead className="w-[120px]" />
+                                        )}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {availableNodeVersions.map((version) => {
+                                        const isCurrent =
+                                            version.value === node.version;
+
+                                        return (
+                                            <TableRow key={version.value}>
+                                                <TableCell className="font-medium">
+                                                    {version.label}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {isCurrent && (
+                                                            <StatusBadge
+                                                                status="Current"
+                                                                color="green"
+                                                            />
+                                                        )}
+                                                        {version.is_end_of_life && (
+                                                            <StatusBadge
+                                                                status="End of life"
+                                                                color="orange"
+                                                                className="normal-case"
+                                                            />
+                                                        )}
+                                                        {!isCurrent &&
+                                                            !version.is_end_of_life && (
+                                                                <span className="text-sm text-muted-foreground">
+                                                                    —
+                                                                </span>
+                                                            )}
+                                                    </div>
+                                                </TableCell>
+                                                {canManageRuntime && (
+                                                    <TableCell className="text-right">
+                                                        {(!isCurrent ||
+                                                            hasFailed) && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={
+                                                                    !serverIsReady ||
+                                                                    isSwitching ||
+                                                                    isSubmitting
+                                                                }
+                                                                onClick={() =>
+                                                                    setVersionToSwitchTo(
+                                                                        version,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {isCurrent
+                                                                    ? 'Reinstall'
+                                                                    : 'Switch'}
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+
+                            {errors?.version && (
+                                <p className="text-sm text-destructive">
+                                    {errors.version}
+                                </p>
                             )}
                         </div>
                     </div>
                 </StatGroup>
+
+                <ConfirmDialog
+                    open={versionToSwitchTo !== null}
+                    onOpenChange={(open) => !open && setVersionToSwitchTo(null)}
+                    title={
+                        isReinstall
+                            ? `Reinstall ${versionToSwitchTo?.label ?? ''}?`
+                            : `Switch to ${versionToSwitchTo?.label ?? ''}?`
+                    }
+                    description={switchDescription(versionToSwitchTo)}
+                    confirmLabel={isReinstall ? 'Reinstall' : 'Switch version'}
+                    loading={isSubmitting}
+                    onConfirm={handleSwitchVersion}
+                />
             </div>
         </AppLayout>
     );

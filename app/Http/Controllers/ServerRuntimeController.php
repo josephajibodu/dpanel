@@ -30,10 +30,13 @@ class ServerRuntimeController extends Controller
                 'status' => $server->node_status->value,
             ], on: new ServerRuntimeUpdated($server)),
             'availableNodeVersions' => collect(NodeVersion::cases())
+                ->reverse()
                 ->map(fn (NodeVersion $version): array => [
                     'value' => $version->value,
                     'label' => $version->label(),
+                    'is_end_of_life' => $version->isEndOfLife(),
                 ])
+                ->values()
                 ->all(),
         ]);
     }

@@ -10,9 +10,7 @@ enum NodeVersion: string
 
     public function label(): string
     {
-        return $this->isEndOfLife()
-            ? "Node.js {$this->value} (end of life)"
-            : "Node.js {$this->value}";
+        return "Node.js {$this->value}";
     }
 
     /**
