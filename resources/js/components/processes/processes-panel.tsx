@@ -78,6 +78,11 @@ const CRON_FREQUENCIES: { value: string; label: string }[] = [
     { value: '0 0 * * 0', label: 'Weekly' },
 ];
 
+/** Turns a cron expression into its preset name (e.g. "Daily"), or returns it unchanged. */
+export function cronFrequencyLabel(value: string): string {
+    return CRON_FREQUENCIES.find((f) => f.value === value)?.label ?? value;
+}
+
 function truncate(str: string, max: number) {
     if (str.length <= max) return str;
     return str.slice(0, max) + '…';
@@ -377,9 +382,6 @@ export function ProcessesPanel({
         });
     };
 
-    const frequencyLabel = (value: string) =>
-        CRON_FREQUENCIES.find((f) => f.value === value)?.label ?? value;
-
     const showSiteColumn = scope === 'server';
     const showSitePicker = scope === 'server';
 
@@ -666,7 +668,9 @@ export function ProcessesPanel({
                                                 {c.user}
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">
-                                                {frequencyLabel(c.frequency)}
+                                                {cronFrequencyLabel(
+                                                    c.frequency,
+                                                )}
                                             </TableCell>
                                             {showSiteColumn && (
                                                 <TableCell className="text-xs text-muted-foreground">

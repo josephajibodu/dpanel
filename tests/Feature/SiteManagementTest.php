@@ -9,11 +9,13 @@ use App\Jobs\CreateSiteJob;
 use App\Jobs\DeleteSiteJob;
 use App\Jobs\DeploySiteJob;
 use App\Jobs\SyncEnvironmentJob;
+use App\Models\CronJob;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteIncident;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\Worker;
 use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -171,7 +173,7 @@ describe('site creation', function () {
     it('can create a site with site_name instead of domain', function () {
         Queue::fake();
 
-        $mock = \Mockery::mock(CloudflareDnsService::class);
+        $mock = Mockery::mock(CloudflareDnsService::class);
         $mock->shouldReceive('createARecord')
             ->once()
             ->with('react-blog.flitops.xyz', '146.190.253.93')
@@ -204,7 +206,7 @@ describe('site creation', function () {
             'status' => 'pending',
         ]);
 
-        $site = \App\Models\Site::query()->where('domain', 'react-blog.flitops.xyz')->firstOrFail();
+        $site = Site::query()->where('domain', 'react-blog.flitops.xyz')->firstOrFail();
         $this->assertDatabaseHas('site_domains', [
             'site_id' => $site->id,
             'hostname' => 'react-blog.flitops.xyz',
@@ -352,6 +354,29 @@ describe('site viewing', function () {
             );
     });
 
+    it('lists only the workers and cron jobs that belong to the site', function () {
+        $site = Site::factory()->forServer($this->server)->create();
+        $otherSite = Site::factory()->forServer($this->server)->create();
+        $siteWorker = Worker::factory()->create(['server_id' => $this->server->id, 'site_id' => $site->id]);
+        Worker::factory()->create(['server_id' => $this->server->id, 'site_id' => $otherSite->id]);
+        Worker::factory()->create(['server_id' => $this->server->id, 'site_id' => null]);
+        $siteCronJob = CronJob::factory()->create(['server_id' => $this->server->id, 'site_id' => $site->id]);
+        CronJob::factory()->create(['server_id' => $this->server->id, 'site_id' => $otherSite->id]);
+        CronJob::factory()->create(['server_id' => $this->server->id, 'site_id' => null]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/show')
+                ->has('workers.data', 1)
+                ->where('workers.data.0.id', $siteWorker->id)
+                ->has('cronJobs.data', 1)
+                ->where('cronJobs.data.0.id', $siteCronJob->id)
+            );
+    });
+
     it('cannot view other users sites', function () {
         $otherUser = User::factory()->create();
         $otherTeam = Team::factory()->forUser($otherUser)->create();
@@ -424,13 +449,13 @@ describe('site sub-pages', function () {
             'server_id' => $this->server->id,
         ]);
 
-        $sshConnectionMock = \Mockery::mock(SshConnection::class);
+        $sshConnectionMock = Mockery::mock(SshConnection::class);
         $sshConnectionMock->shouldReceive('download')
             ->once()
             ->andReturn("APP_NAME=FlitOps\nAPP_ENV=production");
         $sshConnectionMock->shouldReceive('disconnect')->once();
 
-        $sshServiceMock = \Mockery::mock(SshService::class);
+        $sshServiceMock = Mockery::mock(SshService::class);
         $sshServiceMock->shouldReceive('connect')
             ->once()
             ->withArgs(fn ($server) => $server->is($this->server))

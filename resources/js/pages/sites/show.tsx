@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { retry } from '@/actions/App/Http/Controllers/SiteController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { cronFrequencyLabel } from '@/components/processes/processes-panel';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { StatusBadge } from '@/components/status-badge';
@@ -26,6 +27,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { StatGroup } from '@/components/ui/stat-group';
+import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
     TableBody,
@@ -37,11 +39,13 @@ import {
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useServerDeploymentUpdates } from '@/hooks/use-server-deployment-updates';
+import { useServerProcessesUpdates } from '@/hooks/use-server-processes-updates';
 import { useSiteProvisioningUpdates } from '@/hooks/use-site-provisioning-updates';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
+import type { CronJob, Worker } from '@/types/server';
 import { Site } from '@/types/site';
 
 interface Props {
@@ -54,9 +58,16 @@ interface Props {
             })[];
         };
     };
+    workers: { data: Worker[] };
+    cronJobs: { data: CronJob[] };
 }
 
-export default function SitesShow({ server: serverProp, site }: Props) {
+export default function SitesShow({
+    server: serverProp,
+    site,
+    workers,
+    cronJobs,
+}: Props) {
     const { currentTeam, errors } = usePage<
         SharedData & { errors?: Record<string, string> }
     >().props;
@@ -69,6 +80,7 @@ export default function SitesShow({ server: serverProp, site }: Props) {
         siteData?.status ?? '',
     );
     useServerDeploymentUpdates(Number(serverId ?? 0), siteData?.id, ['site']);
+    useServerProcessesUpdates(Number(serverId ?? 0));
     useSiteProvisioningUpdates(
         Number(serverId ?? 0),
         siteData?.id,
@@ -110,6 +122,8 @@ export default function SitesShow({ server: serverProp, site }: Props) {
         user?: { id: number; name: string };
     })[];
     const latestDeployment = siteData.latest_deployment;
+    const siteWorkers = workers?.data ?? [];
+    const siteCronJobs = cronJobs?.data ?? [];
 
     const handleDelete = () => {
         setDeleteDialogOpen(true);
@@ -739,40 +753,153 @@ export default function SitesShow({ server: serverProp, site }: Props) {
                             )}
                         </div>
 
-                        {/* Background processes */}
-                        <div id="background-processes" className="space-y-4">
+                        {/* Workers */}
+                        <div id="workers" className="space-y-4">
                             <div className="space-y-1">
-                                <CardTitle>Background processes</CardTitle>
+                                <CardTitle>Workers</CardTitle>
                                 <CardDescription>
-                                    Process managers and workers for this site.
+                                    Supervisor-style workers for this site.
                                 </CardDescription>
                             </div>
-                            <EmptyState
-                                title="No background processes yet"
-                                description={
-                                    can('manage_processes')
-                                        ? 'Add process managers or workers when ready.'
-                                        : 'Background processes for this site will appear here.'
-                                }
-                            />
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Command</TableHead>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">
+                                                Numprocs
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {siteWorkers.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={5}
+                                                    className="border-0 bg-transparent p-0"
+                                                >
+                                                    <EmptyState
+                                                        title="No workers yet"
+                                                        description={
+                                                            can(
+                                                                'manage_processes',
+                                                            )
+                                                                ? 'Add workers from the Processes tab.'
+                                                                : 'Workers for this site will appear here.'
+                                                        }
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            siteWorkers.map((w) => (
+                                                <TableRow key={w.id}>
+                                                    <TableCell className="font-medium">
+                                                        {w.name}
+                                                    </TableCell>
+                                                    <TableCell className="max-w-[200px] truncate font-mono text-xs">
+                                                        {w.command}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {w.user}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <AutoStatusBadge
+                                                            status={w.status}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                                        {w.numprocs}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
 
-                        {/* Scheduled jobs */}
-                        <div id="scheduled-jobs" className="space-y-4">
+                        {/* Cron jobs */}
+                        <div id="cron-jobs" className="space-y-4">
                             <div className="space-y-1">
-                                <CardTitle>Scheduled jobs</CardTitle>
+                                <CardTitle>Cron jobs</CardTitle>
                                 <CardDescription>
-                                    Cron jobs and scheduled tasks for this site.
+                                    Scheduled cron jobs for this site.
                                 </CardDescription>
                             </div>
-                            <EmptyState
-                                title="No scheduled jobs yet"
-                                description={
-                                    can('manage_processes')
-                                        ? 'Add cron jobs or scheduled tasks when ready.'
-                                        : 'Scheduled jobs for this site will appear here.'
-                                }
-                            />
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Command</TableHead>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Frequency</TableHead>
+                                            <TableHead>Enabled</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {siteCronJobs.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={4}
+                                                    className="border-0 bg-transparent p-0"
+                                                >
+                                                    <EmptyState
+                                                        title="No cron jobs yet"
+                                                        description={
+                                                            can(
+                                                                'manage_processes',
+                                                            )
+                                                                ? 'Add cron jobs from the Processes tab.'
+                                                                : 'Cron jobs for this site will appear here.'
+                                                        }
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            siteCronJobs.map((c) => (
+                                                <TableRow key={c.id}>
+                                                    <TableCell className="max-w-[200px] truncate font-mono font-medium">
+                                                        {c.command}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {c.user}
+                                                    </TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {cronFrequencyLabel(
+                                                            c.frequency,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {c.status ===
+                                                        'deleting' ? (
+                                                            <AutoStatusBadge
+                                                                status="deleting"
+                                                                label="Deleting..."
+                                                            />
+                                                        ) : (
+                                                            <AutoStatusBadge
+                                                                status={
+                                                                    c.hidden
+                                                                        ? 'disabled'
+                                                                        : 'enabled'
+                                                                }
+                                                                label={
+                                                                    c.hidden
+                                                                        ? 'Disabled'
+                                                                        : 'Enabled'
+                                                                }
+                                                            />
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
                 )}
