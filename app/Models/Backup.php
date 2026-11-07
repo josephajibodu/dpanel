@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Events\BackupStatusChanged;
 use App\Support\BackupFailureMessage;
+use Database\Factories\BackupFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Throwable;
 
 class Backup extends Model
 {
-    /** @use HasFactory<\Database\Factories\BackupFactory> */
+    /** @use HasFactory<BackupFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -98,7 +99,7 @@ class Backup extends Model
         $server = $this->targetServer();
 
         return $this->isSqlite()
-            ? route('servers.sites.backups.index', [$server->team, $server, $this->site])
+            ? route('servers.sites.database.show', [$server->team, $server, $this->site])
             : route('servers.databases.backups.index', [$server->team, $server, $this->serverDatabase]);
     }
 

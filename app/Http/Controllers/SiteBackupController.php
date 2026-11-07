@@ -3,46 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Backups\RunSqliteBackup;
-use App\Http\Resources\BackupResource;
-use App\Http\Resources\BackupScheduleResource;
-use App\Http\Resources\ServerResource;
-use App\Http\Resources\SiteResource;
-use App\Http\Resources\StorageProviderResource;
 use App\Models\Backup;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\Team;
 use App\Services\Storage\StorageProviderManager;
 use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class SiteBackupController extends Controller
 {
-    public function index(Team $team, Server $server, Site $site): Response
+    /**
+     * The site's backups now live on its Database page. This keeps links in
+     * backup emails that were already sent working.
+     */
+    public function index(Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('view', $site);
-
-        $site->load(['server', 'backupSchedule', 'serverDatabase']);
-
-        $backups = $site->backups()
-            ->with('user:id,name')
-            ->latest()
-            ->paginate(20);
-
-        return Inertia::render('sites/backups/index', [
-            'server' => new ServerResource($server),
-            'site' => new SiteResource($site),
-            'usesSqlite' => $site->usesSqlite(),
-            'serverDatabase' => $site->serverDatabase?->only(['id', 'name']),
-            'schedule' => $site->backupSchedule
-                ? new BackupScheduleResource($site->backupSchedule)
-                : null,
-            'backups' => BackupResource::collection($backups),
-            'storageProviders' => StorageProviderResource::collection(
-                $team->storageProviders()->where('is_valid', true)->get()
-            ),
-        ]);
+        return to_route('servers.sites.database.show', [$team, $server, $site]);
     }
 
     public function store(Team $team, Server $server, Site $site, RunSqliteBackup $action): RedirectResponse

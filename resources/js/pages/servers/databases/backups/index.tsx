@@ -4,17 +4,8 @@ import { useState } from 'react';
 
 import { BackupHistory } from '@/components/backups/backup-history';
 import { BackupScheduleCard } from '@/components/backups/backup-schedule-card';
+import { RestoreBackupDialog } from '@/components/backups/restore-backup-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
@@ -62,9 +53,7 @@ export default function ServerDatabaseBackupsIndex({
     const basePath = `/servers/${server.id}/databases/${serverDatabase.id}/backups`;
     const schedulePath = `/servers/${server.id}/databases/${serverDatabase.id}/backup-schedule`;
 
-    const [restoreOpen, setRestoreOpen] = useState(false);
     const [backupToRestore, setBackupToRestore] = useState<Backup | null>(null);
-    const [restoreConfirmText, setRestoreConfirmText] = useState('');
     const [isBackingUp, setIsBackingUp] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -85,28 +74,6 @@ export default function ServerDatabaseBackupsIndex({
             {
                 preserveScroll: true,
                 onFinish: () => setIsBackingUp(false),
-            },
-        );
-    };
-
-    const handleRestore = (backup: Backup) => {
-        setBackupToRestore(backup);
-        setRestoreConfirmText('');
-        setRestoreOpen(true);
-    };
-
-    const confirmRestore = () => {
-        if (!backupToRestore) return;
-        router.post(
-            teamPath(`${basePath}/${backupToRestore.id}/restore`),
-            {},
-            {
-                preserveScroll: true,
-                onFinish: () => {
-                    setRestoreOpen(false);
-                    setBackupToRestore(null);
-                    setRestoreConfirmText('');
-                },
             },
         );
     };
@@ -155,55 +122,19 @@ export default function ServerDatabaseBackupsIndex({
                     backupsUrl={teamPath(basePath)}
                     description="All backups for this database."
                     onRestore={
-                        can('restore_backups') ? handleRestore : undefined
+                        can('restore_backups') ? setBackupToRestore : undefined
                     }
                 />
             </div>
 
-            <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Restore backup</DialogTitle>
-                        <DialogDescription>
-                            This overwrites the live data in{' '}
-                            <span className="font-mono">
-                                {serverDatabase.name}
-                            </span>{' '}
-                            with this backup. Type the database name to confirm.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-2">
-                        <Label htmlFor="restore-confirm">Database name</Label>
-                        <Input
-                            id="restore-confirm"
-                            value={restoreConfirmText}
-                            onChange={(e) =>
-                                setRestoreConfirmText(e.target.value)
-                            }
-                            placeholder={serverDatabase.name}
-                            className="font-mono"
-                            autoComplete="off"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setRestoreOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            disabled={
-                                restoreConfirmText !== serverDatabase.name
-                            }
-                            onClick={confirmRestore}
-                        >
-                            Restore
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {backupToRestore && (
+                <RestoreBackupDialog
+                    backup={backupToRestore}
+                    databaseName={serverDatabase.name}
+                    backupsUrl={teamPath(basePath)}
+                    onClose={() => setBackupToRestore(null)}
+                />
+            )}
         </AppLayout>
     );
 }

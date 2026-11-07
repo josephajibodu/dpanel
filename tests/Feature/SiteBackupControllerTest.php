@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Services\Storage\CloudflareR2Driver;
 use App\Services\Storage\StorageProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
@@ -30,40 +29,18 @@ beforeEach(function () {
 });
 
 describe('index', function () {
-    it('shows the backups page for a sqlite site', function () {
-        Backup::factory()->forSite($this->site)->completed()->create([
+    it('sends the old backups page to the sites database page', function () {
+        $response = $this->actingAs($this->user)->get($this->basePath);
+
+        $response->assertRedirect("{$this->sitePath}/database");
+    });
+
+    it('links a sqlite backup to the sites database page', function () {
+        $backup = Backup::factory()->forSite($this->site)->create([
             'storage_provider_id' => $this->storageProvider->id,
         ]);
 
-        $response = $this->actingAs($this->user)->get($this->basePath);
-
-        $response->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('sites/backups/index')
-                ->where('usesSqlite', true)
-                ->where('serverDatabase', null)
-                ->has('backups.data', 1)
-                ->has('storageProviders')
-            );
-    });
-
-    it('points sites with a server database at that databases backups', function () {
-        $serverDatabase = ServerDatabase::factory()->create(['server_id' => $this->server->id]);
-        $this->site->update(['server_database_id' => $serverDatabase->id]);
-
-        $response = $this->actingAs($this->user)->get($this->basePath);
-
-        $response->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('usesSqlite', false)
-                ->where('serverDatabase.id', $serverDatabase->id)
-            );
-    });
-
-    it('denies access to another teams site', function () {
-        $response = $this->actingAs(User::factory()->create())->get($this->basePath);
-
-        $response->assertForbidden();
+        expect($backup->indexUrl())->toBe(url("{$this->sitePath}/database"));
     });
 });
 

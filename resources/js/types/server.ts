@@ -106,6 +106,21 @@ export interface DatabaseUser {
     updated_at: string;
 }
 
+/**
+ * What the Connect dialog needs for one server database, taken from the server
+ * the database lives on.
+ */
+export interface DatabaseConnection {
+    server: Pick<
+        Server,
+        'id' | 'name' | 'ip_address' | 'ssh_port' | 'database_type'
+    >;
+    database: ServerDatabase;
+    databaseUsers: DatabaseUser[];
+    sshUser: string;
+    hasSshKey: boolean;
+}
+
 export interface WorkerSite {
     id: number;
     domain: string;

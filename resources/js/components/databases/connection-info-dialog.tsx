@@ -289,8 +289,8 @@ export function ConnectionInfoDialog({
                             <span className="font-mono text-foreground">
                                 {databaseName}
                             </span>{' '}
-                            yet. Add a user with access to it under Database
-                            users, then come back here to connect.
+                            yet. Add one on the server's Databases page, then
+                            come back here to connect.
                         </div>
                     ) : (
                         <>

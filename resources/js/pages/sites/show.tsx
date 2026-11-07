@@ -4,6 +4,7 @@ import {
     AlertCircleIcon,
     ExternalLinkIcon,
     GitBranchIcon,
+    LinkIcon,
     Loader2Icon,
     MoreVerticalIcon,
     Trash2Icon,
@@ -12,6 +13,7 @@ import { useState } from 'react';
 
 import { retry } from '@/actions/App/Http/Controllers/SiteController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { cronFrequencyLabel } from '@/components/processes/processes-panel';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
@@ -45,7 +47,7 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
-import type { CronJob, Worker } from '@/types/server';
+import type { CronJob, DatabaseConnection, Worker } from '@/types/server';
 import { Site } from '@/types/site';
 
 interface Props {
@@ -60,6 +62,7 @@ interface Props {
     };
     workers: { data: Worker[] };
     cronJobs: { data: CronJob[] };
+    databaseConnection: DatabaseConnection | null;
 }
 
 export default function SitesShow({
@@ -67,6 +70,7 @@ export default function SitesShow({
     site,
     workers,
     cronJobs,
+    databaseConnection,
 }: Props) {
     const { currentTeam, errors } = usePage<
         SharedData & { errors?: Record<string, string> }
@@ -91,6 +95,7 @@ export default function SitesShow({
     const [isDeploying, setIsDeploying] = useState(false);
     const [isolateDialogOpen, setIsolateDialogOpen] = useState(false);
     const [isIsolating, setIsIsolating] = useState(false);
+    const [connectOpen, setConnectOpen] = useState(false);
     const retryForm = useForm({});
 
     if (!siteData?.id) {
@@ -624,6 +629,48 @@ export default function SitesShow({
                                             )}
                                         </div>
                                     </div>
+
+                                    {databaseConnection && (
+                                        <div className="border-t pt-5">
+                                            <p className="text-sm text-muted-foreground">
+                                                Database
+                                            </p>
+                                            <div className="mt-2 flex items-center justify-between gap-2">
+                                                <span className="truncate font-mono text-sm font-medium">
+                                                    {
+                                                        databaseConnection
+                                                            .database.name
+                                                    }
+                                                </span>
+                                                {databaseConnection.database
+                                                    .status === 'ready' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            setConnectOpen(true)
+                                                        }
+                                                    >
+                                                        <LinkIcon className="mr-2 h-4 w-4" />
+                                                        Connect
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                On{' '}
+                                                {databaseConnection.server.name}{' '}
+                                                ·{' '}
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${serverId}/sites/${siteData.id}/database`,
+                                                    )}
+                                                    className="font-medium hover:text-foreground"
+                                                >
+                                                    Manage →
+                                                </Link>
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </StatGroup>
@@ -925,6 +972,19 @@ export default function SitesShow({
                 onConfirm={confirmDelete}
                 loading={isDeleting}
             />
+
+            {connectOpen && databaseConnection && (
+                <ConnectionInfoDialog
+                    server={databaseConnection.server}
+                    sshUser={databaseConnection.sshUser}
+                    hasSshKey={databaseConnection.hasSshKey}
+                    databases={[databaseConnection.database]}
+                    databaseUsers={databaseConnection.databaseUsers}
+                    initialDatabase={databaseConnection.database.name}
+                    teamPath={teamPath}
+                    onOpenChange={setConnectOpen}
+                />
+            )}
         </AppLayout>
     );
 }

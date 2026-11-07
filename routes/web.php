@@ -25,6 +25,7 @@ use App\Http\Controllers\SiteBackupController;
 use App\Http\Controllers\SiteBackupScheduleController;
 use App\Http\Controllers\SiteCommandRunController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteDatabaseController;
 use App\Http\Controllers\SiteDomainController;
 use App\Http\Controllers\SiteIsolationController;
 use App\Http\Controllers\SiteLogController;
@@ -225,6 +226,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.sites.command-runs.store');
                 Route::get('servers/{server}/sites/{site}/command-runs/{command_run}', [SiteCommandRunController::class, 'show'])
                     ->name('servers.sites.command-runs.show');
+
+                // The site's database and its backups
+                Route::get('servers/{server}/sites/{site}/database', [SiteDatabaseController::class, 'show'])
+                    ->name('servers.sites.database.show');
 
                 // SQLite backups (sites without a server database)
                 Route::put('servers/{server}/sites/{site}/backup-schedule', [SiteBackupScheduleController::class, 'update'])

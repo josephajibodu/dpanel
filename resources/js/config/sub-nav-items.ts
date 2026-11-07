@@ -72,7 +72,7 @@ export function getSiteSubNavItems(
             href: `${base}/environment`,
             permission: 'view_secrets',
         },
-        { title: 'Backups', href: `${base}/backups` },
+        { title: 'Database', href: `${base}/database` },
         { title: 'Deploy Script', href: `${base}/deploy-script` },
         { title: 'Web Server', href: `${base}/nginx` },
         { title: 'Domains', href: `${base}/domains` },

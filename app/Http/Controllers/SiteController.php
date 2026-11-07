@@ -12,7 +12,7 @@ use App\Http\Requests\CheckSiteNameRequest;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
 use App\Http\Resources\CronJobResource;
-use App\Http\Resources\DatabaseUserResource;
+use App\Http\Resources\DatabaseConnectionResource;
 use App\Http\Resources\ServerDatabaseResource;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
@@ -21,7 +21,6 @@ use App\Http\Resources\WorkerResource;
 use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\RetryCreateSiteJob;
 use App\Jobs\SyncSiteNginxJob;
-use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Site;
@@ -154,7 +153,9 @@ class SiteController extends Controller
             'site' => new SiteResource($site),
             'workers' => WorkerResource::collection($server->workers()->where('site_id', $site->id)->get()),
             'cronJobs' => CronJobResource::collection($server->cronJobs()->where('site_id', $site->id)->get()),
-            'databaseConnection' => $this->databaseConnection($site),
+            'databaseConnection' => $site->serverDatabase
+                ? DatabaseConnectionResource::make($site->serverDatabase)->resolve()
+                : null,
         ]);
     }
 
@@ -248,35 +249,5 @@ class SiteController extends Controller
         return redirect()
             ->route('servers.sites.show', [$team, $server, $site])
             ->with('success', 'Retrying site creation...');
-    }
-
-    /**
-     * What the Connect dialog needs for the server database this site uses.
-     * Everything comes from the server the database lives on, which can be a
-     * different server from the site's own.
-     *
-     * @return array{server: array<string, mixed>, database: array<string, mixed>, databaseUsers: array<int, mixed>, sshUser: string, hasSshKey: bool}|null
-     */
-    private function databaseConnection(Site $site): ?array
-    {
-        $database = $site->serverDatabase;
-
-        if ($database === null) {
-            return null;
-        }
-
-        $databaseServer = $database->server;
-        $usersWithAccess = $databaseServer->databaseUsers()
-            ->get()
-            ->filter(fn (DatabaseUser $user): bool => in_array($database->name, $user->databases ?? [], true))
-            ->values();
-
-        return [
-            'server' => $databaseServer->only(['id', 'name', 'ip_address', 'ssh_port', 'database_type']),
-            'database' => (new ServerDatabaseResource($database))->resolve(),
-            'databaseUsers' => DatabaseUserResource::collection($usersWithAccess)->resolve(),
-            'sshUser' => config('server.user'),
-            'hasSshKey' => $databaseServer->sshKeys()->where('user_id', auth()->id())->exists(),
-        ];
     }
 }

@@ -10,9 +10,12 @@ use App\Jobs\DeleteSiteJob;
 use App\Jobs\DeploySiteJob;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\CronJob;
+use App\Models\DatabaseUser;
 use App\Models\Server;
+use App\Models\ServerDatabase;
 use App\Models\Site;
 use App\Models\SiteIncident;
+use App\Models\SshKey;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
@@ -374,6 +377,54 @@ describe('site viewing', function () {
                 ->where('workers.data.0.id', $siteWorker->id)
                 ->has('cronJobs.data', 1)
                 ->where('cronJobs.data.0.id', $siteCronJob->id)
+            );
+    });
+
+    it('shows the connection details of the database the site uses, taken from the server the database lives on', function () {
+        $databaseServer = Server::factory()->forTeam($this->team)->database()->create([
+            'ip_address' => '203.0.113.10',
+            'ssh_port' => 2222,
+            'database_type' => 'postgresql',
+        ]);
+        $database = ServerDatabase::factory()->create(['server_id' => $databaseServer->id, 'name' => 'shop']);
+        $userWithAccess = DatabaseUser::factory()->create([
+            'server_id' => $databaseServer->id,
+            'username' => 'shop_app',
+            'databases' => ['shop', 'reports'],
+        ]);
+        DatabaseUser::factory()->create(['server_id' => $databaseServer->id, 'databases' => ['reports']]);
+        $databaseServer->sshKeys()->attach(SshKey::factory()->create(['user_id' => $this->user->id]));
+        $site = Site::factory()->forServer($this->server)->create(['server_database_id' => $database->id]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/show')
+                ->where('databaseConnection.server.id', $databaseServer->id)
+                ->where('databaseConnection.server.ip_address', '203.0.113.10')
+                ->where('databaseConnection.server.ssh_port', 2222)
+                ->where('databaseConnection.server.database_type', 'postgresql')
+                ->where('databaseConnection.database.name', 'shop')
+                ->has('databaseConnection.databaseUsers', 1)
+                ->where('databaseConnection.databaseUsers.0.id', $userWithAccess->id)
+                ->missing('databaseConnection.databaseUsers.0.password')
+                ->where('databaseConnection.sshUser', config('server.user'))
+                ->where('databaseConnection.hasSshKey', true)
+            );
+    });
+
+    it('sends no database connection details when the site has no server database', function () {
+        $site = Site::factory()->forServer($this->server)->create(['server_database_id' => null]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}");
+
+        $response->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('sites/show')
+                ->where('databaseConnection', null)
             );
     });
 
