@@ -88,6 +88,7 @@ class SiteController extends Controller
             'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
                 'value' => $type->value,
                 'label' => $type->label(),
+                'description' => $type->description(),
                 'defaultDirectory' => $type->defaultDirectory(),
             ]),
             'repositoryProviders' => collect(RepositoryProvider::cases())->map(fn ($provider) => [

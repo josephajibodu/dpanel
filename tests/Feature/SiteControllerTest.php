@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ConnectionStatus;
+use App\Enums\ProjectType;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
 use App\Jobs\SyncSiteNginxJob;
@@ -117,6 +118,7 @@ it('shows site create page with source control accounts but without prefetched r
             ->component('sites/create')
             ->has('server')
             ->has('projectTypes')
+            ->where('projectTypes.0.description', ProjectType::Laravel->description())
             ->has('repositoryProviders')
             ->has('phpVersions')
             ->has('sourceControl')

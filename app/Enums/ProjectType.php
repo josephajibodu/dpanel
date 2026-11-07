@@ -22,6 +22,20 @@ enum ProjectType: string
     }
 
     /**
+     * A one-line explanation shown when picking the project type.
+     */
+    public function description(): string
+    {
+        return match ($this) {
+            self::Laravel => 'Runs migrations and caches config on each deploy.',
+            self::Symfony => 'Installs Composer packages and warms the cache.',
+            self::PhpGeneric => 'Any PHP app. Installs Composer packages.',
+            self::WordPress => 'Keeps uploads and wp-config.php between deploys.',
+            self::StaticHtml => 'Plain files served as they are, without PHP.',
+        };
+    }
+
+    /**
      * Get the default public directory for this project type.
      */
     public function defaultDirectory(): string

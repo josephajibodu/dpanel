@@ -48,6 +48,7 @@ export interface Site {
 export interface ProjectType {
     value: string;
     label: string;
+    description: string;
     defaultDirectory: string;
 }
 

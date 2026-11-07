@@ -1,35 +1,62 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeftIcon, CheckIcon, EyeIcon, EyeOffIcon, Loader2Icon, PlusIcon, XCircleIcon } from 'lucide-react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    ArrowLeftIcon,
+    CheckIcon,
+    EyeIcon,
+    EyeOffIcon,
+    Loader2Icon,
+    PlusIcon,
+    RefreshCwIcon,
+    XCircleIcon,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import { RepositorySelector } from '@/components/sites/repository-selector';
+import {
+    FormSection,
+    RadioOption,
+    SegmentedControl,
+    SummaryCard,
+} from '@/components/create-form';
+import InputError from '@/components/input-error';
+import {
+    type Repository,
+    RepositorySelector,
+} from '@/components/sites/repository-selector';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectSeparator,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
-import { cn } from '@/lib/utils';
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
 import { PhpVersion, ProjectType } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
-
-interface Repository {
-    id: number;
-    name: string;
-    full_name: string;
-    ssh_url: string;
-    html_url: string;
-    default_branch: string;
-    private: boolean;
-}
 
 interface SourceControlData {
     accounts: {
@@ -52,6 +79,17 @@ interface Props {
     databases: { data: ServerDatabase[] };
     sourceControl?: SourceControlData;
 }
+
+type DomainMode = 'free' | 'custom';
+
+type SiteNameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+
+/** The state of fetching a list from the source control provider. */
+type Remote<T> =
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'ready'; items: T[] }
+    | { status: 'error'; message: string };
 
 const PACKAGE_MANAGERS = [
     { value: 'none', label: 'None' },
@@ -78,8 +116,22 @@ const PROVIDER_LABELS: Record<OAuthProvider, string> = {
     bitbucket: 'Bitbucket',
 };
 
+/** Select value that opens the "connect a provider" dialog instead of picking an account. */
+const ADD_ACCOUNT = '__add__';
+
+/** Select value that opens the "create database" sheet instead of picking a database. */
+const CREATE_DATABASE = '__create__';
+
+const emptyDbForm = {
+    name: '',
+    charset: '',
+    collation: '',
+    db_user: '',
+    db_password: '',
+};
+
 /**
- * Derive a valid subdomain label from a GitHub project name.
+ * Derive a valid subdomain label from a repository name.
  * Lowercases, replaces runs of non-alphanumerics with a hyphen, and trims
  * leading/trailing hyphens so the result matches the site_name validation rule.
  */
@@ -91,28 +143,88 @@ function slugifyProjectName(name: string): string {
         .slice(0, 63);
 }
 
-export default function SitesCreate({ server, freeDomain, projectTypes, phpVersions, databases, sourceControl }: Props) {
+function generatePassword(): string {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    const array = new Uint32Array(24);
+    crypto.getRandomValues(array);
+
+    return Array.from(array, (value) => chars[value % chars.length]).join('');
+}
+
+/**
+ * Call one of FlitOps' JSON endpoints, sending the CSRF token for writes.
+ * Never throws: a network failure comes back as `ok: false`.
+ */
+async function requestJson<T>(
+    url: string,
+    options: { method?: 'GET' | 'POST'; body?: unknown } = {},
+): Promise<{ ok: boolean; data: Partial<T> & { message?: string } }> {
+    const csrfToken =
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') ?? '';
+
+    try {
+        const response = await fetch(url, {
+            method: options.method ?? 'GET',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+            body:
+                options.body === undefined
+                    ? undefined
+                    : JSON.stringify(options.body),
+        });
+
+        return {
+            ok: response.ok,
+            data: await response.json().catch(() => ({})),
+        };
+    } catch {
+        return {
+            ok: false,
+            data: {
+                message:
+                    'Could not reach FlitOps. Check your connection and try again.',
+            } as Partial<T> & { message?: string },
+        };
+    }
+}
+
+export default function SitesCreate({
+    server,
+    freeDomain,
+    projectTypes,
+    phpVersions,
+    databases,
+    sourceControl,
+}: Props) {
     const teamPath = useTeamPath();
     const { data: serverData } = server;
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [loadingBranches, setLoadingBranches] = useState(false);
-    const [repositories, setRepositories] = useState<Repository[]>([]);
-    const [loadingRepositories, setLoadingRepositories] = useState(false);
-    const [useCustomDomain, setUseCustomDomain] = useState(false);
+    const sourceControlAccounts = sourceControl?.accounts.data ?? [];
+
+    const [repositories, setRepositories] = useState<Remote<Repository>>({
+        status: 'idle',
+    });
+    const [branches, setBranches] = useState<Remote<Branch>>({
+        status: 'idle',
+    });
+    const [domainMode, setDomainMode] = useState<DomainMode>('free');
     const [connectDatabase, setConnectDatabase] = useState(false);
     const [createDbOpen, setCreateDbOpen] = useState(false);
     const [isCreatingDb, setIsCreatingDb] = useState(false);
     const [showDbPassword, setShowDbPassword] = useState(false);
-    const [dbForm, setDbForm] = useState({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+    const [dbForm, setDbForm] = useState(emptyDbForm);
     const [providerPickerOpen, setProviderPickerOpen] = useState(false);
     const pendingDbNameRef = useRef<string | null>(null);
-    const [siteNameStatus, setSiteNameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+    const [siteNameStatus, setSiteNameStatus] =
+        useState<SiteNameStatus>('idle');
     const [siteNameMessage, setSiteNameMessage] = useState<string | null>(null);
-    const siteNameCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const sourceControlAccounts = sourceControl?.accounts.data ?? [];
-
-    const firstAccountId = sourceControl?.accounts.data[0]?.id;
 
     const form = useForm({
         server_id: serverData.id,
@@ -120,7 +232,8 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         site_name: '',
         directory: '/public',
         repository: '',
-        repository_provider: sourceControl?.accounts.data[0]?.provider ?? 'github',
+        repository_provider:
+            sourceControlAccounts[0]?.provider ?? ('github' as string),
         branch: 'main',
         project_type: 'laravel',
         php_version: serverData.php_version || phpVersions[0]?.value || '8.3',
@@ -129,33 +242,320 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         build_command: 'npm run build',
         auto_deploy: false,
         isolated: true,
-        source_control_account_id: firstAccountId ?? undefined,
+        source_control_account_id: sourceControlAccounts[0]?.id as
+            | number
+            | undefined,
     });
+
+    const accountId = form.data.source_control_account_id;
+    const repository = form.data.repository;
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Servers', href: teamPath('/servers') },
+        { title: serverData.name, href: teamPath(`/servers/${serverData.id}`) },
+        {
+            title: 'New Site',
+            href: teamPath(`/servers/${serverData.id}/sites/create`),
+        },
+    ];
 
     const dbList = databases?.data ?? [];
     const readyDatabases = dbList.filter((db) => db.status === 'ready');
     const pendingDatabases = dbList.filter((db) => db.status === 'pending');
 
+    // Pick a database created from this page as soon as it's ready.
     useEffect(() => {
         if (pendingDbNameRef.current) {
-            const newDb = readyDatabases.find((db) => db.name === pendingDbNameRef.current);
+            const newDb = readyDatabases.find(
+                (db) => db.name === pendingDbNameRef.current,
+            );
             if (newDb) {
                 form.setData('server_database_id', newDb.id);
                 pendingDbNameRef.current = null;
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [readyDatabases]);
 
-    const generatePassword = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        let password = '';
-        const array = new Uint32Array(24);
-        crypto.getRandomValues(array);
-        for (let i = 0; i < 24; i++) {
-            password += chars[array[i] % chars.length];
+    /** Load the account's repositories; `sync` asks the provider for a fresh list. */
+    const loadRepositories = useCallback(
+        async (sync = false) => {
+            if (!accountId) {
+                setRepositories({ status: 'idle' });
+
+                return;
+            }
+
+            setRepositories({ status: 'loading' });
+
+            const { ok, data } = await requestJson<{
+                repositories: Repository[];
+            }>(
+                teamPath(
+                    sync
+                        ? `/source-control/${accountId}/repositories/sync`
+                        : `/source-control/${accountId}/repositories`,
+                ),
+                { method: sync ? 'POST' : 'GET' },
+            );
+
+            setRepositories(
+                ok
+                    ? { status: 'ready', items: data.repositories ?? [] }
+                    : {
+                          status: 'error',
+                          message:
+                              data.message ??
+                              'Could not load repositories from the provider.',
+                      },
+            );
+        },
+        [accountId, teamPath],
+    );
+
+    useEffect(() => {
+        void loadRepositories();
+    }, [loadRepositories]);
+
+    const loadBranches = useCallback(async () => {
+        if (!repository || !accountId) {
+            setBranches({ status: 'idle' });
+
+            return;
         }
-        return password;
-    };
+
+        setBranches({ status: 'loading' });
+
+        const { ok, data } = await requestJson<{ branches: Branch[] }>(
+            teamPath(
+                `/source-control/${accountId}/repositories/${encodeURIComponent(repository)}/branches`,
+            ),
+        );
+
+        if (!ok) {
+            setBranches({
+                status: 'error',
+                message: data.message ?? 'Could not load branches.',
+            });
+
+            return;
+        }
+
+        const items = data.branches ?? [];
+        setBranches({ status: 'ready', items });
+
+        // Keep the chosen branch if it exists, otherwise fall back to main/master.
+        form.setData((current) => {
+            if (
+                items.length === 0 ||
+                items.some((branch) => branch.name === current.branch)
+            ) {
+                return current;
+            }
+
+            const fallback =
+                items.find((branch) => branch.name === 'main') ??
+                items.find((branch) => branch.name === 'master') ??
+                items[0];
+
+            return { ...current, branch: fallback.name };
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [repository, accountId, teamPath]);
+
+    useEffect(() => {
+        void loadBranches();
+    }, [loadBranches]);
+
+    // Check the free subdomain is still available, a moment after typing stops.
+    useEffect(() => {
+        if (domainMode !== 'free') {
+            return;
+        }
+
+        const siteName = form.data.site_name.trim();
+
+        if (!siteName) {
+            setSiteNameStatus('idle');
+            setSiteNameMessage(null);
+
+            return;
+        }
+
+        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(siteName)) {
+            setSiteNameStatus('invalid');
+            setSiteNameMessage(
+                'Only lowercase letters, numbers, and hyphens are allowed.',
+            );
+
+            return;
+        }
+
+        setSiteNameStatus('checking');
+        setSiteNameMessage(null);
+
+        const timeout = setTimeout(async () => {
+            const { ok, data } = await requestJson<{
+                available: boolean;
+                errors: { site_name?: string[] };
+            }>(teamPath(`/servers/${serverData.id}/sites/check-site-name`), {
+                method: 'POST',
+                body: { site_name: siteName },
+            });
+
+            if (!ok) {
+                setSiteNameStatus('invalid');
+                setSiteNameMessage(
+                    data.errors?.site_name?.[0] ??
+                        data.message ??
+                        'Invalid site name.',
+                );
+
+                return;
+            }
+
+            setSiteNameStatus(data.available ? 'available' : 'taken');
+            setSiteNameMessage(data.available ? null : (data.message ?? null));
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [form.data.site_name, domainMode, serverData.id, teamPath]);
+
+    // Pick up an account connected in the OAuth popup.
+    useEffect(() => {
+        const previousIds = new Set(
+            sourceControlAccounts.map((account) => account.id),
+        );
+
+        function handleMessage(event: MessageEvent) {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+
+            const data = event.data as
+                | { type?: string; status?: string; error?: string }
+                | undefined;
+
+            if (data?.type !== 'flitops:source-control') {
+                return;
+            }
+
+            if (data.status === 'connected') {
+                router.reload({
+                    only: ['sourceControl'],
+                    onSuccess: (page) => {
+                        const newAccounts =
+                            (
+                                page.props.sourceControl as
+                                    | SourceControlData
+                                    | undefined
+                            )?.accounts.data ?? [];
+                        const added = newAccounts.find(
+                            (account) => !previousIds.has(account.id),
+                        );
+                        if (added) {
+                            selectAccount(added);
+                        }
+                    },
+                });
+            } else if (data.status === 'failed') {
+                toast.error(
+                    data.error ?? 'Failed to connect source control provider.',
+                );
+            }
+        }
+
+        window.addEventListener('message', handleMessage);
+
+        return () => window.removeEventListener('message', handleMessage);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sourceControlAccounts]);
+
+    function selectAccount(account: SourceControlAccount) {
+        form.setData((current) => ({
+            ...current,
+            source_control_account_id: account.id,
+            repository_provider: account.provider,
+            repository: '',
+            branch: 'main',
+            site_name: '',
+        }));
+    }
+
+    function handleAccountChange(value: string) {
+        if (value === ADD_ACCOUNT) {
+            setProviderPickerOpen(true);
+
+            return;
+        }
+
+        const account = sourceControlAccounts.find(
+            (option) => option.id === Number(value),
+        );
+        if (account && account.id !== accountId) {
+            selectAccount(account);
+        }
+    }
+
+    function handleRepositoryChange(fullName: string, repo?: Repository) {
+        const projectName = repo?.name ?? fullName.split('/')[1] ?? '';
+
+        form.setData((current) => ({
+            ...current,
+            repository: fullName,
+            branch: repo?.default_branch || current.branch,
+            site_name: slugifyProjectName(projectName),
+        }));
+    }
+
+    function handleProjectTypeChange(projectType: ProjectType) {
+        form.setData((current) => ({
+            ...current,
+            project_type: projectType.value,
+            directory: projectType.defaultDirectory || '/public',
+        }));
+    }
+
+    function handlePackageManagerChange(value: string) {
+        form.setData((current) => ({
+            ...current,
+            package_manager: value,
+            build_command: DEFAULT_BUILD_COMMANDS[value] ?? '',
+        }));
+    }
+
+    function handleDatabaseToggle(checked: boolean) {
+        setConnectDatabase(checked);
+        if (!checked) {
+            form.setData('server_database_id', undefined);
+        }
+    }
+
+    function openProviderPopup(provider: OAuthProvider) {
+        const returnUrl = window.location.pathname + window.location.search;
+        const url = `/auth/${provider}/redirect?popup=1&redirect=${encodeURIComponent(returnUrl)}`;
+        const width = 600;
+        const height = 700;
+        const left = Math.max(
+            0,
+            window.screenX + (window.outerWidth - width) / 2,
+        );
+        const top = Math.max(
+            0,
+            window.screenY + (window.outerHeight - height) / 2,
+        );
+        const popup = window.open(
+            url,
+            'source-control-oauth',
+            `width=${width},height=${height},left=${left},top=${top}`,
+        );
+
+        if (!popup) {
+            toast.error(
+                'Please allow popups to connect a source control provider.',
+            );
+        }
+    }
 
     function handleCreateDatabase(e: React.FormEvent) {
         e.preventDefault();
@@ -175,7 +575,7 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                 preserveScroll: true,
                 onSuccess: () => {
                     setCreateDbOpen(false);
-                    setDbForm({ name: '', charset: '', collation: '', db_user: '', db_password: '' });
+                    setDbForm(emptyDbForm);
                     setShowDbPassword(false);
                 },
                 onFinish: () => setIsCreatingDb(false),
@@ -183,825 +583,516 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
         );
     }
 
-    function handleDatabaseToggle(checked: boolean) {
-        setConnectDatabase(checked);
-        if (!checked) {
-            form.setData('server_database_id', undefined);
-        }
-    }
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Servers', href: teamPath('/servers') },
-        { title: serverData.name, href: teamPath(`/servers/${serverData.id}`) },
-        { title: 'New Site', href: teamPath(`/servers/${serverData.id}/sites/create`) },
-    ];
-
-    const fetchRepositories = useCallback(() => {
-        if (!form.data.source_control_account_id) {
-            setRepositories([]);
-            setLoadingRepositories(false);
-            return;
-        }
-
-        setLoadingRepositories(true);
-        const accountId = form.data.source_control_account_id;
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const url = teamPath(`/source-control/${accountId}/repositories`);
-
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            credentials: 'same-origin',
-        })
-            .then((res) => {
-                if (!res.ok) {
-                    return res.text().then((text) => {
-                        throw new Error(`HTTP ${res.status}: ${text}`);
-                    });
-                }
-                return res.json();
-            })
-            .then((data) => {
-                setRepositories(data.repositories || []);
-            })
-            .catch(() => {
-                setRepositories([]);
-            })
-            .finally(() => {
-                setLoadingRepositories(false);
-            });
-    }, [form.data.source_control_account_id]);
-
-    const reloadRepositories = useCallback(() => {
-        if (!form.data.source_control_account_id) {
-            return;
-        }
-
-        setLoadingRepositories(true);
-        const accountId = form.data.source_control_account_id;
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const url = teamPath(`/source-control/${accountId}/repositories/sync`);
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            credentials: 'same-origin',
-        })
-            .then((res) => {
-                if (!res.ok) {
-                    return res.text().then((text) => {
-                        throw new Error(`HTTP ${res.status}: ${text}`);
-                    });
-                }
-                return res.json();
-            })
-            .then((data) => {
-                setRepositories(data.repositories || []);
-            })
-            .catch(() => {
-                toast.error('Failed to refresh repositories. Please try again.');
-            })
-            .finally(() => {
-                setLoadingRepositories(false);
-            });
-    }, [form.data.source_control_account_id, teamPath]);
-
-    useEffect(() => {
-        fetchRepositories();
-    }, [fetchRepositories]);
-
-    // Fetch branches when repository is selected
-    useEffect(() => {
-        // Reset branches when repository or account changes
-        if (!form.data.repository || !form.data.source_control_account_id) {
-            setBranches([]);
-            setLoadingBranches(false);
-            return;
-        }
-
-        setLoadingBranches(true);
-        const accountId = form.data.source_control_account_id;
-        const account = sourceControl?.accounts.data.find((a) => a.id === accountId);
-
-        if (!account) {
-            setLoadingBranches(false);
-            return;
-        }
-
-        // Get CSRF token from meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const url = teamPath(`/source-control/${accountId}/repositories/${encodeURIComponent(form.data.repository)}/branches`);
-
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            credentials: 'same-origin',
-        })
-            .then((res) => {
-                if (!res.ok) {
-                    return res.text().then((text) => {
-                        console.error(`Failed to fetch branches: HTTP ${res.status}`, text);
-                        throw new Error(`HTTP ${res.status}: ${text}`);
-                    });
-                }
-                return res.json();
-            })
-            .then((data) => {
-                const branchesList = data.branches || [];
-                console.log('Fetched branches:', branchesList);
-                setBranches(branchesList);
-
-                // Auto-select default branch if available and branch is not already set
-                if (branchesList.length > 0) {
-                    const currentBranch = form.data.branch;
-                    const branchExists = branchesList.some((b: Branch) => b.name === currentBranch);
-
-                    // Only auto-select if current branch doesn't exist in the list
-                    if (!branchExists) {
-                        const defaultBranch = branchesList.find((b: Branch) => b.name === 'main')
-                            || branchesList.find((b: Branch) => b.name === 'master')
-                            || branchesList[0];
-                        if (defaultBranch) {
-                            form.setData('branch', defaultBranch.name);
-                        }
-                    }
-                }
-            })
-            .catch((error) => {
-                console.error('Failed to fetch branches:', error);
-                setBranches([]);
-            })
-            .finally(() => {
-                setLoadingBranches(false);
-            });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [form.data.repository, form.data.source_control_account_id, sourceControl?.accounts.data]);
-
-    // Auto-fill build command when package manager changes
-    useEffect(() => {
-        if (form.data.package_manager && form.data.package_manager !== 'none') {
-            const defaultCommand = DEFAULT_BUILD_COMMANDS[form.data.package_manager];
-            if (defaultCommand && !form.data.build_command) {
-                form.setData('build_command', defaultCommand);
-            }
-        } else if (form.data.package_manager === 'none') {
-            form.setData('build_command', '');
-        }
-    }, [form.data.package_manager]);
-
-    // Debounce free-subdomain availability check as the site name changes
-    useEffect(() => {
-        if (useCustomDomain) {
-            return;
-        }
-
-        if (siteNameCheckRef.current) {
-            clearTimeout(siteNameCheckRef.current);
-        }
-
-        const siteName = form.data.site_name.trim();
-
-        if (!siteName) {
-            setSiteNameStatus('idle');
-            setSiteNameMessage(null);
-            return;
-        }
-
-        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(siteName)) {
-            setSiteNameStatus('invalid');
-            setSiteNameMessage('Only lowercase letters, numbers, and hyphens are allowed.');
-            return;
-        }
-
-        setSiteNameStatus('checking');
-        setSiteNameMessage(null);
-
-        siteNameCheckRef.current = setTimeout(() => {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-            fetch(teamPath(`/servers/${serverData.id}/sites/check-site-name`), {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ site_name: siteName }),
-            })
-                .then(async (res) => ({ ok: res.ok, data: await res.json() }))
-                .then(({ ok, data }) => {
-                    if (!ok) {
-                        setSiteNameStatus('invalid');
-                        setSiteNameMessage(data.message ?? data.errors?.site_name?.[0] ?? 'Invalid site name.');
-                        return;
-                    }
-                    setSiteNameStatus(data.available ? 'available' : 'taken');
-                    setSiteNameMessage(data.available ? null : data.message);
-                })
-                .catch(() => {
-                    setSiteNameStatus('idle');
-                    setSiteNameMessage(null);
-                });
-        }, 400);
-
-        return () => {
-            if (siteNameCheckRef.current) {
-                clearTimeout(siteNameCheckRef.current);
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [form.data.site_name, useCustomDomain]);
-
-    function handleProjectTypeChange(value: string) {
-        const projectType = projectTypes.find((pt) => pt.value === value);
-        form.setData({
-            ...form.data,
-            project_type: value,
-            directory: projectType?.defaultDirectory || '/public',
-        });
-    }
-
-    function handlePackageManagerChange(value: string) {
-        form.setData({
-            ...form.data,
-            package_manager: value,
-            build_command: value !== 'none' ? DEFAULT_BUILD_COMMANDS[value] || '' : '',
-        });
-    }
-
-    const applyRepository = (fullName: string, repo?: { name: string; default_branch: string }) => {
-        const projectName = repo?.name ?? fullName.split('/')[1] ?? '';
-
-        form.setData({
-            ...form.data,
-            repository: fullName,
-            branch: repo?.default_branch || form.data.branch,
-            site_name: slugifyProjectName(projectName),
-        });
-    };
-
-    const openProviderPopup = (provider: OAuthProvider) => {
-        const returnUrl = window.location.pathname + window.location.search;
-        const url = `/auth/${provider}/redirect?popup=1&redirect=${encodeURIComponent(returnUrl)}`;
-        const width = 600;
-        const height = 700;
-        const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
-        const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
-        const popup = window.open(url, 'source-control-oauth', `width=${width},height=${height},left=${left},top=${top}`);
-
-        if (!popup) {
-            toast.error('Please allow popups to connect a source control provider.');
-        }
-    };
-
-    useEffect(() => {
-        const previousIds = new Set(sourceControlAccounts.map((a) => a.id));
-
-        function handleMessage(event: MessageEvent) {
-            if (event.origin !== window.location.origin) return;
-            const data = event.data as { type?: string; status?: string; error?: string } | undefined;
-            if (data?.type !== 'flitops:source-control') return;
-
-            if (data.status === 'connected') {
-                router.reload({
-                    only: ['sourceControl'],
-                    onSuccess: (page) => {
-                        const newAccounts =
-                            (page.props.sourceControl as SourceControlData | undefined)?.accounts.data ?? [];
-                        const added = newAccounts.find((a) => !previousIds.has(a.id));
-                        if (added) {
-                            form.setData({
-                                ...form.data,
-                                source_control_account_id: added.id,
-                                repository_provider: added.provider,
-                                repository: '',
-                                branch: 'main',
-                                site_name: '',
-                            });
-                        }
-                    },
-                });
-            } else if (data.status === 'failed') {
-                toast.error(data.error ?? 'Failed to connect source control provider.');
-            }
-        }
-
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, [sourceControlAccounts, form]);
+    const siteNameBlocked =
+        siteNameStatus === 'taken' ||
+        siteNameStatus === 'invalid' ||
+        siteNameStatus === 'checking';
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
-        if (!useCustomDomain && (siteNameStatus === 'taken' || siteNameStatus === 'invalid' || siteNameStatus === 'checking')) {
-            toast.error(siteNameMessage ?? 'Choose an available free subdomain before continuing.');
+        if (domainMode === 'free' && siteNameBlocked) {
+            toast.error(
+                siteNameMessage ??
+                    'Choose an available free subdomain before continuing.',
+            );
+
             return;
         }
 
-        // Send only the field relevant to the chosen mode so the backend's
-        // required_without rule resolves cleanly (site_name is always derived
-        // from the selected repository, even when a custom domain is in use).
+        // Send only the field for the chosen domain mode, so the backend's
+        // required_without rule resolves cleanly (site_name is filled from the
+        // repository even when a custom domain is used).
         form.transform((data) => ({
             ...data,
-            domain: useCustomDomain ? data.domain : '',
-            site_name: useCustomDomain ? '' : data.site_name,
+            domain: domainMode === 'custom' ? data.domain : '',
+            site_name: domainMode === 'free' ? data.site_name : '',
         }));
 
         form.post(teamPath(`/servers/${serverData.id}/sites`));
     }
 
+    const selectedProjectType = projectTypes.find(
+        (type) => type.value === form.data.project_type,
+    );
+    const selectedDatabase = readyDatabases.find(
+        (db) => db.id === form.data.server_database_id,
+    );
+    const hostname =
+        domainMode === 'custom'
+            ? form.data.domain || null
+            : form.data.site_name
+              ? `${form.data.site_name}.${freeDomain}`
+              : null;
+
+    const isSubmitBlocked =
+        (domainMode === 'custom'
+            ? !form.data.domain
+            : !form.data.site_name || siteNameBlocked) ||
+        (connectDatabase && !form.data.server_database_id);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`New Site - ${serverData.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center gap-4">
+            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4">
+                <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={teamPath(`/servers/${serverData.id}`)}>
+                        <Link
+                            href={teamPath(`/servers/${serverData.id}`)}
+                            aria-label={`Back to ${serverData.name}`}
+                        >
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">New Site</h1>
-                        <p className="text-muted-foreground text-sm">Create a new site on {serverData.name}</p>
-                    </div>
+                    <h1 className="text-xl font-semibold tracking-tight">
+                        New Site
+                    </h1>
+                    <span className="text-sm text-muted-foreground">
+                        on {serverData.name}
+                    </span>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mx-auto grid max-w-3xl gap-6">
-                        {/* Source Control Configuration */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Source Control (Optional)</CardTitle>
-                                <CardDescription>Connect a Git repository to enable deployments.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="source_control_account_id">Source control provider</Label>
-                                        <Select
-                                            value={form.data.source_control_account_id ? String(form.data.source_control_account_id) : ''}
-                                            onValueChange={(value) => {
-                                                if (value === '__add__') {
-                                                    setProviderPickerOpen(true);
-                                                    return;
-                                                }
-                                                const accountId = Number(value);
-                                                const account = sourceControlAccounts.find((a) => a.id === accountId);
-
-                                                form.setData({
-                                                    ...form.data,
-                                                    source_control_account_id: accountId,
-                                                    repository_provider: account?.provider ?? form.data.repository_provider,
-                                                    repository: '',
-                                                    branch: 'main',
-                                                    site_name: '',
-                                                });
-                                                setBranches([]);
-                                                setRepositories([]);
-                                            }}
-                                        >
-                                            <SelectTrigger id="source_control_account_id">
-                                                <SelectValue
-                                                    placeholder={
-                                                        sourceControlAccounts.length === 0
-                                                            ? 'No providers connected'
-                                                            : 'Select a connected account'
-                                                    }
-                                                />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {sourceControlAccounts.map((account) => (
-                                                    <SelectItem key={account.id} value={String(account.id)}>
-                                                        {account.provider_label} · @{account.provider_username}
-                                                    </SelectItem>
-                                                ))}
-                                                {sourceControlAccounts.length > 0 && <SelectSeparator />}
-                                                <SelectItem value="__add__" className="text-primary">
-                                                    <span className="flex items-center gap-2">
-                                                        <PlusIcon className="h-4 w-4" />
-                                                        Add source control provider
-                                                    </span>
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {form.data.source_control_account_id && (
+                <form
+                    onSubmit={handleSubmit}
+                    className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+                >
+                    <Card className="gap-0 divide-y py-0">
+                        <FormSection
+                            title="Repository"
+                            description="Where deployments pull the code from. You can skip this and add one later."
+                        >
+                            {sourceControlAccounts.length === 0 ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed px-4 py-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        No GitHub, GitLab or Bitbucket account
+                                        connected yet.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setProviderPickerOpen(true)
+                                        }
+                                    >
+                                        Connect a provider
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="repository">Repository</Label>
-                                            <RepositorySelector
-                                                repositories={repositories}
-                                                loadingRepositories={loadingRepositories}
-                                                onReload={reloadRepositories}
-                                                value={form.data.repository}
-                                                onChange={(fullName, repo) => applyRepository(fullName, repo)}
-                                                disabled={loadingRepositories}
-                                                placeholder="Select a repository"
+                                            <Label htmlFor="source_control_account_id">
+                                                Account
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    accountId
+                                                        ? String(accountId)
+                                                        : ''
+                                                }
+                                                onValueChange={
+                                                    handleAccountChange
+                                                }
+                                            >
+                                                <SelectTrigger
+                                                    id="source_control_account_id"
+                                                    className="w-full"
+                                                >
+                                                    <SelectValue placeholder="Select an account" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {sourceControlAccounts.map(
+                                                        (account) => (
+                                                            <SelectItem
+                                                                key={account.id}
+                                                                value={String(
+                                                                    account.id,
+                                                                )}
+                                                            >
+                                                                {
+                                                                    account.provider_label
+                                                                }
+                                                                <span className="text-muted-foreground">
+                                                                    @
+                                                                    {
+                                                                        account.provider_username
+                                                                    }
+                                                                </span>
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                    <SelectSeparator />
+                                                    <SelectItem
+                                                        value={ADD_ACCOUNT}
+                                                        className="text-primary"
+                                                    >
+                                                        <PlusIcon className="h-4 w-4" />
+                                                        Connect another account
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                message={
+                                                    form.errors
+                                                        .source_control_account_id
+                                                }
                                             />
                                         </div>
-                                    )}
-                                </div>
 
-                                {form.data.repository && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="branch">Branch</Label>
-                                        <Select
-                                            value={form.data.branch}
-                                            onValueChange={(value) => form.setData('branch', value)}
-                                            disabled={loadingBranches}
-                                        >
-                                            <SelectTrigger id="branch" className={form.errors.branch ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder={loadingBranches ? 'Loading branches...' : 'Select a branch'} />
-                                                {loadingBranches && (
-                                                    <Loader2Icon className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                                )}
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {loadingBranches ? (
-                                                    <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
-                                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                        Loading branches...
-                                                    </div>
-                                                ) : branches.length > 0 ? (
-                                                    branches.map((branch) => (
-                                                        <SelectItem key={branch.name} value={branch.name}>
-                                                            {branch.name}
-                                                            {branch.protected && (
-                                                                <span className="text-muted-foreground ml-1 text-xs">(protected)</span>
-                                                            )}
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    // If no branches loaded but we have a branch value, show it as an option
-                                                    form.data.branch ? (
-                                                        <SelectItem value={form.data.branch}>{form.data.branch}</SelectItem>
-                                                    ) : (
-                                                        <div className="py-4 text-center text-muted-foreground text-sm">
-                                                            No branches available
-                                                        </div>
-                                                    )
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        {form.errors.branch && <p className="text-destructive text-sm">{form.errors.branch}</p>}
-                                        {!loadingBranches && branches.length === 0 && form.data.branch && (
-                                            <p className="text-muted-foreground text-xs">
-                                                Using branch "{form.data.branch}". If this branch doesn't exist, you may need to enter it manually.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {form.data.source_control_account_id &&
-                                    !loadingRepositories &&
-                                    repositories.length === 0 && (
-                                        <div className="rounded-lg border border-dashed p-4 text-center">
-                                            <p className="text-muted-foreground text-sm">No repositories found for this account.</p>
-                                        </div>
-                                    )}
-
-                                {sourceControlAccounts.length === 0 && (
-                                    <p className="text-muted-foreground text-xs">
-                                        Connect a source control provider to deploy from your repositories.
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Domain Configuration */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                    Domain Configuration
-                                    {!useCustomDomain && (
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            className="h-auto p-0 text-primary"
-                                            onClick={() => setUseCustomDomain(true)}
-                                        >
-                                            Use custom domain
-                                        </Button>
-                                    )}
-                                </CardTitle>
-                                <CardDescription>
-                                    {useCustomDomain
-                                        ? 'Configure a custom domain for your site.'
-                                        : `Each site includes a free ${freeDomain} subdomain.`}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {useCustomDomain ? (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="domain">Domain Name</Label>
-                                        <Input
-                                            id="domain"
-                                            placeholder="example.com"
-                                            value={form.data.domain}
-                                            onChange={(e) => form.setData('domain', e.target.value)}
-                                            className={form.errors.domain ? 'border-destructive' : ''}
-                                        />
-                                        {form.errors.domain && <p className="text-destructive text-sm">{form.errors.domain}</p>}
-                                        <p className="text-muted-foreground text-xs">
-                                            Your site will be served from{' '}
-                                            <code className="bg-muted rounded px-1">
-                                                /home/artisan/{form.data.domain || 'example.com'}
-                                            </code>
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="site_name">Free domain</Label>
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative flex-1">
-                                                <Input
-                                                    id="site_name"
-                                                    placeholder="my-app"
-                                                    value={form.data.site_name}
-                                                    onChange={(e) => form.setData('site_name', e.target.value.toLowerCase())}
-                                                    className={cn(
-                                                        'pr-8',
-                                                        (form.errors.site_name || siteNameStatus === 'taken' || siteNameStatus === 'invalid') &&
-                                                            'border-destructive',
-                                                    )}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="repository">
+                                                Repository
+                                            </Label>
+                                            {repositories.status === 'error' ? (
+                                                <RemoteError
+                                                    message={
+                                                        repositories.message
+                                                    }
+                                                    onRetry={() =>
+                                                        void loadRepositories()
+                                                    }
                                                 />
-                                                <span className="absolute top-1/2 right-2 -translate-y-1/2">
-                                                    {siteNameStatus === 'checking' && (
-                                                        <Loader2Icon className="text-muted-foreground size-4 animate-spin" />
-                                                    )}
-                                                    {siteNameStatus === 'available' && <CheckIcon className="size-4 text-emerald-600" />}
-                                                    {(siteNameStatus === 'taken' || siteNameStatus === 'invalid') && (
-                                                        <XCircleIcon className="text-destructive size-4" />
-                                                    )}
-                                                </span>
-                                            </div>
-                                            <span className="text-muted-foreground whitespace-nowrap text-sm">.{freeDomain}</span>
+                                            ) : (
+                                                <RepositorySelector
+                                                    repositories={
+                                                        repositories.status ===
+                                                        'ready'
+                                                            ? repositories.items
+                                                            : []
+                                                    }
+                                                    loadingRepositories={
+                                                        repositories.status ===
+                                                        'loading'
+                                                    }
+                                                    onReload={() =>
+                                                        void loadRepositories(
+                                                            true,
+                                                        )
+                                                    }
+                                                    value={repository}
+                                                    onChange={
+                                                        handleRepositoryChange
+                                                    }
+                                                    disabled={
+                                                        repositories.status ===
+                                                        'loading'
+                                                    }
+                                                    placeholder="Select a repository"
+                                                />
+                                            )}
+                                            {repositories.status === 'ready' &&
+                                                repositories.items.length ===
+                                                    0 && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        No repositories found
+                                                        for this account.
+                                                    </p>
+                                                )}
+                                            <InputError
+                                                message={form.errors.repository}
+                                            />
                                         </div>
-                                        {form.errors.site_name ? (
-                                            <p className="text-destructive text-sm">{form.errors.site_name}</p>
-                                        ) : siteNameMessage ? (
-                                            <p className={cn('text-sm', siteNameStatus === 'available' ? 'text-emerald-600' : 'text-destructive')}>
-                                                {siteNameMessage}
-                                            </p>
-                                        ) : siteNameStatus === 'available' ? (
-                                            <p className="text-sm text-emerald-600">That subdomain is available.</p>
-                                        ) : (
-                                            <p className="text-muted-foreground text-xs">
-                                                Generated from your repository name. Change it to use a different free subdomain.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="project_type">Project Type</Label>
-                                        <Select value={form.data.project_type} onValueChange={handleProjectTypeChange}>
-                                            <SelectTrigger id="project_type">
-                                                <SelectValue placeholder="Select project type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projectTypes.map((type) => (
-                                                    <SelectItem key={type.value} value={type.value}>
-                                                        {type.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="directory">Web Directory</Label>
-                                        <Input
-                                            id="directory"
-                                            placeholder="/public"
-                                            value={form.data.directory}
-                                            onChange={(e) => form.setData('directory', e.target.value)}
-                                            className={form.errors.directory ? 'border-destructive' : ''}
+                                    {repository && (
+                                        <BranchField
+                                            branches={branches}
+                                            value={form.data.branch}
+                                            onChange={(value) =>
+                                                form.setData('branch', value)
+                                            }
+                                            onRetry={() => void loadBranches()}
+                                            error={form.errors.branch}
                                         />
-                                        {form.errors.directory && <p className="text-destructive text-sm">{form.errors.directory}</p>}
-                                    </div>
+                                    )}
+                                </>
+                            )}
+                        </FormSection>
+
+                        <FormSection
+                            title="Domain"
+                            description={
+                                domainMode === 'free'
+                                    ? `Every site gets a free ${freeDomain} subdomain.`
+                                    : 'Point the domain at this server once the site is created.'
+                            }
+                            action={
+                                <SegmentedControl
+                                    label="Domain type"
+                                    value={domainMode}
+                                    onChange={setDomainMode}
+                                    options={[
+                                        { value: 'free', label: 'Free' },
+                                        { value: 'custom', label: 'Custom' },
+                                    ]}
+                                />
+                            }
+                        >
+                            {domainMode === 'custom' ? (
+                                <div className="space-y-2">
+                                    <Input
+                                        id="domain"
+                                        aria-label="Domain"
+                                        placeholder="example.com"
+                                        value={form.data.domain}
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'domain',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="sm:max-w-sm"
+                                    />
+                                    <InputError message={form.errors.domain} />
+                                </div>
+                            ) : (
+                                <SubdomainField
+                                    value={form.data.site_name}
+                                    onChange={(value) =>
+                                        form.setData('site_name', value)
+                                    }
+                                    freeDomain={freeDomain}
+                                    status={siteNameStatus}
+                                    message={
+                                        form.errors.site_name ?? siteNameMessage
+                                    }
+                                    hasRepository={repository !== ''}
+                                />
+                            )}
+                        </FormSection>
+
+                        <FormSection
+                            title="Project type"
+                            description="Sets the web directory and the starting deploy script."
+                        >
+                            <div
+                                role="radiogroup"
+                                aria-label="Project type"
+                                className="grid gap-2 sm:grid-cols-2"
+                            >
+                                {projectTypes.map((type) => (
+                                    <RadioOption
+                                        key={type.value}
+                                        selected={
+                                            form.data.project_type ===
+                                            type.value
+                                        }
+                                        onSelect={() =>
+                                            handleProjectTypeChange(type)
+                                        }
+                                        title={type.label}
+                                        description={type.description}
+                                    />
+                                ))}
+                            </div>
+                            <InputError message={form.errors.project_type} />
+
+                            <div className="grid gap-4 pt-2 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="directory">
+                                        Web directory
+                                    </Label>
+                                    <Input
+                                        id="directory"
+                                        placeholder="/public"
+                                        value={form.data.directory}
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'directory',
+                                                e.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={form.errors.directory}
+                                    />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="php_version">PHP Version</Label>
-                                    <Select value={form.data.php_version} onValueChange={(value) => form.setData('php_version', value)}>
-                                        <SelectTrigger id="php_version">
+                                    <Label htmlFor="php_version">PHP</Label>
+                                    <Select
+                                        value={form.data.php_version}
+                                        onValueChange={(value) =>
+                                            form.setData('php_version', value)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            id="php_version"
+                                            className="w-full"
+                                        >
                                             <SelectValue placeholder="Select PHP version" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {phpVersions.map((version) => (
-                                                <SelectItem key={version.value} value={version.value}>
+                                                <SelectItem
+                                                    key={version.value}
+                                                    value={version.value}
+                                                >
                                                     {version.label}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div className="flex items-start gap-3">
-                                    <Checkbox
-                                        id="isolated"
-                                        checked={form.data.isolated}
-                                        onCheckedChange={(checked) => form.setData('isolated', checked === true)}
-                                        className="mt-0.5"
+                                    <InputError
+                                        message={form.errors.php_version}
                                     />
-                                    <div className="space-y-1">
-                                        <Label htmlFor="isolated" className="font-normal">
-                                            Isolate this site (recommended)
-                                        </Label>
-                                        <p className="text-muted-foreground text-xs">
-                                            Runs the site as its own system user, so if it's ever hacked it can't reach your other sites or
-                                            take over the server.
-                                        </p>
-                                        {form.errors.isolated && <p className="text-destructive text-sm">{form.errors.isolated}</p>}
-                                    </div>
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </FormSection>
 
-                        {/* Frontend Build Configuration */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Frontend Build (Optional)</CardTitle>
-                                <CardDescription>Configure package manager and build command for frontend assets.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="package_manager">Package Manager</Label>
-                                        <Select value={form.data.package_manager} onValueChange={handlePackageManagerChange}>
-                                            <SelectTrigger id="package_manager">
-                                                <SelectValue placeholder="Select package manager" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {PACKAGE_MANAGERS.map((pm) => (
-                                                    <SelectItem key={pm.value} value={pm.value}>
-                                                        {pm.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="build_command">Build Command</Label>
-                                        <Input
-                                            id="build_command"
-                                            placeholder="npm run build"
-                                            value={form.data.build_command}
-                                            onChange={(e) => form.setData('build_command', e.target.value)}
-                                            disabled={form.data.package_manager === 'none'}
-                                            className={form.errors.build_command ? 'border-destructive' : ''}
-                                        />
-                                        {form.errors.build_command && (
-                                            <p className="text-destructive text-sm">{form.errors.build_command}</p>
-                                        )}
-                                        {form.data.package_manager !== 'none' && (
-                                            <p className="text-muted-foreground text-xs">
-                                                This command will be run during deployments.
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Database Connection */}
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Connect to Database</CardTitle>
-                                        <CardDescription>Select or create a database to connect to your site.</CardDescription>
-                                    </div>
-                                    <Switch checked={connectDatabase} onCheckedChange={handleDatabaseToggle} />
-                                </div>
-                            </CardHeader>
-                            {connectDatabase && (
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="server_database_id">Database</Label>
-                                        <Select
-                                            value={form.data.server_database_id ? String(form.data.server_database_id) : ''}
-                                            onValueChange={(value) => {
-                                                if (value === '__create__') {
-                                                    setCreateDbOpen(true);
-                                                    return;
-                                                }
-                                                form.setData('server_database_id', Number(value));
-                                            }}
+                        <FormSection
+                            title="Frontend build"
+                            description="Runs on every deployment to build your assets."
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="package_manager">
+                                        Package manager
+                                    </Label>
+                                    <Select
+                                        value={form.data.package_manager}
+                                        onValueChange={
+                                            handlePackageManagerChange
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            id="package_manager"
+                                            className="w-full"
                                         >
-                                            <SelectTrigger id="server_database_id" className={form.errors.server_database_id ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder="Select a database" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {readyDatabases.map((db) => (
-                                                    <SelectItem key={db.id} value={String(db.id)}>
-                                                        {db.name}
-                                                        {db.server_id !== serverData.id && db.server_name && (
-                                                            <span className="text-muted-foreground text-xs"> (on {db.server_name})</span>
-                                                        )}
-                                                    </SelectItem>
-                                                ))}
-                                                {pendingDatabases.map((db) => (
-                                                    <SelectItem key={db.id} value={String(db.id)} disabled>
-                                                        <span className="flex items-center gap-2">
-                                                            <Loader2Icon className="h-3 w-3 animate-spin" />
-                                                            {db.name}
-                                                            <span className="text-muted-foreground text-xs">(creating…)</span>
-                                                        </span>
-                                                    </SelectItem>
-                                                ))}
-                                                {serverData.database_type !== null && (
-                                                    <SelectItem value="__create__">
-                                                        <span className="flex items-center gap-1 text-primary">
-                                                            <PlusIcon className="h-3.5 w-3.5" />
-                                                            Create database
-                                                        </span>
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        {form.errors.server_database_id && (
-                                            <p className="text-destructive text-sm">{form.errors.server_database_id}</p>
-                                        )}
-                                    </div>
-                                    {pendingDatabases.length > 0 && (
-                                        <div className="flex items-center gap-2 rounded-lg border border-dashed p-3">
-                                            <Loader2Icon className="h-4 w-4 shrink-0 animate-spin text-primary" />
-                                            <p className="text-muted-foreground text-sm">
-                                                {pendingDatabases.length === 1
-                                                    ? `Database "${pendingDatabases[0].name}" is being created…`
-                                                    : `${pendingDatabases.length} databases are being created…`}
-                                            </p>
-                                        </div>
-                                    )}
-                                    {readyDatabases.length === 0 && pendingDatabases.length === 0 && (
-                                        <div className="rounded-lg border border-dashed p-4 text-center">
-                                            <p className="text-muted-foreground text-sm">
-                                                {serverData.database_type !== null
-                                                    ? 'No databases available on this server.'
-                                                    : 'This server has no database. Connect it to a database server from that server\'s Connections page.'}
-                                            </p>
-                                            {serverData.database_type !== null && (
-                                                <Button type="button" variant="link" className="mt-1 h-auto p-0" onClick={() => setCreateDbOpen(true)}>
-                                                    Create one now
-                                                </Button>
-                                            )}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            )}
-                        </Card>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PACKAGE_MANAGERS.map((pm) => (
+                                                <SelectItem
+                                                    key={pm.value}
+                                                    value={pm.value}
+                                                >
+                                                    {pm.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={form.errors.package_manager}
+                                    />
+                                </div>
 
-                        {/* Submit */}
-                        <div className="flex justify-end gap-3">
-                            <Button type="button" variant="outline" asChild>
-                                <Link href={teamPath(`/servers/${serverData.id}`)}>Cancel</Link>
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={
-                                    form.processing ||
-                                    (useCustomDomain
-                                        ? !form.data.domain
-                                        : !form.data.site_name || siteNameStatus === 'taken' || siteNameStatus === 'invalid' || siteNameStatus === 'checking') ||
-                                    (connectDatabase && !form.data.server_database_id)
-                                }
-                            >
-                                {form.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                Create Site
-                            </Button>
-                        </div>
-                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="build_command">
+                                        Build command
+                                    </Label>
+                                    <Input
+                                        id="build_command"
+                                        placeholder="npm run build"
+                                        value={form.data.build_command}
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'build_command',
+                                                e.target.value,
+                                            )
+                                        }
+                                        disabled={
+                                            form.data.package_manager === 'none'
+                                        }
+                                    />
+                                    <InputError
+                                        message={form.errors.build_command}
+                                    />
+                                </div>
+                            </div>
+                        </FormSection>
+
+                        <FormSection
+                            title="Database"
+                            description="Connect a database and its credentials are added to the site's environment."
+                            action={
+                                <Switch
+                                    aria-label="Connect a database"
+                                    checked={connectDatabase}
+                                    onCheckedChange={handleDatabaseToggle}
+                                />
+                            }
+                        >
+                            {connectDatabase && (
+                                <DatabaseField
+                                    server={serverData}
+                                    readyDatabases={readyDatabases}
+                                    pendingDatabases={pendingDatabases}
+                                    value={form.data.server_database_id}
+                                    onChange={(id) =>
+                                        form.setData('server_database_id', id)
+                                    }
+                                    onCreate={() => setCreateDbOpen(true)}
+                                    error={form.errors.server_database_id}
+                                />
+                            )}
+                        </FormSection>
+
+                        <FormSection
+                            title="Isolate this site"
+                            description="Recommended. Runs the site as its own system user, so if it's ever hacked it can't reach your other sites or take over the server."
+                            action={
+                                <Switch
+                                    aria-label="Isolate this site"
+                                    checked={form.data.isolated}
+                                    onCheckedChange={(checked) =>
+                                        form.setData('isolated', checked)
+                                    }
+                                />
+                            }
+                        >
+                            {form.errors.isolated && (
+                                <InputError message={form.errors.isolated} />
+                            )}
+                        </FormSection>
+                    </Card>
+
+                    <SummaryCard
+                        rows={[
+                            { label: 'Server', value: serverData.name },
+                            { label: 'Domain', value: hostname },
+                            {
+                                label: 'Repository',
+                                value: repository || null,
+                            },
+                            {
+                                label: 'Branch',
+                                value: repository ? form.data.branch : null,
+                            },
+                            {
+                                label: 'Type',
+                                value: selectedProjectType?.label ?? null,
+                            },
+                            {
+                                label: 'PHP',
+                                value: form.data.php_version || null,
+                            },
+                            {
+                                label: 'Database',
+                                value: selectedDatabase?.name ?? null,
+                            },
+                        ]}
+                        submitLabel="Create site"
+                        processing={form.processing}
+                        disabled={isSubmitBlocked}
+                        cancelHref={teamPath(`/servers/${serverData.id}`)}
+                    />
                 </form>
 
-                {/* Add Source Control Provider Dialog */}
-                <Dialog open={providerPickerOpen} onOpenChange={setProviderPickerOpen}>
+                <Dialog
+                    open={providerPickerOpen}
+                    onOpenChange={setProviderPickerOpen}
+                >
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Add source control provider</DialogTitle>
+                            <DialogTitle>
+                                Connect a source control provider
+                            </DialogTitle>
                             <DialogDescription>
-                                A new window will open to authorize the provider. Your form values stay on this page.
+                                A new window opens to authorize the provider.
+                                What you've filled in here stays on this page.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-2">
@@ -1022,50 +1113,78 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                     </DialogContent>
                 </Dialog>
 
-                {/* Create Database Sheet */}
                 <Sheet open={createDbOpen} onOpenChange={setCreateDbOpen}>
                     <SheetContent side="right">
                         <SheetHeader>
                             <SheetTitle>Create database</SheetTitle>
                         </SheetHeader>
-                        <form onSubmit={handleCreateDatabase} className="flex flex-1 flex-col gap-4 p-4 pt-4">
+                        <form
+                            onSubmit={handleCreateDatabase}
+                            className="flex flex-1 flex-col gap-4 p-4 pt-4"
+                        >
                             <div className="space-y-2">
                                 <Label htmlFor="new-db-name">Name</Label>
                                 <Input
                                     id="new-db-name"
                                     value={dbForm.name}
-                                    onChange={(e) => setDbForm((p) => ({ ...p, name: e.target.value }))}
+                                    onChange={(e) =>
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            name: e.target.value,
+                                        }))
+                                    }
                                     placeholder="mydb"
                                     className="font-mono"
                                     autoComplete="off"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="new-db-charset">Charset (optional)</Label>
+                                <Label htmlFor="new-db-charset">
+                                    Charset (optional)
+                                </Label>
                                 <Input
                                     id="new-db-charset"
                                     value={dbForm.charset}
-                                    onChange={(e) => setDbForm((p) => ({ ...p, charset: e.target.value }))}
+                                    onChange={(e) =>
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            charset: e.target.value,
+                                        }))
+                                    }
                                     placeholder="utf8mb4"
                                     className="font-mono"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="new-db-collation">Collation (optional)</Label>
+                                <Label htmlFor="new-db-collation">
+                                    Collation (optional)
+                                </Label>
                                 <Input
                                     id="new-db-collation"
                                     value={dbForm.collation}
-                                    onChange={(e) => setDbForm((p) => ({ ...p, collation: e.target.value }))}
+                                    onChange={(e) =>
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            collation: e.target.value,
+                                        }))
+                                    }
                                     placeholder="utf8mb4_unicode_ci"
                                     className="font-mono"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="new-db-user">Database user (optional)</Label>
+                                <Label htmlFor="new-db-user">
+                                    Database user (optional)
+                                </Label>
                                 <Input
                                     id="new-db-user"
                                     value={dbForm.db_user}
-                                    onChange={(e) => setDbForm((p) => ({ ...p, db_user: e.target.value }))}
+                                    onChange={(e) =>
+                                        setDbForm((p) => ({
+                                            ...p,
+                                            db_user: e.target.value,
+                                        }))
+                                    }
                                     placeholder="Leave blank for default user"
                                     className="font-mono"
                                     autoComplete="off"
@@ -1073,13 +1192,17 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="new-db-password">Password</Label>
+                                    <Label htmlFor="new-db-password">
+                                        Password
+                                    </Label>
                                     <button
                                         type="button"
-                                        className="text-primary text-sm font-medium hover:underline"
+                                        className="text-sm font-medium text-primary hover:underline"
                                         onClick={() => {
-                                            const pw = generatePassword();
-                                            setDbForm((p) => ({ ...p, db_password: pw }));
+                                            setDbForm((p) => ({
+                                                ...p,
+                                                db_password: generatePassword(),
+                                            }));
                                             setShowDbPassword(true);
                                         }}
                                     >
@@ -1089,29 +1212,56 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                                 <div className="relative">
                                     <Input
                                         id="new-db-password"
-                                        type={showDbPassword ? 'text' : 'password'}
+                                        type={
+                                            showDbPassword ? 'text' : 'password'
+                                        }
                                         value={dbForm.db_password}
-                                        onChange={(e) => setDbForm((p) => ({ ...p, db_password: e.target.value }))}
+                                        onChange={(e) =>
+                                            setDbForm((p) => ({
+                                                ...p,
+                                                db_password: e.target.value,
+                                            }))
+                                        }
                                         placeholder="••••••••"
                                         autoComplete="new-password"
                                         className="pr-10"
                                     />
                                     <button
                                         type="button"
-                                        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                                        onClick={() => setShowDbPassword((v) => !v)}
+                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        onClick={() =>
+                                            setShowDbPassword((v) => !v)
+                                        }
                                         tabIndex={-1}
+                                        aria-label={
+                                            showDbPassword
+                                                ? 'Hide password'
+                                                : 'Show password'
+                                        }
                                     >
-                                        {showDbPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                                        {showDbPassword ? (
+                                            <EyeOffIcon className="h-4 w-4" />
+                                        ) : (
+                                            <EyeIcon className="h-4 w-4" />
+                                        )}
                                     </button>
                                 </div>
                             </div>
                             <SheetFooter>
-                                <Button type="button" variant="outline" onClick={() => setCreateDbOpen(false)}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setCreateDbOpen(false)}
+                                >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={isCreatingDb || !dbForm.name}>
-                                    {isCreatingDb ? 'Creating…' : 'Create database'}
+                                <Button
+                                    type="submit"
+                                    disabled={isCreatingDb || !dbForm.name}
+                                >
+                                    {isCreatingDb
+                                        ? 'Creating…'
+                                        : 'Create database'}
                                 </Button>
                             </SheetFooter>
                         </form>
@@ -1119,5 +1269,254 @@ export default function SitesCreate({ server, freeDomain, projectTypes, phpVersi
                 </Sheet>
             </div>
         </AppLayout>
+    );
+}
+
+/** A failed fetch from the provider, with a way to try again. */
+function RemoteError({
+    message,
+    onRetry,
+}: {
+    message: string;
+    onRetry: () => void;
+}) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+            <p className="text-sm text-destructive">{message}</p>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                <RefreshCwIcon className="h-4 w-4" />
+                Try again
+            </Button>
+        </div>
+    );
+}
+
+interface BranchFieldProps {
+    branches: Remote<Branch>;
+    value: string;
+    onChange: (value: string) => void;
+    onRetry: () => void;
+    error?: string;
+}
+
+/** The branch picker, with loading and error states while branches are fetched. */
+function BranchField({
+    branches,
+    value,
+    onChange,
+    onRetry,
+    error,
+}: BranchFieldProps) {
+    const items = branches.status === 'ready' ? branches.items : [];
+
+    return (
+        <div className="space-y-2">
+            <Label htmlFor="branch">Branch</Label>
+            {branches.status === 'loading' ? (
+                <Skeleton className="h-9 w-full sm:max-w-sm" />
+            ) : branches.status === 'error' ? (
+                <RemoteError message={branches.message} onRetry={onRetry} />
+            ) : (
+                <Select value={value} onValueChange={onChange}>
+                    <SelectTrigger id="branch" className="w-full sm:max-w-sm">
+                        <SelectValue placeholder="Select a branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {items.length > 0 ? (
+                            items.map((branch) => (
+                                <SelectItem
+                                    key={branch.name}
+                                    value={branch.name}
+                                >
+                                    {branch.name}
+                                    {branch.protected && (
+                                        <span className="text-xs text-muted-foreground">
+                                            protected
+                                        </span>
+                                    )}
+                                </SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value={value}>{value}</SelectItem>
+                        )}
+                    </SelectContent>
+                </Select>
+            )}
+            <InputError message={error} />
+        </div>
+    );
+}
+
+interface SubdomainFieldProps {
+    value: string;
+    onChange: (value: string) => void;
+    freeDomain: string;
+    status: SiteNameStatus;
+    message: string | null;
+    hasRepository: boolean;
+}
+
+/** The free subdomain input, showing whether the name is still available. */
+function SubdomainField({
+    value,
+    onChange,
+    freeDomain,
+    status,
+    message,
+    hasRepository,
+}: SubdomainFieldProps) {
+    const isProblem = status === 'taken' || status === 'invalid';
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center gap-2">
+                <div className="relative flex-1 sm:max-w-sm">
+                    <Input
+                        id="site_name"
+                        aria-label="Subdomain"
+                        placeholder="my-app"
+                        value={value}
+                        onChange={(e) => onChange(e.target.value.toLowerCase())}
+                        aria-invalid={isProblem || undefined}
+                        className="pr-8"
+                    />
+                    <span className="absolute top-1/2 right-2 -translate-y-1/2">
+                        {status === 'checking' && (
+                            <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+                        )}
+                        {status === 'available' && (
+                            <CheckIcon className="size-4 text-emerald-600" />
+                        )}
+                        {isProblem && (
+                            <XCircleIcon className="size-4 text-destructive" />
+                        )}
+                    </span>
+                </div>
+                <span className="text-sm whitespace-nowrap text-muted-foreground">
+                    .{freeDomain}
+                </span>
+            </div>
+            {message ? (
+                <InputError message={message} />
+            ) : status === 'available' ? (
+                <p className="text-sm text-emerald-600">
+                    That subdomain is available.
+                </p>
+            ) : (
+                hasRepository && (
+                    <p className="text-xs text-muted-foreground">
+                        Taken from the repository name. Change it if you like.
+                    </p>
+                )
+            )}
+        </div>
+    );
+}
+
+interface DatabaseFieldProps {
+    server: Server;
+    readyDatabases: ServerDatabase[];
+    pendingDatabases: ServerDatabase[];
+    value: number | undefined;
+    onChange: (id: number) => void;
+    onCreate: () => void;
+    error?: string;
+}
+
+/** The database picker, offering to create one when the server can host it. */
+function DatabaseField({
+    server,
+    readyDatabases,
+    pendingDatabases,
+    value,
+    onChange,
+    onCreate,
+    error,
+}: DatabaseFieldProps) {
+    const canCreate = server.database_type !== null;
+
+    if (readyDatabases.length === 0 && pendingDatabases.length === 0) {
+        return (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                    {canCreate
+                        ? 'No databases on this server yet.'
+                        : "This server has no database. Connect it to a database server from that server's Connections page."}
+                </p>
+                {canCreate && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={onCreate}
+                    >
+                        Create database
+                    </Button>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-2">
+            <Select
+                value={value ? String(value) : ''}
+                onValueChange={(selected) =>
+                    selected === CREATE_DATABASE
+                        ? onCreate()
+                        : onChange(Number(selected))
+                }
+            >
+                <SelectTrigger
+                    id="server_database_id"
+                    aria-label="Database"
+                    className="w-full sm:max-w-sm"
+                >
+                    <SelectValue placeholder="Select a database" />
+                </SelectTrigger>
+                <SelectContent>
+                    {readyDatabases.map((db) => (
+                        <SelectItem key={db.id} value={String(db.id)}>
+                            {db.name}
+                            {db.server_id !== server.id && db.server_name && (
+                                <span className="text-xs text-muted-foreground">
+                                    on {db.server_name}
+                                </span>
+                            )}
+                        </SelectItem>
+                    ))}
+                    {pendingDatabases.map((db) => (
+                        <SelectItem key={db.id} value={String(db.id)} disabled>
+                            <Loader2Icon className="h-3 w-3 animate-spin" />
+                            {db.name}
+                            <span className="text-xs text-muted-foreground">
+                                creating…
+                            </span>
+                        </SelectItem>
+                    ))}
+                    {canCreate && (
+                        <>
+                            <SelectSeparator />
+                            <SelectItem
+                                value={CREATE_DATABASE}
+                                className="text-primary"
+                            >
+                                <PlusIcon className="h-4 w-4" />
+                                Create database
+                            </SelectItem>
+                        </>
+                    )}
+                </SelectContent>
+            </Select>
+            {pendingDatabases.length > 0 && (
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2Icon className="h-3 w-3 animate-spin" />
+                    {pendingDatabases.length === 1
+                        ? `"${pendingDatabases[0].name}" is being created…`
+                        : `${pendingDatabases.length} databases are being created…`}
+                </p>
+            )}
+            <InputError message={error} />
+        </div>
     );
 }
