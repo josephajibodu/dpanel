@@ -1,7 +1,8 @@
-import { cn } from '@/lib/utils';
-import { type LogLine } from '@/hooks/use-log-stream';
-import { useEffect, useMemo, useRef } from 'react';
 import { AnsiUp } from 'ansi_up';
+import { useEffect, useMemo, useRef } from 'react';
+
+import { type LogLine } from '@/hooks/use-log-stream';
+import { cn } from '@/lib/utils';
 
 const PLACEHOLDER_LOGS: LogLine[] = [
     { type: 'info', message: '=> Warming up deployment workers' },
