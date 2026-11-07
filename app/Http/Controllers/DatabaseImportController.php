@@ -23,10 +23,10 @@ class DatabaseImportController extends Controller
         ServerDatabase $server_database,
         ImportDatabaseDump $action,
     ): RedirectResponse {
-        if (! in_array($server->database_type, ['mysql', 'mariadb'], true)) {
+        if ($server->database_type === 'postgresql' && ! $server_database->importOwner()) {
             return redirect()
                 ->back()
-                ->with('error', 'Importing a dump is only available for MySQL and MariaDB databases for now.');
+                ->with('error', "Add a database user with read-write access to {$server_database->name} first. The imported tables are handed to that user.");
         }
 
         if (! $server->isReady()) {

@@ -15,7 +15,7 @@ use RuntimeException;
 
 class RestoreDatabaseBackup
 {
-    use EscapesShell, KeepsSecretsOffCommandLine;
+    use EscapesShell, ImportsForeignDumps, KeepsSecretsOffCommandLine;
 
     public function __construct(
         private SshService $sshService,
@@ -62,13 +62,17 @@ class RestoreDatabaseBackup
                 $download = $awsCredentials.' aws s3 cp '.$this->escapeForShell($s3Uri).' - '.$driver->awsCliArgs();
 
                 $pipeline = $backup->isImport()
-                    ? $download.' | gunzip -cf | '.$this->buildImportFilterCommand().' | '.$this->buildImportCommand($server, $mysqlCredentials, $serverDatabase->name)
+                    ? $this->buildImportPipeline($connection, $directory, $server, $serverDatabase, $mysqlCredentials, $download)
                     : $download.' | gunzip -c | '.$this->buildRestoreCommand($server, $mysqlCredentials);
 
                 $inner = 'set -o pipefail; '.$pipeline;
 
                 $connection->exec('bash -c '.$this->escapeForShell($inner), 3600);
             });
+
+            if ($backup->isImport()) {
+                $this->finishImport($connection, $server, $serverDatabase);
+            }
 
             $backup->update([
                 'restore_status' => 'completed',
@@ -102,34 +106,6 @@ class RestoreDatabaseBackup
             'mariadb' => "sudo mariadb {$credentialsOption}",
             'postgresql' => 'sudo -u postgres psql -d postgres',
             default => throw new RuntimeException("Unsupported database type: {$server->database_type}"),
-        };
-    }
-
-    /**
-     * A dump from elsewhere may name the database it came from (`CREATE
-     * DATABASE`/`USE`), which would load the data into that database instead
-     * of the chosen one. Those lines are dropped. The match is anchored to the
-     * start of the line so a row whose text merely mentions them is kept.
-     * `|| [ $? -eq 1 ]` lets an empty result through: grep exits 1 when
-     * nothing is left, which is not an error here.
-     */
-    private function buildImportFilterCommand(): string
-    {
-        return "{ grep -Eiv '^(CREATE DATABASE|USE )' || [ \$? -eq 1 ]; }";
-    }
-
-    /**
-     * Load the filtered dump into the chosen database.
-     */
-    private function buildImportCommand(Server $server, string $mysqlCredentials, string $databaseName): string
-    {
-        $credentialsOption = '--defaults-extra-file='.$this->escapeForShell($mysqlCredentials);
-        $databaseNameEsc = $this->escapeForShell($databaseName);
-
-        return match ($server->database_type) {
-            'mysql' => "sudo mysql {$credentialsOption} {$databaseNameEsc}",
-            'mariadb' => "sudo mariadb {$credentialsOption} {$databaseNameEsc}",
-            default => throw new RuntimeException("Importing a dump isn't supported for {$server->database_type} yet."),
         };
     }
 }

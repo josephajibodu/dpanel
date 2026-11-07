@@ -1,8 +1,10 @@
 <?php
 
 use App\Actions\Backups\RestoreDatabaseBackup;
+use App\Exceptions\BackupFailedException;
 use App\Exceptions\SshCommandException;
 use App\Models\Backup;
+use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
@@ -168,4 +170,95 @@ it('shows the database error when an imported dump is rejected', function () {
 
     expect($backup->fresh()->restore_error)
         ->toBe('The database rejected the imported dump: ERROR 1064 (42000) at line 12: You have an error in your SQL syntax');
+});
+
+it('imports a dump into Postgres in one transaction and hands the tables to the oldest read-write user', function () {
+    $this->server->update(['database_type' => 'postgresql']);
+    $owner = DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'username' => 'app_owner',
+        'databases' => ['app_production'],
+    ]);
+    DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'username' => 'app_reader',
+        'permission' => 'readonly',
+        'databases' => ['app_production'],
+    ]);
+
+    $commands = [];
+    $uploads = [];
+    $grantScripts = [];
+    $connection = mockDatabaseConnection($uploads, $commands, function (string $command) use (&$uploads, &$grantScripts) {
+        if (str_contains($command, 'statements.sql')) {
+            $grantScripts[] = $uploads['/tmp/tmp.fleetops/statements.sql'];
+        }
+    });
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('bucket')->andReturn('test-bucket');
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
+    $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
+
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    $this->app->instance(StorageProviderManager::class, $storageManager);
+
+    $backup = Backup::factory()->completed()->create([
+        'server_database_id' => $this->serverDatabase->id,
+        'storage_provider_id' => $this->storageProvider->id,
+        'triggered_by' => 'import',
+    ]);
+
+    app(RestoreDatabaseBackup::class)->execute($backup);
+
+    $importCommand = collect($commands)->first(fn (string $command) => str_contains($command, 'aws s3 cp'));
+    expect($importCommand)
+        ->toContain('ON_ERROR_STOP=1')
+        ->toContain('prelude.sql')
+        ->toContain('postlude.sql')
+        ->toContain('app_production')
+        ->and($uploads['/tmp/tmp.fleetops/prelude.sql'])->toStartWith('BEGIN;')
+        ->and($uploads['/tmp/tmp.fleetops/postlude.sql'])
+        ->toContain("owner_name text := 'app_owner'")
+        ->toEndWith("COMMIT;\n")
+        ->and(implode('
+', $grantScripts))
+        ->toContain('GRANT ALL ON SCHEMA public TO "app_owner"')
+        ->toContain('GRANT SELECT ON ALL TABLES IN SCHEMA public TO "app_reader"')
+        ->and($backup->fresh()->restore_status)->toBe('completed')
+        ->and($owner->exists)->toBeTrue();
+});
+
+it('refuses a Postgres import when the database has no read-write user', function () {
+    $this->server->update(['database_type' => 'postgresql']);
+    $connection = mockDatabaseConnection();
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    $this->app->instance(SshService::class, $sshService);
+
+    $driver = Mockery::mock(CloudflareR2Driver::class);
+    $driver->shouldReceive('bucket')->andReturn('test-bucket');
+    $driver->shouldReceive('awsCredentialsFile')->andReturn("[default]\naws_access_key_id = x\naws_secret_access_key = y\n");
+    $driver->shouldReceive('awsCliArgs')->andReturn("--region='auto'");
+
+    $storageManager = Mockery::mock(StorageProviderManager::class);
+    $storageManager->shouldReceive('forAccount')->andReturn($driver);
+    $this->app->instance(StorageProviderManager::class, $storageManager);
+
+    $backup = Backup::factory()->completed()->create([
+        'server_database_id' => $this->serverDatabase->id,
+        'storage_provider_id' => $this->storageProvider->id,
+        'triggered_by' => 'import',
+    ]);
+
+    expect(fn () => app(RestoreDatabaseBackup::class)->execute($backup))
+        ->toThrow(BackupFailedException::class);
+
+    expect($backup->fresh()->restore_error)->toContain('Add a database user with read-write access to app_production');
 });

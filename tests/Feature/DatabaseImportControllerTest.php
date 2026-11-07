@@ -4,6 +4,7 @@ use App\Enums\ServerStatus;
 use App\Enums\TeamRoleKey;
 use App\Jobs\RestoreBackupJob;
 use App\Models\Backup;
+use App\Models\DatabaseUser;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\StorageProvider;
@@ -84,7 +85,7 @@ it('refuses a storage provider from another team', function () {
     expect(Backup::count())->toBe(0);
 });
 
-it('refuses to import into a Postgres database for now', function () {
+it('needs a read-write user before importing into a Postgres database', function () {
     $this->server->update(['database_type' => 'postgresql']);
 
     $this->actingAs($this->user)
@@ -95,6 +96,24 @@ it('refuses to import into a Postgres database for now', function () {
         ->assertSessionHas('error');
 
     expect(Backup::count())->toBe(0);
+});
+
+it('imports into a Postgres database that has a read-write user', function () {
+    $this->server->update(['database_type' => 'postgresql']);
+    DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'databases' => ['app_production'],
+    ]);
+    $this->driver->shouldReceive('putStream')->once();
+
+    $this->actingAs($this->user)
+        ->post($this->importPath, [
+            'storage_provider_id' => $this->storageProvider->id,
+            'dump' => UploadedFile::fake()->create('app.sql', 10),
+        ])
+        ->assertSessionHas('success');
+
+    Queue::assertPushed(RestoreBackupJob::class);
 });
 
 it('lets only members who may restore backups import a dump', function (TeamRoleKey $role, bool $allowed) {

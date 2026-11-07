@@ -74,8 +74,8 @@ export function ImportDumpDialog({
                     <DialogDescription>
                         Load a <span className="font-mono">.sql</span> or{' '}
                         <span className="font-mono">.sql.gz</span> dump into{' '}
-                        <span className="font-mono">{databaseName}</span>. This
-                        replaces the data in the tables the dump contains.
+                        <span className="font-mono">{databaseName}</span>,
+                        replacing its current data.
                     </DialogDescription>
                 </DialogHeader>
 

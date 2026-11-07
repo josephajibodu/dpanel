@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\ServerDatabaseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ServerDatabase extends Model
 {
-    /** @use HasFactory<\Database\Factories\ServerDatabaseFactory> */
+    /** @use HasFactory<ServerDatabaseFactory> */
     use HasFactory;
 
     protected $table = 'server_databases';
@@ -36,5 +37,20 @@ class ServerDatabase extends Model
     public function backups(): HasMany
     {
         return $this->hasMany(Backup::class);
+    }
+
+    /**
+     * The read-write user an imported Postgres dump's tables are handed to:
+     * the oldest one, which is normally the user the site connects as.
+     */
+    public function importOwner(): ?DatabaseUser
+    {
+        return DatabaseUser::query()
+            ->where('server_id', $this->server_id)
+            ->where('permission', 'readwrite')
+            ->where('status', 'ready')
+            ->whereJsonContains('databases', $this->name)
+            ->oldest('id')
+            ->first();
     }
 }

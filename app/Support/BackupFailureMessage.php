@@ -56,7 +56,7 @@ class BackupFailureMessage
             str_contains($output, 'SQLite database not found at') => "No SQLite database file was found at {$backup->site?->sqliteDatabasePath()} on the server.",
             str_contains($output, 'SQLite integrity check failed') => 'The backup was uploaded but failed its integrity check, so it was discarded. Try running it again.',
             (bool) preg_match('/Unknown database|database ".+" does not exist/', $output) => "The database \"{$backup->targetName()}\" no longer exists on the server.",
-            $backup->isImport() && preg_match('/^ERROR \d+ \(\w+\)( at line \d+)?: .+$/m', $output, $sqlError) => 'The database rejected the imported dump: '.Str::limit($sqlError[0], 300),
+            $backup->isImport() && preg_match('/^(ERROR \d+ \(\w+\)( at line \d+)?|(psql:\S+:\d+: )?ERROR): .+$/m', $output, $sqlError) => 'The database rejected the imported dump: '.Str::limit($sqlError[0], 300),
             default => null,
         };
     }
