@@ -8,6 +8,14 @@ use Illuminate\Http\Request;
 class CustomDeploymentWebhookHandler implements DeploymentWebhookHandler
 {
     /**
+     * No standard event format for custom providers, so every call counts.
+     */
+    public function isPush(Request $request): bool
+    {
+        return true;
+    }
+
+    /**
      * Custom Git providers have no standardised signature mechanism.
      * The secret in the URL is sufficient authentication.
      */
@@ -19,11 +27,6 @@ class CustomDeploymentWebhookHandler implements DeploymentWebhookHandler
     /**
      * No standard payload format for custom providers — always deploy.
      */
-    public function isPush(Request $request): bool
-    {
-        return true;
-    }
-
     public function parseBranch(Request $request): ?string
     {
         return null;

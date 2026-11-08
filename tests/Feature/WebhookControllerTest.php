@@ -54,6 +54,19 @@ function githubHeaders(string $body, string $secret): array
     ];
 }
 
+function bitbucketPayload(string $branch): array
+{
+    return ['push' => ['changes' => [['new' => ['type' => 'branch', 'name' => $branch]]]]];
+}
+
+function bitbucketHeaders(array $payload, string $secret): array
+{
+    return [
+        'X-Event-Key' => 'repo:push',
+        'X-Hub-Signature' => 'sha256='.hash_hmac('sha256', json_encode($payload), $secret),
+    ];
+}
+
 // ---------------------------------------------------------------------------
 // 404 — unknown secret
 // ---------------------------------------------------------------------------
@@ -150,6 +163,7 @@ it('triggers a deployment for a valid gitlab push', function () {
     $payload = githubPayload('main'); // GitLab uses the same ref format
     $this->postJson('/webhook/'.$secret, $payload, [
         'X-Gitlab-Token' => $secret,
+        'X-Gitlab-Event' => 'Push Hook',
         'Content-Type' => 'application/json',
     ])->assertOk()->assertJson(['message' => 'Deployment triggered.']);
 
@@ -175,8 +189,8 @@ it('rejects a gitlab push with an invalid token', function () {
 it('triggers a deployment for a valid bitbucket push', function () {
     $site = makeSite(['repository_provider' => RepositoryProvider::Bitbucket]);
 
-    $payload = ['push' => ['changes' => [['new' => ['name' => 'main']]]]];
-    $this->postJson('/webhook/'.$site->webhook_secret, $payload)
+    $payload = bitbucketPayload('main');
+    $this->postJson('/webhook/'.$site->webhook_secret, $payload, bitbucketHeaders($payload, $site->webhook_secret))
         ->assertOk()->assertJson(['message' => 'Deployment triggered.']);
 
     expect(Deployment::count())->toBe(1);
@@ -189,8 +203,8 @@ it('skips deployment for a bitbucket push to a different branch', function () {
         'repository_provider' => RepositoryProvider::Bitbucket,
     ]);
 
-    $payload = ['push' => ['changes' => [['new' => ['name' => 'feature-x']]]]];
-    $this->postJson('/webhook/'.$site->webhook_secret, $payload)
+    $payload = bitbucketPayload('feature-x');
+    $this->postJson('/webhook/'.$site->webhook_secret, $payload, bitbucketHeaders($payload, $site->webhook_secret))
         ->assertOk()->assertJson(['message' => 'Branch does not match. Deployment skipped.']);
 
     expect(Deployment::count())->toBe(0);
@@ -238,6 +252,39 @@ it('does not deploy when github pings a newly added webhook', function () {
     $headers = [...githubHeaders(json_encode($payload), $site->webhook_secret), 'X-GitHub-Event' => 'ping'];
 
     $this->postJson('/webhook/'.$site->webhook_secret, $payload, $headers)
+        ->assertOk()->assertJson(['message' => 'Not a push. Deployment skipped.']);
+
+    expect(Deployment::count())->toBe(0);
+});
+
+it('does not deploy for a gitlab event other than a push', function () {
+    $site = makeSite(['repository_provider' => RepositoryProvider::Gitlab]);
+
+    $this->postJson('/webhook/'.$site->webhook_secret, githubPayload(), [
+        'X-Gitlab-Token' => $site->webhook_secret,
+        'X-Gitlab-Event' => 'Tag Push Hook',
+    ])->assertOk()->assertJson(['message' => 'Not a push. Deployment skipped.']);
+
+    expect(Deployment::count())->toBe(0);
+});
+
+it('rejects a bitbucket push without a valid signature', function (array $headers) {
+    $site = makeSite(['repository_provider' => RepositoryProvider::Bitbucket]);
+
+    $this->postJson('/webhook/'.$site->webhook_secret, bitbucketPayload('main'), $headers)
+        ->assertForbidden();
+
+    expect(Deployment::count())->toBe(0);
+})->with([
+    'unsigned' => [['X-Event-Key' => 'repo:push']],
+    'wrong secret' => [['X-Event-Key' => 'repo:push', 'X-Hub-Signature' => 'sha256='.hash_hmac('sha256', json_encode(['push' => ['changes' => [['new' => ['type' => 'branch', 'name' => 'main']]]]]), 'wrong')]],
+]);
+
+it('does not deploy when a bitbucket push deletes the branch', function () {
+    $site = makeSite(['repository_provider' => RepositoryProvider::Bitbucket]);
+
+    $payload = ['push' => ['changes' => [['old' => ['type' => 'branch', 'name' => 'main'], 'new' => null]]]];
+    $this->postJson('/webhook/'.$site->webhook_secret, $payload, bitbucketHeaders($payload, $site->webhook_secret))
         ->assertOk()->assertJson(['message' => 'Not a push. Deployment skipped.']);
 
     expect(Deployment::count())->toBe(0);

@@ -8,6 +8,14 @@ use Illuminate\Http\Request;
 class GithubDeploymentWebhookHandler implements DeploymentWebhookHandler
 {
     /**
+     * GitHub also sends other events, such as the ping when a webhook is created.
+     */
+    public function isPush(Request $request): bool
+    {
+        return $request->header('X-GitHub-Event') === 'push';
+    }
+
+    /**
      * GitHub sends an HMAC-SHA256 signature of the raw body in X-Hub-Signature-256.
      */
     public function verifySignature(Request $request, string $secret): bool
@@ -26,11 +34,6 @@ class GithubDeploymentWebhookHandler implements DeploymentWebhookHandler
     /**
      * GitHub push payloads include a `ref` field in the format `refs/heads/{branch}`.
      */
-    public function isPush(Request $request): bool
-    {
-        return $request->header('X-GitHub-Event') === 'push';
-    }
-
     public function parseBranch(Request $request): ?string
     {
         return $this->parseRef($request->json('ref'));
