@@ -18,6 +18,11 @@ class GitlabDeploymentWebhookHandler implements DeploymentWebhookHandler
     /**
      * GitLab push payloads include a `ref` field in the format `refs/heads/{branch}`.
      */
+    public function isPush(Request $request): bool
+    {
+        return true;
+    }
+
     public function parseBranch(Request $request): ?string
     {
         $ref = $request->json('ref');

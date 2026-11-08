@@ -33,6 +33,10 @@ class DeploymentWebhookController extends Controller
             abort(403, 'Invalid webhook signature.');
         }
 
+        if (! $handler->isPush($request)) {
+            return response()->json(['message' => 'Not a push. Deployment skipped.']);
+        }
+
         $pushedBranch = $handler->parseBranch($request);
 
         if ($pushedBranch !== null && $pushedBranch !== $site->branch) {

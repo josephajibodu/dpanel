@@ -19,6 +19,11 @@ class CustomDeploymentWebhookHandler implements DeploymentWebhookHandler
     /**
      * No standard payload format for custom providers — always deploy.
      */
+    public function isPush(Request $request): bool
+    {
+        return true;
+    }
+
     public function parseBranch(Request $request): ?string
     {
         return null;

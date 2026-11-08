@@ -6,16 +6,18 @@ use App\Enums\RepositoryProvider;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class SourceControlService
 {
     /**
      * List repositories available for a given source control account.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     public function listRepositories(SourceControlAccount $account): Collection
     {
@@ -29,7 +31,7 @@ class SourceControlService
     /**
      * List branches for a given repository.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     public function listBranches(SourceControlAccount $account, string $repositoryFullName): Collection
     {
@@ -91,7 +93,7 @@ class SourceControlService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function listGithubRepositories(SourceControlAccount $account): Collection
     {
@@ -156,7 +158,7 @@ class SourceControlService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function listGithubBranches(SourceControlAccount $account, string $repositoryFullName): Collection
     {
@@ -404,6 +406,91 @@ class SourceControlService
             account: $account,
             publicKey: $server->local_public_key,
         );
+    }
+
+    /**
+     * Whether pushes to this site's repository can be wired to deploy it.
+     */
+    public function supportsDeployWebhooks(Site $site): bool
+    {
+        return $site->repository !== null
+            && $site->sourceControlAccount !== null
+            && $site->repository_provider === RepositoryProvider::Github;
+    }
+
+    /**
+     * Register a push webhook on the site's repository that calls the site's
+     * deployment webhook URL, signed with the site's webhook secret.
+     *
+     * @return string The provider's id for the webhook.
+     *
+     * @throws RuntimeException when the provider refuses, with a message fit to show the user.
+     */
+    public function createDeployWebhook(Site $site): string
+    {
+        $response = $this->github($site->sourceControlAccount)
+            ->post("https://api.github.com/repos/{$site->repository}/hooks", [
+                'name' => 'web',
+                'active' => true,
+                'events' => ['push'],
+                'config' => [
+                    'url' => route('deployment-webhook.handle', $site->webhook_secret),
+                    'content_type' => 'json',
+                    'secret' => $site->webhook_secret,
+                    'insecure_ssl' => '0',
+                ],
+            ]);
+
+        if ($response->status() === 201) {
+            return (string) $response->json('id');
+        }
+
+        Log::warning('Failed to create GitHub deploy webhook', [
+            'site_id' => $site->id,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        throw new RuntimeException(match ($response->status()) {
+            403, 404 => "GitHub refused to add a webhook to {$site->repository}. You need admin access to the repository; if you have it, reconnect your GitHub account and try again.",
+            default => 'GitHub could not add the webhook. Try again in a moment.',
+        });
+    }
+
+    /**
+     * Remove the site's push webhook from its repository. A webhook that's
+     * already gone (deleted on GitHub, or the repository removed) counts as removed.
+     *
+     * @throws RuntimeException when the provider refuses, with a message fit to show the user.
+     */
+    public function deleteDeployWebhook(Site $site): void
+    {
+        if ($site->deploy_webhook_id === null || $site->sourceControlAccount === null) {
+            return;
+        }
+
+        $response = $this->github($site->sourceControlAccount)
+            ->delete("https://api.github.com/repos/{$site->repository}/hooks/{$site->deploy_webhook_id}");
+
+        if ($response->successful() || $response->status() === 404) {
+            return;
+        }
+
+        Log::warning('Failed to delete GitHub deploy webhook', [
+            'site_id' => $site->id,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        throw new RuntimeException('GitHub could not remove the webhook. Try again in a moment.');
+    }
+
+    private function github(SourceControlAccount $account): PendingRequest
+    {
+        return Http::withToken($account->token)
+            ->acceptJson()
+            ->withHeaders(['X-GitHub-Api-Version' => '2022-11-28'])
+            ->timeout(15);
     }
 
     /**

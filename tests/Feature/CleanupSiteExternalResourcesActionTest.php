@@ -2,6 +2,7 @@
 
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\SourceControlAccount;
 use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\SourceControlService;
@@ -114,5 +115,20 @@ it('swallows GitHub SSH key cleanup errors so the caller can keep going', functi
         cloudflareDnsRecordIds: [],
         server: $server,
         sourceControlAccount: $account,
+    );
+});
+
+it('removes the site\'s deploy webhook, and carries on if that fails', function () {
+    $cloudflare = Mockery::mock(CloudflareDnsService::class);
+    $cloudflare->shouldReceive('deleteRecord')->once()->with('cf-1');
+
+    $site = Site::factory()->create(['deploy_webhook_id' => '4242']);
+
+    $sourceControl = Mockery::mock(SourceControlService::class);
+    $sourceControl->shouldReceive('deleteDeployWebhook')->once()->with($site)->andThrow(new RuntimeException('GitHub down'));
+
+    (new CleanupSiteExternalResourcesAction($cloudflare, $sourceControl))->execute(
+        cloudflareDnsRecordIds: ['cf-1'],
+        site: $site,
     );
 });

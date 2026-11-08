@@ -19,6 +19,11 @@ class BitbucketDeploymentWebhookHandler implements DeploymentWebhookHandler
     /**
      * Bitbucket push payloads nest the branch name under push.changes[].new.name.
      */
+    public function isPush(Request $request): bool
+    {
+        return true;
+    }
+
     public function parseBranch(Request $request): ?string
     {
         return $request->json('push.changes.0.new.name');

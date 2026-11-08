@@ -50,6 +50,7 @@ class Site extends Model
         'provisioning_step',
         'deploy_key_id',
         'webhook_secret',
+        'deploy_webhook_id',
         'auto_deploy',
         'deployment_started_at',
         'deployment_finished_at',

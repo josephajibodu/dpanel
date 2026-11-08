@@ -49,6 +49,7 @@ function githubHeaders(string $body, string $secret): array
 {
     return [
         'X-Hub-Signature-256' => 'sha256='.hash_hmac('sha256', $body, $secret),
+        'X-GitHub-Event' => 'push',
         'Content-Type' => 'application/json',
     ];
 }
@@ -228,4 +229,16 @@ it('returns a message when a deployment is already in progress', function () {
 
     $response->assertOk()->assertJson(['message' => 'A deployment is already in progress for this site.']);
     expect(Deployment::count())->toBe(1); // No new deployment created
+});
+
+it('does not deploy when github pings a newly added webhook', function () {
+    $site = makeSite();
+
+    $payload = ['zen' => 'Keep it logically awesome.', 'hook_id' => 1];
+    $headers = [...githubHeaders(json_encode($payload), $site->webhook_secret), 'X-GitHub-Event' => 'ping'];
+
+    $this->postJson('/webhook/'.$site->webhook_secret, $payload, $headers)
+        ->assertOk()->assertJson(['message' => 'Not a push. Deployment skipped.']);
+
+    expect(Deployment::count())->toBe(0);
 });

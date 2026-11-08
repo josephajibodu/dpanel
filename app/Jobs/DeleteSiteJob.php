@@ -71,6 +71,7 @@ class DeleteSiteJob implements ShouldQueue
             server: $server,
             sourceControlAccount: $site?->sourceControlAccount,
             domain: $this->domain,
+            site: $site,
         );
 
         // Fetched before $site->delete(), which nulls site_id on these via the

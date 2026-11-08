@@ -17,4 +17,10 @@ interface DeploymentWebhookHandler
      * Return null when the branch cannot be determined — the caller treats this as a match.
      */
     public function parseBranch(Request $request): ?string;
+
+    /**
+     * Whether the request reports a push. Providers also send other events
+     * (GitHub pings a webhook as soon as it's created), which must not deploy.
+     */
+    public function isPush(Request $request): bool;
 }

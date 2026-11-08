@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Sites\CreateSiteAction;
 use App\Actions\Sites\DeleteSiteAction;
+use App\Actions\Sites\SetDeployOnPushAction;
 use App\Data\SiteData;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
@@ -31,12 +32,15 @@ use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\SourceControlAccount;
 use App\Models\Team;
+use App\Services\SourceControlService;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class SiteController extends Controller
 {
@@ -171,7 +175,7 @@ class SiteController extends Controller
         ]);
     }
 
-    public function edit(Team $team, Server $server, Site $site): Response
+    public function edit(Team $team, Server $server, Site $site, SourceControlService $sourceControl): Response
     {
         $this->authorize('update', $site);
 
@@ -197,26 +201,37 @@ class SiteController extends Controller
         return Inertia::render('sites/edit', [
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
-            'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
-                'value' => $type->value,
-                'label' => $type->label(),
-                'defaultDirectory' => $type->defaultDirectory(),
-            ]),
-            'repositoryProviders' => collect(RepositoryProvider::cases())->map(fn ($provider) => [
-                'value' => $provider->value,
-                'label' => $provider->label(),
-            ]),
             'phpVersions' => $phpVersions,
+            'supportsDeployOnPush' => $sourceControl->supportsDeployWebhooks($site),
         ]);
     }
 
-    public function update(UpdateSiteRequest $request, Team $team, Server $server, Site $site): RedirectResponse
-    {
-        $previousPhpVersion = $site->php_version;
-        $site->update($request->validated());
+    public function update(
+        UpdateSiteRequest $request,
+        Team $team,
+        Server $server,
+        Site $site,
+        SetDeployOnPushAction $setDeployOnPush,
+    ): RedirectResponse {
+        $validated = $request->validated();
 
-        if ($previousPhpVersion !== $site->php_version && $server->isReady()) {
-            if ($site->isIsolated()) {
+        if (array_key_exists('auto_deploy', $validated)) {
+            try {
+                $setDeployOnPush->execute($site, (bool) $validated['auto_deploy']);
+            } catch (RuntimeException $exception) {
+                return back()->withErrors(['auto_deploy' => $exception->getMessage()]);
+            }
+        }
+
+        $previousPhpVersion = $site->php_version;
+        $site->update(Arr::except($validated, 'auto_deploy'));
+
+        $phpVersionChanged = $site->wasChanged('php_version');
+
+        if (($phpVersionChanged || $site->wasChanged('directory')) && $server->isReady()) {
+            $site->forgetGeneratedNginxConfig();
+
+            if ($phpVersionChanged && $site->isIsolated()) {
                 MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
             } else {
                 SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');

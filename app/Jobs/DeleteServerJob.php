@@ -63,6 +63,7 @@ class DeleteServerJob implements ShouldQueue
                         sourceControlAccount: null,
                         domain: $site->domain,
                         cleanupGithubSshKey: false,
+                        site: $site,
                     );
                 } catch (\Exception $e) {
                     Log::warning("Failed to clean up external resources for site {$site->domain}: {$e->getMessage()}");

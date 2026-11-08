@@ -2,9 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\ProjectType;
-use App\Enums\RepositoryProvider;
 use App\Models\Server;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,33 +21,13 @@ class UpdateSiteRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'domain' => [
-                'sometimes',
-                'string',
-                'max:255',
-                'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/',
-            ],
-            'aliases' => ['nullable', 'array'],
-            'aliases.*' => [
-                'string',
-                'max:255',
-                'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/',
-            ],
             'directory' => ['sometimes', 'string', 'max:255', 'regex:/^\/[a-zA-Z0-9\/_-]*$/'],
-            'repository' => [
-                'nullable',
-                'string',
-                'max:255',
-                'regex:/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\.-]+$/',
-            ],
-            'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
-            'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
             'php_version' => ['sometimes', 'string', Rule::in($this->getInstalledPhpVersions())],
             'auto_deploy' => ['sometimes', 'boolean'],
         ];
@@ -62,10 +41,7 @@ class UpdateSiteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'domain.regex' => 'Please enter a valid domain name (e.g., example.com).',
-            'aliases.*.regex' => 'Please enter valid domain aliases.',
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
-            'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
             'php_version.in' => 'The selected PHP version is not installed on this server.',
         ];

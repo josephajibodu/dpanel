@@ -3,6 +3,7 @@
 namespace App\Actions\Sites;
 
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\SourceControlAccount;
 use App\Services\Cloudflare\CloudflareDnsService;
 use App\Services\SourceControlService;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Tears down external (third-party) resources tied to a site: Cloudflare DNS
- * records and, when requested, the GitHub account-level SSH key added for the
+ * records, the push webhook on its repository and, when requested, the GitHub account-level SSH key added for the
  * site's server.
  *
  * Designed to be called both from DeleteSiteJob (per-site delete) and from
@@ -31,6 +32,7 @@ class CleanupSiteExternalResourcesAction
      * @param  ?SourceControlAccount  $sourceControlAccount  Account whose SSH key would have been added for this server. Required for GitHub SSH key cleanup.
      * @param  ?string  $domain  Optional site domain — used only for log context.
      * @param  bool  $cleanupGithubSshKey  Set false when the caller (e.g. DeleteServerJob) is doing a server-wide GitHub key sweep separately, to avoid redundant API calls.
+     * @param  ?Site  $site  The site, while it still exists, so its deploy-on-push webhook can be removed from its repository.
      */
     public function execute(
         array $cloudflareDnsRecordIds,
@@ -38,8 +40,17 @@ class CleanupSiteExternalResourcesAction
         ?SourceControlAccount $sourceControlAccount = null,
         ?string $domain = null,
         bool $cleanupGithubSshKey = true,
+        ?Site $site = null,
     ): void {
         $logSuffix = $domain ? " for {$domain}" : '';
+
+        if ($site?->deploy_webhook_id !== null) {
+            try {
+                $this->sourceControl->deleteDeployWebhook($site);
+            } catch (\Throwable $e) {
+                Log::warning("Failed to delete deploy webhook{$logSuffix}: {$e->getMessage()}");
+            }
+        }
 
         foreach ($cloudflareDnsRecordIds as $recordId) {
             try {
