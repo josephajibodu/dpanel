@@ -1,0 +1,57 @@
+---
+title: "Limits and naming rules"
+description: "What names, sizes and values flitops accepts."
+---
+
+## Names
+
+| Field | Rules |
+| --- | --- |
+| **Server name** | Letters, numbers and hyphens. Also used as the hostname. |
+| **Team handle** | Lowercase letters, numbers, dots and dashes. Unique across flitops. |
+| **Free subdomain** | Letters, numbers and hyphens; must start and end with a letter or number. One site per subdomain. |
+| **Custom domain** | A valid hostname such as `example.com` or `app.example.com`. One site per hostname. |
+| **Database name** | Letters, numbers and underscores. Unique on the server. |
+| **Database username** | Letters, numbers and underscores, up to 32 characters. Unique on the server. |
+| **Database password** | At least 8 characters. |
+| **Repository** | `owner/name`, as on your Git host. |
+| **Branch** | Letters, numbers, `.`, `_`, `-` and `/`. |
+| **Web directory** | Starts with `/`; letters, numbers, `_`, `-` and `/`. |
+| **Web server file name** | Letters, numbers, `.`, `_` and `-`, ending in `.conf`. Up to 100 characters. |
+| **Web server sub-path** | Letters, numbers, `_`, `-` and `/`. Up to 100 characters. |
+
+## Sizes and counts
+
+| What | Limit |
+| --- | --- |
+| Worker copies (**Numprocs**) | 1–64 |
+| Worker or cron command | Up to 1,024 characters |
+| One-off command | Up to 1,024 characters; runs for up to 5 minutes |
+| Build command | Up to 500 characters |
+| Web server file content | Up to 64 KB |
+| Backups kept (**Keep last**) | 1–365 |
+| Imported dump | `.sql` or `.sql.gz`, up to 1 GB |
+| Releases kept per site | The 5 most recent, plus the live one |
+| PHP max execution time | 1–86,400 seconds |
+
+## Supported versions
+
+| Software | Versions |
+| --- | --- |
+| Ubuntu | 22.04 and 24.04 (new servers use 24.04) |
+| PHP | 8.1, 8.2, 8.3, 8.4 |
+| Node.js | 20 (end of life), 22, 24 |
+| Databases | MySQL 8, MariaDB, PostgreSQL |
+| Web servers | Nginx, Caddy |
+
+## Timings
+
+| What | How often |
+| --- | --- |
+| Server metrics | Every 10 minutes, or on **Refresh** |
+| Uptime checks | Every 5 minutes; down after 2 failures in a row |
+| Worker status check | Every 5 minutes |
+| Certificate expiry check | Daily |
+| Scheduled backups | Checked hourly; run at the chosen frequency |
+| Password confirmation | Lasts 15 minutes |
+| Browser terminal | Closes after 15 minutes idle, or 2 hours in total |

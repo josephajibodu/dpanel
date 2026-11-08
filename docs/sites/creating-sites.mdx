@@ -1,0 +1,81 @@
+---
+title: "Creating sites"
+description: "Add a site to a server: repository, domain, project type, PHP, build, database and isolation."
+---
+
+A **site** is one application on a server, reachable at a web address. You can create sites on any **Active** server that has a web server. You need the **Manage sites** permission (Owners, Admins and Developers).
+
+Open the server, then click **New site** (or **Add site** on the **Sites** tab).
+
+## The site form
+
+<Steps>
+  <Step title="Repository">
+    Where deployments pull the code from.
+
+    1. Choose a connected **Account** (or click **Connect a provider** to add one; see [Source control](/connections/source-control)).
+    2. Choose the **Repository**. Use the search box to filter, or the reload button if a new repository is missing.
+    3. Choose the **Branch** to deploy, for example `main`.
+
+    You can skip the repository, for example to set up the server first. Adding a repository to an existing site isn't available yet (it's on the [roadmap](/roadmap)), so if you'll deploy from Git, choose it now.
+  </Step>
+  <Step title="Domain">
+    Choose the **Domain type**:
+
+    - **Free**: type a **Subdomain** such as `my-app`, and the site gets an address on the flitops free domain (`my-app.flitops.xyz`). HTTPS works straight away and you don't need to change any DNS. flitops suggests a subdomain from the repository name, and tells you if it's available or taken.
+    - **Custom**: type your own domain, for example `example.com` or `app.example.com`. After creating the site, you'll be shown the DNS record to add. See [Domains](/sites/domains).
+
+    You can add more domains, including your own, after the site is created.
+  </Step>
+  <Step title="Project type">
+    Choose **Laravel**, **Symfony**, **WordPress**, **PHP** or **Static HTML**. This sets the **Web directory** (the folder the web server serves, for example `/public` for Laravel) and a starting deploy script. See [Project types](/sites/project-types). You can change the web directory if your project is laid out differently.
+  </Step>
+  <Step title="PHP version">
+    Choose one of the PHP versions installed on the server. Not shown for Static HTML sites.
+  </Step>
+  <Step title="Frontend build">
+    If your project builds CSS and JavaScript, choose its **Package manager** (**npm**, **pnpm**, **yarn**, **bun** or **None**) and the **Build command** (for example `npm run build`). This runs on every deployment.
+  </Step>
+  <Step title="Database">
+    Optionally **Connect a database**: pick an existing database on this server (or on a [connected server](/servers/server-connections)), or create a new one right here. Its credentials are added to the site's environment for you.
+
+    For a Laravel site without a database, flitops sets it up to use **SQLite**, a database stored in a single file, and you can [back that file up](/backups/sqlite-backups).
+  </Step>
+  <Step title="Isolate this site">
+    Leave this **on** (recommended). The site runs as its own Linux user, so if it's ever hacked it can't reach your other sites or take over the server. See [Site isolation](/sites/site-isolation).
+  </Step>
+  <Step title="Create">
+    Check the summary and click **Create site**.
+  </Step>
+</Steps>
+
+## What happens next
+
+flitops sets the site up on the server, showing each step live:
+
+1. **Initializing**: preparing the site's folders and, for isolated sites, its user.
+2. **Configuring Nginx** (or Caddy): writing the web server configuration for your domain.
+3. **Cloning Git repository**: downloading your code.
+4. **Creating environment file**: writing the site's `.env` with sensible defaults. For Laravel this includes production settings, `APP_URL`, a freshly generated `APP_KEY` and your database credentials.
+5. **Installing dependencies**: for example `composer install`.
+6. **Building frontend assets**: running your build command.
+7. **Running database migrations**: for Laravel.
+8. **Making final touches**.
+
+Which steps run depends on the project type. When it's done, the site's status changes to **Deployed** (or **Provisioned** if there's no code yet), and the free domain or your verified custom domain gets an SSL certificate.
+
+## If creation fails
+
+The site page shows **Site creation failed** with the reason. Fix the cause (for example, a build error in your code, or a missing environment value), then click **Retry**. See [Troubleshooting](/troubleshooting#site-creation-failed).
+
+## Choosing a free subdomain
+
+Free subdomains can contain letters, numbers and hyphens, and must start and end with a letter or number. Each free subdomain can only be used by one site at a time; the form tells you if the one you typed is already taken.
+
+## After creating the site
+
+- [Add your own domain](/sites/domains) and get an SSL certificate.
+- Review the [environment](/sites/environment) and add your app's settings.
+- Check the [deploy script](/sites/deploy-script).
+- Add [workers and cron jobs](/servers/processes), such as Laravel's scheduler.
+- [Deploy](/sites/deployments).

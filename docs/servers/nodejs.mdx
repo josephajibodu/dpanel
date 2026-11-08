@@ -1,0 +1,32 @@
+---
+title: "Node.js"
+description: "Choose the Node.js version your deploys use to build front-end assets."
+---
+
+Most modern web apps build their CSS and JavaScript with Node.js tools such as Vite or webpack during each deploy. The server's **Runtime** tab shows which **Node.js** version is installed and lets you switch to another one.
+
+Every site on the server uses this version when a deploy runs `npm` (or `pnpm`, `yarn` or `bun`) commands.
+
+## Available versions
+
+| Version | Notes |
+| --- | --- |
+| **Node.js 24** | The default for new servers. |
+| **Node.js 22** | |
+| **Node.js 20** | No longer receives security updates. Only use it if your project can't run on a newer version yet. |
+
+## Switching versions
+
+1. Open the server's **Runtime** tab.
+2. Choose the version you want and confirm.
+
+The status shows **Switching** while flitops installs it. You need the **Manage PHP** permission (Owners, Admins and Developers), and the server must be **Active** and reachable.
+
+What changes, and when:
+
+- Sites start using the new version from their **next deploy**.
+- Processes already running (for example a worker that runs a Node.js script) stay on the old version until they restart. Restart them from the [Processes](/servers/processes) tab.
+
+If a switch fails, the tab says so and the server may still be on the previous version. Click the version again to retry; choosing the version that's already installed reinstalls it to repair a failed switch.
+
+<Tip>Pin the Node.js version your project expects in your `package.json` (`"engines": { "node": ">=22" }`) so mismatches show up clearly in deploy logs.</Tip>

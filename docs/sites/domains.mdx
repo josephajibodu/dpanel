@@ -1,0 +1,90 @@
+---
+title: "Domains"
+description: "Add your own domains to a site, point DNS at your server, and manage www redirects and wildcards."
+---
+
+A **domain** (or hostname) is the address people type to reach your site, such as `example.com` or `app.example.com`. A site can have several domains, and one of them is its **primary** domain. Manage them on the site's **Domains** tab. You need the **Manage sites** permission to make changes.
+
+## Types of domain
+
+| Type | What it is |
+| --- | --- |
+| **Free domain** | An address on the flitops free domain, such as `my-app.flitops.xyz`, chosen when you create the site. Its DNS and SSL are handled for you. It can't be deleted, but you can set another domain as primary. |
+| **Custom** | Your own domain. You add a DNS record at your domain provider, flitops verifies it, then issues an SSL certificate. |
+
+## Adding your own domain
+
+<Steps>
+  <Step title="Add the domain">
+    On the **Domains** tab, add the hostname, for example `example.com`. Choose:
+
+    - **Wildcards**: **Off** (only this hostname) or include `*.example.com`, so every subdomain reaches this site too.
+    - **Redirects**: how `www` should behave. See [www redirects](#www-redirects).
+
+    flitops adds it to the web server configuration straight away.
+  </Step>
+  <Step title="Point your DNS at the server">
+    flitops shows the DNS records to add. Sign in to wherever your domain's DNS is managed (your registrar, or a DNS service such as Cloudflare) and add them. Usually that's an **A record**:
+
+    | Type | Name | Value |
+    | --- | --- | --- |
+    | A | `@` (for `example.com`) or `app` (for `app.example.com`) | Your server's IP address |
+
+    If you chose a www redirect, add a record for `www` too.
+
+    <Note>If you use Cloudflare, set the record to **DNS only** (grey cloud) until the certificate is issued. Cloudflare's proxy hides your server's IP address, so the verification can't see it.</Note>
+  </Step>
+  <Step title="Verify">
+    Click **Verify**. flitops checks that the domain's A record points to your server. DNS changes can take a few minutes (occasionally longer) to spread across the internet, so if it fails at first, wait and try again. flitops retries a few times on its own.
+  </Step>
+  <Step title="SSL is issued automatically">
+    Once the domain is verified, flitops issues a free Let's Encrypt certificate and switches the domain to HTTPS. See [SSL certificates](/sites/ssl-certificates).
+  </Step>
+</Steps>
+
+## www redirects
+
+Most sites should be reachable both with and without `www`, but have one "real" address, so search engines and visitors aren't split between two. Choose one:
+
+| Option | What it does |
+| --- | --- |
+| **Redirect from www** *(recommended)* | Sends `www.example.com` to `example.com`. |
+| **Redirect to www** | Sends `example.com` to `www.example.com`. |
+| **No redirect** | Serves both independently. |
+
+When you choose a redirect on a top-level domain, the SSL certificate covers both `example.com` and `www.example.com`, so the redirect works over HTTPS too.
+
+## Wildcard domains
+
+Turning on wildcards adds `*.example.com`, so any subdomain (`a.example.com`, `b.example.com`) reaches the site. This is useful for apps that give each customer their own subdomain.
+
+<Note>The certificate flitops issues for a custom domain covers the domain itself (and `www` if you use a redirect), not every subdomain. Wildcard subdomains under your own domain therefore work over plain HTTP only for now. Wildcard certificates for custom domains are on the [roadmap](/roadmap). Free-domain sites already use a wildcard certificate.</Note>
+
+## Managing domains
+
+Each domain's menu offers:
+
+- **Visit**: open the domain in a new tab.
+- **Copy URL** / **Copy ID**.
+- **Renew SSL**: request a fresh certificate now. See [SSL certificates](/sites/ssl-certificates#renewing-manually).
+- **Set as primary**: make this the site's main address. Only an enabled domain can be primary.
+- **Disable** / **Enable**: a disabled domain stays in the list but is no longer served. The primary domain can't be disabled.
+- **Delete**: remove the domain and clean up its web server configuration and certificate.
+
+### Rules
+
+- A site must always keep **at least one** enabled domain.
+- To disable or delete the **primary** domain, set another domain as primary first.
+- The free domain can't be deleted.
+- A hostname can only be used by one site in flitops at a time.
+
+<Note>Wildcard and www redirect settings are chosen when you add a domain. Changing them on an existing domain from the dashboard is [coming soon](/roadmap); for now, delete the domain and add it again with the new settings.</Note>
+
+## Domain statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Unverified** | Added, but flitops hasn't confirmed the DNS yet. Add the records and click **Verify**. |
+| **Verified** | DNS points to your server; the certificate is issued or on its way. |
+| **Enabled** | Served by the web server. |
+| **Deleting** | Being removed. |

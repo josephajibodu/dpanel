@@ -1,0 +1,66 @@
+---
+title: "Storage providers"
+description: "Connect your own Amazon S3 or Cloudflare R2 bucket for database backups."
+---
+
+A **storage provider** is an object storage bucket that you own, where flitops keeps your [database backups](/backups/overview) and uploaded database dumps. Using your own bucket means backups are stored away from the server they came from: if the server is lost, your backups aren't.
+
+Storage providers belong to a team. Owners and Admins can connect and disconnect them.
+
+## Supported storage
+
+| Storage | What you need |
+| --- | --- |
+| **Cloudflare R2** | Your Cloudflare Account ID, an R2 access key ID and secret, and a bucket name. R2 has no fees for downloading data (egress). |
+| **Amazon S3** | An access key ID and secret, a bucket name and the bucket's region (for example `us-east-1`). |
+
+## Connecting storage
+
+<Steps>
+  <Step title="Create a bucket">
+    Create an empty, **private** bucket at your storage provider, for example `myapp-backups`. Don't make it public.
+  </Step>
+  <Step title="Create access keys">
+    Create keys that can read, write, list and delete objects in that bucket only. See below.
+  </Step>
+  <Step title="Connect it in flitops">
+    In the sidebar, click **Storage Providers**, then **Connect Storage**. Choose the type, give it an **Account Name** (for example "Production Backups"), and fill in the fields.
+  </Step>
+  <Step title="Validation">
+    flitops checks that it can reach the bucket with those keys. Once validated, you can choose it in a [backup schedule](/backups/scheduled-backups).
+  </Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="Creating Cloudflare R2 keys">
+    1. In the Cloudflare dashboard, open **R2** and create a bucket.
+    2. Your **Account ID** is shown on the R2 overview page.
+    3. Go to **Manage R2 API Tokens** and create a token with **Object Read & Write** permission, limited to your backup bucket.
+    4. Copy the **Access Key ID** and **Secret Access Key**. Cloudflare only shows the secret once.
+  </Accordion>
+  <Accordion title="Creating Amazon S3 keys">
+    1. In the AWS console, create an S3 bucket and note its region. Keep **Block all public access** turned on.
+    2. In **IAM**, create a user for backups, with no console access.
+    3. Attach a policy that allows `s3:ListBucket` on the bucket and `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on the objects in it.
+    4. Create an **access key** for the user and copy both parts.
+  </Accordion>
+</AccordionGroup>
+
+## How backups reach your bucket
+
+Backups go **straight from your server to your bucket**. The database dump never passes through flitops itself. This keeps your data private and makes large backups faster.
+
+The keys are passed to the server securely for each backup and aren't left in any configuration file, command history or process list on the server.
+
+## Re-validating and disconnecting
+
+- If you rotate the keys or change bucket permissions, use **Re-validate Credentials** from the storage provider's menu.
+- To stop using a storage provider, choose **Disconnect**.
+
+<Note>Disconnecting doesn't delete any files from your bucket. Backups already uploaded stay there until you delete them yourself, either in flitops before disconnecting or at your storage provider.</Note>
+
+## Good practice
+
+- Use a separate bucket, and separate keys, for each team or application.
+- Consider turning on **object versioning** or a **retention lock** in your bucket, so a backup can't be removed by accident.
+- Your flitops [backup schedule](/backups/scheduled-backups) controls how many backups are kept. You can also add a lifecycle rule in your bucket as a second safety net.

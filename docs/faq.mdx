@@ -1,0 +1,55 @@
+---
+title: "FAQ"
+description: "Answers to common questions about flitops."
+---
+
+<AccordionGroup>
+  <Accordion title="Do I pay flitops for my servers?">
+    No. Servers are created in **your own** cloud account, and your provider bills you for them directly. flitops is the platform that manages them. See [pricing](https://flitops.com/pricing) for flitops's own plans.
+  </Accordion>
+  <Accordion title="What happens to my sites if flitops is down?">
+    They keep running. Your visitors talk directly to your servers, not to flitops. While flitops is unavailable you just can't deploy or change things from the dashboard, and scheduled tasks run by flitops (such as backups and monitoring) pause until it's back.
+  </Accordion>
+  <Accordion title="What happens to my servers if I stop using flitops?">
+    They keep running exactly as they are, with standard software you can manage yourself. Delete them at your provider if you no longer need them. Revoke the tokens you created for flitops at your providers.
+  </Accordion>
+  <Accordion title="Which frameworks can I deploy?">
+    Laravel, Symfony, WordPress, any other PHP application, and static HTML sites (including the output of static site generators). See [Project types](/sites/project-types).
+  </Accordion>
+  <Accordion title="Can I deploy Node.js, Python or Ruby apps?">
+    Not as their own site type yet. Node.js is installed on every server for building front-end assets, and you can run any long-running program as a [worker](/servers/processes), with a [Locations](/sites/web-server-configuration) file to proxy to it.
+  </Accordion>
+  <Accordion title="Which cloud providers are supported?">
+    DigitalOcean, Hetzner Cloud, Vultr and AWS (EC2). You can also connect any Ubuntu 22.04 or 24.04 server from any host as a [custom server](/servers/custom-servers).
+  </Accordion>
+  <Accordion title="Which Git hosts are supported?">
+    GitHub, fully. GitLab and Bitbucket accounts can be connected, and deploying from them is [coming soon](/roadmap).
+  </Accordion>
+  <Accordion title="Do deploys cause downtime?">
+    No. Each deploy builds in a new folder and switches over instantly once it succeeds. A failed build never goes live. See [Deployments](/sites/deployments).
+  </Accordion>
+  <Accordion title="Can I get a free domain for testing?">
+    Yes. When creating a site, choose **Free** and pick a subdomain. HTTPS works straight away. You can add your own domain later.
+  </Accordion>
+  <Accordion title="Are SSL certificates free?">
+    Yes. flitops uses Let's Encrypt, and renews certificates automatically. See [SSL certificates](/sites/ssl-certificates).
+  </Accordion>
+  <Accordion title="Can I put several sites on one server?">
+    Yes, as many as the server can handle. With [site isolation](/sites/site-isolation) on, each one runs as its own user and can't reach the others.
+  </Accordion>
+  <Accordion title="Can I log in to my servers myself?">
+    Yes. Add an [SSH key](/connections/ssh-keys) and sync it to the server, or use the [browser terminal](/servers/terminal) (Owners and Admins).
+  </Accordion>
+  <Accordion title="Can I change things on the server by hand?">
+    You can, but changes flitops manages (such as web server configuration, cron jobs and workers) may be overwritten the next time flitops updates them. Use the dashboard for those where you can. Never edit code inside `releases` or `current`; deploy changes through Git instead.
+  </Accordion>
+  <Accordion title="Where are my backups stored?">
+    In your own Amazon S3 or Cloudflare R2 bucket. They're uploaded straight from your server and never pass through flitops. See [Backups](/backups/overview).
+  </Accordion>
+  <Accordion title="Can I move my existing site to flitops?">
+    Yes. Create a server and a site, [import your database dump](/backups/importing-a-dump), copy your settings to the [environment](/sites/environment), deploy, then point your domain's DNS at the new server and verify it.
+  </Accordion>
+  <Accordion title="Does flitops record what I type in the terminal?">
+    No. It records who opened a session, on which server, from where and when, but not what was typed, since that would include any passwords typed at prompts.
+  </Accordion>
+</AccordionGroup>

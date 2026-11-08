@@ -1,0 +1,58 @@
+---
+title: "Source control"
+description: "Connect GitHub so flitops can list your repositories and deploy your code."
+---
+
+A **source control account** is a connection to the service that hosts your Git repositories. flitops uses it to list your repositories and branches when you create a site, and to give your servers permission to download your code.
+
+Source control accounts belong to **you**, not to a team. Once connected, you can use the account in every team you're a member of.
+
+## Supported providers
+
+| Provider | Status |
+| --- | --- |
+| **GitHub** | Fully supported: repository and branch lists, and deploys |
+| **GitLab** | You can connect an account, but listing repositories and deploying from it is [coming soon](/roadmap) |
+| **Bitbucket** | You can connect an account, but listing repositories and deploying from it is [coming soon](/roadmap) |
+| **Any other Git host** | [Coming soon](/roadmap) |
+
+## Connecting GitHub
+
+<Steps>
+  <Step title="Open Source Control">
+    In the sidebar, click **Source Control**, then **Add Provider** and choose **GitHub**.
+  </Step>
+  <Step title="Approve access">
+    GitHub opens and asks you to approve flitops. Check the account shown is the one you want, then approve.
+  </Step>
+  <Step title="Return to flitops">
+    You're sent back to flitops, and the account appears in the list with your username and email.
+  </Step>
+</Steps>
+
+You can also connect an account while creating a site: click **Connect a provider** in the repository section. A new window opens for the approval, and what you've already filled in on the site form stays on the page.
+
+### What flitops asks GitHub for
+
+flitops asks GitHub for permission to:
+
+- **Read your repositories**, including private ones, so you can pick one and so your servers can download the code.
+- **Read your profile**, to show which account is connected.
+- **Manage your SSH keys**, so flitops can add each server's key to your GitHub account. That key is what lets the server download (clone) your private repositories. It's labelled with the server's name, so you can recognise it in your GitHub settings.
+
+## Refreshing the repository list
+
+flitops keeps a list of your repositories so the site form loads quickly. If you've just created a repository on GitHub and it doesn't appear, use the reload button in the repository picker to fetch the latest list.
+
+## Disconnecting an account
+
+Click **Disconnect** next to the account. flitops forgets its access.
+
+<Note>
+  Disconnecting in flitops doesn't remove flitops from GitHub. To fully revoke access, also remove flitops under **GitHub → Settings → Applications → Authorized OAuth Apps**, and delete any server keys flitops added under **GitHub → Settings → SSH and GPG keys** for servers you no longer use.
+</Note>
+
+## Repository access tips
+
+- The repository list shows every repository your GitHub account can access, including ones in organisations. If an organisation repository is missing, the organisation may restrict third-party app access. An organisation owner can approve flitops in the organisation's settings.
+- Because the server's key is added to your **personal** GitHub account, the server can download any repository you can. If you'd rather limit that, consider connecting a separate GitHub account that only has access to the repositories you deploy.

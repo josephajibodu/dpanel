@@ -1,0 +1,66 @@
+---
+title: "Roles and permissions"
+description: "What Owners, Admins, Developers and Viewers can each do."
+---
+
+Every team member has one **role**. The role decides what they can see and do in that team. flitops checks the role on the server for every action, so hiding a button is never the only protection.
+
+## The four roles
+
+<CardGroup cols={2}>
+  <Card title="Owner" icon="crown">
+    Can do everything, including managing other Owners and deleting the team.
+  </Card>
+  <Card title="Admin" icon="user-shield">
+    Can do everything except manage Owners and delete the team.
+  </Card>
+  <Card title="Developer" icon="code">
+    Day-to-day work on sites: deploy, edit environments, manage workers, databases and PHP, and run backups. Can't create or delete servers, or manage the team.
+  </Card>
+  <Card title="Viewer" icon="eye">
+    Read-only. Can look at everything they're allowed to see, but can't change anything.
+  </Card>
+</CardGroup>
+
+## What each role can do
+
+| Permission | What it allows | Owner | Admin | Developer | Viewer |
+| --- | --- | :-: | :-: | :-: | :-: |
+| View | See servers, sites, deployments, logs and history; test a server's connection and refresh its metrics | ✓ | ✓ | ✓ | ✓ |
+| Deploy | Start, cancel and roll back deployments, and save the deploy script and environment | ✓ | ✓ | ✓ | |
+| Manage sites | Create, isolate and delete sites, and manage domains and web server files | ✓ | ✓ | ✓ | |
+| Manage processes | Create, change, start, stop and delete workers and cron jobs | ✓ | ✓ | ✓ | |
+| Manage databases | Create and delete databases and database users | ✓ | ✓ | ✓ | |
+| Manage PHP | Install PHP versions and extensions, change PHP settings and the Node.js version | ✓ | ✓ | ✓ | |
+| Run commands | Run one-off commands in a site's folder | ✓ | ✓ | ✓ | |
+| View secrets | See environment variables, command output, the Redis password and database passwords, and download backups | ✓ | ✓ | ✓ | |
+| Access servers | Sync SSH keys to isolated sites (access to that site only) | ✓ | ✓ | ✓ | |
+| Access servers as admin | Sync SSH keys with full server access, and open the browser terminal | ✓ | ✓ | | |
+| Run backups | Start backups and change backup schedules | ✓ | ✓ | ✓ | |
+| Restore backups | Restore a backup or import a dump over a live database | ✓ | ✓ | | |
+| Delete backups | Delete backup files | ✓ | ✓ | | |
+| Manage servers | Create, provision and delete servers, connect servers to each other, and reset a server's identity | ✓ | ✓ | | |
+| Manage providers | Connect and disconnect cloud and storage providers | ✓ | ✓ | | |
+| Manage members | Invite, remove and change the role of members | ✓ | ✓ | | |
+| Manage team settings | Rename the team and change its handle | ✓ | ✓ | | |
+| Manage owners | Invite, promote, change or remove Owners | ✓ | | | |
+| Delete team | Permanently delete the team | ✓ | | | |
+
+## Choosing the right role
+
+- Give **Owner** only to people who should have the final say over the team, such as the business owner or a lead engineer.
+- Give **Admin** to people who manage infrastructure: they can create servers and connect cloud accounts, which can cost money.
+- Give **Developer** to people who ship code. They can do almost everything to sites but can't create or destroy servers, restore over live data, or get root-level access.
+- Give **Viewer** to people who only need to look, such as a client or a support colleague.
+
+<Tip>
+  Follow the rule of **least privilege**: give each person the lowest role that lets them do their job. It's easy to raise someone's role later.
+</Tip>
+
+## Why Developers can't restore backups
+
+Restoring a backup replaces a live database's contents. It's a powerful action that can lose recent data if used by mistake, so it's limited to Owners and Admins, along with deleting backups and importing dumps over an existing database.
+
+## Why Developers don't get full server access
+
+A key with full server access logs in as the server's main user, which can act as an administrator (root) on the whole machine, including every other site on it. Developers can instead sync a key to an [isolated site](/sites/site-isolation), which only reaches that one site's files. See [SSH keys](/connections/ssh-keys).

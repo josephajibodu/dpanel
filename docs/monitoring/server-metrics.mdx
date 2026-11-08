@@ -1,0 +1,24 @@
+---
+title: "Server metrics"
+description: "CPU, memory and disk usage for every server, collected automatically."
+---
+
+Each server's **Overview** shows three numbers that tell you whether it's healthy:
+
+| Metric | What it tells you |
+| --- | --- |
+| **CPU load** | How busy the processor is. Consistently high load means requests queue up and your site slows down. |
+| **Memory usage** | How much RAM is in use. When memory runs out, the server starts using slow swap space, and programs may be stopped. |
+| **Disk usage** | How full the disk is. A full disk breaks deploys, backups, logs and databases. |
+
+## How often they update
+
+flitops collects metrics from every active server **every 10 minutes**. Click **Refresh** on the server's overview to collect them right now; the numbers update live when they arrive.
+
+## What to do when numbers are high
+
+- **CPU load high for a long time**: look for a runaway worker or cron job on the [Processes](/servers/processes) tab, or upgrade to a size with more vCPUs at your provider.
+- **Memory high**: reduce the number of worker processes (**Numprocs**), lower PHP's memory limit, or upgrade to a size with more RAM.
+- **Disk nearly full**: clear old logs, check large uploads, and make sure [backups](/backups/overview) go to your storage bucket (they do by default). Consider a larger disk.
+
+<Note>Metrics are a snapshot every 10 minutes, so short spikes between checks may not show. More detailed graphs, history and alerts on high usage are on the [roadmap](/roadmap).</Note>

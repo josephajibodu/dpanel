@@ -1,0 +1,105 @@
+---
+title: "Roadmap"
+description: "Features we plan to add. These aren't available yet."
+---
+
+These are features we're planning or working on. They're **not available yet**, and the list doesn't promise dates or an order. If one of them matters to you, [tell us](https://flitops.com/contact); it helps us decide what comes first.
+
+## Deployments and source control
+
+<AccordionGroup>
+  <Accordion title="Deploys from CI, and deploy on push for GitLab and Bitbucket">
+    Triggering a deploy from your CI pipeline with a private webhook address, and Deploy on push for GitLab and Bitbucket repositories. Deploy on push already works for GitHub.
+  </Accordion>
+  <Accordion title="GitLab, Bitbucket and any Git host">
+    Listing repositories and branches, and deploying, from GitLab and Bitbucket accounts, plus deploying from any other Git remote by URL. Today, deploying works with GitHub.
+  </Accordion>
+  <Accordion title="Changing a site's repository">
+    Adding a repository to a site created without one, or switching a site to another repository. Branch, web directory, PHP version and Deploy on push can already be changed with **Edit Site**.
+  </Accordion>
+  <Accordion title="Environment change history">
+    A record of who changed which environment variable, and when.
+  </Accordion>
+  <Accordion title="Staging environments">
+    A staging copy of a site that mirrors production, with an easy way to promote changes from staging to production.
+  </Accordion>
+</AccordionGroup>
+
+## Domains and SSL
+
+<AccordionGroup>
+  <Accordion title="Wildcard certificates for your own domains">
+    HTTPS for every subdomain of a custom domain with wildcards turned on. Free-domain sites already have this.
+  </Accordion>
+  <Accordion title="Changing domain settings">
+    Changing a domain's wildcard and www redirect settings after it's been added.
+  </Accordion>
+</AccordionGroup>
+
+## Servers
+
+<AccordionGroup>
+  <Accordion title="Restarting services and rebooting">
+    Restart Nginx, Caddy, PHP-FPM, your database, Redis or Supervisor, and reboot the server, from the dashboard.
+  </Accordion>
+  <Accordion title="Firewall rules">
+    Add and remove your own firewall rules, for example to open a port for a specific service or address.
+  </Accordion>
+  <Accordion title="Load balancers">
+    A Load Balancer server type that spreads traffic across several web servers.
+  </Accordion>
+  <Accordion title="Storage tab">
+    Managing disk and storage settings from a server's Storage tab.
+  </Accordion>
+  <Accordion title="Removing an SSH key from a single server">
+    Revoking a key from one server or site while keeping it on others. Today, deleting a key removes it everywhere.
+  </Accordion>
+</AccordionGroup>
+
+## Monitoring and logs
+
+<AccordionGroup>
+  <Accordion title="Observe tab: graphs and history">
+    Detailed, more frequent server metrics with history and graphs, collected by a small agent on each server instead of by polling every 10 minutes.
+  </Accordion>
+  <Accordion title="More alerts">
+    Alerts when a server stops responding, when usage is high, and application health checks (for example a backed-up queue or an unreachable database).
+  </Accordion>
+  <Accordion title="Slack, SMS and webhook alerts, and choosing recipients">
+    Sending alerts somewhere other than email, and choosing who in the team receives each one.
+  </Accordion>
+  <Accordion title="Incident history">
+    Browsing past downtime incidents for each site in the dashboard.
+  </Accordion>
+  <Accordion title="Application and server logs">
+    Reading your app's own logs (such as `laravel.log`) and server logs from the dashboard, with search and filtering. Per-site error logs on Caddy servers.
+  </Accordion>
+</AccordionGroup>
+
+## Databases and backups
+
+<AccordionGroup>
+  <Accordion title="Restoring to another database or server">
+    Restoring a backup into a different database, or onto a different server. Today a backup is restored onto the database it came from.
+  </Accordion>
+  <Accordion title="Restoring SQLite backups">
+    Restoring a SQLite site's backup from the dashboard. Today you can back up and download them.
+  </Accordion>
+  <Accordion title="Incremental backups">
+    Backing up only what changed since the last backup, for very large databases. Today every backup is a full copy.
+  </Accordion>
+  <Accordion title="Database browser">
+    A read-only way to look at your data in the dashboard.
+  </Accordion>
+</AccordionGroup>
+
+## Teams and platform
+
+<AccordionGroup>
+  <Accordion title="Custom roles">
+    Creating your own roles with exactly the permissions you choose, beyond Owner, Admin, Developer and Viewer.
+  </Accordion>
+  <Accordion title="Public API">
+    An API to manage servers, sites and deployments from your own scripts and tools.
+  </Accordion>
+</AccordionGroup>

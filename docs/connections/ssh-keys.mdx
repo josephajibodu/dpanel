@@ -1,0 +1,65 @@
+---
+title: "SSH keys"
+description: "Add your SSH keys once, sync them to servers or single sites, and revoke them everywhere."
+---
+
+An **SSH key** lets you log in to a server from your own computer without a password. It comes as a pair: a **private key** that stays on your computer and must never be shared, and a **public key** that you can safely give to servers. You add your **public** key to flitops, and flitops installs it on the servers you choose.
+
+SSH keys belong to **you**, not to a team, though you manage them from inside a team.
+
+## Adding a key
+
+<Steps>
+  <Step title="Find or create your public key">
+    On your computer, your public key is usually in `~/.ssh/id_ed25519.pub` or `~/.ssh/id_rsa.pub`. If you don't have one, create one in a terminal:
+
+    ```bash
+    ssh-keygen -t ed25519 -C "you@example.com"
+    ```
+
+    Then show the public key so you can copy it:
+
+    ```bash
+    cat ~/.ssh/id_ed25519.pub
+    ```
+  </Step>
+  <Step title="Add it to flitops">
+    In the sidebar, click **SSH Keys**, then **Add SSH Key**. Give it a **Name** (for example "My MacBook") and paste the **Public Key**. It should start with `ssh-ed25519` or `ssh-rsa`.
+  </Step>
+</Steps>
+
+<Warning>Only ever paste the **public** key (the file ending in `.pub`). Never paste or share your private key, with flitops or anyone else.</Warning>
+
+## Syncing a key to servers
+
+Adding a key doesn't install it anywhere yet. To install it, open the key's menu and choose **Sync to Servers**. You can choose two kinds of access:
+
+| Access | What it means | Who can choose it |
+| --- | --- | --- |
+| **Servers (full access)** | The key logs in as the server's main user, which can administer the whole server and reach every site on it. | Owners and Admins |
+| **Isolated sites (that site only)** | The key logs in as one [isolated site](/sites/site-isolation)'s own user, and can only reach that site's files. | Owners, Admins and Developers |
+
+Pick the servers and sites, then confirm. flitops installs the key on each one, and **View details** shows the sync status for each: Pending, Syncing, Synced, Revoking or Failed.
+
+Once synced, you can log in. Your server's **Settings** tab shows the exact command to copy, for example:
+
+```bash
+ssh <user>@<server-ip>
+```
+
+## Revoking a key
+
+To remove a key from **everywhere at once**, choose **Delete Key**. flitops removes it from every server and site it was synced to, then deletes it from your account.
+
+<Note>Removing a key from just one server or site, while keeping it on the others, isn't available in the dashboard yet. It's on the [roadmap](/roadmap). For now, delete the key and add it again, then sync it to only the servers you want.</Note>
+
+<Tip>When someone leaves your team, ask them (or do it yourself if you're an Owner) to delete their SSH keys, so they can no longer log in to your servers directly.</Tip>
+
+## Viewing a key
+
+**View details** shows the key's **fingerprint** (a short, unique summary of the key you can compare with `ssh-keygen -lf ~/.ssh/id_ed25519.pub` on your computer), the full public key, and its sync status on each server.
+
+## Troubleshooting
+
+- **Sync failed:** the server may be offline or still provisioning. Check the server is **Active**, then sync again.
+- **"Permission denied (publickey)" when connecting:** check you're using the right user (shown in the server's Settings tab), that the key shows as **Synced** on that server, and that your computer is offering the matching private key.

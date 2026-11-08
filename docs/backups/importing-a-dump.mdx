@@ -1,0 +1,53 @@
+---
+title: "Importing a dump"
+description: "Bring an existing database into flitops by uploading a SQL dump."
+---
+
+Moving to flitops from another host? You can upload a **database dump** (a file containing your data as SQL commands) and load it into a database on your server.
+
+You need the **Restore backups** permission (Owners and Admins), and a connected [storage provider](/connections/storage-providers).
+
+## Before you start
+
+1. [Create the database](/servers/databases#creating-a-database) on your server, if you haven't already.
+2. Export your data from your old host as a plain SQL dump, for example:
+
+   ```bash
+   # MySQL or MariaDB
+   mysqldump --single-transaction --routines mydb | gzip > mydb.sql.gz
+
+   # PostgreSQL
+   pg_dump --no-owner --no-acl mydb | gzip > mydb.sql.gz
+   ```
+
+The file can be `.sql` or `.sql.gz`, up to **1 GB**. Compress large dumps with gzip to stay under the limit and upload faster.
+
+## Importing
+
+<Steps>
+  <Step title="Open the import">
+    Open the database's **Backups** page and click **Import dump**.
+  </Step>
+  <Step title="Choose the file">
+    Choose your **Dump file**, and the storage provider to **keep the dump in**. The dump is stored there so your server can download it.
+  </Step>
+  <Step title="Confirm">
+    Type the **database name** to confirm. Importing **replaces the database's current data**.
+  </Step>
+</Steps>
+
+flitops uploads the dump to your bucket, then the server downloads it and loads it into the database. The import appears in the backup history, so you can see when it finished, and restore it again later if you need to.
+
+## Safety checks
+
+A dump from somewhere else can't be fully trusted. Database tools can run special commands found inside a dump file, and some of those can reach the server itself. flitops always loads imported dumps in a **safe mode** that switches those commands off, so a dump can only change your database.
+
+That safe mode needs a recent version of your database software. If your server's version is too old, the import stops with a message asking you to update it (for example by running `sudo apt update && sudo apt upgrade` on the server), then try again.
+
+flitops also adapts dumps made elsewhere as it loads them: for example, a dump that names a different database, or refers to database users that don't exist on your server.
+
+## Tips
+
+- **PostgreSQL**: exporting with `--no-owner --no-acl` gives the cleanest import, since the dump then doesn't try to assign tables to users from your old server.
+- Point your app's [environment](/sites/environment) at the new database once the import is done, and test it before switching your DNS over.
+- Imported dumps aren't counted or deleted by your backup schedule's **Keep last** setting. Delete them yourself when you no longer need them.

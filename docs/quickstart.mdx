@@ -1,0 +1,74 @@
+---
+title: "Quickstart"
+description: "Go from a new account to a live site in about fifteen minutes."
+---
+
+This guide walks you through the shortest path to a working site: connect a cloud account, create a server, connect your Git host, and deploy. Each step links to a page with more detail if you need it.
+
+## Before you start
+
+You need:
+
+- An account with **DigitalOcean**, **Hetzner**, **Vultr** or **AWS** (or an existing Ubuntu 22.04 or 24.04 server you can log in to as root).
+- Your code in a repository on **GitHub**, **GitLab** or **Bitbucket**. You can also create a site without a repository and add code later.
+
+<Steps>
+  <Step title="Create your account">
+    Sign up at [flitops.com](https://flitops.com/register) and confirm your email address. flitops creates a personal team for you automatically, so you can start straight away.
+
+    We recommend turning on [two-factor authentication](/account/two-factor-authentication) right away, since your account will hold the keys to your servers.
+  </Step>
+  <Step title="Connect a cloud provider">
+    Go to **Provider Accounts** in the sidebar and click **Connect Provider**. Pick your provider, give the account a name you will recognise, and paste an API token (or, for AWS, an access key).
+
+    flitops checks the credentials before saving them. See [Cloud providers](/connections/cloud-providers) for how to create a token for each provider.
+
+    <Note>Using a server you already have? Skip this step and follow [Custom servers](/servers/custom-servers) instead.</Note>
+  </Step>
+  <Step title="Create a server">
+    Go to **Servers** and click **Create server**.
+
+    1. Choose **New server**, then pick your provider account.
+    2. Choose a **region** (where the server lives) and a **size** (how powerful it is). The form shows the monthly price your provider charges.
+    3. Keep the suggested name or type your own.
+    4. Choose a **server type**. **App Server** is the right choice for most people: it puts PHP, the web server, a database and Redis on one machine.
+    5. Click **Create server**.
+
+    flitops asks your provider to create the machine, then installs the software. You can watch each step live. This usually takes 5–15 minutes. See [Provisioning](/servers/provisioning) for what happens during this time.
+  </Step>
+  <Step title="Connect your Git host">
+    Go to **Source Control** and connect GitHub, GitLab or Bitbucket. A window opens where you approve access, then you return to flitops. See [Source control](/connections/source-control).
+  </Step>
+  <Step title="Create a site">
+    Open your server and click **New site**.
+
+    1. Pick your **repository** and **branch**.
+    2. Choose a **domain**. The quickest option is **Free**: type a name like `my-app` and your site gets an address on our free domain, with HTTPS already working. You can add your own domain later.
+    3. Pick the **project type** (Laravel, Symfony, WordPress, PHP or Static HTML). This sets the folder the web server serves and a starting deploy script.
+    4. Optionally **connect a database**, or create a new one from the same form. Its credentials are added to the site's environment for you.
+    5. Leave **Isolate this site** turned on. It runs the site as its own system user, which keeps your other sites safe if this one is ever compromised.
+    6. Click **Create site**.
+
+    flitops sets up the web server, clones your code, writes your environment file and runs your first build. See [Creating sites](/sites/creating-sites).
+  </Step>
+  <Step title="Deploy">
+    Once the site is ready, open its **Deployments** tab and click **Deploy Now** whenever you want to ship new code. Every deploy builds in a fresh folder and switches over only when the build succeeds, so visitors never see a half-finished release. See [Deployments](/sites/deployments).
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Add your own domain" icon="globe" href="/sites/domains">
+    Point your domain at the server and get a free SSL certificate.
+  </Card>
+  <Card title="Run queue workers" icon="gears" href="/servers/processes">
+    Keep background jobs running, and restart them on every deploy.
+  </Card>
+  <Card title="Schedule backups" icon="box-archive" href="/backups/scheduled-backups">
+    Back up your database to S3 or R2 every hour, day or week.
+  </Card>
+  <Card title="Invite your team" icon="user-plus" href="/teams/members-and-invitations">
+    Give teammates access with the right role.
+  </Card>
+</CardGroup>

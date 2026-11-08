@@ -1,0 +1,42 @@
+---
+title: "Members and invitations"
+description: "Invite people to a team, change their role, and remove them."
+---
+
+You manage a team's members from **Settings → Team**. You need permission to manage members, which Owners and Admins have.
+
+## Inviting someone
+
+1. Go to **Settings → Team**.
+2. Under **Invite member**, enter their **email address** and choose a **role**.
+3. Click **Send invitation**.
+
+flitops emails them a link to join. The invitation shows under **Pending invitations** until they accept it.
+
+### Accepting an invitation
+
+When the person opens the link, they can **sign in** or **create an account**. They must sign in with the same email address the invitation was sent to; this stops an invitation link from being used by someone it wasn't meant for. Once they confirm, they join the team with the role you chose.
+
+### Cancelling an invitation
+
+Click **Remove** next to a pending invitation. The link stops working immediately.
+
+## Changing someone's role
+
+In the **Team members** list, choose a new role next to the person's name. The change takes effect straight away. See [Roles and permissions](/teams/roles-and-permissions) for what each role can do.
+
+## Removing someone
+
+Click **Remove** next to the person in the **Team members** list. They lose access to the team immediately.
+
+<Warning>
+  Removing someone from the team stops them using flitops to reach your servers, but if they had their own SSH key synced to your servers, that key could still log in directly. When someone leaves, check [SSH keys](/connections/ssh-keys) and revoke any keys they added. flitops can remove a key from every server it was synced to in one step.
+</Warning>
+
+## Rules that keep teams safe
+
+To stop anyone from taking over a team, flitops applies a few rules:
+
+- **Only Owners can create or change Owners.** Admins can invite and manage Admins, Developers and Viewers, but they can't invite someone as an Owner, promote someone to Owner, or cancel an invitation that would make someone an Owner.
+- **You can't change your own role or remove yourself.** Ask another Owner or Admin, or [leave the team](/teams/overview#leaving-a-team).
+- **The person who created the team can't be removed or have their role changed.**

@@ -1,0 +1,46 @@
+---
+title: "Browser terminal"
+description: "Open a real shell on your server from the dashboard, without setting up SSH on your computer."
+---
+
+The **Terminal** tab gives you a live command line on the server, right in your browser. It's handy for quick checks and fixes when you're away from your usual computer, or haven't set up an SSH key yet.
+
+## Who can use it
+
+The terminal logs in as the server's main user, which can administer the whole server and reach every site on it, including isolated ones. Because that's so powerful:
+
+- Only members with the **Access servers as admin** permission (Owners and Admins) can see or open the terminal.
+- You must have **confirmed your password in the last 15 minutes**. If not, flitops asks for it before showing the terminal.
+
+## Opening a terminal
+
+1. Open the server and click the **Terminal** tab.
+2. Confirm your password if asked.
+3. Click **Connect**. A shell opens in the page.
+
+Type commands as you would in any terminal. Copy and paste work as normal, and the terminal resizes with the window. Click **Disconnect** when you're done.
+
+## When a session ends
+
+A session closes automatically when:
+
+- You click **Disconnect**, close the tab or navigate away.
+- The shell exits (for example, you type `exit`).
+- You haven't typed anything for **15 minutes**.
+- It has been open for **2 hours**.
+
+## Session history
+
+Under **Recent sessions**, the Terminal tab lists who opened a terminal on this server, from which IP address, and when each session started and ended.
+
+**What you type is not recorded.** Recording keystrokes would also capture any passwords you typed at prompts, so flitops deliberately doesn't.
+
+## How it stays secure
+
+- Each connection uses a one-time, short-lived pass that only works once and expires within a minute.
+- The server's private key never reaches your browser.
+- flitops only connects if the server proves it's the same machine it was the first time (its [host key](/servers/settings#server-identity) matches).
+
+<Tip>For regular work, an [SSH key](/connections/ssh-keys) on your own computer is usually more convenient, and lets Developers access isolated sites without full server access.</Tip>
+
+<Note>If the Terminal tab says it couldn't open a terminal, try again in a moment. If it keeps failing, check that the server is **Active** and reachable.</Note>

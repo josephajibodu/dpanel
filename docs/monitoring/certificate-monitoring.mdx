@@ -1,0 +1,34 @@
+---
+title: "Certificate monitoring"
+description: "flitops checks the certificate each server is actually serving, and warns you before one expires."
+---
+
+An expired SSL certificate makes browsers show a full-page security warning, and stops other services (such as payment providers sending webhooks) from reaching your site. Certificates renew automatically, but renewal can fail silently, for example if DNS changed. flitops watches for that.
+
+## How it works
+
+Once a day, flitops connects to each server and asks for the certificate it serves for each of your custom domains, exactly as a visitor's browser would. This checks what visitors really get, not just what's on record.
+
+If a certificate is getting close to expiry, flitops emails the **team owner** at:
+
+- **14 days** left
+- **7 days** left
+- **3 days** left
+- **1 day** left
+- **On the day** it expires
+
+Each warning is sent once.
+
+## Free-domain sites
+
+The wildcard certificate for the flitops free domain is monitored by us. If a server is still serving an older copy of it, flitops sends it the current one automatically.
+
+## On the dashboard
+
+The dashboard's **SSL alerts** count shows how many of your custom domains have a certificate that has expired or is close to expiring, with a list of them so you can go straight to each one.
+
+## What to do when you get a warning
+
+1. Check that the domain's DNS still points at the right server. See [Domains](/sites/domains).
+2. Open the domain's menu and click **Renew SSL**.
+3. If renewal fails, you'll get an email with the reason. See [Why a certificate request might fail](/sites/ssl-certificates#why-a-certificate-request-might-fail).

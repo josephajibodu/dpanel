@@ -1,0 +1,47 @@
+---
+title: "How flitops protects you"
+description: "The safeguards built into flitops for your servers, credentials and team."
+---
+
+flitops holds the keys to your servers, so security isn't an add-on; it's built into how everything works. This page explains, in plain terms, what we do to keep your infrastructure safe.
+
+## Your servers stay yours
+
+- Servers live in **your own cloud account**. You can see and control them at your provider at any time.
+- Your visitors' traffic and your database contents go **straight to your servers**. They never pass through flitops.
+- Backups go **straight from your server to your own bucket**.
+- flitops installs only standard software (Nginx or Caddy, PHP-FPM, Supervisor, cron, your database). There's nothing proprietary on your servers, and everything keeps working if you stop using flitops.
+
+## Your credentials
+
+- **Encrypted at rest.** Cloud tokens, Git access, storage keys, database passwords, server keys and environment files are encrypted before they're stored.
+- **Hidden by default.** Secrets are never sent to your browser unless you explicitly reveal them, and revealing is limited to members with the **View secrets** permission.
+- **Kept off the command line.** When flitops passes database passwords or storage keys to your server, it uses protected temporary files, never command arguments that other users on the server could see in the list of running programs.
+- **Least access.** flitops asks your providers only for the access it needs. For AWS, we give you a [policy](/connections/cloud-providers) that allows managing EC2 servers and nothing else.
+
+## Your servers
+
+- **Hardened from the start.** A firewall is turned on during provisioning, allowing only SSH and web traffic.
+- **Internal services are firewalled.** Databases and Redis are never opened to the internet. When another of your servers needs them, they're opened [only to that server](/servers/server-connections), and Redis requires a password.
+- **Pinned host keys.** flitops records each server's identity the first time it connects and refuses to talk to a server that presents a different one. See [Server identity](/servers/settings#server-identity).
+- **Site isolation.** Each site can run as its own Linux user, so one compromised site can't read another's files or take over the server. It's [on by default](/sites/site-isolation).
+- **No Git keys on isolated sites.** An isolated site's user never holds a key to your Git account.
+- **Workers and cron jobs never run as root.** They run as the server user or the site's own user.
+- **Safe imports.** Imported database dumps are loaded in a mode that [can't run commands on your server](/backups/importing-a-dump#safety-checks).
+- **Checked configuration.** Web server changes are tested before they're applied, and rolled back if they'd break the configuration.
+
+## Your account and team
+
+- **Two-factor authentication** with an authenticator app and one-time recovery codes. See [Two-factor authentication](/account/two-factor-authentication).
+- **Role-based permissions.** Owners, Admins, Developers and Viewers can each do only what their role allows, checked on the server for every action, not just hidden in the interface. See [Roles and permissions](/teams/roles-and-permissions).
+- **Protection against takeover.** Only Owners can create or change Owners, and the person who created a team can't be removed from it.
+- **Re-confirmed terminal access.** Opening the [browser terminal](/servers/terminal) requires the right permission and a password confirmed in the last 15 minutes. Each terminal session uses a single-use pass that expires within a minute, and every session is logged (who, which server, from where, when).
+- **Fleet-wide key revocation.** Deleting an SSH key removes it from every server and site it was synced to, in one step.
+- **Private deploy addresses.** Each site has its own long, random deploy secret, so no one can start a deploy by guessing a web address.
+- **Invitations are tied to an email address.** An invitation can only be accepted by someone signed in with the email it was sent to.
+
+## Found a vulnerability?
+
+We appreciate responsible disclosure. Please report it **privately** to [hello@flitops.com](mailto:hello@flitops.com) rather than publicly. We'll acknowledge it within two business days, keep you updated, and credit you once it's fixed if you'd like.
+
+See also the [security overview](https://flitops.com/security) on our website, and [Security best practices](/security/best-practices) for what you can do on your side.

@@ -1,0 +1,25 @@
+---
+title: "Site database"
+description: "See which database a site uses, connect to it, and manage its backups."
+---
+
+The site's **Database** tab shows the database the site uses and its backups, in one place.
+
+## What it shows
+
+- **Engine**: MySQL, MariaDB, PostgreSQL, or **SQLite**.
+- **Server**: where the database lives. This can be the site's own server or a [connected database server](/servers/server-connections).
+- **Users with access**: the database users that can reach it.
+- **Connect**: opens the [connection details](/servers/connecting-to-a-database), so you can browse the data from a desktop app.
+- **Backups**: the backup schedule and history, with actions to back up now, restore, download and [import a dump](/backups/importing-a-dump).
+
+If the site doesn't use a database, the tab says so.
+
+## SQLite sites
+
+Laravel sites created without a database use **SQLite**, a database stored as a single file in the site's shared folder. The tab shows **SQLite** as the engine, and backups copy that file. See [SQLite backups](/backups/sqlite-backups).
+
+## Related
+
+- [Databases](/servers/databases) — create databases and users on a server.
+- [Backups](/backups/overview) — how backups, restores and imports work.

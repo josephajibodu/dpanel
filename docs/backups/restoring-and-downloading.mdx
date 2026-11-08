@@ -1,0 +1,48 @@
+---
+title: "Restoring and downloading"
+description: "Put a backup back onto its database, download a copy, or delete old backups."
+---
+
+## Restoring a backup
+
+Restoring replaces the database's **current contents** with the contents of the backup. You need the **Restore backups** permission (Owners and Admins).
+
+<Steps>
+  <Step title="Take a fresh backup first">
+    If there's any chance you'll want today's data, click back up now and wait for it to complete. A restore can't be undone.
+  </Step>
+  <Step title="Choose the backup">
+    Open the database's **Backups** page and find the backup in the **History** list. Choose **Restore**.
+  </Step>
+  <Step title="Confirm">
+    Type the **database name** to confirm, then click **Restore**. This extra step is there so a restore can't happen by accident.
+  </Step>
+</Steps>
+
+flitops downloads the backup from your bucket onto the server and loads it into the database. Large databases can take a while; the status updates live.
+
+<Warning>
+  Anything written to the database after the backup was taken is lost when you restore. While the restore runs, your site may show errors or incomplete data. Consider putting your app into maintenance mode first (for Laravel, run `php artisan down` as a [command](/sites/commands), and `php artisan up` afterwards).
+</Warning>
+
+### Restore limits
+
+- A backup is restored onto **the same database it came from**. Restoring into a different database or onto another server isn't available yet; see the [roadmap](/roadmap). As a workaround, download the backup and [import it](/backups/importing-a-dump) into the other database.
+
+## Downloading a backup
+
+Choose **Download** on a backup to save a copy to your computer, for example to inspect it locally or keep an extra copy elsewhere. You need the **View secrets** permission, because a backup contains all your data.
+
+The file is a gzip-compressed SQL dump (`.sql.gz`). To look at it:
+
+```bash
+gunzip -c backup.sql.gz | less
+```
+
+<Warning>A downloaded backup holds everything in your database, including personal data and password hashes. Store it securely and delete it when you're done.</Warning>
+
+## Deleting a backup
+
+Choose **Delete** on a backup and confirm. This permanently removes the file from your bucket. You need the **Delete backups** permission (Owners and Admins).
+
+Old backups are also deleted automatically to stay within your schedule's **Keep last** number.

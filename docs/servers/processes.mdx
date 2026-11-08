@@ -1,0 +1,84 @@
+---
+title: "Workers and cron jobs"
+description: "Keep background processes running with Supervisor, and run commands on a schedule with cron."
+---
+
+Many apps need work to happen outside of web requests: sending emails from a queue, processing uploads, or running a nightly report. flitops handles two kinds of background work:
+
+- **Workers**: programs that run **all the time**, such as a queue worker. If one crashes, it's restarted automatically.
+- **Cron jobs**: commands that run **on a schedule**, such as every minute or every night at 2am.
+
+Manage them from the server's **Processes** tab (everything on the server) or a site's **Processes** tab (just that site's). You need the **Manage processes** permission (Owners, Admins and Developers) to make changes; everyone can view them.
+
+## Workers
+
+Workers run under **Supervisor**, a standard process manager that starts your program, watches it, and restarts it if it stops unexpectedly.
+
+### Creating a worker
+
+Click **New worker** and fill in:
+
+| Field | What it means |
+| --- | --- |
+| **Name** | A label for the worker, for example `queue` or `horizon`. |
+| **Command** | The command to run, for example `php artisan queue:work --tries=3` or `php8.4 artisan horizon`. |
+| **Site** | The site the worker belongs to, or **Server (no site)**. A site's worker runs inside the site's live release folder, so commands like `php artisan` just work. |
+| **User** | The Linux user the worker runs as. For an [isolated site](/sites/site-isolation) this is always the site's own user; otherwise it's the server user. Workers can never run as root. |
+| **Numprocs** | How many copies of the program to run side by side (1–64). More copies process a queue faster, but use more memory. |
+| **Auto start** | Start the worker automatically when the server boots. |
+| **Auto restart** | Restart the worker automatically if it exits. Leave this on for anything that should always be running. |
+| **Restart after each deployment** | Restart the worker after every deploy of its site, so it runs your new code. |
+
+Click **Create worker**. flitops writes the Supervisor configuration and starts it.
+
+<Tip>
+  PHP queue workers load your code once and keep it in memory, so after a deploy they keep running the **old** code until restarted. For Laravel sites flitops restarts queue workers, Horizon and Reverb for you after every deploy (see [How a deployment works](/sites/deployments#how-a-deployment-works)). For other long-running programs, turn on **Restart after each deployment**.
+</Tip>
+
+### Controlling a worker
+
+From a worker's menu you can:
+
+- **Start**, **Stop** or **Restart** it. The status shows Starting, Stopping or Restarting while it happens.
+- **Edit** its settings. Saving applies the changes and restarts the worker.
+- **View logs** to see the program's recent output, without logging in to the server.
+- **Delete** it. flitops stops it and removes its configuration.
+
+<Note>Stopping, restarting, editing or deleting a worker stops the program within about 10 seconds. A job in the middle of running may be cut short, so make your jobs safe to retry. Restarts after a deploy are gentler: the worker is asked to finish its current job first.</Note>
+
+### Worker statuses
+
+flitops checks every 5 minutes that each worker's status matches what's really running on the server, so a worker that crashed, or was stopped outside flitops, shows its true state.
+
+## Cron jobs
+
+### Creating a cron job
+
+Click **New cron job** and fill in:
+
+| Field | What it means |
+| --- | --- |
+| **Command** | The command to run, for example `php artisan schedule:run`. |
+| **Site** | The site it belongs to, or **Server (no site)**. A site's cron job runs inside the site's live release folder. |
+| **User** | Who it runs as. For an isolated site, always the site's own user. |
+| **Frequency** | **Every minute**, **Every 5 minutes**, **Every 15 minutes**, **Every 30 minutes**, **Every hour**, **Daily**, **Weekly**, or **Custom…** |
+
+With **Custom…** you enter a standard five-part cron expression: minute, hour, day of month, month, day of week. For example, `0 2 * * 1-5` means "at 2:00am, Monday to Friday". Times use the server's clock, which is normally set to UTC.
+
+### Laravel's scheduler
+
+Laravel apps define their scheduled tasks in code and need one cron job that runs every minute to trigger them. For each Laravel site, create a cron job with:
+
+- **Command**: `php artisan schedule:run`
+- **Site**: your site
+- **Frequency**: Every minute
+
+### Pausing and editing
+
+- **Disable** pauses a cron job without deleting it; **Enable** resumes it.
+- **Edit** changes its command, user or frequency.
+- **Delete** removes it from the server.
+
+## When sites are deleted
+
+Deleting a site also removes the workers and cron jobs tied to it.

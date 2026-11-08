@@ -1,0 +1,39 @@
+---
+title: "Two-factor authentication"
+description: "Protect your account with a code from an authenticator app, as well as your password."
+---
+
+**Two-factor authentication (2FA)** means signing in needs two things: your password, and a short code from an app on your phone that changes every 30 seconds. Even if someone learns your password, they can't sign in without your phone.
+
+Because a flitops account can reach your servers, we strongly recommend turning 2FA on.
+
+## What you need
+
+An authenticator app that supports **TOTP** (time-based one-time passwords), for example 1Password, Bitwarden, Google Authenticator, Microsoft Authenticator or Authy.
+
+## Turning it on
+
+<Steps>
+  <Step title="Open the 2FA settings">
+    Go to **Settings → Two-Factor Auth** and click **Enable 2FA**. You may be asked to confirm your password.
+  </Step>
+  <Step title="Add flitops to your authenticator app">
+    Scan the QR code with your app, or type in the setup key shown underneath if you can't scan.
+  </Step>
+  <Step title="Confirm with a code">
+    Enter the 6-digit code your app shows and click **Confirm**. 2FA is now on.
+  </Step>
+  <Step title="Save your recovery codes">
+    flitops shows a list of **recovery codes**. Each one lets you sign in once if you lose your phone. Store them somewhere safe, such as your password manager. You can view them again or click **Regenerate Codes** later from the same page (regenerating makes the old ones stop working).
+  </Step>
+</Steps>
+
+## Signing in with 2FA
+
+After entering your password, you'll be asked for the **authentication code** from your app. If you don't have your phone, choose to enter a **recovery code** instead. Each recovery code works only once.
+
+## Turning it off
+
+Go to **Settings → Two-Factor Auth** and click **Disable 2FA**. We don't recommend this unless you're about to set it up again on a new device.
+
+<Warning>If you lose both your phone and your recovery codes, you won't be able to sign in. Keep your recovery codes somewhere you can always reach.</Warning>

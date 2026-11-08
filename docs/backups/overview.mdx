@@ -1,0 +1,71 @@
+---
+title: "Backups overview"
+description: "How flitops backs up your databases to your own storage, checks every backup, and restores it."
+---
+
+Your database holds data you can't get back if it's lost: customers, orders, content. flitops backs up your databases to a storage bucket **you own**, on a schedule or on demand, and **checks that every backup can actually be restored** before calling it complete.
+
+## What gets backed up
+
+| Database | How it's backed up |
+| --- | --- |
+| **MySQL** and **MariaDB** | A full dump of the database, taken without locking your tables, so your site keeps running normally. |
+| **PostgreSQL** | A full dump of the database. |
+| **SQLite** (Laravel sites without a server database) | A safe copy of the database file. See [SQLite backups](/backups/sqlite-backups). |
+
+Backups are compressed (`.sql.gz`) and are **full** backups each time.
+
+## Where backups are stored
+
+In a [storage provider](/connections/storage-providers) you connect: an **Amazon S3** or **Cloudflare R2** bucket. You need to connect one before you can back up.
+
+Backups go **straight from your server to your bucket**. The data never passes through flitops, and it's stored away from the server it came from, so a lost server doesn't mean lost backups.
+
+## How a backup works
+
+<Steps>
+  <Step title="Dump">
+    flitops connects to your server and creates a dump of the database.
+  </Step>
+  <Step title="Upload">
+    The dump is compressed and streamed directly to your bucket.
+  </Step>
+  <Step title="Verify">
+    flitops imports the backup into a temporary, throw-away database on the same server, checks it loaded successfully, then drops the temporary database. Only then is the backup marked **completed** and **Verified**.
+  </Step>
+  <Step title="Tidy up">
+    Old backups beyond the number you chose to keep are deleted from your bucket.
+  </Step>
+</Steps>
+
+Verifying every backup means you find out a backup is broken **now**, not on the day you need it.
+
+<Note>Verification briefly needs extra disk space and some CPU on the server, about as much as the database itself. Keep enough free disk space, and schedule backups for quieter times if your database is very large.</Note>
+
+## Where to find backups
+
+- On the server's **Databases** tab, choose **Backups** for a database.
+- Or on a site's **Database** tab, for the database that site uses.
+
+Each page has a **Schedule** card and a **History** list.
+
+## Who can do what
+
+| Action | Permission | Roles |
+| --- | --- | --- |
+| View backups | View | Everyone |
+| Back up now, change the schedule | Run backups | Owners, Admins, Developers |
+| Download a backup | View secrets | Owners, Admins, Developers |
+| Restore a backup, import a dump | Restore backups | Owners, Admins |
+| Delete a backup | Delete backups | Owners, Admins |
+
+## If a backup fails
+
+flitops emails the person who started the backup (or the team owner, for scheduled backups), and an alert banner appears in the dashboard until it's dismissed. The backup shows **Failed** in the history. Common causes: the storage provider's keys have changed, the bucket was removed, or the server is low on disk space.
+
+## Next
+
+- [Scheduled backups](/backups/scheduled-backups)
+- [Restoring and downloading](/backups/restoring-and-downloading)
+- [Importing a dump](/backups/importing-a-dump)
+- [SQLite backups](/backups/sqlite-backups)

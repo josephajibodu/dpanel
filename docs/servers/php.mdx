@@ -1,0 +1,60 @@
+---
+title: "PHP"
+description: "Install several PHP versions side by side, choose the default, change settings and manage extensions."
+---
+
+The server's **PHP** tab lets you manage PHP without logging in to the server. You need the **Manage PHP** permission (Owners, Admins and Developers) to make changes.
+
+## Installed versions
+
+The **Installed versions** table lists every PHP version on the server and which one is the **Default**.
+
+### Installing another version
+
+Click **Install PHP version** and choose a version: **8.1**, **8.2**, **8.3** or **8.4**. flitops installs it from the widely used `ondrej/php` package source, along with PHP-FPM and the standard extensions. Installation runs in the background, and the table updates when it's done.
+
+Having several versions lets you run older and newer apps on the same server, or upgrade one site at a time.
+
+### Changing the default version
+
+Choose a version under **Default** and confirm. The default version is suggested for new sites, and it's the version the [PHP settings](#php-settings) below apply to.
+
+Tick **Also update all sites to the new default version** to move every site on the server to it at the same time. Leave it unticked to change only the default and keep each site on its current version.
+
+<Warning>Before moving a site to a newer PHP version, check that your app and its dependencies support it. Test on a staging site first if you can.</Warning>
+
+## PHP settings
+
+The **PHP settings** card changes the most commonly needed limits for web requests. They apply to the server's **default** PHP version.
+
+| Setting | What it controls | Example |
+| --- | --- | --- |
+| **Upload max filesize** | The largest single file that can be uploaded | `64M` |
+| **Post max size** | The largest total size of a form submission, including uploads. Should be at least as large as the upload limit. | `64M` |
+| **Max execution time (seconds)** | How long one PHP request may run before it's stopped (1 to 86,400) | `30` |
+| **Memory limit** | How much memory one PHP request may use. `-1` means no limit (not recommended). | `256M` |
+
+Sizes are a number with an optional `K`, `M` or `G` suffix. Leave a field empty to keep its current value. flitops restarts PHP-FPM after saving so the change takes effect, which can interrupt requests that are running at that exact moment.
+
+<Note>On Nginx servers, saving **Post max size** also sets the web server's upload limit to the same size, so the two always match. New servers start at PHP's default of `8M`. To give one site a different limit, add `client_max_body_size` in a **Server** file on its [Web Server](/sites/web-server-configuration) tab.</Note>
+
+## Extensions
+
+The **Extensions** card lists optional PHP extensions you can install or remove for each PHP version.
+
+| Extension | Use it for |
+| --- | --- |
+| **APCu** | An in-memory cache for data shared between requests |
+| **Bzip2** | Reading and writing bzip2-compressed files |
+| **GMP** | Arithmetic on very large numbers |
+| **Imagick** | Image processing with ImageMagick |
+| **LDAP** | Connecting to LDAP and Active Directory servers |
+| **Memcached** | Client for Memcached cache servers |
+| **MongoDB** | Driver for MongoDB databases |
+| **SOAP** | Calling and serving SOAP web services |
+
+Choose the PHP version, then click **Install** or **Remove** next to an extension. Its status shows **Installing**, **Removing** or **Installed**. Extensions that every app needs (such as `mbstring`, `curl`, `xml`, `zip`, `intl`, `bcmath` and the database drivers) are installed with PHP automatically.
+
+## Site PHP versions
+
+Each site runs on one PHP version, chosen when you [create the site](/sites/creating-sites). Change it for one site with **Edit Site** (see [Editing a site](/sites/site-overview#editing-a-site)), or for every site at once by changing the server's default version with **Also update all sites to the new default version** ticked. [Isolated sites](/sites/site-isolation) also run in their own PHP-FPM pool, as their own user.

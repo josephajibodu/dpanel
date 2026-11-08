@@ -1,0 +1,53 @@
+---
+title: "Server settings"
+description: "Get the SSH command for a server, check its identity, and delete it."
+---
+
+The server's **Settings** tab has three sections: **SSH command**, **Server identity** and **Destroy server**.
+
+## SSH command
+
+Copy and paste this command into a terminal on your computer to log in to the server, for example:
+
+```bash
+ssh <user>@<server-ip>
+```
+
+For it to work, you need an [SSH key](/connections/ssh-keys) on your computer that's been added to flitops and synced to this server. If you haven't synced one, the tab says so and offers **Add SSH key**. If your role doesn't include SSH access to the team's servers, it says that instead.
+
+If the server's IP address isn't assigned yet, it's probably still being created.
+
+## Server identity
+
+Every server has a **host key**, a unique fingerprint it uses to prove its identity. The first time flitops connects, it records the key's **type** and **fingerprint**, shown here. Every later connection must present the same key, or flitops refuses to connect.
+
+This protects you from a **man-in-the-middle attack**, where someone tricks flitops into connecting to their machine instead of yours (for example, after taking over the server's IP address) to steal what flitops sends.
+
+If no fingerprint is shown, it will be recorded the next time flitops connects.
+
+### Resetting a server's identity
+
+If you **rebuilt or reinstalled** the server (for example, restored it from a snapshot or reinstalled the operating system at your provider), it gets a new host key, and flitops will refuse to connect until you reset the identity.
+
+1. Click **Reset identity** and confirm.
+2. flitops forgets the old fingerprint and records the new one on its next connection.
+
+<Warning>Only reset the identity if **you** know the server was rebuilt or reinstalled. If you didn't change anything and flitops reports a different identity, don't reset it: someone may be impersonating your server. Check with your provider first.</Warning>
+
+Resetting needs the **Manage servers** permission (Owners and Admins).
+
+## Deleting a server
+
+**Destroy server** permanently deletes the server and everything on it: all its sites, databases and data.
+
+1. Click **Destroy server**.
+2. Confirm.
+
+What happens depends on how the server was added:
+
+- **Created by flitops at a provider:** flitops deletes the machine at your provider too, along with anything it created for it (such as an SSH key at the provider, and on AWS its fixed IP address). Billing for it stops at your provider.
+- **Custom server:** flitops removes it from your account, but **the machine keeps running** at your host, and keeps being billed, until you cancel it there.
+
+<Warning>Deleting a server can't be undone. Download any [backups](/backups/restoring-and-downloading) you want to keep first. Backups stored in your own bucket stay there.</Warning>
+
+Deleting needs the **Manage servers** permission (Owners and Admins).

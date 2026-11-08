@@ -1,0 +1,60 @@
+---
+title: "Teams"
+description: "Group servers, sites and people into teams, and switch between them."
+---
+
+A **team** is a shared workspace. Everything you build in flitops belongs to a team: servers, sites, databases, workers, cron jobs, deployment and backup history, and the cloud provider and storage accounts used to create them. Everyone in the team sees the same servers, with the level of access their role allows.
+
+Teams are useful for keeping things apart, for example one team per client, per company or per project.
+
+## Your personal team
+
+When you sign up, flitops creates a personal team for you (named after you, like "Ada's Team"). It works like any other team, with two differences: it can't be deleted, and you can't leave it.
+
+## Creating a team
+
+1. Open the team switcher at the top of the sidebar.
+2. Click **Create team** (or **New team**).
+3. Enter a **Team name**. flitops suggests a **team handle** from the name; click **Change** to edit it.
+4. Click **Create**.
+
+You become the team's **Owner**, and flitops switches you into it.
+
+### The team handle
+
+The handle is the short name used in the team's web addresses, for example `flitops.com/acme-corp/servers`. It can only contain lowercase letters, numbers, dots and dashes, and must be unique.
+
+Because the handle is in every address, you can share a link to a server or site with a teammate. If they're a member of that team, flitops switches them into it automatically when they open the link.
+
+## Switching teams
+
+Use the team switcher at the top of the sidebar. The dashboard, servers list and everything else then show that team's resources.
+
+## Renaming a team
+
+Go to **Settings → Team**, change the **Team name** or **Team handle**, and click **Save**. You need permission to manage team settings (Owners and Admins).
+
+<Note>Changing the handle changes the team's web addresses. Old bookmarks and shared links that use the previous handle will stop working.</Note>
+
+## Leaving a team
+
+Go to **Settings → Team** and click **Leave team**. You'll lose access straight away. You can't leave your personal team, and the person who created a team can't leave it, because the team would be left without its creator. That person can delete the team instead. Other Owners can leave at any time.
+
+## Deleting a team
+
+Only Owners can delete a team, and personal teams can't be deleted. Go to **Settings → Team → Delete team** and type the team name to confirm.
+
+<Warning>
+  Deleting a team permanently removes it from flitops: its servers, sites, databases, workers, cron jobs, deployment and backup history, the cloud provider and storage accounts connected to it, and all members and pending invitations.
+
+  It does **not** touch anything outside flitops:
+
+  - The servers themselves **keep running at your cloud provider, and keep being billed**, until you delete them there. To remove them completely, [delete each server](/servers/settings#deleting-a-server) in flitops first.
+  - Backup files already uploaded stay in your storage bucket.
+  - SSH keys already added to the servers stay on them.
+</Warning>
+
+## Related
+
+- [Members and invitations](/teams/members-and-invitations)
+- [Roles and permissions](/teams/roles-and-permissions)

@@ -1,0 +1,41 @@
+---
+title: "Server connections"
+description: "Let your web and worker servers reach a separate database or Redis server, without opening it to the internet."
+---
+
+When your app and its database (or Redis) live on different servers, the app server needs to be allowed through the database server's firewall. **Server connections** do exactly that, for only the servers you choose.
+
+The **Connections** tab appears on servers that run a database or Redis. You need the **Manage servers** permission (Owners and Admins) to connect and disconnect servers.
+
+## How it works
+
+When you connect a server (the **client**, for example a web server) to this server (the **host**, for example a database server), flitops:
+
+1. Makes the host's database and Redis listen for connections from the network, not just from the host itself.
+2. Opens the host's firewall for the database and Redis ports **only for the client server's address**. Everyone else is still blocked.
+3. For Redis, requires a **password**, so even an allowed server must know it.
+4. Uses your provider's **private network** when both servers are on it (traffic then never leaves the data centre), and the public internet otherwise. The connection list says which.
+
+## Connecting a server
+
+1. Open the **host** server (the one with the database or Redis), then its **Connections** tab.
+2. Under **Connect a server**, choose the server whose sites and workers need access.
+3. Click **Connect**.
+
+You can't connect a server to itself (it can already reach its own services), and each server can only be connected once.
+
+## Using the connection
+
+### Databases
+
+When you create a site on the client server, the **Database** section of the site form lists databases on connected servers as well as its own. Pick one and flitops writes the right host, port, database name, username and password into the site's environment for you.
+
+### Redis
+
+The connection details show the **REDIS_HOST** and **REDIS_PASSWORD** to put in your app's environment (the password is only shown to members with the **View secrets** permission). For a Laravel site, add them on the site's [Environment](/sites/environment) tab.
+
+## Disconnecting a server
+
+Click **Disconnect** next to a connected server. flitops closes the firewall for that server, and its sites and workers will no longer be able to reach this server's database or Redis.
+
+<Warning>Before disconnecting, make sure nothing on the client server still uses this database or Redis, or those apps will start failing.</Warning>

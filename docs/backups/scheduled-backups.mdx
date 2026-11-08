@@ -1,0 +1,46 @@
+---
+title: "Scheduled backups"
+description: "Back up a database automatically every hour, day or week, and choose how many backups to keep."
+---
+
+A **backup schedule** backs up a database automatically. Each database has its own schedule. You need the **Run backups** permission (Owners, Admins and Developers).
+
+## Setting up a schedule
+
+1. Open the database's **Backups** page (from the server's **Databases** tab, or the site's **Database** tab).
+2. In the **Schedule** card, choose:
+   - **Storage provider**: the bucket to store backups in. [Connect one](/connections/storage-providers) first if the list is empty.
+   - **Frequency**: **Hourly**, **Daily** or **Weekly**.
+   - **Keep last**: how many backups to keep (1 to 365). When a new backup completes, older ones beyond this number are deleted from your bucket.
+   - **Enabled**: turn the schedule on or off.
+3. Save.
+
+The first scheduled backup runs within the next hour. After that, backups run at the chosen interval, counted from the previous scheduled run.
+
+## Choosing a frequency and retention
+
+Think about how much data you could afford to lose, and how far back you might need to go:
+
+| If you… | Try |
+| --- | --- |
+| Take orders or payments all day | **Hourly**, keep **48** (two days of hourly backups) |
+| Run a typical business app | **Daily**, keep **30** (a month) |
+| Have a site that rarely changes | **Weekly**, keep **12** (about three months) |
+
+Backups are full copies each time, so keeping more of them uses more storage. Check your storage provider's pricing.
+
+<Tip>If you need both recent and long-term copies, keep a frequent schedule in flitops and add a lifecycle or versioning rule in your bucket to keep older copies for longer.</Tip>
+
+## Backing up now
+
+Click the button to start a backup straight away, for example before a risky migration or deploy. Manual backups appear in the history marked as triggered by you, and count towards the **Keep last** number.
+
+## Pausing a schedule
+
+Turn off **Enabled** and save. Existing backups stay in your bucket. Turn it back on to resume.
+
+## Backup history
+
+The **History** list shows each backup's **Status**, who or what **triggered** it (the schedule, or a person), its **Size**, whether it's **Verified**, and when it was **Created**.
+
+Statuses you'll see while a backup runs include running, verifying, completed and failed.

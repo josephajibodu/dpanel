@@ -1,0 +1,67 @@
+---
+title: "Site overview"
+description: "Find your way around a site's page and its tabs."
+---
+
+Open a server, then click a site to see its page. The tabs along the top are:
+
+| Tab | What it's for |
+| --- | --- |
+| **Overview** | Status, details, uptime, recent deployments, workers and cron jobs |
+| **Deployments** | [Deploy, view history, cancel and roll back](/sites/deployments) |
+| **Commands** | [Run one-off commands](/sites/commands) in the site's folder |
+| **Processes** | The site's [workers and cron jobs](/servers/processes) |
+| **Environment** | The site's [`.env` file](/sites/environment) (members with **View secrets**) |
+| **Database** | The [site's database and backups](/sites/site-database) |
+| **Deploy Script** | The [commands each deploy runs](/sites/deploy-script) |
+| **Web Server** | The site's [Nginx or Caddy configuration files](/sites/web-server-configuration) |
+| **Domains** | [Domains, DNS and SSL](/sites/domains) |
+| **Logs** | The site's [error log](/sites/logs) |
+
+## The overview
+
+- **Details**: server ID, site ID, framework, PHP version, **System user** (the Linux user the site runs as) and the server's public IP.
+- **Status** and when the site was **Created**.
+- **Uptime**: whether the site is **Up** or **Down**, and when it was last checked. See [Uptime monitoring](/monitoring/uptime).
+- **Domains**: the site's addresses, with a link to manage them.
+- **Source**: the repository and branch, or "No repository connected".
+- **Auto deploy**: whether pushes to the branch deploy automatically (see [Automatic deploys](/sites/deployments#automatic-deploys)).
+- **Server** and **Database**: what the site runs on and uses.
+- **Deployments**: recent deployments, with a shortcut to deploy.
+- **Workers** and **Cron jobs** tied to the site.
+
+## Editing a site
+
+From the site's menu, choose **Edit Site** to change:
+
+- **Branch**: the branch deployments pull from. The next deployment uses it.
+- **Web directory**: the folder the web server serves, for example `/public`.
+- **PHP version**: any PHP version installed on the server. Not shown for Static HTML sites.
+- **Deploy on push**: see [Automatic deploys](/sites/deployments#automatic-deploys).
+
+Changes to the web directory and PHP version reach the web server within a few moments, without downtime. You need the **Manage sites** permission (and **Deploy** for Deploy on push).
+
+The domain and project type are fixed once a site is created; manage domains on the [Domains](/sites/domains) tab. Changing a site's repository is on the [roadmap](/roadmap).
+
+## Site statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Waiting to be set up. |
+| **Installing** | flitops is setting up the site. |
+| **Provisioned** | Set up, but no code has been deployed yet. |
+| **Deploying** | A deployment is running. |
+| **Deployed** | Live and serving the latest successful deployment. |
+| **Failed** | Setting up the site failed. Check the message and click **Retry**. |
+| **Isolating** | The site is being converted to an [isolated site](/sites/site-isolation). |
+| **Deleting** | The site is being removed. |
+
+## Deleting a site
+
+From the site's menu, choose **Delete Site** and confirm. flitops removes the site's files, web server configuration, SSL certificates, workers and cron jobs from the server, and, for free subdomains, its DNS record.
+
+<Warning>Deleting a site can't be undone. Back up the site's database and any uploaded files you need first. Deleting a site doesn't delete its database; remove that separately on the server's **Databases** tab if you no longer need it.</Warning>
+
+## Switching between sites
+
+Use the site switcher in the breadcrumb at the top of the page to jump to another site on the same server.

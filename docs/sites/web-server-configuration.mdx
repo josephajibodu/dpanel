@@ -1,0 +1,76 @@
+---
+title: "Web server configuration"
+description: "Add your own Nginx or Caddy configuration to a site, with checks before applying and full history."
+---
+
+flitops writes a working web server configuration for every site and domain. When you need something extra, such as a redirect, a custom header, a larger upload limit or a reverse proxy, add it on the site's **Web Server** tab without logging in to the server.
+
+Editing needs the **Manage sites** permission. Everyone in the team can view the files.
+
+## How files are organised
+
+Files are grouped by **domain**, then by **section**. The section decides where in the configuration your file is included:
+
+| Section | Where it goes | Use it for |
+| --- | --- | --- |
+| **Main Configuration** | The generated configuration for the domain. **Read-only**, since flitops manages it. | Reading what flitops set up. |
+| **Before** | Loaded before the site's `server` block. | `map` blocks, `upstream` definitions, rate-limit zones. |
+| **Server** | Included inside the `server` block. | Headers, `client_max_body_size`, `gzip` settings. |
+| **Locations** | Included as `location` blocks inside the server block. | Redirects for specific paths, reverse proxies, caching rules for assets. |
+| **After** | Loaded after the server block. | Extra `server` blocks, such as a redirect from an old domain. |
+
+On **Caddy** servers the same structure applies, and files are shown as plain text.
+
+## Creating a file
+
+1. Click **New file**.
+2. Choose the **Domain** and **Section**.
+3. Optionally enter a **Sub-path** to group files into a folder (letters, numbers, hyphens, underscores and slashes).
+4. Enter a **Filename** ending in `.conf`, for example `uploads.conf`.
+5. Write the **Content** and save.
+
+### Example: a different upload limit for one site
+
+The server-wide upload limit follows PHP's **Post max size** (see [PHP settings](/servers/php#php-settings)). To give one site its own limit, create `uploads.conf` in the **Server** section:
+
+```nginx uploads.conf
+client_max_body_size 256M;
+```
+
+PHP's limits still apply, so raise them on the server's PHP tab too.
+
+### Example: proxy a WebSocket server
+
+In the **Locations** section, create `websockets.conf`:
+
+```nginx websockets.conf
+location /app/ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $http_host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass http://127.0.0.1:8080;
+}
+```
+
+## Changes are checked before they go live
+
+When you save, create or rename a file, flitops writes it to the server and asks the web server to **test the whole configuration**. If the test fails (for example, a missing semicolon), flitops puts the previous version back and shows the error, so a typo can't take your site down. If it passes, the web server reloads gracefully, without dropping connections.
+
+## Renaming and deleting
+
+Open a file and use **Rename** or **Delete**. Deleting removes the file from the server and reloads the web server.
+
+## History
+
+Click **History** to see every change to the site's files: who made it, when, and what changed. Select an entry to see that version, and click **Restore this version** to put it back.
+
+## Keeping in sync with the server
+
+If someone edits the files directly on the server, the dashboard may show an older version. Click **Refresh** (or **Sync file contents from server**) to read the current files from the server.
+
+## Tips
+
+- Keep each file focused on one thing, with a clear name. It makes history easier to read.
+- Configuration you add applies to the domain you chose. If the site has several domains, add the file to each one that needs it.
+- Avoid repeating directives that flitops already sets in the main configuration; the web server will reject duplicates.

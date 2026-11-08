@@ -1,0 +1,62 @@
+---
+title: "Databases"
+description: "Create databases and database users on a server, with read-write or read-only access."
+---
+
+The server's **Databases** tab manages the databases and database users on that server. It appears on servers with **MySQL**, **MariaDB** or **PostgreSQL** installed. You need the **Manage databases** permission (Owners, Admins and Developers) to make changes.
+
+A **database** holds your app's data. A **database user** is a login your app (or you) use to reach one or more databases. Keeping them separate means you can give each app its own login with access to only its own data.
+
+## Creating a database
+
+1. Open the server's **Databases** tab and click **New database**.
+2. Enter a **Name**, for example `myapp`. Use letters, numbers and underscores only.
+3. Optionally set the **Charset** and **Collation** (MySQL and MariaDB). These control how text is stored and sorted. The defaults (`utf8mb4` and `utf8mb4_unicode_ci`) support every language and emoji; leave them unless you have a reason to change them.
+4. Optionally enter a **Database user** and **Password** to create a user with access to this database at the same time. Click **Generate password** for a strong random one.
+5. Click **Create database**.
+
+The database appears in the list with its status. You can also create a database while [creating a site](/sites/creating-sites).
+
+## Creating a database user
+
+1. In the **Database users** section, click **New user**.
+2. Enter a **Username** (letters, numbers and underscores, up to 32 characters) and a **Password** (at least 8 characters). Click **Generate password** for a strong one.
+3. Choose which **databases** the user can access.
+4. Choose a **Permission**:
+   - **Read-write**: can read and change data, and change the database structure (for example, run migrations).
+   - **Read-only**: can only read data. Useful for reporting tools, analysts or backups to other systems.
+5. Optionally set a **Host**. This limits where the user can connect from. Leave it as `localhost` for apps on the same server.
+6. Click **Create database user**.
+
+## Editing a user
+
+Click **Edit** next to a user to change which databases they can access, their permission and host. Leave **New password** empty to keep the current password.
+
+## Resetting a password
+
+Choose **Reset password** from a user's menu. flitops generates a new password, applies it, and shows it once so you can copy it. You can always see it again later from the **Connect** action.
+
+<Warning>After resetting a password, update every app that uses that user. For a flitops site, update `DB_PASSWORD` in the site's [environment](/sites/environment).</Warning>
+
+## Viewing a password
+
+Passwords are hidden by default. Use **Connect** on a database to see the connection details for a user, and click to reveal the password. This needs the **View secrets** permission, and each reveal is an explicit action.
+
+## Deleting
+
+- **Delete database** permanently deletes the database and all its data.
+- **Delete database user** removes the login. Apps using it will no longer be able to connect.
+
+<Warning>Deleting a database can't be undone. Take a [backup](/backups/overview) first if there's any chance you'll need the data.</Warning>
+
+## Backups and imports
+
+Each database has its own **Backups** page, where you can set up a schedule, take a backup now, restore, download and import dumps. See [Backups](/backups/overview).
+
+## Connecting from your computer
+
+To browse your data with a desktop tool such as TablePlus, DBeaver or MySQL Workbench, see [Connecting to a database](/servers/connecting-to-a-database).
+
+## Using a database from another server
+
+If your app runs on a different server from the database, [connect the two servers](/servers/server-connections) first, so the app server is allowed through the database server's firewall.

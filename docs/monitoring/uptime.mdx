@@ -1,0 +1,32 @@
+---
+title: "Uptime monitoring"
+description: "Every live site is checked every five minutes, and you're emailed when it goes down and when it recovers."
+---
+
+flitops checks that your sites are reachable, so you hear about downtime before your users tell you. There's nothing to set up: every live site is monitored automatically.
+
+## How it works
+
+- Every **5 minutes**, flitops sends a request to each live site's **primary domain**, the same way a visitor's browser would.
+- A site counts as **down** if the request can't connect, takes longer than **10 seconds**, or gets a **server error** (an HTTP status in the 500s). Any other response, including redirects and "not found" pages, counts as up.
+- To avoid false alarms from a single blip, a site is only reported down after **2 failed checks in a row** (so within about 10 minutes).
+
+## Alerts
+
+| When | What happens |
+| --- | --- |
+| The site goes down | The team owner gets an email with the reason, and the latest lines from the site's [error log](/sites/logs) to help find the cause. |
+| The site comes back | The team owner gets an email saying it has recovered. |
+
+## Seeing the status
+
+The site's **Overview** shows **Uptime**: **Up**, **Down** or **Not checked yet**, and when it was **Last checked**.
+
+## If your site is down
+
+1. Open the site's **Logs** tab for recent errors.
+2. Check the server's **Overview** for high CPU, memory or a full disk.
+3. Check the last [deployment](/sites/deployments) — if it broke something, roll back.
+4. Check your [domain's](/sites/domains) DNS still points at the server, and its [certificate](/sites/ssl-certificates) is valid.
+
+<Note>Alerts go to the team owner by email for now. Choosing who gets alerts, a history of past incidents in the dashboard, Slack and SMS alerts, and alerts when a server itself stops responding are on the [roadmap](/roadmap).</Note>

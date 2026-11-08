@@ -1,0 +1,160 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "flitops",
+  "description": "Provision servers on your own cloud, deploy with zero downtime, and keep everything running.",
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://flitops.com"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Contact",
+        "href": "https://flitops.com/contact"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Open dashboard",
+      "href": "https://flitops.com/login"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "quickstart",
+          "concepts"
+        ]
+      },
+      {
+        "group": "Account and teams",
+        "pages": [
+          "account/settings",
+          "account/two-factor-authentication",
+          "teams/overview",
+          "teams/members-and-invitations",
+          "teams/roles-and-permissions"
+        ]
+      },
+      {
+        "group": "Connections",
+        "pages": [
+          "connections/cloud-providers",
+          "connections/source-control",
+          "connections/storage-providers",
+          "connections/ssh-keys"
+        ]
+      },
+      {
+        "group": "Servers",
+        "pages": [
+          "servers/creating-servers",
+          "servers/custom-servers",
+          "servers/server-types",
+          "servers/provisioning",
+          "servers/server-overview",
+          "servers/php",
+          "servers/nodejs",
+          "servers/databases",
+          "servers/connecting-to-a-database",
+          "servers/server-connections",
+          "servers/processes",
+          "servers/terminal",
+          "servers/settings"
+        ]
+      },
+      {
+        "group": "Sites",
+        "pages": [
+          "sites/creating-sites",
+          "sites/project-types",
+          "sites/site-isolation",
+          "sites/site-overview",
+          "sites/domains",
+          "sites/ssl-certificates",
+          "sites/deployments",
+          "sites/deploy-script",
+          "sites/environment",
+          "sites/web-server-configuration",
+          "sites/commands",
+          "sites/logs",
+          "sites/site-database"
+        ]
+      },
+      {
+        "group": "Backups",
+        "pages": [
+          "backups/overview",
+          "backups/scheduled-backups",
+          "backups/restoring-and-downloading",
+          "backups/importing-a-dump",
+          "backups/sqlite-backups"
+        ]
+      },
+      {
+        "group": "Monitoring and alerts",
+        "pages": [
+          "monitoring/server-metrics",
+          "monitoring/uptime",
+          "monitoring/certificate-monitoring",
+          "monitoring/notifications"
+        ]
+      },
+      {
+        "group": "Security",
+        "pages": [
+          "security/how-flitops-protects-you",
+          "security/best-practices"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/server-layout",
+          "reference/statuses",
+          "reference/limits-and-naming-rules",
+          "reference/glossary"
+        ]
+      },
+      {
+        "group": "Help",
+        "pages": [
+          "troubleshooting",
+          "faq",
+          "roadmap"
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "links": [
+      {
+        "header": "flitops",
+        "items": [
+          { "label": "Website", "href": "https://flitops.com" },
+          { "label": "Features", "href": "https://flitops.com/features" },
+          { "label": "Pricing", "href": "https://flitops.com/pricing" },
+          { "label": "Security", "href": "https://flitops.com/security" }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          { "label": "Terms", "href": "https://flitops.com/terms" },
+          { "label": "Privacy", "href": "https://flitops.com/privacy" }
+        ]
+      }
+    ]
+  }
+}

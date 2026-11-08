@@ -1,0 +1,76 @@
+---
+title: "How flitops works"
+description: "The few ideas everything else in flitops builds on, explained in plain language."
+---
+
+You don't need to be a systems administrator to use flitops, but knowing a few ideas makes everything else easier to follow.
+
+## The big picture
+
+flitops does the work a platform or operations team would normally do for you. It talks to your cloud provider to create machines, and it logs in to those machines over **SSH** (the standard secure way to run commands on a remote server) to install software, write configuration files and deploy your code.
+
+Your servers do the actual hosting. When someone visits your site, their browser talks directly to your server, not to flitops. If flitops were unavailable for a while, your sites would keep running; you just couldn't change them from the dashboard until it was back.
+
+Everything flitops sets up is standard, well-known software (Nginx or Caddy, PHP-FPM, MySQL, MariaDB or PostgreSQL, Redis, Supervisor and cron). Nothing proprietary runs on your servers, and you can inspect every file flitops writes.
+
+## Teams
+
+Everything you create belongs to a **team**: servers, sites, provider accounts, storage providers and their history. When you sign up you get a personal team. You can create more teams, for example one per client or project, and switch between them from the team switcher at the top of the sidebar.
+
+Each person in a team has a **role** (Owner, Admin, Developer or Viewer) that decides what they can do. See [Roles and permissions](/teams/roles-and-permissions).
+
+A few things belong to **you** rather than to a team: your SSH keys and your source control (Git host) connections. You can use them in any team you're a member of.
+
+## Servers
+
+A **server** is one machine, usually a virtual server rented from a cloud provider. flitops can create it for you through your provider's API, or you can connect one you already have.
+
+When you create a server you choose its **type**, which decides what software gets installed. One server can do everything (an App Server), or you can split the work across several servers, for example a web server, a separate database server and a worker server, and let them talk to each other privately. See [Server types](/servers/server-types).
+
+## Sites
+
+A **site** is one application running on a server, reachable at one or more **domains** (web addresses). A server can host many sites. Each site has:
+
+- A **repository and branch** that its code is deployed from.
+- A **project type** (Laravel, Symfony, WordPress, PHP or Static HTML) that sets sensible defaults.
+- An **environment** (its `.env` file), holding settings and secrets such as API keys.
+- A **deploy script**, the commands that build your app on each deploy.
+- Optionally, a **database**, **workers** and **cron jobs**.
+
+### Site isolation
+
+By default each new site runs as its **own Linux user** on the server. This means that if one site is ever hacked, the attacker can't read or change your other sites' files. You can turn this off when creating a site, but we don't recommend it. See [Site isolation](/sites/site-isolation).
+
+## Deployments and releases
+
+A **deployment** is one run of getting your latest code live. flitops never edits your live code in place. Instead, each deployment:
+
+1. Downloads your code into a brand-new **release** folder.
+2. Runs your deploy script there (installing dependencies, building assets, running migrations).
+3. Only if every step succeeds, switches the site's `current` link to point at the new release. This switch is instant.
+
+Visitors keep using the old release until the very last moment, so there is no downtime, and a failed build never goes live. flitops keeps your most recent releases, so a **rollback** is just switching the link back to an earlier one, without rebuilding anything. See [Deployments](/sites/deployments).
+
+Files that must survive between releases, such as your `.env` file, uploaded files and logs, live in a separate **shared** folder that every release links to.
+
+## The dashboard
+
+The **Dashboard** is the first page you see after signing in. It shows the current team's number of **servers**, **sites** and **deployments in the last 7 days**, any **SSL alerts**, and lists of recent servers and recent deployments.
+
+## Live updates
+
+Most actions in flitops, such as creating a server, deploying or installing a PHP version, take time on the server. flitops runs them in the background and updates the page live as they progress, so you can watch output appear line by line. You can leave the page and come back; the work carries on.
+
+## Words you will see
+
+| Term | What it means |
+| --- | --- |
+| **Provisioning** | Installing and configuring the software on a new server. |
+| **SSH** | The secure protocol used to log in to and run commands on a server. |
+| **SSH key** | A pair of files (public and private) that proves who you are to a server, instead of a password. |
+| **Worker** | A program that keeps running in the background, such as a queue worker. |
+| **Cron job** | A command that runs automatically on a schedule. |
+| **DNS** | The internet's address book. A DNS record tells the world which server a domain points to. |
+| **SSL / TLS certificate** | What lets your site use `https://`, so traffic is encrypted. |
+
+See the [Glossary](/reference/glossary) for more.

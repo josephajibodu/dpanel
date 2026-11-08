@@ -1,0 +1,45 @@
+---
+title: "Introduction"
+description: "flitops sets up servers on your own cloud account, deploys your code to them, and keeps them running."
+---
+
+flitops is a server management and deployment platform. You connect a cloud account (or bring a server you already have), and flitops installs everything your application needs: the web server, PHP, a database, Redis, Node.js and a process manager. From then on you deploy your code with a click, and flitops handles domains, SSL certificates, background workers, scheduled jobs, backups and monitoring.
+
+The servers are yours. They live in your own cloud account, you pay your provider for them directly, and your application traffic and data go straight to them. flitops never sits in the middle of your users' requests.
+
+## What you can do with flitops
+
+<CardGroup cols={2}>
+  <Card title="Create servers" icon="server" href="/servers/creating-servers">
+    Create servers on DigitalOcean, Hetzner, Vultr or AWS from one form, or connect any Ubuntu server you already run.
+  </Card>
+  <Card title="Deploy sites" icon="rocket" href="/sites/deployments">
+    Deploy Laravel, Symfony, WordPress, plain PHP and static sites from GitHub, GitLab or Bitbucket, with zero downtime and one-click rollback.
+  </Card>
+  <Card title="Domains and SSL" icon="lock" href="/sites/domains">
+    Get a free subdomain instantly, or add your own domain. flitops checks your DNS and issues a free Let's Encrypt certificate.
+  </Card>
+  <Card title="Databases and backups" icon="database" href="/backups/overview">
+    Create MySQL, MariaDB or PostgreSQL databases and users, and back them up on a schedule to Amazon S3 or Cloudflare R2.
+  </Card>
+  <Card title="Workers and cron jobs" icon="gears" href="/servers/processes">
+    Run queue workers and other long-running processes that restart on failure, and schedule cron jobs without editing a crontab.
+  </Card>
+  <Card title="Teams" icon="users" href="/teams/overview">
+    Invite your team with Owner, Admin, Developer and Viewer roles, so everyone gets exactly the access they need.
+  </Card>
+</CardGroup>
+
+## How the docs are organised
+
+- **[Get started](/quickstart)** takes you from a new account to a live site.
+- **[Account and teams](/account/settings)** covers your profile, two-factor authentication, teams and roles.
+- **[Connections](/connections/cloud-providers)** explains how to link the outside services flitops works with: your cloud provider, your Git host, your backup storage and your SSH keys.
+- **[Servers](/servers/creating-servers)** and **[Sites](/sites/creating-sites)** cover the day-to-day work.
+- **[Backups](/backups/overview)**, **[Monitoring](/monitoring/server-metrics)** and **[Security](/security/how-flitops-protects-you)** cover keeping things safe and running.
+- **[Reference](/reference/server-layout)** has the details you look up rather than read: where files live on the server, what each status means, and naming rules.
+- **[Roadmap](/roadmap)** lists what is planned but not available yet.
+
+<Tip>
+  New to running servers? Read [How flitops works](/concepts) first. It explains the handful of ideas (teams, servers, sites, releases) that everything else builds on, in plain language.
+</Tip>

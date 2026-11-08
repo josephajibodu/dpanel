@@ -1,0 +1,65 @@
+---
+title: "Server layout"
+description: "Where flitops puts your sites, releases and shared files on the server."
+---
+
+You don't need to know any of this to use flitops, but it helps when you log in to a server with SSH.
+
+## Users
+
+| User | What it's for |
+| --- | --- |
+| **Server user** | The main user flitops creates during provisioning. flitops and keys synced with full server access log in as it. It can administer the server. The server's **Settings** tab shows the SSH command with this user. |
+| **Site users** | One per [isolated site](/sites/site-isolation), named after the site's domain (for example `example_com`). Shown as **System user** on the site's page. |
+| **Web user** | The user the web server runs as. |
+
+## A site's folders
+
+Each site lives in its own folder in its user's home folder:
+
+- Isolated site: `/home/<site user>/<domain>`
+- Site without isolation: `/home/<server user>/<domain>`
+
+Inside it:
+
+```text
+/home/<user>/<domain>/
+├── current -> releases/<newest successful release>
+├── releases/
+│   ├── 01J…   (newest)
+│   ├── 01J…
+│   └── …      (the 5 most recent are kept)
+└── shared/
+    ├── .env
+    ├── storage/
+    └── …
+```
+
+| Folder | What it holds |
+| --- | --- |
+| `current` | A link to the live release. The web server, workers and cron jobs all use this path, so they always run the live code. |
+| `releases/` | One folder per deployment, named by when it was created. flitops keeps the 5 most recent, plus whichever is live. |
+| `shared/` | Files kept between releases, such as `.env`, `storage` and uploads. Each release links to these. See [Project types](/sites/project-types) for what each type shares. |
+
+The web server serves the **web directory** inside `current`, for example `current/public` for Laravel.
+
+<Warning>Don't edit files inside `releases/` or `current` by hand: the next deployment replaces them. Change your code in Git and deploy, and change `.env` from the [Environment](/sites/environment) tab.</Warning>
+
+## Running commands as a site's user
+
+When logged in as the server user, switch to an isolated site's user with:
+
+```bash
+sudo -iu <site user>
+cd ~/<domain>/current
+```
+
+Or log in directly as the site user with an [SSH key synced to the site](/connections/ssh-keys#syncing-a-key-to-servers).
+
+## Other locations
+
+| What | Where |
+| --- | --- |
+| Worker configuration and logs | Managed by Supervisor. View logs from each worker's **View logs** action. |
+| Cron jobs | Managed by flitops in the system cron folder. Edit them from the **Processes** tab, not by hand. |
+| Web server configuration | Managed by flitops. Add your own from the site's [Web Server](/sites/web-server-configuration) tab. |

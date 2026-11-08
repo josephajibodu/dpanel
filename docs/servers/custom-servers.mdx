@@ -1,0 +1,54 @@
+---
+title: "Custom servers"
+description: "Connect any fresh Ubuntu server you already have, from any hosting provider."
+---
+
+You don't need one of our supported cloud providers to use flitops. You can connect **any server** you can log in to as root, from any provider or data centre, as long as it meets the requirements below.
+
+## Requirements
+
+- A **fresh, unused** installation of **Ubuntu 22.04 or 24.04**. flitops installs and configures a lot of software, and could conflict with, or overwrite, anything already set up.
+- **Root SSH access** (you can log in as the `root` user).
+- A **public IP address** that flitops can reach over SSH.
+
+<Warning>Don't connect a server that is already running something important. Provisioning changes system configuration, installs packages and turns on a firewall.</Warning>
+
+## Connecting a server
+
+<Steps>
+  <Step title="Enter the server's details">
+    Go to **Servers → Create server** and choose **Existing server** at the top. Enter:
+
+    - The **IP address** (its public IPv4 address, for example `203.0.113.10`).
+    - The **SSH port**, usually `22`.
+    - A **name**, which is also used as the server's hostname.
+    - The **server type** and software, exactly as when [creating a server](/servers/creating-servers#creating-a-server).
+
+    Click **Connect server**.
+  </Step>
+  <Step title="Add flitops to your server">
+    flitops shows a one-line command. Log in to your server **as root** and run it. It adds a public key that belongs to this server only to root's list of allowed keys (`/root/.ssh/authorized_keys`), so flitops can log in.
+
+    Use the **Copy** button to avoid typos.
+  </Step>
+  <Step title="Test the connection">
+    Click **Test connection**. flitops tries to log in and tells you whether it worked. This is a quick check before the full setup starts.
+  </Step>
+  <Step title="Start provisioning">
+    Click **Start provisioning**. flitops installs Nginx (or Caddy), PHP, your database, Redis and Supervisor. You can watch the progress live. See [Provisioning](/servers/provisioning).
+  </Step>
+</Steps>
+
+<Note>Only Owners and Admins can start provisioning. Other members see a note asking them to ask an Owner or Admin.</Note>
+
+## After provisioning
+
+Once provisioning is complete, flitops logs in as a dedicated server user rather than root, and the server works exactly like one flitops created. You can remove the setup key from root's `authorized_keys` if you prefer, but don't remove keys flitops adds for its server user.
+
+Custom servers can't be resized, rebooted or deleted at the hosting provider by flitops, because flitops has no account there. [Deleting a custom server](/servers/settings#deleting-a-server) in flitops only removes it from flitops; the machine keeps running until you cancel it with your host.
+
+## Troubleshooting
+
+- **Test connection fails:** check the IP address and port, that the command was run as root, and that your hosting provider's firewall allows SSH from the internet on that port.
+- **"Unsupported Ubuntu version":** flitops only supports Ubuntu 22.04 and 24.04. Reinstall the server with one of these.
+- **IP address rejected:** the address must be a public internet address. Private and local network addresses (such as `10.x.x.x`, `192.168.x.x` or `127.0.0.1`) can't be used.

@@ -1,0 +1,39 @@
+---
+title: "Commands"
+description: "Run one-off commands in a site's folder, and see their output and history."
+---
+
+The site's **Commands** tab runs a single command on the server, in the site's live release folder, and shows you the result. It's useful for one-off tasks such as clearing a cache, checking a version, or running a maintenance script, without opening a terminal.
+
+## Running a command
+
+1. Open the site's **Commands** tab and click **Run command**.
+2. Type the command, for example:
+
+   ```bash
+   php artisan --version
+   ```
+
+3. Click **Run**.
+
+The command runs in the site's live release folder, as the site's user (its own user for [isolated sites](/sites/site-isolation)). Its status shows **Running…** and updates when it's done.
+
+You need the **Run commands** permission (Owners, Admins and Developers).
+
+## Command history
+
+The table lists every command run on the site, with its **Status**, **Exit** code and when it **Finished**. An exit code of `0` means success; anything else usually means an error.
+
+For each command you can:
+
+- **View logs**: see the full output. Output is only shown to members with the **View secrets** permission, since commands can print sensitive values.
+- **Run again**: run the same command again.
+- **Edit and run**: change the command, then run it.
+
+## Limits
+
+- A command can be up to 1,024 characters.
+- A command may run for up to **5 minutes**. For longer jobs, use a [worker](/servers/processes) or the [browser terminal](/servers/terminal).
+- Commands aren't interactive: you can't answer prompts. Use flags such as `--force` or `--no-interaction` where a command would normally ask a question.
+
+<Warning>Commands run against your live site and data. Double-check anything destructive (such as `migrate:fresh` or deleting files) before running it.</Warning>

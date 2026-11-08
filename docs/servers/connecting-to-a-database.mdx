@@ -1,0 +1,47 @@
+---
+title: "Connecting to a database"
+description: "Browse your data safely from TablePlus, DBeaver or any database app, through an SSH tunnel."
+---
+
+Your database isn't open to the internet. That's deliberate: an exposed database is one of the most common ways data gets stolen. Instead, you connect through an **SSH tunnel**: your database app first logs in to the server over SSH (which is encrypted and needs your SSH key), then talks to the database from inside the server.
+
+Most database apps can do this for you. flitops gives you every detail you need, ready to copy.
+
+## Before you start
+
+You need an [SSH key](/connections/ssh-keys) added to flitops and synced to the database's server. Without one, the connect dialog shows **Add SSH key** instead of the connection details.
+
+## Getting the connection details
+
+1. Open the server's **Databases** tab.
+2. Click **Connect** next to the database.
+3. Under **Connect as**, choose the database user you want to log in as.
+
+The dialog shows:
+
+### 1. Database details
+
+The main fields in your database app: **Host**, **Port**, **Database**, **Username** and **Password** (click to reveal).
+
+The host is `127.0.0.1`, which means "the server itself". That's correct here, because the connection goes through SSH first and then reaches the database on the same machine.
+
+### 2. SSH details
+
+Turn on the SSH option in your database app (**Over SSH** in TablePlus and TablePro, the **SSH** tab in DBeaver, **Standard TCP/IP over SSH** in MySQL Workbench), then enter:
+
+- **SSH host**: the server's IP address.
+- **SSH port**: usually `22`.
+- **SSH user**: the user your key is synced to.
+- **SSH authentication**: choose **private key** and pick the key file on your computer that matches the SSH key you added, for example `~/.ssh/id_ed25519`.
+
+## Shortcuts
+
+- **TablePlus / TablePro URL**: fills in both the database and SSH details at once. In TablePlus or TablePro, create a new connection from a URL and paste it.
+- **Standard connection URL**: for tools that ask for a connection string. From your computer, it only works while the SSH tunnel below is running.
+- **SSH tunnel command**: run it in a terminal and leave it open. It forwards the database to the same port on your computer, so any tool can connect to `127.0.0.1` on that port.
+
+## Tips
+
+- Use a **read-only** database user when you only need to look at data. It's much harder to break something by accident. See [Databases](/servers/databases#creating-a-database-user).
+- Close the tunnel when you're done.
+- If the connection fails at the SSH step, check that your key shows as **Synced** for that server in [SSH keys](/connections/ssh-keys).

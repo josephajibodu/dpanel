@@ -1,0 +1,53 @@
+---
+title: "Site isolation"
+description: "Run each site as its own Linux user, so one compromised site can't reach the others."
+---
+
+On a server, every program runs as a **user**, and a user can only read and change the files it's allowed to. **Site isolation** gives each site its own user. The site's files, its PHP processes, its deploys, workers and cron jobs all run as that user, and it can't see any other site's files.
+
+## Why it matters
+
+Websites get hacked, most often through an outdated plugin or a vulnerable package. When that happens, the attacker can do whatever the site's user can do.
+
+- **Without isolation**, every site shares the server user. A hacked site can read every other site's code and secrets (such as database passwords and API keys), and that user can administer the whole server.
+- **With isolation**, the damage stays inside that one site. The attacker can't read your other sites or take over the server.
+
+That's why isolation is **on by default** for new sites, and we recommend leaving it on.
+
+## How it works
+
+- flitops creates a Linux user for the site, named after the domain (for example `example_com`). The site's page shows it as the **System user**.
+- The site's files live in that user's home folder (see [Server layout](/reference/server-layout)).
+- PHP for the site runs in its own pool as that user.
+- Deploys, [workers and cron jobs](/servers/processes) tied to the site always run as that user.
+- The site's user **never holds a key to your Git account**. flitops downloads your code as the server user and hands the files over to the site's user.
+- Certificate renewal files are kept where the site's user can't tamper with them.
+
+## Giving someone access to only one site
+
+You can [sync an SSH key](/connections/ssh-keys#syncing-a-key-to-servers) to an isolated site rather than the whole server. The key then logs in as the site's user, with access to that site's files only. Developers can do this; full server access is limited to Owners and Admins.
+
+## Isolating an existing site
+
+Sites created before isolation was available, or with it turned off, show a warning on their page: *"This site shares the server user, so if it's hacked it can reach your other sites and the server."*
+
+To convert one:
+
+1. Open the site and click **Isolate this site**.
+2. Confirm.
+
+flitops creates the site's user, moves its files into that user's home folder, and switches its PHP, web server configuration, workers and cron jobs over. The site is unavailable for **a few seconds** while this happens, and its status shows **Isolating**.
+
+If anything goes wrong, every step is undone and **the site is put back exactly as it was**.
+
+<Note>Isolation can't be turned off again once it's on. If you have scripts or tools that reach the site's files using the old path or user, update them afterwards.</Note>
+
+## Working with an isolated site over SSH
+
+If you log in as the server user, use `sudo` to run commands as the site's user, for example:
+
+```bash
+sudo -iu example_com
+```
+
+This opens a shell as the site's user in its home folder. Or log in directly as the site's user with an SSH key synced to that site.

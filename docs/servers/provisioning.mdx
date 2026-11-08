@@ -1,0 +1,71 @@
+---
+title: "Provisioning"
+description: "What flitops installs and configures on a new server, step by step."
+---
+
+**Provisioning** is the set-up flitops does on a new server: it logs in, installs the software you chose, and configures it for production. It runs automatically after a server is created (or when you click **Start provisioning** on a [custom server](/servers/custom-servers)), and takes about 5–15 minutes depending on the server's size and what you chose.
+
+You can watch it live on the server's page. You can also leave and come back; it carries on in the background.
+
+## The steps
+
+<Steps>
+  <Step title="Waiting on your server to become ready">
+    flitops waits for the new machine to start and accept connections.
+  </Step>
+  <Step title="Preparing your server">
+    flitops checks that the server runs a supported Ubuntu version, creates a dedicated **server user** that flitops and your full-access SSH keys log in as, and configures SSH access.
+  </Step>
+  <Step title="Configuring swap">
+    Sets up 1 GB of **swap**, disk space the server can use as overflow memory, so a short spike in memory use doesn't crash your apps.
+  </Step>
+  <Step title="Installing base dependencies">
+    Installs the basic tools everything else needs, and updates the server to the latest Ubuntu patch release.
+  </Step>
+  <Step title="Installing PHP">
+    Installs your chosen PHP version with PHP-FPM (the program that runs PHP for web requests) and the common extensions Laravel and most PHP apps need. Skipped if you chose no PHP.
+  </Step>
+  <Step title="Installing web server">
+    Installs and configures **Nginx** or **Caddy** to serve your sites. Skipped if you chose no web server.
+  </Step>
+  <Step title="Installing database">
+    Installs and secures **MySQL**, **MariaDB** or **PostgreSQL**. Skipped if you chose no database.
+  </Step>
+  <Step title="Installing Redis">
+    Installs **Redis** for caching and queues. Skipped if Redis is off.
+  </Step>
+  <Step title="Making final touches">
+    Installs **Composer** (on servers with PHP), **Node.js**, **Supervisor** and the Let's Encrypt certificate tool, and turns on the **firewall**.
+  </Step>
+  <Step title="Provisioning complete">
+    The server is marked **Active** and is ready for sites.
+  </Step>
+</Steps>
+
+## The firewall
+
+flitops turns on Ubuntu's firewall and only allows the traffic a web server needs:
+
+| Port | Used for |
+| --- | --- |
+| 22 | SSH, so flitops and you can log in |
+| 80 | HTTP (plain web traffic, and redirects to HTTPS) |
+| 443 | HTTPS (encrypted web traffic). Caddy servers also allow HTTP/3 over UDP. |
+
+Your database and Redis are **not** open to the internet. If another of your servers needs to reach them, use [Server connections](/servers/server-connections), which opens them only to that server.
+
+## Server identity
+
+The first time flitops connects to a server, it records the server's **host key**, a unique fingerprint the server uses to prove its identity. Every later connection must present the same key. If it ever doesn't, flitops refuses to connect, because it could mean someone is pretending to be your server. See [Server settings](/servers/settings#server-identity).
+
+## When provisioning fails
+
+If a step fails, the server's status changes to **Error**, the server page shows **Provisioning failed** with the **Provisioning log**, and flitops emails the person who created the server. Read the last lines of the log; they usually say what went wrong.
+
+Common causes:
+
+- **Unsupported operating system.** Only Ubuntu 22.04 and 24.04 are supported.
+- **The server isn't fresh.** Existing software or configuration can conflict with what flitops installs. Rebuild the server with a clean Ubuntu image.
+- **Temporary network or package mirror problems.** These usually go away on their own; try provisioning again later.
+
+For a server created through a provider, the easiest fix is usually to delete it and create a new one. For a custom server, reinstall Ubuntu, then connect it again.

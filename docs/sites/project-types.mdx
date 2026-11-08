@@ -1,0 +1,84 @@
+---
+title: "Project types"
+description: "What flitops sets up for Laravel, Symfony, WordPress, PHP and static sites."
+---
+
+The **project type** you pick when creating a site sets three things: the **web directory** the web server serves, a starting **deploy script**, and which files are **shared** between releases (kept when a new version is deployed). You can edit the deploy script at any time.
+
+## At a glance
+
+| Type | Web directory | What each deploy does by default |
+| --- | --- | --- |
+| **Laravel** | `/public` | Installs Composer packages, builds front-end assets, runs migrations and caches config, routes, views and events |
+| **Symfony** | `/public` | Installs Composer packages, clears and warms the production cache |
+| **PHP** | `/` | Installs Composer packages |
+| **WordPress** | `/` | Nothing extra; keeps uploads and `wp-config.php` between deploys |
+| **Static HTML** | `/` | Nothing; files are served as they are, without PHP |
+
+## Laravel
+
+Default deploy script:
+
+```bash
+$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
+npm run build
+
+$PHP artisan migrate --force
+$PHP artisan config:cache
+$PHP artisan route:cache
+$PHP artisan view:cache
+$PHP artisan event:cache
+```
+
+After the new release goes live, flitops also restarts your long-running processes so they pick up the new code:
+
+- `php artisan queue:restart`, always.
+- `php artisan horizon:terminate`, if your project uses Laravel Horizon.
+- `php artisan reverb:restart`, if your project uses Laravel Reverb.
+
+These run automatically, so you don't need them in your deploy script.
+
+**Kept between releases:** `.env`, the `storage` folder and `database/database.sqlite`.
+
+**When the site is created:** flitops writes a starting `.env` with `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` set to your domain, a newly generated `APP_KEY`, and the database settings (`DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`), or SQLite if you didn't connect a database. Add the rest of your app's settings on the [Environment](/sites/environment) tab before you rely on them.
+
+<Tip>Laravel's task scheduler needs a cron job. Add `php artisan schedule:run` to run every minute; see [Workers and cron jobs](/servers/processes#laravels-scheduler).</Tip>
+
+## Symfony
+
+Default deploy script:
+
+```bash
+$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+$PHP bin/console cache:clear --env=prod
+$PHP bin/console cache:warmup --env=prod
+```
+
+**Kept between releases:** `.env`, `.env.local`, `var/cache` and `var/log`.
+
+## PHP
+
+For any other PHP application. Default deploy script:
+
+```bash
+$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+```
+
+**Kept between releases:** `.env`.
+
+## WordPress
+
+The deploy script is empty by default. Add anything your setup needs, such as `$COMPOSER install` if you manage WordPress with Composer.
+
+**Kept between releases:** `wp-config.php` and `wp-content/uploads`, so your settings and media library survive every deploy. flitops creates an empty, private `wp-config.php` in the shared folder when the site is created; fill it in with your database details and keys.
+
+## Static HTML
+
+For plain HTML, CSS and JavaScript sites, or the output of a static site generator. Files are served as they are, without PHP. The deploy script is empty by default; if your site needs a build step, choose a package manager and build command when creating the site, or add the commands to the deploy script.
+
+## Changing the web directory
+
+If your project's public files are in a different folder (for example `/dist` for a static site, or `/web` for some PHP frameworks), set the **Web directory** when creating the site, or change it later with **Edit Site**.

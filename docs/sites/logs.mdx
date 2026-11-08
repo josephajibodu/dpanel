@@ -1,0 +1,29 @@
+---
+title: "Logs"
+description: "Read a site's web server error log from the dashboard."
+---
+
+The site's **Logs** tab shows the latest entries from the site's **web server error log**: the last 100 lines, oldest first. This is where errors like PHP crashes, timeouts reaching PHP-FPM, and configuration problems show up.
+
+Click **Refresh** to load the latest lines.
+
+| You see | It means |
+| --- | --- |
+| **No errors logged** | Nothing has been written to the error log yet. Good news. |
+| "Couldn't read the error log from the server" | flitops couldn't reach the server. Check the server is online, then refresh. |
+
+Each Nginx site has its own error log, so you only see this site's errors. On Caddy servers, a per-site error log isn't available yet.
+
+## Your application's own logs
+
+Your app may also write its own log files, such as Laravel's `storage/logs/laravel.log`. Viewing those from the dashboard is [coming soon](/roadmap). Until then, you can:
+
+- Read them with a [command](/sites/commands), for example `tail -n 100 storage/logs/laravel.log`.
+- Use the [browser terminal](/servers/terminal) or [SSH](/connections/ssh-keys).
+- Send logs to an external logging service from your app.
+
+Worker output is available from each worker's **View logs** action. See [Workers and cron jobs](/servers/processes#controlling-a-worker).
+
+## When a site goes down
+
+If [uptime monitoring](/monitoring/uptime) finds your site is down, the alert email includes the most recent lines from this error log, to help you see what went wrong straight away.

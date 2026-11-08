@@ -1,0 +1,45 @@
+---
+title: "Environment"
+description: "Edit your site's .env file securely from the dashboard."
+---
+
+Most apps read their settings and secrets (database passwords, API keys, mail settings) from **environment variables**, usually stored in a `.env` file. The site's **Environment** tab lets you edit that file without logging in to the server.
+
+## Who can see and change it
+
+- The **Environment** tab is only shown to members with the **View secrets** permission (Owners, Admins and Developers).
+- Saving changes needs the **Deploy** permission.
+
+## Viewing variables
+
+Variables are **hidden by default**, so they aren't shown on screen if someone is looking over your shoulder or you're sharing your screen. Click **Reveal secrets** to show them.
+
+## Editing variables
+
+1. Click **Reveal secrets**.
+2. Edit the file. Use the standard `.env` format, one variable per line:
+
+   ```bash .env
+   APP_NAME="My App"
+   MAIL_MAILER=smtp
+   STRIPE_SECRET=sk_live_...
+   ```
+
+3. Choose what should happen after saving (for Laravel sites):
+   - **Clear config cache**: rebuilds Laravel's cached configuration so the new values are used. Leave it on if your deploy script runs `config:cache`, otherwise your app keeps using the old values.
+   - **Restart queue workers**: restarts queue workers, Horizon and Reverb, which load settings once when they start and otherwise keep the old values.
+4. Save.
+
+flitops saves the variables encrypted, then writes them to the site's `.env` file on the server. The file lives in the site's shared folder, so every release uses it, and only the site's user can read it.
+
+<Warning>Changing the environment affects the live site as soon as the file is written (or after the config cache is rebuilt). Double-check values such as database credentials before saving.</Warning>
+
+## Values flitops sets for you
+
+When a Laravel site is created, flitops fills in `APP_ENV`, `APP_DEBUG`, `APP_URL`, `APP_KEY` and the `DB_*` settings. If you connect the site to Redis on another server, add `REDIS_HOST` and `REDIS_PASSWORD` here; see [Server connections](/servers/server-connections#redis).
+
+## Tips
+
+- Never commit your production `.env` file to your Git repository. Keep secrets in flitops instead.
+- Keep `APP_DEBUG=false` in production. Debug mode can show secrets in error pages.
+- Don't change `APP_KEY` on a live Laravel site unless you know what you're doing: it would log out every user and make encrypted data unreadable.

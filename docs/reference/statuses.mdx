@@ -1,0 +1,80 @@
+---
+title: "Statuses"
+description: "What every status in flitops means."
+---
+
+## Servers
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Waiting to start. A custom server stays here until you start provisioning. |
+| **Creating** | flitops is asking your provider to create the machine. |
+| **Provisioning** | flitops is installing and configuring software. |
+| **Active** | Ready to use. |
+| **Error** | Creating or provisioning failed. See the provisioning log. |
+| **Deleting** | Being removed. |
+
+## Sites
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Waiting to be set up. |
+| **Installing** | Being set up on the server. |
+| **Provisioned** | Set up, no code deployed yet. |
+| **Deploying** | A deployment is running. |
+| **Deployed** | Live. |
+| **Failed** | Setup failed; check the message and click **Retry**. |
+| **Isolating** | Being converted to an isolated site. |
+| **Deleting** | Being removed. |
+
+## Deployments
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Queued. Can still be cancelled. |
+| **Running** | In progress. |
+| **Finished** | Succeeded; the new release is live. |
+| **Failed** | A command failed. |
+| **Cancelled** | Cancelled before it started. |
+
+## Domains
+
+| Status | Meaning |
+| --- | --- |
+| **Unverified** | DNS not confirmed yet. |
+| **Verified** | DNS points at your server. |
+| **Enabled** / disabled | Whether the web server serves the domain. |
+| **Deleting** | Being removed. |
+
+## SSH key syncs
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Waiting to be installed. |
+| **Syncing** | Being installed. |
+| **Synced** | Installed; the key can log in. |
+| **Revoking** | Being removed. |
+| **Failed** | Couldn't be installed; check the server is active and try again. |
+
+## Workers
+
+| Status | Meaning |
+| --- | --- |
+| **Active** | Running. |
+| **Stopped** | Not running. |
+| **Starting**, **Stopping**, **Restarting** | A change is in progress. |
+
+## Uptime
+
+| Status | Meaning |
+| --- | --- |
+| **Up** | The last check succeeded. |
+| **Down** | 2 or more checks in a row failed. |
+| **Not checked yet** | The site hasn't been checked yet. |
+
+## Provider and storage accounts
+
+| Status | Meaning |
+| --- | --- |
+| **Validated** | flitops checked the credentials and they work. |
+| **Invalid** / not validated | The credentials didn't work, or haven't been checked. Re-validate or reconnect. |

@@ -1,0 +1,32 @@
+---
+title: "SQLite backups"
+description: "Back up the SQLite database of a Laravel site that doesn't use a server database."
+---
+
+Laravel sites created without a server database use **SQLite**: the whole database is one file (`database/database.sqlite`), kept in the site's shared folder so it survives deploys. flitops can back that file up to your storage, just like a server database.
+
+## Setting up
+
+Open the site's **Database** tab. It shows **SQLite** as the engine, with a **Schedule** card and **History**, which work the same way as for [server databases](/backups/scheduled-backups):
+
+- Choose a **Storage provider**, **Frequency** (Hourly, Daily or Weekly) and how many to **Keep last**.
+- Turn the schedule **Enabled** and save.
+- Or back up now.
+
+## How it works
+
+flitops makes a consistent copy of the database file using SQLite's own backup method, which is safe even while your app is writing to it. The copy is compressed and sent straight from the server to your bucket.
+
+## Downloading and deleting
+
+From the history you can **Download** a backup (needs **View secrets**) or **Delete** it (needs **Delete backups**).
+
+## Restoring
+
+Restoring a SQLite backup from the dashboard is [coming soon](/roadmap). For now:
+
+1. Download the backup and decompress it.
+2. Upload the file to the server, replacing `shared/database/database.sqlite` in the site's folder (see [Server layout](/reference/server-layout)), using SFTP or `scp` with an SSH key synced to the site.
+3. Make sure the file is owned by the site's user.
+
+<Tip>If your app is growing, consider moving to MySQL or PostgreSQL. You'll get in-place restores from the dashboard, read-only users and server connections.</Tip>

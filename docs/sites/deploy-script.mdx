@@ -1,0 +1,60 @@
+---
+title: "Deploy script"
+description: "Customise the commands that build your site on every deployment."
+---
+
+The **deploy script** is the list of shell commands that run inside each new release during a [deployment](/sites/deployments), such as installing dependencies and running migrations. Edit it on the site's **Deploy Script** tab. Saving needs the **Deploy** permission.
+
+Each [project type](/sites/project-types) starts with a sensible default script.
+
+## How the script runs
+
+- It runs in the **new release folder**, before that release goes live.
+- It runs as the site's user (its own user for [isolated sites](/sites/site-isolation)).
+- It stops at the **first command that fails**. A failed command fails the deployment and your live site isn't changed.
+- Its output streams into the deployment's logs.
+
+You don't need to add commands to download the code, link shared files, switch the release live or reload PHP-FPM. flitops does those before and after your script. For Laravel sites, it also restarts queue workers, Horizon and Reverb after the switch.
+
+## Variables
+
+These variables are available in the script. Use them instead of hard-coding paths and versions, so the script keeps working if you change the site's PHP version.
+
+| Variable | What it contains |
+| --- | --- |
+| `$SITE_ROOT` | The site's base folder on the server (which holds `releases`, `current` and `shared`). |
+| `$RELEASE_PATH` | The new release's folder, where the script is running. |
+| `$BRANCH` | The branch being deployed. |
+| `$PHP` | The PHP command for the site's PHP version, for example to run `$PHP artisan migrate --force`. |
+| `$COMPOSER` | The Composer command, run with the site's PHP version. |
+| `$PHP_FPM` | The name of the PHP-FPM service for the site's PHP version. |
+
+## Examples
+
+Run a Laravel app's migrations and cache its config:
+
+```bash
+$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+$PHP artisan migrate --force
+$PHP artisan config:cache
+```
+
+Build front-end assets with pnpm:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm run build
+```
+
+Only run a step if a file exists:
+
+```bash
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
+```
+
+## Tips
+
+- Use `--force` for Laravel's `migrate` command, since there's no one to answer the "are you sure?" prompt in production.
+- Keep secrets out of the deploy script. Put them in the site's [environment](/sites/environment) instead, where they're encrypted.
+- If a deploy fails, the logs show the exact command and its error. Fix the script or your code, then deploy again.
+- Sites created before flitops started restarting queue workers after the switch may still have `$PHP artisan queue:restart` in their saved script. It's now redundant and safe to remove.

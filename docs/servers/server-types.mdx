@@ -1,0 +1,42 @@
+---
+title: "Server types"
+description: "Choose what a server is for, and what software it gets."
+---
+
+When you create a server you choose a **type**. The type is a preset: it ticks the software that role needs, and you can change the selection before you create the server.
+
+## The types
+
+| Type | Best for | PHP | Web server | Database | Redis |
+| --- | --- | :-: | :-: | :-: | :-: |
+| **App Server** | Everything on one machine. The right choice for most projects. | ✓ | ✓ | ✓ | ✓ |
+| **Web Server** | Serving your sites, while the database lives on another server. | ✓ | ✓ | | |
+| **Worker Server** | Running queue workers and background jobs, with nothing public. | ✓ | | | ✓ |
+| **Database Server** | A dedicated MySQL, PostgreSQL or MariaDB server. | | | ✓ | |
+| **Cache Server** | A dedicated Redis for caching, sessions and queues. | | | | ✓ |
+
+## Software choices
+
+| Software | Options | Notes |
+| --- | --- | --- |
+| **PHP** | 8.4, 8.3, 8.2, 8.1, None | You can [install more versions](/servers/php) later. |
+| **Web server** | Nginx, Caddy, None | Needs PHP. **Caddy** gets HTTPS certificates for your domains automatically. **Nginx** is the most widely used web server and the default choice. Both let you edit each site's configuration files from the dashboard. |
+| **Database** | MySQL 8, PostgreSQL, MariaDB, None | One database engine per server. |
+| **Redis** | On, Off | An in-memory store, used for caching, sessions and queues. |
+
+Every server also gets **Supervisor** (keeps [workers](/servers/processes) running), **Node.js** (Node.js 24 by default, for building front-end assets) and a firewall. Servers with PHP also get **Composer** (PHP's package manager). See [Provisioning](/servers/provisioning).
+
+## Starting small, growing later
+
+Start with a single **App Server**. When traffic grows, you can split the work:
+
+1. Create a **Database Server** and move your data to it.
+2. Create one or more **Web Servers** for your sites.
+3. Add a **Worker Server** for queues, and a **Cache Server** for Redis.
+4. Use [Server connections](/servers/server-connections) to let the web and worker servers reach the database and Redis privately. flitops opens the firewall only for the servers you connect.
+
+## What each type shows
+
+The server page only shows the tabs that make sense for its software. For example, a Database Server has no **Sites** or **PHP** tab, and a server without a database has no **Databases** tab. Only servers with a database or Redis show the **Connections** tab.
+
+<Note>A **Load Balancer** type, for spreading traffic across several web servers, is planned. See the [roadmap](/roadmap).</Note>

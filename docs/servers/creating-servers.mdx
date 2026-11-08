@@ -1,0 +1,58 @@
+---
+title: "Creating servers"
+description: "Create a new server at your cloud provider and let flitops set it up."
+---
+
+flitops can create a server for you at DigitalOcean, Hetzner, Vultr or AWS, then install everything it needs. You need a [connected provider account](/connections/cloud-providers) and the **Manage servers** permission (Owners and Admins).
+
+Already have a server? See [Custom servers](/servers/custom-servers).
+
+## Creating a server
+
+Go to **Servers** and click **Create server**. Make sure **New server** is selected at the top of the form.
+
+<Steps>
+  <Step title="Provider">
+    Choose the **provider account** to create the server in. flitops then loads the regions and sizes that account offers.
+  </Step>
+  <Step title="Region and size">
+    - **Region** is where the server physically lives. Choose one close to your users for faster page loads.
+    - **Size** is how much computing power the server has. The list shows each size's vCPUs (processor cores), RAM (memory), disk space and monthly price. Only sizes available in the chosen region are shown.
+
+    The summary shows an **estimated total** per month, as billed by your provider. Open **Pricing details** for what the estimate includes.
+  </Step>
+  <Step title="Name">
+    flitops suggests a random, friendly name. Click the refresh button for another, or type your own. The name can contain letters, numbers and hyphens, and is also used as the server's **hostname** (the name the machine calls itself).
+  </Step>
+  <Step title="Server type and software">
+    Choose a **server type**. It's a starting point that ticks the right software for the job; you can change the selection below it:
+
+    - **PHP**: 8.4, 8.3, 8.2, 8.1 or None.
+    - **Web server**: Nginx, Caddy (automatic HTTPS) or None. A web server needs PHP.
+    - **Database**: MySQL 8, PostgreSQL, MariaDB or None.
+    - **Redis**: on or off, for caching and queues.
+
+    See [Server types](/servers/server-types) for help choosing.
+  </Step>
+  <Step title="Create">
+    Check the summary and click **Create server**.
+  </Step>
+</Steps>
+
+## What happens next
+
+flitops asks your provider to create the machine, waits for it to start, then [provisions](/servers/provisioning) it: it logs in and installs and configures the software you chose. The server page shows each step as it happens. When it finishes, the server's status changes to **Active** and you can add sites.
+
+Servers are created with **Ubuntu 24.04 LTS**, a long-term-support version of Linux that receives security updates for years.
+
+<Tip>Not sure which size to pick? For a small Laravel or WordPress site, 1–2 vCPUs and 2 GB of RAM is a comfortable start. You can resize later at your provider if you need more.</Tip>
+
+## If something goes wrong
+
+If creating or provisioning fails, the server's status becomes **Error**, the page shows the **Provisioning log** and the reason, and flitops emails you. Common causes:
+
+- The provider account's token has expired or lost permissions. [Re-validate](/connections/cloud-providers#re-validating-credentials) it.
+- Your provider account has reached its limit on servers. Ask your provider to raise it.
+- The chosen size isn't available in that region right now. Try another size or region.
+
+See [Troubleshooting](/troubleshooting#server-provisioning-failed).

@@ -1,0 +1,53 @@
+---
+title: "SSL certificates"
+description: "Free HTTPS for every site, renewed automatically, with alerts if anything goes wrong."
+---
+
+An **SSL certificate** (strictly, a TLS certificate) lets your site use `https://`. Visitors' browsers then encrypt everything they send, and show the padlock instead of a "Not secure" warning. flitops gets free certificates from **Let's Encrypt**, a non-profit certificate authority trusted by every browser.
+
+You don't need to buy or upload anything.
+
+## Free-domain sites
+
+Sites on the flitops free domain (such as `my-app.flitops.xyz`) are covered by a **wildcard certificate** that flitops manages for the whole free domain. HTTPS works from the moment the site is created. flitops renews it well before it expires and installs the new one on every server that needs it.
+
+## Custom domains
+
+For your own domains:
+
+1. [Add the domain](/sites/domains#adding-your-own-domain) and point its DNS at your server.
+2. Click **Verify**. Once the DNS is confirmed, flitops requests a certificate from Let's Encrypt.
+3. Let's Encrypt checks that the domain really points at your server, then issues the certificate. flitops installs it and switches the domain to HTTPS.
+
+If you chose a www redirect on a top-level domain, the certificate covers `www` too.
+
+### On Caddy servers
+
+Caddy gets and renews certificates for your domains by itself. flitops just tells Caddy to serve the domain over HTTPS once it's verified.
+
+## Renewal
+
+Let's Encrypt certificates last 90 days. They're renewed automatically on the server well before they expire, and the new certificate is put in place and the web server reloaded without any downtime. You don't need to do anything.
+
+## Expiry alerts
+
+Every day, flitops connects to each of your servers and checks the certificate it's **actually serving** for each domain, the same way a visitor's browser would. If one is close to expiring (meaning renewal isn't reaching visitors), flitops emails the team owner at **14, 7, 3 and 1 days** before expiry, and on the day it expires. See [Certificate monitoring](/monitoring/certificate-monitoring).
+
+If requesting a certificate fails, flitops emails you too.
+
+## Renewing manually
+
+Choose **Renew SSL** from a custom domain's menu to request a fresh certificate now. Use it if:
+
+- You've fixed a DNS problem that made the first request fail.
+- You've received an expiry alert.
+- Your domain was added a long time ago and you want to make sure it has the automatic renewal set up. Domains added before automatic renewal hooks existed need **Renew SSL** clicked once to get them.
+
+The domain must be verified first.
+
+## Why a certificate request might fail
+
+- **DNS doesn't point at the server yet**, or points somewhere else (including through a proxy such as Cloudflare's orange cloud). Fix the record, wait a few minutes, then use **Renew SSL**.
+- **Port 80 is blocked** by a firewall in front of the server (for example, a cloud provider firewall you set up yourself). Let's Encrypt checks the domain over plain HTTP on port 80.
+- **Let's Encrypt rate limits.** If you request certificates for the same domain many times in a short period, Let's Encrypt temporarily refuses. Wait an hour and try again.
+- **CAA records** on your domain that don't allow Let's Encrypt. Add `letsencrypt.org` to them, or remove them.

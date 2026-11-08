@@ -1,0 +1,106 @@
+---
+title: "Troubleshooting"
+description: "Fixes for the most common problems."
+---
+
+## Server provisioning failed
+
+The server's status is **Error** and the overview shows **Provisioning failed**.
+
+1. Read the last lines of the **Provisioning log**. They usually name the problem.
+2. Check the common causes:
+   - **Unsupported Ubuntu version.** Only 22.04 and 24.04 are supported.
+   - **Not a fresh server** (custom servers). Existing software can conflict. Reinstall Ubuntu.
+   - **Provider limits or an invalid token.** Re-validate the [provider account](/connections/cloud-providers), and check your provider's server limits.
+   - **A temporary network or package mirror problem.** Try again a little later.
+3. For a provider server, delete it and create a new one. For a custom server, reinstall Ubuntu and connect it again.
+
+## Custom server: test connection fails
+
+- Check the **IP address** and **SSH port**.
+- Make sure you ran the setup command **as root**, and copied it exactly (use the **Copy** button).
+- Check your hosting provider's firewall allows SSH on that port from the internet.
+- The address must be a public IP address, not a private or local one.
+
+## Site creation failed
+
+The site page shows **Site creation failed** with a message.
+
+- **Clone failed:** check the repository and branch exist, and that your GitHub account (still) has access to them. If you disconnected and reconnected GitHub, try again.
+- **Dependency install failed:** your `composer.json` or `package.json` may need a newer PHP or Node.js version than the server has. Check the [PHP](/servers/php) and [Node.js](/servers/nodejs) versions.
+- **Build failed:** the logs show the error from your build tool. Fix it in your code, push, and retry.
+- **Migrations failed:** usually a database connection problem. Check the database exists and the credentials in the [environment](/sites/environment) are right.
+
+Click **Retry** once the cause is fixed.
+
+## A deployment failed
+
+1. Open the deployment and read the **build logs**. The last command shown is the one that failed.
+2. If the failure happened before the switch (most failures), your previous release is still live; nothing is broken for visitors.
+3. Fix the problem in your code or [deploy script](/sites/deploy-script), and deploy again.
+4. If a new release is live and broken, [roll back](/sites/deployments#rolling-back).
+
+"**A deployment is already in progress for this site**" means one is still running. Wait for it to finish.
+
+## My changes don't show up after deploying
+
+- **Laravel config cache:** if your deploy script runs `config:cache`, environment changes need **Clear config cache** ticked when saving the [environment](/sites/environment).
+- **Queue workers running old code:** Laravel queue workers, Horizon and Reverb are restarted after each deploy. Other long-running processes need **Restart after each deployment** on their [worker](/servers/processes).
+- **Browser cache or CDN:** hard-refresh the page, or clear your CDN's cache.
+
+## Domain won't verify
+
+- Check the **A record** points to the server's IP address shown on the **Domains** tab. You can check what the world sees with `dig +short example.com`.
+- DNS changes can take a few minutes, sometimes longer. Wait and click **Verify** again.
+- If you use Cloudflare, set the record to **DNS only** (grey cloud) for verification and certificate issuing.
+- Remove any old **AAAA** (IPv6) records pointing elsewhere.
+
+## SSL certificate wasn't issued
+
+See [Why a certificate request might fail](/sites/ssl-certificates#why-a-certificate-request-might-fail). After fixing the cause, click **Renew SSL** on the domain.
+
+## Large uploads fail
+
+Raise **Upload max filesize** and **Post max size** on the server's [PHP](/servers/php#php-settings) tab. On Nginx servers, saving **Post max size** also raises the web server's upload limit to match.
+
+If your server was set up before this happened automatically, save the PHP settings once to apply the web server limit.
+
+## I can't SSH into the server
+
+- Make sure your key is **Synced** to that server in [SSH keys](/connections/ssh-keys).
+- Use the exact command from the server's **Settings** tab, including the user.
+- For an isolated site, log in as the site's user with a key synced to that site, or as the server user if your key has full access.
+- "**Permission denied (publickey)**": your computer isn't offering the matching private key. Try `ssh -i ~/.ssh/id_ed25519 user@ip`.
+
+## flitops says the server's identity changed
+
+flitops refuses to connect because the server presented a different host key than before.
+
+- If **you** rebuilt or reinstalled the server, [reset its identity](/servers/settings#resetting-a-servers-identity).
+- If you **didn't**, don't reset it. Check with your provider that the server and its IP address are still yours.
+
+## A worker keeps stopping
+
+- Open **View logs** on the worker to see its error.
+- Check the command works when run from the site's folder (use [Commands](/sites/commands)).
+- Check the server isn't running out of memory (see [Server metrics](/monitoring/server-metrics)), and reduce **Numprocs** if it is.
+
+## A backup failed
+
+- **Storage errors:** re-validate the [storage provider](/connections/storage-providers), and check the bucket still exists and the keys can write to it.
+- **Disk space:** backups and their verification need free disk space on the server, roughly the size of the database.
+- **Verification failed:** the dump couldn't be loaded back in. Try again; if it keeps failing, contact us.
+
+## Importing a dump fails
+
+- The file must be `.sql` or `.sql.gz`, up to 1 GB.
+- If you're told the database client is too old, update the server's packages (`sudo apt update && sudo apt upgrade`) and try again.
+- See [Importing a dump](/backups/importing-a-dump#tips) for export tips.
+
+## The page doesn't update live
+
+Live updates use a constant connection from your browser. Some company networks, VPNs or browser extensions block these. Refresh the page to see the latest state, or try another network.
+
+## Still stuck?
+
+Contact us at [hello@flitops.com](mailto:hello@flitops.com) with the server or site name and what you were doing. **Never send passwords, private keys or tokens**; we'll never ask for them.

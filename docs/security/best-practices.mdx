@@ -1,0 +1,58 @@
+---
+title: "Security best practices"
+description: "Simple habits that keep your account, servers and data safe."
+---
+
+flitops sets secure defaults, but some of security is in your hands. These are the habits that matter most, roughly in order of importance.
+
+## Your account
+
+<AccordionGroup>
+  <Accordion title="Turn on two-factor authentication" icon="shield">
+    It's the single most effective thing you can do. A stolen password alone then isn't enough to get in. See [Two-factor authentication](/account/two-factor-authentication). Ask everyone in your team to do the same.
+  </Accordion>
+  <Accordion title="Use a unique, generated password" icon="key">
+    Let a password manager create and store a long random password for flitops. Never reuse a password from another site.
+  </Accordion>
+  <Accordion title="Keep your recovery codes safe" icon="life-ring">
+    Store them in your password manager, not in a note on your desktop.
+  </Accordion>
+</AccordionGroup>
+
+## Your team
+
+- **Give the lowest role that works.** Most people who ship code only need **Developer**. Keep **Owner** to one or two people. See [Roles and permissions](/teams/roles-and-permissions).
+- **Remove people promptly** when they leave, and delete their [SSH keys](/connections/ssh-keys).
+- **Review members now and then.** Remove anyone who no longer needs access, and cancel old invitations.
+
+## Your servers
+
+- **Leave site isolation on** for every site. Isolate older sites with **Isolate this site**. See [Site isolation](/sites/site-isolation).
+- **Use SSH keys to isolated sites** for developers, rather than full server access.
+- **Never reset a server's identity** unless you know you rebuilt it. An unexpected identity change can mean someone is impersonating your server.
+- **Keep packages up to date.** Ubuntu's security updates matter. Log in now and then and run `sudo apt update && sudo apt upgrade`, or schedule it.
+- **Don't open database ports to the internet.** Use [server connections](/servers/server-connections) between your servers, and an [SSH tunnel](/servers/connecting-to-a-database) from your computer.
+- **Don't add extra firewall rules** at your cloud provider that open more than SSH, HTTP and HTTPS, unless you know you need them.
+
+## Your sites and data
+
+- **Keep secrets in the Environment tab**, never in your Git repository or deploy script.
+- **Keep `APP_DEBUG=false`** (or your framework's equivalent) in production. Debug pages can reveal secrets.
+- **Keep your dependencies updated.** Most hacked websites are hacked through an outdated plugin or package.
+- **Schedule backups**, and keep them in a separate bucket with its own keys. Every backup is verified, but test a restore on a spare database from time to time anyway.
+- **Use read-only database users** for reporting tools and anyone who only needs to look at data.
+- **Treat downloaded backups as sensitive.** Delete them from your computer when you're done.
+
+## Your provider credentials
+
+- Create **dedicated tokens** for flitops, with only the permissions it needs.
+- **Rotate** them if you think they may have been exposed, then reconnect the account in flitops.
+- **Revoke** them at your provider if you stop using flitops.
+
+## If you think something is wrong
+
+1. **Change your flitops password** and check two-factor authentication is on.
+2. **Remove unknown members** from your teams, and **delete unknown SSH keys**.
+3. **Rotate** your cloud, Git and storage credentials, and any secrets in your sites' environments.
+4. **Check your servers** for unknown users, processes or cron jobs.
+5. **Contact us** at [hello@flitops.com](mailto:hello@flitops.com).

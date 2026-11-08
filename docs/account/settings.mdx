@@ -1,0 +1,49 @@
+---
+title: "Account settings"
+description: "Manage your profile, Git identity, password, appearance and account."
+---
+
+Open your account settings from the user menu at the bottom of the sidebar, then **Settings**. The settings area has five tabs: **Profile**, **Password**, **Two-Factor Auth**, **Appearance** and **Team**.
+
+## Signing up and signing in
+
+- **Register** with your name, email address and a password. flitops sends you a verification email; you need to confirm your address before you can use the dashboard. If the email doesn't arrive, the verification page lets you send a new link.
+- **Sign in** with your email and password. Tick **Remember me** to stay signed in on that browser.
+- **Forgot your password?** Use **Forgot password?** on the sign-in page. flitops emails you a link to choose a new one.
+- If you have [two-factor authentication](/account/two-factor-authentication) turned on, you'll be asked for a code from your authenticator app after your password.
+
+## Profile
+
+On the **Profile** tab you can change:
+
+- **Full name** and **Email address**. If you change your email, you'll need to verify the new address.
+- **Git name** and **Git email**. These identify you as the author of any Git commits made on your servers by applications that commit changes themselves (for example, some content management systems save content as Git commits).
+
+## Password
+
+On the **Password** tab, enter your current password and your new password twice. Use a long, random password, ideally generated and stored by a password manager.
+
+<Note>To protect your account, password changes are rate-limited. If you try too many times in a short period, wait a minute and try again.</Note>
+
+## Appearance
+
+Choose **Light**, **Dark** or **System** (follows your computer's setting). You can also switch quickly using the theme toggle in the app.
+
+## Team
+
+The **Team** tab takes you to the settings of the team you're currently working in. See [Teams](/teams/overview).
+
+## Deleting your account
+
+At the bottom of the **Profile** tab, **Delete account** permanently deletes your account. You'll need to enter your password to confirm.
+
+<Warning>
+  Deleting your account cannot be undone. Before you do it:
+
+  - For any team that others depend on, make another member an Owner first (see [Roles and permissions](/teams/roles-and-permissions)), or delete the team yourself.
+  - Remember that deleting your flitops account **does not delete servers at your cloud provider**. They keep running, and keep being billed, until you delete them there.
+</Warning>
+
+## Confirming your password
+
+Some sensitive areas, such as the [browser terminal](/servers/terminal), ask you to re-enter your password even though you're signed in. Once confirmed, you won't be asked again for 15 minutes. This protects you if you leave your computer unlocked.

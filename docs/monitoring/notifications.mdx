@@ -1,0 +1,35 @@
+---
+title: "Notifications"
+description: "Every email and in-app alert flitops sends, and who receives it."
+---
+
+flitops tells you when something needs your attention, by email and, for some failures, with a banner in the dashboard.
+
+## Emails
+
+| Email | Sent when | Sent to |
+| --- | --- | --- |
+| **Server provisioning failed** | Creating or provisioning a server fails | The person who created the server |
+| **Site is down** | A site fails 2 uptime checks in a row | The team owner |
+| **Site recovered** | A site that was down is reachable again | The team owner |
+| **SSL certificate expiring** | A served certificate is 14, 7, 3, 1 or 0 days from expiry | The team owner |
+| **SSL certificate request failed** | Issuing or renewing a certificate for a domain fails | The team owner |
+| **Database backup failed** | A backup fails | The person who started it, or the team owner for scheduled backups |
+| **Team invitation** | Someone invites you to a team | The invited email address |
+
+Account emails (verifying your email address and resetting your password) are sent to you as needed.
+
+## Dashboard alerts
+
+Failures that need action, such as a **failed backup**, also appear as a banner at the top of every page until you dismiss them. Click **View details** to go to the problem, or **Dismiss** to hide it.
+
+## Live updates
+
+You don't need to refresh the page to see progress. Deployments, provisioning, backups, domain verification, worker status, metrics and more update live while you watch.
+
+## Making sure you get emails
+
+- Add flitops's sending address to your contacts, or allow it in your spam filter.
+- Most alerts go to the team owner (the person who created the team), so make sure that account uses an email address someone reads.
+
+<Note>Choosing who receives each alert, and sending alerts to Slack, SMS or webhooks, is on the [roadmap](/roadmap).</Note>

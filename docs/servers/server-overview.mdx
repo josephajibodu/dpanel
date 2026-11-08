@@ -1,0 +1,59 @@
+---
+title: "Server overview"
+description: "Find your way around a server's page: details, metrics, sites, databases and recent events."
+---
+
+Click a server in the **Servers** list to open it. Along the top are the server's tabs. Which tabs you see depends on the software installed on it (see [Server types](/servers/server-types#what-each-type-shows)) and your role.
+
+| Tab | What it's for |
+| --- | --- |
+| **Overview** | Details, live metrics, sites, databases and recent events |
+| **Sites** | All [sites](/sites/creating-sites) on the server |
+| **Databases** | [Databases and database users](/servers/databases), and their [backups](/backups/overview) |
+| **Connections** | [Other servers allowed to reach](/servers/server-connections) this server's database and Redis |
+| **PHP** | [PHP versions, extensions and settings](/servers/php) |
+| **Processes** | [Workers and cron jobs](/servers/processes) |
+| **Runtime** | The [Node.js version](/servers/nodejs) |
+| **Terminal** | A [browser terminal](/servers/terminal) (Owners and Admins) |
+| **Settings** | [SSH access, server identity and deleting the server](/servers/settings) |
+
+## The overview
+
+### Server details
+
+The details card shows the server's **name**, **provider account**, **size**, **region**, **SSH port** and its **public** and **private** IP addresses, plus the installed runtime (PHP, web server, database, Redis).
+
+### Metrics
+
+The overview shows the server's **CPU load**, **memory usage** and **disk usage**. flitops collects these automatically every 10 minutes. Click **Refresh** to fetch them right now. See [Server metrics](/monitoring/server-metrics).
+
+### Sites and databases
+
+Quick lists of the **sites** and **databases** on the server, with links to create new ones. Click **View All** to open the full list.
+
+### Recent events
+
+A log of the latest provisioning and management actions on the server, with when they happened and their status.
+
+### Provisioning log
+
+While a server is provisioning, or if provisioning failed, the overview shows each step and the output from the server. See [Provisioning](/servers/provisioning).
+
+## Server statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Waiting to start. For a custom server, waiting for you to finish the setup steps. |
+| **Creating** | flitops is asking your provider to create the machine. |
+| **Provisioning** | flitops is installing software. |
+| **Active** | Ready to use. |
+| **Error** | Something failed. Check the provisioning log. |
+| **Deleting** | The server is being removed. |
+
+## Testing the connection
+
+On a custom server's setup page, **Test connection** checks that flitops can log in. The result updates live on the page.
+
+## Switching between servers
+
+Use the server switcher in the breadcrumb at the top of the page to jump straight to another server, without going back to the list.

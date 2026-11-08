@@ -1,0 +1,97 @@
+---
+title: "Deployments"
+description: "Ship new code with zero downtime, watch it live, cancel it, and roll back in one click."
+---
+
+A **deployment** takes the latest code from your site's branch and makes it live. Manage deployments on the site's **Deployments** tab. You need the **Deploy** permission (Owners, Admins and Developers).
+
+## Deploying
+
+Click **Deploy Now**. flitops starts a new deployment and opens its page, where the **build logs** stream in live as each command runs.
+
+Only one deployment can run per site at a time. If you click **Deploy Now** while one is running, flitops tells you a deployment is already in progress.
+
+## How a deployment works
+
+flitops uses **zero-downtime deployments**. Your live site is never changed in place:
+
+<Steps>
+  <Step title="A new release folder">
+    flitops creates a fresh, empty **release** folder and downloads your branch's latest code into it.
+  </Step>
+  <Step title="Shared files are linked in">
+    Files that must survive between releases, such as `.env`, `storage` and uploads, live in the site's **shared** folder. flitops links them into the new release. See [Project types](/sites/project-types) for which files each type shares.
+  </Step>
+  <Step title="Your deploy script runs">
+    Your [deploy script](/sites/deploy-script) runs inside the new release: installing dependencies, building assets, running migrations and so on. The script stops at the first command that fails.
+  </Step>
+  <Step title="The switch">
+    Only if every command succeeded, flitops points the site's `current` link at the new release. This switch is instant, so visitors go straight from the old version to the new one. PHP-FPM is reloaded so it picks up the new code.
+  </Step>
+  <Step title="After the switch">
+    For Laravel sites, flitops restarts queue workers (and Horizon and Reverb, if your project uses them) from the new release, so they run the new code. Workers with **Restart after each deployment** turned on are restarted too.
+  </Step>
+  <Step title="Clean-up">
+    flitops keeps your **5 most recent releases**, plus whichever one is live, and deletes older ones to save disk space.
+  </Step>
+</Steps>
+
+If anything fails before the switch, **your live site isn't touched**. Visitors keep using the previous release, and the deployment is marked **Failed** with the logs showing exactly which command failed.
+
+<Note>Database migrations run before the switch, while the old release is still serving visitors. Write migrations that the old code can live with for a moment (for example, add a new column before using it, and remove an old column in a later deploy).</Note>
+
+## Deployment history
+
+The **Deployment History** table lists each deployment with its:
+
+- **Status**: Pending, Running, Finished, Failed or Cancelled.
+- **Commit**: the commit hash and message that was deployed.
+- **Triggered by**: who started it (or **Manual** / **webhook**).
+- **Author**: who wrote the commit.
+- **Date**.
+
+Click **View** to open a deployment and read its full logs.
+
+## Cancelling a deployment
+
+Open a **pending** deployment (one that's queued but hasn't started) and click **Cancel deployment**. It won't run, and your live site stays on its current release. A deployment that's already running can't be cancelled; let it finish or fail, then roll back if needed.
+
+## Rolling back
+
+If a deployment breaks something, switch back to an earlier release in seconds:
+
+1. On the **Deployments** tab, click **Rollback** next to an earlier, successful deployment (or open it and click **Rollback to this**).
+2. Confirm.
+
+flitops points `current` back at that release, reloads PHP-FPM and, for Laravel, restarts your queue workers, Horizon and Reverb from it. **Nothing is rebuilt**, so it's almost instant.
+
+You can roll back to any release flitops still keeps (the 5 most recent).
+
+<Warning>A rollback switches the code, not the database. If the deployment you're undoing ran migrations, the database keeps those changes. Make sure the older code still works with the current database, or roll back the migration yourself first.</Warning>
+
+## Automatic deploys
+
+Turn on **Deploy on push** to deploy every time someone pushes to the site's branch:
+
+1. From the site's menu, choose **Edit Site**.
+2. Turn on **Deploy on push** and save.
+
+flitops adds a webhook to your repository on GitHub. From then on, each push to the site's branch starts a deployment, shown as triggered by **webhook**. Pushes to other branches, tags and other GitHub events are ignored.
+
+You need the **Deploy** permission, and the site's repository must come from a connected GitHub account. You also need **admin access** to the repository on GitHub, because adding a webhook needs it; if GitHub refuses, flitops tells you and leaves Deploy on push off.
+
+Turn it off the same way to remove the webhook. Deleting the site removes it too.
+
+<Note>Deploy on push for GitLab and Bitbucket, and triggering deploys from your CI pipeline, are on the [roadmap](/roadmap).</Note>
+
+## Deployment statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Queued, about to start. |
+| **Running** | In progress; logs are streaming. |
+| **Finished** | Succeeded. The new release is live. |
+| **Failed** | A command failed. If it failed before the switch, the previous release is still live. |
+| **Cancelled** | Cancelled before it started. |
+
+<Note>Commands that run **after** the switch (such as restarting queue workers) can also fail a deployment. In that case the new release is already live; check the logs to see which restart failed.</Note>

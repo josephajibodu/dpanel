@@ -1,0 +1,46 @@
+---
+title: "Glossary"
+description: "Plain-language explanations of the terms used in flitops."
+---
+
+| Term | Meaning |
+| --- | --- |
+| **A record** | A DNS record that points a domain at a server's IPv4 address. |
+| **Caddy** | A web server that gets HTTPS certificates automatically. One of the two web servers flitops can install. |
+| **Composer** | PHP's package manager. Installs the libraries your PHP app depends on. |
+| **Cron job** | A command that runs automatically on a schedule. |
+| **Custom server** | A server you already have, connected to flitops over SSH, rather than created through a provider. |
+| **Deploy script** | The commands that build your app during each deployment. |
+| **Deployment** | One run of making your latest code live. |
+| **DNS** | The internet's address book. It maps domain names to server addresses. |
+| **Environment (`.env`)** | Your app's settings and secrets, such as database passwords and API keys. |
+| **Firewall** | Software that decides which network traffic may reach the server. |
+| **Free domain** | A subdomain of the flitops free domain, with DNS and HTTPS handled for you. |
+| **Host key** | The fingerprint a server uses to prove its identity to anyone connecting over SSH. |
+| **Isolation** | Running a site as its own Linux user, so it can't reach other sites. |
+| **Let's Encrypt** | A free, non-profit certificate authority whose certificates every browser trusts. |
+| **Migration** | A script that changes your database's structure, such as adding a table. |
+| **Nginx** | The most widely used web server. One of the two web servers flitops can install. |
+| **PHP-FPM** | The program that runs PHP code for web requests. |
+| **Primary domain** | A site's main address. Uptime checks use it. |
+| **Private network** | A network between servers at the same provider, not reachable from the internet. |
+| **Provider account** | A connection to your cloud provider, used to create servers. |
+| **Provisioning** | Installing and configuring software on a new server. |
+| **Redis** | A fast in-memory data store, used for caching, sessions and queues. |
+| **Release** | One deployment's copy of your code, in its own folder. |
+| **Rollback** | Switching a site back to an earlier release. |
+| **Root** | The all-powerful administrator account on a Linux server. |
+| **Shared folder** | Where files that survive between releases live, such as `.env` and uploads. |
+| **SSH** | The secure, encrypted way to log in to and run commands on a server. |
+| **SSH key** | A pair of files that proves who you are to a server. The **public** key goes on the server; the **private** key never leaves your computer. |
+| **SSH tunnel** | A way to reach a service on the server (such as a database) through an SSH connection, without exposing it to the internet. |
+| **SSL / TLS certificate** | What makes `https://` work, so traffic between visitors and your site is encrypted. |
+| **Storage provider** | Your own S3 or R2 bucket, where backups are kept. |
+| **Supervisor** | A process manager that keeps workers running and restarts them if they stop. |
+| **Swap** | Disk space a server uses as overflow when it runs out of memory. |
+| **Team** | A shared workspace for servers, sites and people. |
+| **Uptime** | Whether a site is reachable. |
+| **Wildcard** | A domain or certificate that covers every subdomain, such as `*.example.com`. |
+| **Worker** | A program that runs continuously in the background, such as a queue worker. |
+| **www redirect** | Sending visitors from `www.example.com` to `example.com`, or the other way round. |
+| **Zero-downtime deployment** | Building a new release in a separate folder and switching to it instantly, so visitors never see a broken or half-updated site. |

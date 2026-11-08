@@ -1,0 +1,135 @@
+---
+title: "Cloud providers"
+description: "Connect DigitalOcean, Hetzner, Vultr or AWS so flitops can create servers in your account."
+---
+
+A **provider account** is a connection to your cloud provider. flitops uses it to create servers in your account, look up the regions and sizes you can choose from, and delete servers when you ask it to. Provider accounts belong to a team, so every Owner and Admin in the team can create servers with them.
+
+You can connect as many provider accounts as you like, including several accounts with the same provider (for example, one for production and one for staging).
+
+## Supported providers
+
+| Provider | What you need |
+| --- | --- |
+| **DigitalOcean** | A personal access token with read and write access |
+| **Hetzner Cloud** | An API token with read and write access, created inside a Hetzner Cloud project |
+| **Vultr** | An API key |
+| **AWS** (EC2) | An access key ID and secret access key for an IAM user |
+
+Don't have any of these? You can still use flitops with any Ubuntu server. See [Custom servers](/servers/custom-servers).
+
+## Connecting a provider
+
+<Steps>
+  <Step title="Open Provider Accounts">
+    In the sidebar, click **Provider Accounts**, then **Connect Provider**.
+  </Step>
+  <Step title="Choose the provider">
+    Pick **DigitalOcean**, **Hetzner**, **Vultr** or **AWS**.
+  </Step>
+  <Step title="Name the account">
+    Give it an **Account Name** you'll recognise later, such as "Production" or "Client A".
+  </Step>
+  <Step title="Paste your credentials">
+    Paste the API token, or for AWS the **Access Key ID** and **Secret Access Key**. See below for how to create them.
+  </Step>
+  <Step title="Save">
+    flitops checks the credentials with your provider before saving. Once they're valid, the account shows as validated and you can [create servers](/servers/creating-servers) with it.
+  </Step>
+</Steps>
+
+## Creating credentials for each provider
+
+<AccordionGroup>
+  <Accordion title="DigitalOcean">
+    1. Sign in to the DigitalOcean control panel.
+    2. Go to **API → Tokens** and click **Generate New Token**.
+    3. Give it a name (for example "flitops"), choose an expiry, and give it **read and write** access (full access, or custom scopes covering Droplets, SSH keys and regions/sizes).
+    4. Copy the token. DigitalOcean only shows it once.
+  </Accordion>
+  <Accordion title="Hetzner Cloud">
+    1. Sign in to the Hetzner Cloud Console and open the **project** you want servers created in.
+    2. Go to **Security → API tokens** and click **Generate API token**.
+    3. Choose **Read & Write** permission.
+    4. Copy the token. Hetzner only shows it once.
+
+    Servers are always created in the project the token belongs to. To use several projects, connect one provider account per project.
+  </Accordion>
+  <Accordion title="Vultr">
+    1. Sign in to Vultr and go to **Account → API**.
+    2. Enable the API and copy your **API key**.
+    3. If you use Vultr's access control list for the API, allow the addresses flitops connects from, or leave it open.
+  </Accordion>
+  <Accordion title="AWS">
+    flitops creates EC2 instances. Use a dedicated IAM user that can only do what flitops needs, rather than your root account or an administrator.
+
+    1. In the AWS console, open **IAM → Users** and create a user (for example "flitops"). It doesn't need console access.
+    2. Attach a policy with the permissions below. The connect form shows the same policy so you can copy it.
+    3. Open the user, go to **Security credentials**, and create an **access key**. Copy the **Access key ID** and **Secret access key**.
+
+    ```json IAM policy
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DescribeRegions",
+            "ec2:DescribeImages",
+            "ec2:DescribeVpcs",
+            "ec2:DescribeSecurityGroups",
+            "ec2:CreateSecurityGroup",
+            "ec2:AuthorizeSecurityGroupIngress",
+            "ec2:ImportKeyPair",
+            "ec2:DeleteKeyPair",
+            "ec2:RunInstances",
+            "ec2:DescribeInstances",
+            "ec2:TerminateInstances",
+            "ec2:CreateTags",
+            "ec2:DescribeAddresses",
+            "ec2:AllocateAddress",
+            "ec2:AssociateAddress",
+            "ec2:DisassociateAddress",
+            "ec2:ReleaseAddress"
+          ],
+          "Resource": "*"
+        }
+      ]
+    }
+    ```
+
+    This lets flitops create, manage and delete EC2 servers, and nothing else. It can't read your other AWS services, billing or users.
+
+    **What flitops creates in your AWS account:** each server gets a fixed public IP address (an Elastic IP) so its address never changes, and flitops creates one security group per region for its servers. When you delete a server in flitops, its instance, Elastic IP and key pair are removed too.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  Treat these tokens like passwords. Create them only for flitops, give them the least access that works, and revoke them at your provider if you ever stop using flitops.
+</Tip>
+
+## Viewing a provider account
+
+Click a provider account to see when it was last validated and every server created with it, with each server's region and status.
+
+## Re-validating credentials
+
+If a token expires or you rotate it at your provider, flitops can no longer create or delete servers with it. Use **Re-validate** (or **Re-validate Credentials** from the account's menu) to check it again. If the token has changed, disconnect the account and connect it again with the new token.
+
+## Disconnecting a provider account
+
+From the account's menu, choose **Disconnect**. flitops forgets the credentials.
+
+<Note>Disconnecting doesn't delete any servers at your provider. Servers created with this account stay in your cloud account. To have flitops delete a server for you, delete it in flitops before disconnecting the account.</Note>
+
+## How your credentials are stored
+
+Your tokens and keys are encrypted before they're saved and are never sent back to your browser after you enter them. See [How flitops protects you](/security/how-flitops-protects-you).
+
+## Costs
+
+flitops shows an estimated monthly price for each size when you create a server, taken from your provider. You're billed by your provider, not by flitops, for the servers you create. Notes shown on the form:
+
+- **Hetzner** prices exclude VAT. Traffic beyond the included amount is billed by Hetzner.
+- **DigitalOcean** and **Vultr** prices include a public IPv4 address. Bandwidth beyond the included amount is billed by the provider.
+- **AWS** prices are an estimate from `us-east-1`, including a 30 GB disk and a fixed public IP. Other regions and data transfer can cost more.
