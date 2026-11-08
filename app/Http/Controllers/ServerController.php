@@ -7,6 +7,7 @@ use App\Actions\Servers\CreateServerAction;
 use App\Actions\Servers\DeleteServerAction;
 use App\Data\CustomServerData;
 use App\Data\ServerData;
+use App\Enums\Provider;
 use App\Enums\ProvisioningStep;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
@@ -252,7 +253,9 @@ class ServerController extends Controller
 
         return redirect()
             ->route('servers.index', $team)
-            ->with('success', 'Server deletion initiated.');
+            ->with('success', $server->provider === Provider::Custom
+                ? 'Disconnecting the server. It keeps running, without Flitops.'
+                : 'Server deletion initiated.');
     }
 
     public function restart(Team $team, Server $server, Request $request): RedirectResponse

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Servers\RevokeFlitopsAccessAction;
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
 use App\Enums\Provider;
 use App\Enums\ServerStatus;
@@ -37,6 +38,7 @@ class DeleteServerJob implements ShouldQueue
         ProviderManager $providerManager,
         SourceControlService $sourceControlService,
         CleanupSiteExternalResourcesAction $cleanupAction,
+        RevokeFlitopsAccessAction $revokeFlitopsAccess,
     ): void {
         Log::info("Starting deletion of server {$this->server->id} ({$this->server->name})");
 
@@ -103,6 +105,18 @@ class DeleteServerJob implements ShouldQueue
             } catch (\Exception $e) {
                 Log::warning("Failed to delete GitHub account SSH keys: {$e->getMessage()}");
                 // Continue with server deletion even if SSH key cleanup fails
+            }
+
+            // A custom server keeps running after it is disconnected, so take
+            // our SSH key off it. Best effort: an unreachable server must not
+            // block the disconnect.
+            if ($this->server->provider === Provider::Custom) {
+                try {
+                    $revokeFlitopsAccess->execute($this->server);
+                    Log::info("Removed our SSH key from custom server {$this->server->id}");
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to remove our SSH key from custom server {$this->server->id}: {$e->getMessage()}");
+                }
             }
 
             // Broadcast deletion before removing the record so list subscribers can update

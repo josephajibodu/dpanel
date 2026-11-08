@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Servers\RevokeFlitopsAccessAction;
 use App\Actions\Sites\CleanupSiteExternalResourcesAction;
+use App\Contracts\ProviderContract;
 use App\Events\ServerDeleted;
 use App\Jobs\DeleteServerJob;
 use App\Models\Server;
@@ -21,18 +23,18 @@ it('broadcasts ServerDeleted when job completes successfully', function () {
         'meta' => [],
     ]);
 
-    $mockProvider = \Mockery::mock(\App\Contracts\ProviderContract::class)->makePartial();
+    $mockProvider = Mockery::mock(ProviderContract::class)->makePartial();
     $mockProvider->shouldReceive('deleteServer')->andReturn(null);
     $mockProvider->shouldReceive('deleteSshKey')->andReturn(null);
 
-    $mockProviderManager = \Mockery::mock(ProviderManager::class);
+    $mockProviderManager = Mockery::mock(ProviderManager::class);
     $mockProviderManager->shouldReceive('forAccount')
-        ->with(\Mockery::on(fn ($account) => $account->id === $server->providerAccount->id))
+        ->with(Mockery::on(fn ($account) => $account->id === $server->providerAccount->id))
         ->andReturn($mockProvider);
 
-    $mockSourceControl = \Mockery::mock(SourceControlService::class);
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
     $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')
-        ->with(\Mockery::on(fn ($s) => $s->id === $server->id))
+        ->with(Mockery::on(fn ($s) => $s->id === $server->id))
         ->andReturn(null);
 
     $this->app->instance(ProviderManager::class, $mockProviderManager);
@@ -43,6 +45,7 @@ it('broadcasts ServerDeleted when job completes successfully', function () {
         app(ProviderManager::class),
         app(SourceControlService::class),
         app(CleanupSiteExternalResourcesAction::class),
+        app(RevokeFlitopsAccessAction::class),
     );
 
     Event::assertDispatched(ServerDeleted::class, function (ServerDeleted $event) use ($server) {
@@ -66,19 +69,19 @@ it('cleans up cloudflare DNS records for each site before destroying the VPS', f
     SiteDomain::where('site_id', $siteA->id)->update(['cloudflare_dns_record_id' => 'cf-rec-A']);
     SiteDomain::where('site_id', $siteB->id)->update(['cloudflare_dns_record_id' => 'cf-rec-B']);
 
-    $mockProvider = \Mockery::mock(\App\Contracts\ProviderContract::class)->makePartial();
+    $mockProvider = Mockery::mock(ProviderContract::class)->makePartial();
     $mockProvider->shouldReceive('deleteServer')->andReturn(null);
     $mockProvider->shouldReceive('deleteSshKey')->andReturn(null);
 
-    $mockProviderManager = \Mockery::mock(ProviderManager::class);
+    $mockProviderManager = Mockery::mock(ProviderManager::class);
     $mockProviderManager->shouldReceive('forAccount')->andReturn($mockProvider);
 
-    $mockSourceControl = \Mockery::mock(SourceControlService::class);
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
     $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->andReturn(null);
 
     // Spy on the cleanup action — it should be called once per site, both with
     // cleanupGithubSshKey: false (the server-wide GitHub sweep handles that).
-    $mockCleanup = \Mockery::mock(CleanupSiteExternalResourcesAction::class);
+    $mockCleanup = Mockery::mock(CleanupSiteExternalResourcesAction::class);
     $mockCleanup->shouldReceive('execute')
         ->once()
         ->withArgs(function (array $recordIds, $serverArg, $accountArg, $domain, $cleanupGithubSshKey) use ($siteA) {
@@ -103,6 +106,7 @@ it('cleans up cloudflare DNS records for each site before destroying the VPS', f
         app(ProviderManager::class),
         app(SourceControlService::class),
         app(CleanupSiteExternalResourcesAction::class),
+        app(RevokeFlitopsAccessAction::class),
     );
 
     $this->assertDatabaseMissing('servers', ['id' => $server->id]);
@@ -116,18 +120,18 @@ it('continues server deletion even if a site cleanup throws', function () {
 
     Site::factory()->forServer($server)->create();
 
-    $mockProvider = \Mockery::mock(\App\Contracts\ProviderContract::class)->makePartial();
+    $mockProvider = Mockery::mock(ProviderContract::class)->makePartial();
     $mockProvider->shouldReceive('deleteServer')->andReturn(null);
     $mockProvider->shouldReceive('deleteSshKey')->andReturn(null);
 
-    $mockProviderManager = \Mockery::mock(ProviderManager::class);
+    $mockProviderManager = Mockery::mock(ProviderManager::class);
     $mockProviderManager->shouldReceive('forAccount')->andReturn($mockProvider);
 
-    $mockSourceControl = \Mockery::mock(SourceControlService::class);
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
     $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->once()->andReturn(null);
 
-    $mockCleanup = \Mockery::mock(CleanupSiteExternalResourcesAction::class);
-    $mockCleanup->shouldReceive('execute')->andThrow(new \RuntimeException('cloudflare down'));
+    $mockCleanup = Mockery::mock(CleanupSiteExternalResourcesAction::class);
+    $mockCleanup->shouldReceive('execute')->andThrow(new RuntimeException('cloudflare down'));
 
     $this->app->instance(ProviderManager::class, $mockProviderManager);
     $this->app->instance(SourceControlService::class, $mockSourceControl);
@@ -138,6 +142,7 @@ it('continues server deletion even if a site cleanup throws', function () {
         app(ProviderManager::class),
         app(SourceControlService::class),
         app(CleanupSiteExternalResourcesAction::class),
+        app(RevokeFlitopsAccessAction::class),
     );
 
     $this->assertDatabaseMissing('servers', ['id' => $server->id]);
@@ -149,10 +154,10 @@ it('skips provider API calls when deleting a custom server', function () {
     $server = Server::factory()->custom()->create();
 
     // ProviderManager must NOT be called for custom servers
-    $mockProviderManager = \Mockery::mock(ProviderManager::class);
+    $mockProviderManager = Mockery::mock(ProviderManager::class);
     $mockProviderManager->shouldNotReceive('forAccount');
 
-    $mockSourceControl = \Mockery::mock(SourceControlService::class);
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
     $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->once()->andReturn(null);
 
     $this->app->instance(ProviderManager::class, $mockProviderManager);
@@ -163,8 +168,70 @@ it('skips provider API calls when deleting a custom server', function () {
         app(ProviderManager::class),
         app(SourceControlService::class),
         app(CleanupSiteExternalResourcesAction::class),
+        app(RevokeFlitopsAccessAction::class),
     );
 
     Event::assertDispatched(ServerDeleted::class, fn ($e) => $e->serverId === $server->id);
+    $this->assertDatabaseMissing('servers', ['id' => $server->id]);
+});
+
+/**
+ * Run the job for a custom server with every outside service stubbed, so a
+ * test only has to say what it expects of our SSH key removal.
+ */
+function runDeleteJobForCustomServer(Server $server, RevokeFlitopsAccessAction $revokeFlitopsAccess): void
+{
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
+    $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->andReturn(null);
+
+    (new DeleteServerJob($server))->handle(
+        Mockery::mock(ProviderManager::class),
+        $mockSourceControl,
+        app(CleanupSiteExternalResourcesAction::class),
+        $revokeFlitopsAccess,
+    );
+}
+
+it('removes our SSH key from a custom server before forgetting it', function () {
+    $server = Server::factory()->custom()->create();
+
+    $revoke = Mockery::mock(RevokeFlitopsAccessAction::class);
+    $revoke->shouldReceive('execute')->once()->with(Mockery::on(fn ($s) => $s->id === $server->id));
+
+    runDeleteJobForCustomServer($server, $revoke);
+
+    $this->assertDatabaseMissing('servers', ['id' => $server->id]);
+});
+
+it('still disconnects a custom server when our SSH key cannot be removed', function () {
+    $server = Server::factory()->custom()->create();
+
+    $revoke = Mockery::mock(RevokeFlitopsAccessAction::class);
+    $revoke->shouldReceive('execute')->once()->andThrow(new RuntimeException('Connection timed out'));
+
+    runDeleteJobForCustomServer($server, $revoke);
+
+    $this->assertDatabaseMissing('servers', ['id' => $server->id]);
+});
+
+it('does not try to remove our SSH key from a provider server it is destroying', function () {
+    $server = Server::factory()->create(['provider_server_id' => null, 'meta' => []]);
+
+    $mockProviderManager = Mockery::mock(ProviderManager::class);
+    $mockProviderManager->shouldReceive('forAccount')->andReturn(Mockery::mock(ProviderContract::class)->makePartial());
+
+    $mockSourceControl = Mockery::mock(SourceControlService::class);
+    $mockSourceControl->shouldReceive('deleteAllAccountSshKeysForServer')->andReturn(null);
+
+    $revoke = Mockery::mock(RevokeFlitopsAccessAction::class);
+    $revoke->shouldNotReceive('execute');
+
+    (new DeleteServerJob($server))->handle(
+        $mockProviderManager,
+        $mockSourceControl,
+        app(CleanupSiteExternalResourcesAction::class),
+        $revoke,
+    );
+
     $this->assertDatabaseMissing('servers', ['id' => $server->id]);
 });

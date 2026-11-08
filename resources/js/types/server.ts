@@ -8,7 +8,7 @@ export interface Server {
     id: number;
     ulid: string;
     name: string;
-    provider: 'digitalocean' | 'hetzner' | 'vultr';
+    provider: 'digitalocean' | 'hetzner' | 'vultr' | 'aws' | 'custom';
     provider_label: string;
     provider_account?: {
         id: number;
