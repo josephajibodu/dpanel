@@ -60,7 +60,7 @@ class StoreSiteRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:255',
-                'regex:/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_\.-]+$/',
+                'regex:/^[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)+$/',
             ],
             'source_control_account_id' => [
                 'nullable',

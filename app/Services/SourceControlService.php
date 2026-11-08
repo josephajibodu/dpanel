@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Contracts\SourceControlClientContract;
 use App\Enums\RepositoryProvider;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SourceControlAccount;
+use App\Services\SourceControl\BitbucketClient;
+use App\Services\SourceControl\GitlabClient;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -23,8 +26,7 @@ class SourceControlService
     {
         return match ($account->provider) {
             RepositoryProvider::Github => $this->listGithubRepositories($account),
-            // @todo Implement GitLab and Bitbucket repositories when needed.
-            default => collect(),
+            default => $this->client($account->provider)?->listRepositories($account) ?? collect(),
         };
     }
 
@@ -37,31 +39,36 @@ class SourceControlService
     {
         return match ($account->provider) {
             RepositoryProvider::Github => $this->listGithubBranches($account, $repositoryFullName),
-            // @todo Implement GitLab and Bitbucket branches when needed.
-            default => collect(),
+            default => $this->client($account->provider)?->listBranches($account, $repositoryFullName) ?? collect(),
         };
     }
 
     /**
      * Ensure an account-level SSH key exists for the given server and source control account.
      *
-     * This uses the server's local public key as an SSH key on the GitHub account,
+     * This uses the server's local public key as an SSH key on the account,
      * allowing the server to clone any repository the account has access to via SSH.
      * The key is added once per server/account combination.
      */
     public function ensureAccountSshKey(Server $server, SourceControlAccount $account): void
     {
-        if ($account->provider !== RepositoryProvider::Github) {
-            // Only GitHub is supported for account-level SSH keys for now.
-            return;
-        }
-
         if (! $server->local_public_key) {
             // Nothing we can do without a server public key.
             return;
         }
 
         $websiteName = config('app.name');
+
+        if ($account->provider !== RepositoryProvider::Github) {
+            try {
+                $this->client($account->provider)?->addSshKey($account, $server->local_public_key, "$websiteName ($server->name)");
+            } catch (\Throwable $e) {
+                Log::error('Exception while adding account SSH key', ['account_id' => $account->id, 'message' => $e->getMessage()]);
+            }
+
+            return;
+        }
+
         $this->createGithubAccountSshKey(
             account: $account,
             publicKey: $server->local_public_key,
@@ -357,13 +364,11 @@ class SourceControlService
             ->distinct()
             ->pluck('source_control_account_id');
 
-        $accounts = SourceControlAccount::where('provider', RepositoryProvider::Github)
-            ->whereIn('id', $accountIds)
-            ->get();
+        $accounts = SourceControlAccount::whereIn('id', $accountIds)->get();
 
         foreach ($accounts as $account) {
             try {
-                $this->deleteGithubAccountSshKey($account, $server->local_public_key);
+                $this->deleteAccountSshKey($account, $server->local_public_key);
             } catch (\Throwable $e) {
                 Log::warning('Failed to delete SSH key for account during server deletion', [
                     'server_id' => $server->id,
@@ -379,11 +384,6 @@ class SourceControlService
      */
     public function deleteAccountSshKeyIfUnused(Server $server, SourceControlAccount $account): void
     {
-        if ($account->provider !== RepositoryProvider::Github) {
-            // Only GitHub is supported for account-level SSH keys for now.
-            return;
-        }
-
         if (! $server->local_public_key) {
             return;
         }
@@ -394,7 +394,7 @@ class SourceControlService
             ->exists();
 
         if ($otherSitesUsingAccount) {
-            Log::info('Not deleting GitHub account SSH key - other sites on server still use this account', [
+            Log::info('Not deleting account SSH key - other sites on server still use this account', [
                 'server_id' => $server->id,
                 'account_id' => $account->id,
             ]);
@@ -402,10 +402,31 @@ class SourceControlService
             return;
         }
 
-        $this->deleteGithubAccountSshKey(
-            account: $account,
-            publicKey: $server->local_public_key,
-        );
+        $this->deleteAccountSshKey($account, $server->local_public_key);
+    }
+
+    private function deleteAccountSshKey(SourceControlAccount $account, string $publicKey): void
+    {
+        if ($account->provider === RepositoryProvider::Github) {
+            $this->deleteGithubAccountSshKey($account, $publicKey);
+
+            return;
+        }
+
+        $this->client($account->provider)?->deleteSshKey($account, $publicKey);
+    }
+
+    /**
+     * The API client for a Git host other than GitHub; null for GitHub
+     * (handled in this class) and for hosts FlitOps has no API for.
+     */
+    private function client(?RepositoryProvider $provider): ?SourceControlClientContract
+    {
+        return match ($provider) {
+            RepositoryProvider::Gitlab => app(GitlabClient::class),
+            RepositoryProvider::Bitbucket => app(BitbucketClient::class),
+            default => null,
+        };
     }
 
     /**
@@ -415,7 +436,7 @@ class SourceControlService
     {
         return $site->repository !== null
             && $site->sourceControlAccount !== null
-            && $site->repository_provider === RepositoryProvider::Github;
+            && ($site->repository_provider === RepositoryProvider::Github || $this->client($site->repository_provider) !== null);
     }
 
     /**
@@ -428,6 +449,12 @@ class SourceControlService
      */
     public function createDeployWebhook(Site $site): string
     {
+        $client = $this->client($site->repository_provider);
+
+        if ($client !== null) {
+            return $client->createDeployWebhook($site);
+        }
+
         $response = $this->github($site->sourceControlAccount)
             ->post("https://api.github.com/repos/{$site->repository}/hooks", [
                 'name' => 'web',
@@ -466,6 +493,14 @@ class SourceControlService
     public function deleteDeployWebhook(Site $site): void
     {
         if ($site->deploy_webhook_id === null || $site->sourceControlAccount === null) {
+            return;
+        }
+
+        $client = $this->client($site->repository_provider);
+
+        if ($client !== null) {
+            $client->deleteDeployWebhook($site);
+
             return;
         }
 

@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\RepositoryProvider;
+use App\Models\SourceControlAccount;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SourceControlAccount>
+ * @extends Factory<SourceControlAccount>
  */
 class SourceControlAccountFactory extends Factory
 {
@@ -53,6 +54,14 @@ class SourceControlAccountFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'provider' => RepositoryProvider::Gitlab,
+        ]);
+    }
+
+    public function bitbucket(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'provider' => RepositoryProvider::Bitbucket,
+            'provider_user_id' => '{'.fake()->uuid().'}',
         ]);
     }
 }

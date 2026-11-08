@@ -26,7 +26,7 @@ The server's status is **Error** and the overview shows **Provisioning failed**.
 
 The site page shows **Site creation failed** with a message.
 
-- **Clone failed:** check the repository and branch exist, and that your GitHub account (still) has access to them. If you disconnected and reconnected GitHub, try again.
+- **Clone failed:** check the repository and branch exist, and that your source control account (still) has access to them. If you disconnected and reconnected the account, try again.
 - **Dependency install failed:** your `composer.json` or `package.json` may need a newer PHP or Node.js version than the server has. Check the [PHP](/servers/php) and [Node.js](/servers/nodejs) versions.
 - **Build failed:** the logs show the error from your build tool. Fix it in your code, push, and retry.
 - **Migrations failed:** usually a database connection problem. Check the database exists and the credentials in the [environment](/sites/environment) are right.

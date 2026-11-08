@@ -76,13 +76,13 @@ Turn on **Deploy on push** to deploy every time someone pushes to the site's bra
 1. From the site's menu, choose **Edit Site**.
 2. Turn on **Deploy on push** and save.
 
-flitops adds a webhook to your repository on GitHub. From then on, each push to the site's branch starts a deployment, shown as triggered by **webhook**. Pushes to other branches, tags and other GitHub events are ignored.
+flitops adds a webhook to your repository on GitHub, GitLab or Bitbucket. From then on, each push to the site's branch starts a deployment, shown as triggered by **webhook**. Pushes to other branches, tags, deleted branches and other events are ignored, and every webhook call must prove it comes from your repository with the site's secret.
 
-You need the **Deploy** permission, and the site's repository must come from a connected GitHub account. You also need **admin access** to the repository on GitHub, because adding a webhook needs it; if GitHub refuses, flitops tells you and leaves Deploy on push off.
+You need the **Deploy** permission, and the site's repository must come from a connected [source control account](/connections/source-control). Adding a webhook also needs enough access to the repository: **admin** on GitHub and Bitbucket, or the **Maintainer** role on GitLab. If the provider refuses, flitops tells you why and leaves Deploy on push off.
 
 Turn it off the same way to remove the webhook. Deleting the site removes it too.
 
-<Note>Deploy on push for GitLab and Bitbucket, and triggering deploys from your CI pipeline, are on the [roadmap](/roadmap).</Note>
+<Note>Triggering deploys from your CI pipeline is on the [roadmap](/roadmap).</Note>
 
 ## Deployment statuses
 

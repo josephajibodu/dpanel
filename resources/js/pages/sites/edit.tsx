@@ -191,8 +191,8 @@ export default function SitesEdit({
                                 title="Deploy on push"
                                 description={
                                     supportsDeployOnPush
-                                        ? `Deploy automatically whenever someone pushes to ${form.data.branch}. A webhook is added to the repository on GitHub.`
-                                        : 'Available for sites with a repository from a connected GitHub account.'
+                                        ? `Deploy automatically whenever someone pushes to ${form.data.branch}. A webhook is added to the repository on ${siteData.repository_provider_label}.`
+                                        : 'Available for sites with a repository from a connected GitHub, GitLab or Bitbucket account.'
                                 }
                                 action={
                                     <Switch

@@ -199,10 +199,14 @@ abstract class BaseSiteProvisioner
         $this->connection->exec("chmod 700 {$sshDir}");
 
         $knownHostsFile = "{$sshDir}/known_hosts";
-        $hasHost = trim($this->connection->exec("grep -q '^github.com' {$knownHostsFile} 2>/dev/null && echo 'yes' || echo 'no'"));
+        $gitHost = parse_url((string) $this->site->repository_provider?->baseUrl(), PHP_URL_HOST);
 
-        if ($hasHost === 'no') {
-            $this->connection->exec("ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> {$knownHostsFile} 2>/dev/null || true");
+        if (is_string($gitHost)) {
+            $hasHost = trim($this->connection->exec("grep -q '^{$gitHost}' {$knownHostsFile} 2>/dev/null && echo 'yes' || echo 'no'"));
+
+            if ($hasHost === 'no') {
+                $this->connection->exec("ssh-keyscan -t rsa,ecdsa,ed25519 {$gitHost} >> {$knownHostsFile} 2>/dev/null || true");
+            }
         }
 
         $this->connection->exec("chmod 600 {$sshDir}/known_hosts 2>/dev/null || true");

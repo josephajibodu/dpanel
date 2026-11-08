@@ -33,7 +33,7 @@ class SetDeployOnPushAction
         }
 
         if (! $this->sourceControl->supportsDeployWebhooks($site)) {
-            throw new RuntimeException('Deploy on push needs a repository from a connected GitHub account.');
+            throw new RuntimeException('Deploy on push needs a repository from a connected GitHub, GitLab or Bitbucket account.');
         }
 
         $webhookId = $this->sourceControl->createDeployWebhook($site);
