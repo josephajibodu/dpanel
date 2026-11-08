@@ -746,6 +746,7 @@ function ServerServices({
                                         <Button
                                             size="sm"
                                             variant="outline"
+                                            className="text-xs"
                                             disabled={isBusy}
                                             onClick={() =>
                                                 setServiceToRestart(service)

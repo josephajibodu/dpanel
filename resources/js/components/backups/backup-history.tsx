@@ -134,7 +134,7 @@ export function BackupHistory({
                                                 </p>
                                             )}
                                     </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
+                                    <TableCell className="text-muted-foreground">
                                         {backup.triggered_by === 'scheduled'
                                             ? 'Scheduled'
                                             : backup.triggered_by === 'import'
@@ -142,7 +142,7 @@ export function BackupHistory({
                                               : (backup.triggered_by_user ??
                                                 'Manual')}
                                     </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
+                                    <TableCell className="text-muted-foreground">
                                         {formatBytes(backup.size_bytes)}
                                     </TableCell>
                                     <TableCell>
@@ -154,7 +154,7 @@ export function BackupHistory({
                                             </span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
+                                    <TableCell className="text-muted-foreground">
                                         {format(
                                             new Date(backup.created_at),
                                             'MMM d, yyyy HH:mm',

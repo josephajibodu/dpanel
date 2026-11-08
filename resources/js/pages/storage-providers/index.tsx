@@ -144,7 +144,7 @@ export default function StorageProvidersIndex({
                                         </span>
                                         {provider.type_label}
                                     </TableCell>
-                                    <TableCell className="font-mono text-sm text-muted-foreground">
+                                    <TableCell className="text-muted-foreground">
                                         {provider.bucket ?? '—'}
                                     </TableCell>
                                     <TableCell>

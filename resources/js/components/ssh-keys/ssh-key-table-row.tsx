@@ -56,7 +56,7 @@ export function SshKeyTableRow({
                     </span>
                 </div>
             </TableCell>
-            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+            <TableCell className="whitespace-nowrap text-muted-foreground">
                 {format(new Date(sshKey.created_at), 'MMM d, yyyy')}
             </TableCell>
             <TableCell

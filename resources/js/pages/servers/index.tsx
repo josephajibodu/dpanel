@@ -198,11 +198,11 @@ export default function ServersIndex({ servers }: Props) {
                                                             {server.name}
                                                         </Link>
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-sm">
+                                                    <TableCell>
                                                         {server.ip_address ??
                                                             '—'}
                                                     </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
+                                                    <TableCell className="text-muted-foreground">
                                                         {format(
                                                             new Date(
                                                                 server.created_at,

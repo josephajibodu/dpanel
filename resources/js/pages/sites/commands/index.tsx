@@ -243,7 +243,7 @@ export default function SiteCommandsIndex({
                                 <TableBody>
                                     {runs.map((run) => (
                                         <TableRow key={run.id}>
-                                            <TableCell className="max-w-[320px] truncate font-mono text-sm">
+                                            <TableCell className="max-w-[320px] truncate">
                                                 {truncateCommand(run.command)}
                                             </TableCell>
                                             <TableCell>
@@ -255,10 +255,10 @@ export default function SiteCommandsIndex({
                                                     }
                                                 />
                                             </TableCell>
-                                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                                            <TableCell className="text-right text-muted-foreground">
                                                 {run.exit_code ?? '—'}
                                             </TableCell>
-                                            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                                            <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {run.finished_at
                                                     ? new Date(
                                                           run.finished_at,

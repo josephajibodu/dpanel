@@ -109,7 +109,7 @@ export default function ServerTerminalIndex({
                                                 {session.user_name ??
                                                     'Removed user'}
                                             </TableCell>
-                                            <TableCell className="font-mono text-sm">
+                                            <TableCell>
                                                 {session.ip_address ?? '—'}
                                             </TableCell>
                                             <TableCell>
