@@ -1,4 +1,11 @@
-import { Deferred, Head, Link, useForm, usePage } from '@inertiajs/react';
+import {
+    Deferred,
+    Head,
+    Link,
+    router,
+    useForm,
+    usePage,
+} from '@inertiajs/react';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
     AlertCircleIcon,
@@ -6,9 +13,10 @@ import {
     PlusIcon,
     RefreshCwIcon,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { EmptyState } from '@/components/empty-state';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
@@ -44,14 +52,9 @@ interface Props {
         data: Server & {
             sites?: Site[];
             databases?: ServerDatabase[];
-            actions?: Array<{
-                id: number;
-                action: string;
-                status: string;
-                created_at: string;
-            }>;
         };
     };
+    services: ServerService[];
     provisioningLogs?: Array<{
         type: string;
         message: string;
@@ -60,8 +63,19 @@ interface Props {
     latestMetric?: ServerMetric | null;
 }
 
+interface ServerService {
+    value: string;
+    label: string;
+    last_restart: {
+        status: 'pending' | 'running' | 'finished' | 'failed';
+        error: string | null;
+        at: string;
+    } | null;
+}
+
 export default function ServersShow({
     server,
+    services,
     provisioningLogs,
     latestMetric,
 }: Props) {
@@ -388,54 +402,15 @@ export default function ServersShow({
                                 </div>
                                 )}
 
-                                {/* Recent events (optional) */}
-                                {data.actions && data.actions.length > 0 && (
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <CardTitle>Recent events</CardTitle>
-                                            <CardDescription>
-                                                Latest provisioning and
-                                                management actions.
-                                            </CardDescription>
-                                        </div>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>
-                                                        Action
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Status
-                                                    </TableHead>
-                                                    <TableHead>Date</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {data.actions
-                                                    .slice(0, 5)
-                                                    .map((action) => (
-                                                        <TableRow
-                                                            key={action.id}
-                                                        >
-                                                            <TableCell className="font-medium">
-                                                                {action.action}
-                                                            </TableCell>
-                                                            <TableCell className="text-muted-foreground">
-                                                                {action.status}
-                                                            </TableCell>
-                                                            <TableCell className="text-muted-foreground">
-                                                                {format(
-                                                                    new Date(
-                                                                        action.created_at,
-                                                                    ),
-                                                                    'MMM d, yyyy HH:mm',
-                                                                )}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                {services.length > 0 && (
+                                    <ServerServices
+                                        serverId={data.id}
+                                        services={services}
+                                        canRestart={
+                                            data.status === 'active' &&
+                                            can('manage_servers')
+                                        }
+                                    />
                                 )}
                             </div>
 
@@ -626,6 +601,141 @@ function ServerMetricsOverviewSkeleton() {
                 </div>
             </StatGroup>
         </section>
+    );
+}
+
+function lastRestartSummary(service: ServerService): string {
+    const restart = service.last_restart;
+
+    if (!restart) {
+        return 'Not restarted from FlitOps yet';
+    }
+
+    if (restart.status === 'pending' || restart.status === 'running') {
+        return 'Restarting…';
+    }
+
+    const when = formatDistanceToNow(new Date(restart.at), {
+        addSuffix: true,
+    });
+
+    return restart.status === 'failed'
+        ? `Restart failed ${when}`
+        : `Restarted ${when}`;
+}
+
+function ServerServices({
+    serverId,
+    services,
+    canRestart,
+}: {
+    serverId: number;
+    services: ServerService[];
+    canRestart: boolean;
+}) {
+    const teamPath = useTeamPath();
+    const [serviceToRestart, setServiceToRestart] =
+        useState<ServerService | null>(null);
+    const [isRestarting, setIsRestarting] = useState(false);
+
+    const confirmRestart = () => {
+        if (!serviceToRestart) {
+            return;
+        }
+
+        setIsRestarting(true);
+        router.post(
+            teamPath(`/servers/${serverId}/restart`),
+            { service: serviceToRestart.value },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsRestarting(false);
+                    setServiceToRestart(null);
+                },
+            },
+        );
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-1">
+                <CardTitle>Services</CardTitle>
+                <CardDescription>
+                    Restart a service if it&apos;s misbehaving or after changing
+                    its configuration by hand.
+                </CardDescription>
+            </div>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Last restart</TableHead>
+                        {canRestart && (
+                            <TableHead className="text-right">
+                                Actions
+                            </TableHead>
+                        )}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {services.map((service) => {
+                        const restart = service.last_restart;
+                        const isBusy =
+                            restart?.status === 'pending' ||
+                            restart?.status === 'running';
+
+                        return (
+                            <TableRow key={service.value}>
+                                <TableCell className="font-medium">
+                                    {service.label}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    <span
+                                        className={
+                                            restart?.status === 'failed'
+                                                ? 'text-destructive'
+                                                : undefined
+                                        }
+                                        title={restart?.error ?? undefined}
+                                    >
+                                        {lastRestartSummary(service)}
+                                    </span>
+                                </TableCell>
+                                {canRestart && (
+                                    <TableCell className="text-right">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={isBusy}
+                                            onClick={() =>
+                                                setServiceToRestart(service)
+                                            }
+                                        >
+                                            Restart
+                                        </Button>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+
+            <ConfirmDialog
+                open={serviceToRestart !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setServiceToRestart(null);
+                    }
+                }}
+                title={`Restart ${serviceToRestart?.label ?? ''}?`}
+                description="Requests or connections it's handling right now are dropped while it restarts, which usually takes a few seconds."
+                confirmLabel="Restart"
+                loading={isRestarting}
+                onConfirm={confirmRestart}
+            />
+        </div>
     );
 }
 

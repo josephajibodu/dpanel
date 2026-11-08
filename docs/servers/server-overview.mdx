@@ -1,13 +1,13 @@
 ---
 title: "Server overview"
-description: "Find your way around a server's page: details, metrics, sites, databases and recent events."
+description: "Find your way around a server's page: details, metrics, services, sites and databases."
 ---
 
 Click a server in the **Servers** list to open it. Along the top are the server's tabs. Which tabs you see depends on the software installed on it (see [Server types](/servers/server-types#what-each-type-shows)) and your role.
 
 | Tab | What it's for |
 | --- | --- |
-| **Overview** | Details, live metrics, sites, databases and recent events |
+| **Overview** | Details, live metrics, services, sites and databases |
 | **Sites** | All [sites](/sites/creating-sites) on the server |
 | **Databases** | [Databases and database users](/servers/databases), and their [backups](/backups/overview) |
 | **Connections** | [Other servers allowed to reach](/servers/server-connections) this server's database and Redis |
@@ -31,9 +31,16 @@ The overview shows the server's **CPU load**, **memory usage** and **disk usage*
 
 Quick lists of the **sites** and **databases** on the server, with links to create new ones. Click **View All** to open the full list.
 
-### Recent events
+### Services
 
-A log of the latest provisioning and management actions on the server, with when they happened and their status.
+The **Services** card lists the server's main services: the web server (Nginx or Caddy), PHP-FPM, the database (MySQL, MariaDB or PostgreSQL) and Redis, depending on what's installed. For each one it shows when it was last restarted from flitops, and whether that worked.
+
+Click **Restart** to restart a service, for example if it's stopped responding or you changed its configuration by hand. Requests or connections it's handling at that moment are dropped while it restarts, which usually takes a few seconds. The card updates by itself when the restart finishes; if it failed, hover over the result to see the error.
+
+Restarting needs the **Manage servers** permission (Owners and Admins), and the server must be **Active**.
+
+- **PHP-FPM** restarts the server's default PHP version. Sites on other PHP versions aren't restarted.
+- Workers aren't listed here, since each [worker](/servers/processes#controlling-a-worker) has its own **Restart**.
 
 ### Provisioning log
 

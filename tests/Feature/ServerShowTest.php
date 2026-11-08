@@ -85,11 +85,31 @@ it('refreshes the server when its status, its sites or a deployment on it change
     $response = $this->actingAs($this->user)
         ->get(route('servers.show', [$this->team, $server]));
 
-    expect(liveProps($response))->toBe([
+    expect(liveProps($response))->toMatchArray([
         'server' => [
             "{$channel} server.status.changed",
             "{$channel} server.sites.updated",
             "{$channel} deployment.status.changed",
         ],
+        'services' => ["{$channel} server.actions.updated"],
     ]);
+});
+
+it('lists the services the server can restart, with how each last restart went', function () {
+    $server = Server::factory()->forTeam($this->team)->active()->create([
+        'web_server' => 'nginx',
+        'php_version' => '8.3',
+        'database_type' => 'mariadb',
+    ]);
+    $server->actions()->create(['action' => 'restart_nginx', 'status' => 'finished', 'finished_at' => now()->subDay()]);
+    $server->actions()->create(['action' => 'restart_nginx', 'status' => 'failed', 'error' => 'Job for nginx.service failed', 'finished_at' => now()]);
+
+    $this->actingAs($this->user)
+        ->get(route('servers.show', [$this->team, $server]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('services', fn ($services) => collect($services)->pluck('value')->all() === ['nginx', 'php', 'mysql'])
+            ->where('services.0.last_restart.status', 'failed')
+            ->where('services.0.last_restart.error', 'Job for nginx.service failed')
+            ->where('services.1.last_restart', null)
+        );
 });

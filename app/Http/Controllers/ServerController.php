@@ -12,6 +12,7 @@ use App\Enums\ServerStatus;
 use App\Enums\ServerType;
 use App\Enums\ServiceType;
 use App\Events\DeploymentStatusChanged;
+use App\Events\ServerActionsUpdated;
 use App\Events\ServerDeleted;
 use App\Events\ServerSitesUpdated;
 use App\Events\ServerStatusChanged;
@@ -179,7 +180,6 @@ class ServerController extends Controller
             'providerAccount:id,ulid,name,provider,is_valid,validated_at,created_at,updated_at',
             'sites' => fn ($q) => $q->with('latestDeployment')->latest(),
             'databases' => fn ($q) => $q->latest()->limit(5),
-            'actions' => fn ($q) => $q->latest()->limit(10),
         ]);
 
         $provisioningLifecycle = [ServerStatus::Pending, ServerStatus::Creating, ServerStatus::Provisioning, ServerStatus::Error];
@@ -189,6 +189,10 @@ class ServerController extends Controller
                 new ServerResource($server),
                 on: [ServerStatusChanged::class, ServerSitesUpdated::class, DeploymentStatusChanged::class],
                 channel: new PrivateChannel("server.{$server->id}"),
+            ),
+            'services' => Inertia::live(
+                fn (): array => $this->servicesWithLastRestart($server),
+                on: new ServerActionsUpdated($server),
             ),
             'provisioningLogs' => in_array($server->status, $provisioningLifecycle, true)
                 ? $server->provisioningLogs()->orderBy('id')->get()->map(fn ($log) => [
@@ -256,7 +260,10 @@ class ServerController extends Controller
         $this->authorize('update', $server);
 
         $validated = $request->validate([
-            'service' => ['required', 'string', Rule::enum(ServiceType::class)],
+            'service' => ['required', 'string', Rule::in(array_map(
+                fn (ServiceType $service): string => $service->value,
+                $server->restartableServices(),
+            ))],
         ]);
 
         $service = ServiceType::from($validated['service']);
@@ -271,6 +278,31 @@ class ServerController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', "{$service->label()} restart initiated.");
+            ->with('success', "Restarting {$service->label()}.");
+    }
+
+    /**
+     * The services the server can restart, each with how its last restart went.
+     *
+     * @return list<array{value: string, label: string, last_restart: array{status: string, error: string|null, at: string}|null}>
+     */
+    private function servicesWithLastRestart(Server $server): array
+    {
+        return array_map(function (ServiceType $service) use ($server): array {
+            $action = $server->actions()
+                ->where('action', "restart_{$service->value}")
+                ->latest('id')
+                ->first();
+
+            return [
+                'value' => $service->value,
+                'label' => $service->label(),
+                'last_restart' => $action === null ? null : [
+                    'status' => $action->status,
+                    'error' => $action->error,
+                    'at' => ($action->finished_at ?? $action->created_at)->toIso8601String(),
+                ],
+            ];
+        }, $server->restartableServices());
     }
 }

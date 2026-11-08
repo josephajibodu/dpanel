@@ -555,6 +555,31 @@ class Server extends Model
         return $this->php_version !== null;
     }
 
+    /**
+     * The services on this server that can be restarted from the dashboard,
+     * in the order they're shown. Supervisor is left out: restarting it
+     * force-stops every worker, and each worker has its own Restart.
+     *
+     * @return list<ServiceType>
+     */
+    public function restartableServices(): array
+    {
+        return array_values(array_filter([
+            match ($this->web_server) {
+                'nginx' => ServiceType::Nginx,
+                'caddy' => ServiceType::Caddy,
+                default => null,
+            },
+            $this->hasPhp() ? ServiceType::Php : null,
+            match ($this->database_type) {
+                'mysql', 'mariadb' => ServiceType::Mysql,
+                'postgresql' => ServiceType::Postgresql,
+                default => null,
+            },
+            $this->hasRedis() ? ServiceType::Redis : null,
+        ]));
+    }
+
     public function hasDatabase(): bool
     {
         return $this->database_type !== null;

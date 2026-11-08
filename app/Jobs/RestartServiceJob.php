@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\ServiceType;
+use App\Events\ServerActionsUpdated;
 use App\Models\Server;
 use App\Models\ServerAction;
 use App\Services\Ssh\SshService;
@@ -94,5 +95,7 @@ class RestartServiceJob implements ShouldQueue
         }
 
         $this->action->update($data);
+
+        broadcast(new ServerActionsUpdated($this->server));
     }
 }
