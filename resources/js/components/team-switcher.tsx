@@ -2,6 +2,7 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { Check, ChevronsUpDown, Loader2, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -62,13 +63,19 @@ export function TeamSwitcher() {
                                 size="lg"
                                 className="text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                             >
-                                {/* Initials badge — grows when collapsed */}
-                                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-neutral-700 text-[10px] font-semibold text-white transition-all duration-200 ease-linear dark:bg-neutral-600 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:text-xs">
-                                    {teamInitials(currentTeam.name)}
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white">
+                                    <AppLogoIcon className="size-4 fill-current" />
                                 </div>
-                                <span className="truncate text-sm font-semibold leading-tight transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
-                                    {currentTeam.name}
-                                </span>
+                                <div className="grid flex-1 text-left leading-tight transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
+                                    <span className="truncate text-sm font-semibold">
+                                        {currentTeam.name}
+                                    </span>
+                                    <span className="truncate text-xs text-muted-foreground">
+                                        {currentTeam.personal_team
+                                            ? 'Personal team'
+                                            : 'Team'}
+                                    </span>
+                                </div>
                                 <ChevronsUpDown className="ml-auto size-4 shrink-0 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
@@ -78,7 +85,7 @@ export function TeamSwitcher() {
                             side="bottom"
                             sideOffset={4}
                         >
-                            <DropdownMenuLabel className="text-muted-foreground text-xs">
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
                                 Teams
                             </DropdownMenuLabel>
                             {teams.map((team) => (
@@ -101,10 +108,10 @@ export function TeamSwitcher() {
                                 className="cursor-pointer gap-2 p-2"
                                 onClick={() => setCreateOpen(true)}
                             >
-                                <div className="bg-background flex size-6 items-center justify-center rounded-md border">
+                                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                                     <Plus className="size-4" />
                                 </div>
-                                <div className="text-muted-foreground font-medium">
+                                <div className="font-medium text-muted-foreground">
                                     Create team
                                 </div>
                             </DropdownMenuItem>
@@ -113,10 +120,7 @@ export function TeamSwitcher() {
                 </SidebarMenuItem>
             </SidebarMenu>
 
-            <CreateTeamDialog
-                open={createOpen}
-                onOpenChange={setCreateOpen}
-            />
+            <CreateTeamDialog open={createOpen} onOpenChange={setCreateOpen} />
         </>
     );
 }
@@ -237,7 +241,7 @@ function CreateTeamDialog({
 
                         {/* Slug preview — hidden once user opens the slug input */}
                         {!showSlugInput && data.name.trim() && (
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-sm text-muted-foreground">
                                 {slugLoading ? (
                                     <span className="inline-flex items-center gap-1">
                                         <Loader2 className="size-3 animate-spin" />
@@ -246,13 +250,13 @@ function CreateTeamDialog({
                                 ) : slugPreview ? (
                                     <>
                                         Your handle will be{' '}
-                                        <span className="text-foreground font-medium">
+                                        <span className="font-medium text-foreground">
                                             {slugPreview}
                                         </span>
                                         .{' '}
                                         <button
                                             type="button"
-                                            className="text-foreground font-semibold underline-offset-2 hover:underline"
+                                            className="font-semibold text-foreground underline-offset-2 hover:underline"
                                             onClick={handleShowSlugInput}
                                         >
                                             Change
@@ -267,7 +271,7 @@ function CreateTeamDialog({
                     {showSlugInput && (
                         <div className="grid gap-2">
                             <Label htmlFor="team-slug">Team handle</Label>
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-sm text-muted-foreground">
                                 Must only contain lowercase letters, numbers,
                                 dots, and dashes.
                             </p>
@@ -296,7 +300,7 @@ function CreateTeamDialog({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={processing || (!data.name.trim())}
+                            disabled={processing || !data.name.trim()}
                         >
                             {processing ? 'Creating…' : 'Create team'}
                         </Button>

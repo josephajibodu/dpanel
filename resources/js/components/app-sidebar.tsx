@@ -1,4 +1,3 @@
-import { Link } from '@inertiajs/react';
 import {
     BookOpen,
     CloudIcon,
@@ -10,7 +9,6 @@ import {
     ServerIcon,
 } from 'lucide-react';
 
-import AppLogoIcon from '@/components/app-logo-icon';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -76,20 +74,7 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                {/*
-                  Expanded: logo link + team switcher side by side in one row.
-                  Collapsed (icon mode): logo link on top, compact initials switcher below.
-                */}
-                <div className="flex items-center gap-2 transition-[gap] duration-200 ease-linear group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
-                    <Link
-                        href={teamPath('/dashboard')}
-                        prefetch
-                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white transition-opacity hover:opacity-80"
-                    >
-                        <AppLogoIcon className="size-4 fill-current" />
-                    </Link>
-                    <TeamSwitcher />
-                </div>
+                <TeamSwitcher />
             </SidebarHeader>
 
             <SidebarContent>
