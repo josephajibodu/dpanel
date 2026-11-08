@@ -98,7 +98,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         <Button asChild>
                             <Link href={teamPath('/provider-accounts/create')}>
                                 <PlusIcon className="mr-2 h-4 w-4" />
-                                Connect Provider
+                                Connect provider
                             </Link>
                         </Button>
                     )}
@@ -109,9 +109,15 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                         title="No provider accounts connected"
                         description={
                             canManageProviders
-                                ? 'Connect a cloud provider account to start provisioning servers.'
+                                ? 'Connect your cloud account so FlitOps can create servers in it for you.'
                                 : 'Cloud provider accounts connected to this team will appear here.'
                         }
+                        points={[
+                            'DigitalOcean, Hetzner, Vultr, and AWS',
+                            'Pick a region and size when you create a server',
+                            'Servers and bills stay in your own account',
+                        ]}
+                        docsHref="https://docs.flitops.com/connections/cloud-providers"
                         action={
                             canManageProviders && (
                                 <Button asChild>
@@ -121,7 +127,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                         )}
                                     >
                                         <PlusIcon className="mr-2 h-4 w-4" />
-                                        Connect Provider
+                                        Connect provider
                                     </Link>
                                 </Button>
                             )

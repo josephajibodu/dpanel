@@ -105,9 +105,15 @@ export default function StorageProvidersIndex({
                         title="No storage providers connected"
                         description={
                             canManageProviders
-                                ? 'Connect an object storage account to store backups off-server.'
+                                ? 'Connect a storage bucket so database backups are kept off your servers.'
                                 : 'Storage providers connected to this team will appear here.'
                         }
+                        points={[
+                            'Cloudflare R2 and Amazon S3',
+                            'Scheduled database backups',
+                            'Restore or download any backup',
+                        ]}
+                        docsHref="https://docs.flitops.com/connections/storage-providers"
                         action={
                             canManageProviders && (
                                 <ConnectStorageDrawer types={types} />

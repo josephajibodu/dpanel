@@ -133,9 +133,15 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                         title="No sites yet"
                         description={
                             canManageSites
-                                ? 'Create your first site on this server.'
+                                ? 'Deploy an app from a Git repository, or start from a blank site.'
                                 : 'Sites added to this server will appear here.'
                         }
+                        points={[
+                            'Laravel, Symfony, WordPress, PHP, and static sites',
+                            'A free domain with SSL out of the box',
+                            'Deploy with one click, or on every push',
+                        ]}
+                        docsHref="https://docs.flitops.com/sites/creating-sites"
                         action={
                             canManageSites && (
                                 <Button asChild>
@@ -145,7 +151,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                         )}
                                     >
                                         <PlusIcon className="mr-2 h-4 w-4" />
-                                        Add Site
+                                        Add site
                                     </Link>
                                 </Button>
                             )

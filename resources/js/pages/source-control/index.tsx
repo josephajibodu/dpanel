@@ -163,7 +163,13 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                 {accounts.data.length === 0 ? (
                     <EmptyState
                         title="No source control providers connected"
-                        description="Connect a source control provider to enable deployments from your repositories."
+                        description="Connect where your code lives so FlitOps can deploy it."
+                        points={[
+                            'GitHub, GitLab, and Bitbucket',
+                            'Pick a repository and branch when you create a site',
+                            'Deploy automatically on every push',
+                        ]}
+                        docsHref="https://docs.flitops.com/connections/source-control"
                         action={
                             providers.length > 0 ? addProviderMenu : undefined
                         }

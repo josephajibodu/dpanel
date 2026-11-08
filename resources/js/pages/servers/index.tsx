@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { AddServerOptions } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
 import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
@@ -111,7 +112,8 @@ export default function ServersIndex({ servers }: Props) {
                             Servers
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            All of the servers of your project listed here.
+                            The servers your team manages, and the sites on
+                            them.
                         </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -121,7 +123,7 @@ export default function ServersIndex({ servers }: Props) {
                                 Docs
                             </a>
                         </Button>
-                        {canManageServers && (
+                        {canManageServers && servers.data.length > 0 && (
                             <Button asChild>
                                 <Link href={teamPath('/servers/create')}>
                                     <PlusIcon className="mr-2 h-4 w-4" />
@@ -132,24 +134,12 @@ export default function ServersIndex({ servers }: Props) {
                     </div>
                 </div>
 
-                {servers.data.length === 0 ? (
+                {servers.data.length === 0 && canManageServers ? (
+                    <AddServerOptions />
+                ) : servers.data.length === 0 ? (
                     <EmptyState
                         title="No servers yet"
-                        description={
-                            canManageServers
-                                ? 'Create your first server to get started with deploying applications.'
-                                : 'Servers added to this team will appear here.'
-                        }
-                        action={
-                            canManageServers && (
-                                <Button asChild>
-                                    <Link href={teamPath('/servers/create')}>
-                                        <PlusIcon className="mr-2 h-4 w-4" />
-                                        Create Server
-                                    </Link>
-                                </Button>
-                            )
-                        }
+                        description="Servers added to this team will appear here."
                     />
                 ) : (
                     <>

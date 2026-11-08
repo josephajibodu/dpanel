@@ -101,7 +101,13 @@ export default function SshKeysIndex({
                 {sshKeysData.data.length === 0 ? (
                     <EmptyState
                         title="No SSH keys added"
-                        description="Add an SSH key to sync it to your servers for secure access."
+                        description="Add your public key once, then log in to your servers from your own computer."
+                        points={[
+                            'Sync a key to whole servers or to one site',
+                            'Revoke it everywhere in one step',
+                            'Keys belong to you, not the team',
+                        ]}
+                        docsHref="https://docs.flitops.com/connections/ssh-keys"
                         action={<AddKeyDialog />}
                     />
                 ) : (
