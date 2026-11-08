@@ -4,6 +4,19 @@ namespace App\Services\Provisioning;
 
 class NginxService
 {
+    /**
+     * Server-wide request body limit. Nginx's own default (1 MB) refuses
+     * uploads PHP would accept, so the limit follows PHP's post_max_size:
+     * set here at provisioning, and again whenever PHP settings are saved.
+     * A site's own server-section file can still override it.
+     */
+    public const UPLOAD_LIMIT_CONFIG = '/etc/nginx/conf.d/flitops-uploads.conf';
+
+    /**
+     * Ubuntu's PHP packages ship with post_max_size = 8M.
+     */
+    public const DEFAULT_UPLOAD_LIMIT = '8M';
+
     private string $nginxConf = '/etc/nginx/nginx.conf';
 
     private string $sitesAvailable = '/etc/nginx/sites-available/app.conf';
@@ -21,6 +34,7 @@ class NginxService
 
         $this->installConfiguration($context);
         $this->installServerConfig($context);
+        $context->files->put(self::UPLOAD_LIMIT_CONFIG, self::uploadLimitConfig(self::DEFAULT_UPLOAD_LIMIT));
 
         $this->restart($context);
     }
@@ -106,6 +120,11 @@ server {
     return 444;
 }
 NGINX;
+    }
+
+    public static function uploadLimitConfig(string $size): string
+    {
+        return "client_max_body_size {$size};\n";
     }
 
     public function updatePort(ProvisioningContext $context, string $port): void

@@ -4,6 +4,7 @@ namespace App\Actions\ServerPhp;
 
 use App\Actions\Database\EscapesShell;
 use App\Models\Server;
+use App\Services\Provisioning\NginxService;
 use App\Services\Ssh\SshService;
 use App\Services\Ssh\StagesFilesPrivately;
 use InvalidArgumentException;
@@ -55,6 +56,11 @@ class UpdatePhpSettings
 
             $this->installAsRoot($connection, $content, $iniPath, timeout: 10);
             $connection->sudo("systemctl restart php{$version}-fpm", 30);
+
+            if (isset($settings['post_max_size']) && $server->web_server === 'nginx') {
+                $this->installAsRoot($connection, NginxService::uploadLimitConfig($settings['post_max_size']), NginxService::UPLOAD_LIMIT_CONFIG, timeout: 10);
+                $server->webServer()->validateAndReload($connection);
+            }
         } finally {
             $connection->disconnect();
         }

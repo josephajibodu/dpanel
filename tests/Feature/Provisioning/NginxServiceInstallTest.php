@@ -22,6 +22,7 @@ it('ensures the ssl-cert package is installed so the catch-all vhost has a certi
     $files->shouldReceive('ensureDirectory')->twice();
     $files->shouldReceive('exists')->andReturn(false);
     $files->shouldReceive('put')->twice();
+    $files->shouldReceive('put')->once()->with(NginxService::UPLOAD_LIMIT_CONFIG, "client_max_body_size 8M;\n");
     $files->shouldReceive('symlink')->once();
 
     $context = new ProvisioningContext(
