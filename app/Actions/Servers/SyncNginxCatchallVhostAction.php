@@ -8,9 +8,9 @@ use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 
 /**
- * Push the current catch-all vhost (app.conf) to an already-provisioned
- * server, so servers provisioned before the 443 default_server fix was
- * added get it retroactively without a full re-provision.
+ * Push the current catch-all vhost (app.conf) and the no-site page it serves
+ * to an already-provisioned server, so servers provisioned before either
+ * changed get them retroactively without a full re-provision.
  */
 class SyncNginxCatchallVhostAction
 {
@@ -36,8 +36,14 @@ class SyncNginxCatchallVhostAction
             $connection->exec('sudo apt-get -o DPkg::Lock::Timeout=60 install -y ssl-cert', 900);
         }
 
-        $config = NginxService::buildServerConfig(config('server.user'), $server->php_version ?? '8.3');
-        $escapedConfig = str_replace("'", "'\\''", $config);
+        $noSitePageRoot = NginxService::NO_SITE_PAGE_ROOT;
+        $noSitePage = NginxService::NO_SITE_PAGE;
+        $escapedPage = str_replace("'", "'\\''", NginxService::noSitePage());
+
+        $connection->exec("sudo mkdir -p {$noSitePageRoot}");
+        $connection->exec("echo '{$escapedPage}' | sudo tee {$noSitePage} > /dev/null");
+
+        $escapedConfig = str_replace("'", "'\\''", NginxService::buildServerConfig());
 
         $connection->exec("echo '{$escapedConfig}' | sudo tee /etc/nginx/sites-available/app.conf > /dev/null");
         $connection->exec('sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf');

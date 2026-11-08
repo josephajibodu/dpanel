@@ -19,9 +19,9 @@ it('ensures the ssl-cert package is installed so the catch-all vhost has a certi
 
     $files = Mockery::mock(RemoteFilesystem::class);
     $files->shouldReceive('backup')->once();
-    $files->shouldReceive('ensureDirectory')->twice();
+    $files->shouldReceive('ensureDirectory')->times(3);
     $files->shouldReceive('exists')->andReturn(false);
-    $files->shouldReceive('put')->twice();
+    $files->shouldReceive('put')->times(3);
     $files->shouldReceive('put')->once()->with(NginxService::UPLOAD_LIMIT_CONFIG, "client_max_body_size 8M;\n");
     $files->shouldReceive('symlink')->once();
 
@@ -37,4 +37,31 @@ it('ensures the ssl-cert package is installed so the catch-all vhost has a certi
     );
 
     app(NginxService::class)->install($context);
+});
+
+it('uploads the no-site page into the catch-all web root', function () {
+    $files = Mockery::mock(RemoteFilesystem::class)->shouldIgnoreMissing();
+    $files->shouldReceive('ensureDirectory')->once()->with('/var/www/flitops')->ordered();
+    $files->shouldReceive('put')->once()->with('/var/www/flitops/index.html', file_get_contents(resource_path('views/provisioning/no-site.html')))->ordered();
+
+    $context = new ProvisioningContext(
+        server: Server::factory()->make(),
+        runner: Mockery::mock(RemoteCommandRunner::class),
+        files: $files,
+        packages: Mockery::mock(PackageManager::class)->shouldIgnoreMissing(),
+        services: Mockery::mock(ServiceManager::class)->shouldIgnoreMissing(),
+        serverUser: 'artisan',
+        sudoPassword: '',
+        databasePassword: '',
+    );
+
+    app(NginxService::class)->install($context);
+});
+
+it('prints the requested host on the no-site page only through nginx\'s html-escaped echo', function () {
+    $page = NginxService::noSitePage();
+
+    expect($page)
+        ->toContain('<!--# echo var="host" -->')
+        ->not->toContain('encoding=');
 });

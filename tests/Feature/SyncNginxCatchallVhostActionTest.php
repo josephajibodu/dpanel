@@ -9,8 +9,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('writes the catch-all vhost, tests, and reloads nginx', function () {
-    $server = Server::factory()->create(['status' => ServerStatus::Active, 'php_version' => '8.4']);
+it('writes the catch-all vhost and no-site page, tests, and reloads nginx', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
 
     $execCalls = [];
     $connection = Mockery::mock(SshConnection::class);
@@ -38,6 +38,8 @@ it('writes the catch-all vhost, tests, and reloads nginx', function () {
 
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'dpkg -s ssl-cert')))->toBeTrue();
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'apt-get') && str_contains($c, 'ssl-cert')))->toBeFalse();
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'sudo mkdir -p /var/www/flitops')))->toBeTrue();
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'Nothing deployed here.') && str_contains($c, 'sudo tee /var/www/flitops/index.html')))->toBeTrue();
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'sudo tee /etc/nginx/sites-available/app.conf')))->toBeTrue();
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'listen 443 ssl default_server')))->toBeTrue();
     expect(collect($execCalls)->contains(fn ($c) => str_contains($c, 'sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf')))->toBeTrue();

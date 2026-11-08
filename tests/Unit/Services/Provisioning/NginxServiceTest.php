@@ -3,7 +3,7 @@
 use App\Services\Provisioning\NginxService;
 
 it('includes an https default_server that rejects unmatched hosts', function () {
-    $config = NginxService::buildServerConfig('artisan', '8.3');
+    $config = NginxService::buildServerConfig();
 
     expect($config)
         ->toContain('listen 443 ssl default_server;')
@@ -13,12 +13,15 @@ it('includes an https default_server that rejects unmatched hosts', function () 
         ->toContain('return 444;');
 });
 
-it('still includes the plain-http default_server for the placeholder page', function () {
-    $config = NginxService::buildServerConfig('artisan', '8.3');
+it('answers every unmatched http request with the no-site page and a 404', function () {
+    $config = NginxService::buildServerConfig();
 
     expect($config)
         ->toContain('listen 80 default_server;')
         ->toContain('listen [::]:80 default_server;')
-        ->toContain('root /home/artisan/sites;')
-        ->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-artisan.sock;');
+        ->toContain('root /var/www/flitops;')
+        ->toContain('ssi on;')
+        ->toContain('error_page 404 /index.html;')
+        ->toContain("location / {\n        return 404;\n    }")
+        ->not->toContain('fastcgi_pass');
 });

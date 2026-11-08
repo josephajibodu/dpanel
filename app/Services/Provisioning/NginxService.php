@@ -17,6 +17,14 @@ class NginxService
      */
     public const DEFAULT_UPLOAD_LIMIT = '8M';
 
+    /**
+     * Where the page shown for requests that match no site lives on the
+     * server. The catch-all vhost serves it in place of nginx's own default.
+     */
+    public const NO_SITE_PAGE_ROOT = '/var/www/flitops';
+
+    public const NO_SITE_PAGE = self::NO_SITE_PAGE_ROOT.'/index.html';
+
     private string $nginxConf = '/etc/nginx/nginx.conf';
 
     private string $sitesAvailable = '/etc/nginx/sites-available/app.conf';
@@ -53,9 +61,10 @@ class NginxService
 
     public function installServerConfig(ProvisioningContext $context): void
     {
-        $config = self::buildServerConfig($context->serverUser, $context->server->php_version);
+        $context->files->ensureDirectory(self::NO_SITE_PAGE_ROOT);
+        $context->files->put(self::NO_SITE_PAGE, self::noSitePage());
 
-        $context->files->put($this->sitesAvailable, $config);
+        $context->files->put($this->sitesAvailable, self::buildServerConfig());
 
         // Remove default site if present.
         if ($context->files->exists('/etc/nginx/sites-enabled/default')) {
@@ -66,9 +75,18 @@ class NginxService
     }
 
     /**
-     * Build the catch-all vhost config: a plain-HTTP `default_server` for the
-     * placeholder landing page, plus an HTTPS `default_server` that rejects
-     * the TLS handshake outright.
+     * The flitops page shown for requests that match no site. nginx's SSI
+     * fills in the requested host name (HTML-escaped) when it's served.
+     */
+    public static function noSitePage(): string
+    {
+        return file_get_contents(resource_path('views/provisioning/no-site.html'));
+    }
+
+    /**
+     * Build the catch-all vhost config: a plain-HTTP `default_server` that
+     * answers every request with the no-site page and a 404, plus an HTTPS
+     * `default_server` that rejects the TLS handshake outright.
      *
      * Every site vhost is a separate file included via `sites-enabled/*`, and
      * nginx silently falls back to whichever 443 server block loaded first
@@ -82,29 +100,28 @@ class NginxService
      * requests are rejected instead of silently landing on someone else's
      * site.
      */
-    public static function buildServerConfig(string $serverUser, string $phpVersion): string
+    public static function buildServerConfig(): string
     {
+        $noSitePageRoot = self::NO_SITE_PAGE_ROOT;
+
         return <<<NGINX
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    root /home/{$serverUser}/sites;
-    index index.php index.html;
-
     server_name _;
 
+    root {$noSitePageRoot};
+    ssi on;
+
+    error_page 404 /index.html;
+
+    location = /index.html {
+        internal;
+    }
+
     location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
-
-    location ~ \\.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php{$phpVersion}-fpm-{$serverUser}.sock;
-    }
-
-    location ~ /\\.ht {
-        deny all;
+        return 404;
     }
 }
 

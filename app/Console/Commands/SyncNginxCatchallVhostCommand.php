@@ -13,7 +13,7 @@ class SyncNginxCatchallVhostCommand extends Command
         {--server=* : Specific server ID(s) to target}
         {--all : Apply to every active server}';
 
-    protected $description = 'Push the current catch-all nginx vhost (with the 443 default_server fix) to already-provisioned servers.';
+    protected $description = 'Push the current catch-all nginx vhost and its no-site page to already-provisioned servers.';
 
     public function handle(SyncNginxCatchallVhostAction $action): int
     {
