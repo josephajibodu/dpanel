@@ -2,7 +2,6 @@ import {
     BookOpen,
     CloudIcon,
     CodeIcon,
-    Folder,
     HardDriveIcon,
     KeyIcon,
     LayoutGrid,
@@ -23,11 +22,6 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import { type NavItem } from '@/types';
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
     {
         title: 'Documentation',
         href: 'https://docs.flitops.com',
