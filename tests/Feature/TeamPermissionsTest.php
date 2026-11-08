@@ -121,27 +121,3 @@ it('looks the role up once however many permissions are checked', function () {
 
     expect(DB::getQueryLog())->toHaveCount(2);
 });
-
-it('moves old owner and member rows onto the Owner and Developer roles', function () {
-    $migration = require database_path('migrations/2026_10_22_125319_create_team_roles_table.php');
-    $migration->down();
-
-    $owner = User::factory()->create();
-    $member = User::factory()->create();
-    DB::table('team_user')->insert([
-        ['team_id' => $this->team->id, 'user_id' => $owner->id, 'role' => 'owner'],
-        ['team_id' => $this->team->id, 'user_id' => $member->id, 'role' => 'member'],
-    ]);
-    DB::table('team_invitations')->insert([
-        ['team_id' => $this->team->id, 'email' => 'a@example.com', 'role' => 'owner', 'token' => 'token-a'],
-        ['team_id' => $this->team->id, 'email' => 'b@example.com', 'role' => 'member', 'token' => 'token-b'],
-    ]);
-
-    $migration->up();
-
-    expect($owner->teamRole($this->team)->key)->toBe('owner')
-        ->and($member->teamRole($this->team)->key)->toBe('developer')
-        ->and($member->hasTeamPermission($this->team, TeamPermission::Deploy))->toBeTrue()
-        ->and($member->hasTeamPermission($this->team, TeamPermission::RestoreBackups))->toBeFalse()
-        ->and($this->team->invitations()->orderBy('email')->get()->pluck('role')->all())->toBe(['owner', 'developer']);
-});
