@@ -7,6 +7,7 @@ use App\Http\Resources\SiteResource;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteEnvironmentHistory;
 use App\Models\Team;
 use App\Services\Ssh\SshService;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,21 @@ class EnvironmentController extends Controller
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'has_workers' => $hasWorkers,
+            'history' => $site->environmentHistory()
+                ->with('user:id,name')
+                ->limit(50)
+                ->get()
+                ->map(fn (SiteEnvironmentHistory $entry): array => [
+                    'id' => $entry->id,
+                    'user_name' => $entry->user?->name,
+                    'added_keys' => $entry->added_keys,
+                    'changed_keys' => $entry->changed_keys,
+                    'removed_keys' => $entry->removed_keys,
+                    'is_first_save' => $entry->old_content === null,
+                    'created_at' => $entry->created_at?->toIso8601String(),
+                ])
+                ->values()
+                ->all(),
             'env_content' => Inertia::defer(function () use ($site, $sshService): string {
                 if ($site->env_content !== null) {
                     return $site->env_content;
@@ -64,6 +80,8 @@ class EnvironmentController extends Controller
         $restartQueue = (bool) ($validated['restart_queue'] ?? false);
         $variables = $this->parseEnvContent($validated['env_content']);
 
+        $this->recordHistory($site, $validated['env_content'], $variables, $request->user()?->id);
+
         $site->update(['env_content' => $validated['env_content']]);
 
         // Get existing variables to detect deletions
@@ -90,6 +108,59 @@ class EnvironmentController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Environment variables updated. Syncing to server...');
+    }
+
+    /**
+     * Record who saved the environment and which keys the save added,
+     * changed or removed. Saving the same content again records nothing.
+     * When FlitOps has never stored this site's environment (it was only
+     * read from the server), the earlier file is unknown, so the entry is
+     * marked as a first save with no key breakdown.
+     *
+     * @param  array<string, string>  $newVariables
+     */
+    protected function recordHistory(Site $site, string $newContent, array $newVariables, ?int $userId): void
+    {
+        $oldContent = $site->env_content;
+
+        if ($oldContent === null) {
+            $storedVariables = $site->environmentVariables()->get();
+
+            if ($storedVariables->isNotEmpty()) {
+                $oldContent = $storedVariables->map(fn ($variable) => "{$variable->key}={$variable->value}")->implode("\n");
+            }
+        }
+
+        if ($oldContent === $newContent) {
+            return;
+        }
+
+        $oldVariables = [];
+
+        if ($oldContent !== null) {
+            try {
+                $oldVariables = $this->parseEnvContent($oldContent);
+            } catch (ValidationException) {
+                $oldVariables = [];
+            }
+        }
+
+        $isFirstSave = $oldContent === null;
+
+        $changedKeys = array_keys(array_filter(
+            array_intersect_key($newVariables, $oldVariables),
+            fn (string $value, string $key): bool => $oldVariables[$key] !== $value,
+            ARRAY_FILTER_USE_BOTH,
+        ));
+
+        $site->environmentHistory()->create([
+            'user_id' => $userId,
+            'added_keys' => $isFirstSave ? [] : array_values(array_keys(array_diff_key($newVariables, $oldVariables))),
+            'changed_keys' => array_values($changedKeys),
+            'removed_keys' => $isFirstSave ? [] : array_values(array_keys(array_diff_key($oldVariables, $newVariables))),
+            'old_content' => $oldContent,
+            'new_content' => $newContent,
+        ]);
     }
 
     /**

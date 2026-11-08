@@ -85,11 +85,11 @@ Verified against the code on 2026-11-07. `flitops.example.com` and PHP 8.4 are p
 
 ---
 
-## 5. Environment & Secrets Management — mostly done
+## 5. Environment & Secrets Management — done (2026-11-08)
 - [x] Per-site environment variable storage
 - [x] Secrets encrypted at rest
 - [x] Easy update of env vars without manual SSH + file editing
-- [ ] Audit trail of who changed what env var and when
+- [x] Audit trail of who changed what env var and when (2026-11-08) — every save on the Environment page records the user, the time, and which keys were added, changed or removed (`site_environment_history`), listed under "Change history" on that page. Values aren't shown there; the before/after files are stored encrypted for a later view/restore feature. Saving identical content records nothing; a site's first save through FlitOps is marked as such because the earlier file is unknown.
 
 *Why it matters: Nomba/Paystack/Flutterwave API keys and DB credentials live here. This is the most sensitive layer of the whole stack.*
 
@@ -189,7 +189,7 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 - [ ] **AWS as a server provider** — code done 2026-10-30 (`AwsProvider`: root login via cloud-init, shared `flitops` security group per region, Elastic IP per server released on delete, region-prefixed IDs, curated instance sizes). **Still to do:** one real run on an AWS account — create a `t3.small`, let it provision, delete it, and confirm no instance, Elastic IP or key pair is left behind. As of 2026-11-07 no AWS server has been created.
 
 ## Security hardening: what has run on real servers (checked 2026-11-07)
-From the FlitOps database: 4 isolated sites (Bouclay included) with 30 successful deploys, 29 completed backups since the secrets-off-the-command-line change, and 1 SSH key synced to a site user. Not yet seen for real: converting an existing site with "Isolate this site", and a restore.
+From the FlitOps database: 4 isolated sites (Bouclay included) with 30 successful deploys, 29 completed backups since the secrets-off-the-command-line change, and 1 SSH key synced to a site user. Not yet seen for real: a restore. Converting an existing site with "Isolate this site" was tested by the user and works (confirmed 2026-11-08).
 
 ## How to use this
 Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-11-07 the code side of item 0 is ready; what's left is carrying out the cutover steps (re-checked that day for isolated sites). The custom-domain renewal gap (item 8) and broken rollback (item 3) were fixed the same day; existing custom domains still need "Renew SSL" clicked once to get the renewal hook. After that, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.

@@ -369,6 +369,11 @@ class Site extends Model
         return $this->hasMany(SiteNginxHistory::class)->latest('created_at');
     }
 
+    public function environmentHistory(): HasMany
+    {
+        return $this->hasMany(SiteEnvironmentHistory::class)->latest('created_at')->latest('id');
+    }
+
     public function nginxSnippetsBasePath(): string
     {
         return "/etc/flitops/sites/{$this->ulid}/nginx";

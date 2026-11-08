@@ -3,7 +3,9 @@ import Editor, { type Monaco } from '@monaco-editor/react';
 import { EyeIcon, Loader2Icon, LockIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
@@ -14,6 +16,16 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Site } from '@/types/site';
 
+interface EnvironmentHistoryEntry {
+    id: number;
+    user_name: string | null;
+    added_keys: string[];
+    changed_keys: string[];
+    removed_keys: string[];
+    is_first_save: boolean;
+    created_at: string;
+}
+
 interface Props {
     server: { data: { id: number; name: string } };
     site: {
@@ -22,6 +34,7 @@ interface Props {
         };
     };
     has_workers: boolean;
+    history: EnvironmentHistoryEntry[];
     env_content?: string;
 }
 
@@ -29,6 +42,7 @@ export default function SiteEnvironmentShow({
     server: serverProp,
     site: siteProp,
     has_workers = false,
+    history = [],
     env_content,
 }: Props) {
     const { currentTeam } = usePage<SharedData>().props;
@@ -261,7 +275,110 @@ export default function SiteEnvironmentShow({
                         </>
                     )}
                 </form>
+
+                <div className="space-y-3">
+                    <div>
+                        <h2 className="text-lg font-semibold tracking-tight">
+                            Change history
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Who saved the environment, and which variables each
+                            save added, changed or removed. Values are not shown
+                            here.
+                        </p>
+                    </div>
+
+                    {history.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No changes recorded yet.
+                        </p>
+                    ) : (
+                        <Card className="gap-0 divide-y py-0">
+                            {history.map((entry) => (
+                                <EnvironmentHistoryRow
+                                    key={entry.id}
+                                    entry={entry}
+                                />
+                            ))}
+                        </Card>
+                    )}
+                </div>
             </div>
         </AppLayout>
+    );
+}
+
+function EnvironmentHistoryRow({ entry }: { entry: EnvironmentHistoryEntry }) {
+    const keyGroups = [
+        {
+            keys: entry.added_keys,
+            sign: '+',
+            label: 'Added',
+            className: 'text-emerald-600 dark:text-emerald-400',
+        },
+        {
+            keys: entry.changed_keys,
+            sign: '~',
+            label: 'Changed',
+            className: 'text-amber-600 dark:text-amber-400',
+        },
+        {
+            keys: entry.removed_keys,
+            sign: '−',
+            label: 'Removed',
+            className: 'text-red-600 dark:text-red-400',
+        },
+    ];
+    const hasKeyChanges = keyGroups.some((group) => group.keys.length > 0);
+
+    let summary = 'Only comments or blank lines changed';
+
+    if (entry.is_first_save) {
+        summary = 'First save from FlitOps';
+    } else if (hasKeyChanges) {
+        summary = keyGroups
+            .filter((group) => group.keys.length > 0)
+            .map((group) => `${group.label.toLowerCase()} ${group.keys.length}`)
+            .join(', ');
+        summary = summary.charAt(0).toUpperCase() + summary.slice(1);
+    }
+
+    return (
+        <div className="flex flex-col gap-2 px-4 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-sm">
+                    <span className="font-medium">
+                        {entry.user_name ?? 'System'}
+                    </span>
+                    <span className="text-muted-foreground"> · {summary}</span>
+                </p>
+                <time
+                    dateTime={entry.created_at}
+                    className="text-xs text-muted-foreground"
+                >
+                    {new Date(entry.created_at).toLocaleString()}
+                </time>
+            </div>
+
+            {hasKeyChanges && (
+                <div className="flex flex-wrap gap-1.5">
+                    {keyGroups.flatMap((group) =>
+                        group.keys.map((key) => (
+                            <Badge
+                                key={`${group.label}-${key}`}
+                                variant="outline"
+                                className="font-mono"
+                                title={group.label}
+                            >
+                                <span className={group.className}>
+                                    {group.sign}
+                                </span>
+                                {key}
+                            </Badge>
+                        )),
+                    )}
+                </div>
+            )}
+        </div>
     );
 }

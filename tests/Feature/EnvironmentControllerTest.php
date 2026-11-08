@@ -4,6 +4,7 @@ use App\Enums\ServerStatus;
 use App\Jobs\SyncEnvironmentJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteEnvironmentHistory;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,5 +170,76 @@ describe('update', function () {
             ]);
 
         $response->assertNotFound();
+    });
+});
+
+describe('history', function () {
+    it('records who saved and which keys were added, changed and removed', function () {
+        Queue::fake();
+        $this->site->update(['env_content' => "APP_NAME=Old\nAPP_DEBUG=true\nKEEP=same"]);
+
+        $this->actingAs($this->user)
+            ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/environment", [
+                'env_content' => "APP_NAME=New\nKEEP=same\nMAIL_HOST=smtp.example.com",
+            ])
+            ->assertRedirect();
+
+        $entry = $this->site->environmentHistory()->sole();
+
+        expect($entry->user_id)->toBe($this->user->id)
+            ->and($entry->added_keys)->toBe(['MAIL_HOST'])
+            ->and($entry->changed_keys)->toBe(['APP_NAME'])
+            ->and($entry->removed_keys)->toBe(['APP_DEBUG'])
+            ->and($entry->old_content)->toBe("APP_NAME=Old\nAPP_DEBUG=true\nKEEP=same")
+            ->and($entry->new_content)->toBe("APP_NAME=New\nKEEP=same\nMAIL_HOST=smtp.example.com");
+    });
+
+    it('records nothing when the content did not change', function () {
+        Queue::fake();
+        $this->site->update(['env_content' => 'APP_NAME=Same']);
+
+        $this->actingAs($this->user)
+            ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/environment", [
+                'env_content' => 'APP_NAME=Same',
+            ]);
+
+        expect($this->site->environmentHistory()->count())->toBe(0);
+    });
+
+    it('marks the first save as such when the earlier file is unknown', function () {
+        Queue::fake();
+
+        $this->actingAs($this->user)
+            ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/environment", [
+                'env_content' => 'APP_NAME=MyApp',
+            ]);
+
+        $entry = $this->site->environmentHistory()->sole();
+
+        expect($entry->old_content)->toBeNull()
+            ->and($entry->added_keys)->toBe([])
+            ->and($entry->removed_keys)->toBe([]);
+    });
+
+    it('shows key names on the page but never values', function () {
+        SiteEnvironmentHistory::factory()->forSite($this->site)->create([
+            'user_id' => $this->user->id,
+            'changed_keys' => ['DB_PASSWORD'],
+            'old_content' => 'DB_PASSWORD=old-secret',
+            'new_content' => 'DB_PASSWORD=new-secret',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/environment");
+
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('history', 1)
+            ->where('history.0.changed_keys', ['DB_PASSWORD'])
+            ->where('history.0.user_name', $this->user->name)
+            ->missing('history.0.old_content')
+            ->missing('history.0.new_content')
+        );
+
+        expect($response->getContent())->not->toContain('new-secret');
     });
 });
