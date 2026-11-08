@@ -430,7 +430,7 @@ export default function ServerPhpIndex({
                                             '';
                                         return (
                                             <TableRow key={s.id}>
-                                                <TableCell className="font-mono font-medium">
+                                                <TableCell className="font-medium">
                                                     {v || '—'}
                                                 </TableCell>
                                                 <TableCell>
@@ -455,6 +455,7 @@ export default function ServerPhpIndex({
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
+                                                                className="text-xs"
                                                                 disabled={
                                                                     !serverIsReady ||
                                                                     isSubmittingDefault ===
@@ -481,7 +482,7 @@ export default function ServerPhpIndex({
                                 ) : (
                                     installedVersions.map((v) => (
                                         <TableRow key={v}>
-                                            <TableCell className="font-mono font-medium">
+                                            <TableCell className="font-medium">
                                                 {v}
                                             </TableCell>
                                             <TableCell>—</TableCell>
@@ -501,6 +502,7 @@ export default function ServerPhpIndex({
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
+                                                            className="text-xs"
                                                             disabled={
                                                                 !serverIsReady ||
                                                                 isSubmittingDefault ===

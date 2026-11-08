@@ -11,7 +11,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { StatGroup } from '@/components/ui/stat-group';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import {
     Table,
@@ -115,119 +114,113 @@ export function PhpExtensions({
             return <AutoStatusBadge status="installed" label="Installed" />;
         }
 
-        return <span className="text-sm text-muted-foreground">—</span>;
+        return <span className="text-muted-foreground">—</span>;
     };
 
     return (
-        <StatGroup>
-            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
-                <div className="flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <CardTitle>Extensions</CardTitle>
-                        <CardDescription className="mt-1">
-                            Add or remove optional PHP extensions. PHP is
-                            reloaded afterwards, so sites keep running.
-                            {current.extensions_sync_status === 'failed' &&
-                                current.extensions_sync_error && (
-                                    <span className="mt-1 block text-destructive">
-                                        The last change failed:{' '}
-                                        {current.extensions_sync_error}
-                                    </span>
-                                )}
-                        </CardDescription>
-                    </div>
-                    {versions.length > 1 && (
-                        <Select
-                            value={current.version}
-                            onValueChange={setSelectedVersion}
+        <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                    <CardTitle>Extensions</CardTitle>
+                    <CardDescription>
+                        Add or remove optional PHP extensions. PHP is reloaded
+                        afterwards, so sites keep running.
+                        {current.extensions_sync_status === 'failed' &&
+                            current.extensions_sync_error && (
+                                <span className="mt-1 block text-destructive">
+                                    The last change failed:{' '}
+                                    {current.extensions_sync_error}
+                                </span>
+                            )}
+                    </CardDescription>
+                </div>
+                {versions.length > 1 && (
+                    <Select
+                        value={current.version}
+                        onValueChange={setSelectedVersion}
+                    >
+                        <SelectTrigger
+                            className="w-full sm:w-[140px]"
+                            aria-label="PHP version"
                         >
-                            <SelectTrigger
-                                className="w-full sm:w-[140px]"
-                                aria-label="PHP version"
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {versions.map((v) => (
-                                    <SelectItem
-                                        key={v.version}
-                                        value={v.version}
-                                    >
-                                        PHP {v.version}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-                <div className="flex flex-col gap-4 p-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Extension</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="w-[120px]" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {availableExtensions.map((extension) => {
-                                const isInstalled = current.extensions.includes(
-                                    extension.value,
-                                );
-
-                                return (
-                                    <TableRow key={extension.value}>
-                                        <TableCell>
-                                            <p className="font-medium">
-                                                {extension.label}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {extension.description}
-                                            </p>
-                                        </TableCell>
-                                        <TableCell>
-                                            {statusFor(extension)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {canManagePhp && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled={
-                                                        !serverIsReady ||
-                                                        isBusy ||
-                                                        submitting !== null
-                                                    }
-                                                    onClick={() =>
-                                                        isInstalled
-                                                            ? setExtensionToRemove(
-                                                                  extension,
-                                                              )
-                                                            : changeExtension(
-                                                                  extension,
-                                                                  true,
-                                                              )
-                                                    }
-                                                >
-                                                    {isInstalled
-                                                        ? 'Remove'
-                                                        : 'Install'}
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                    <p className="text-sm text-muted-foreground">
-                        Always installed:{' '}
-                        <span className="font-mono">
-                            {includedExtensions.join(', ')}
-                        </span>
-                    </p>
-                </div>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {versions.map((v) => (
+                                <SelectItem key={v.version} value={v.version}>
+                                    PHP {v.version}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
             </div>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Extension</TableHead>
+                        <TableHead>Status</TableHead>
+                        {canManagePhp && (
+                            <TableHead className="text-right">
+                                Actions
+                            </TableHead>
+                        )}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {availableExtensions.map((extension) => {
+                        const isInstalled = current.extensions.includes(
+                            extension.value,
+                        );
+
+                        return (
+                            <TableRow key={extension.value}>
+                                <TableCell>
+                                    <p className="font-medium">
+                                        {extension.label}
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                        {extension.description}
+                                    </p>
+                                </TableCell>
+                                <TableCell>{statusFor(extension)}</TableCell>
+                                {canManagePhp && (
+                                    <TableCell className="text-right">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs"
+                                            disabled={
+                                                !serverIsReady ||
+                                                isBusy ||
+                                                submitting !== null
+                                            }
+                                            onClick={() =>
+                                                isInstalled
+                                                    ? setExtensionToRemove(
+                                                          extension,
+                                                      )
+                                                    : changeExtension(
+                                                          extension,
+                                                          true,
+                                                      )
+                                            }
+                                        >
+                                            {isInstalled ? 'Remove' : 'Install'}
+                                        </Button>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+            <p className="text-xs text-muted-foreground">
+                Always installed:{' '}
+                <span className="font-mono">
+                    {includedExtensions.join(', ')}
+                </span>
+            </p>
 
             <ConfirmDialog
                 open={extensionToRemove !== null}
@@ -242,6 +235,6 @@ export function PhpExtensions({
                     changeExtension(extensionToRemove, false)
                 }
             />
-        </StatGroup>
+        </div>
     );
 }
