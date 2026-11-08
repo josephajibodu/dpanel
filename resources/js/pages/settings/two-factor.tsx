@@ -1,16 +1,15 @@
 import { Form, Head } from '@inertiajs/react';
-import { ShieldBan, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
-import HeadingSmall from '@/components/heading-small';
+import { SettingsSection } from '@/components/settings-section';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { cn } from '@/lib/utils';
 import { disable, enable, show } from '@/routes/two-factor';
 import { type BreadcrumbItem } from '@/types';
 
@@ -21,10 +20,31 @@ interface TwoFactorProps {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Two-Factor Authentication',
+        title: 'Two-factor authentication',
         href: show.url(),
     },
 ];
+
+function StatusPill({ enabled }: { enabled: boolean }) {
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                enabled
+                    ? 'border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-400'
+                    : 'text-muted-foreground',
+            )}
+        >
+            <span
+                className={cn(
+                    'size-1.5 rounded-full',
+                    enabled ? 'bg-green-500' : 'bg-neutral-400',
+                )}
+            />
+            {enabled ? 'On' : 'Off'}
+        </span>
+    );
+}
 
 export default function TwoFactor({
     requiresConfirmation = false,
@@ -43,99 +63,79 @@ export default function TwoFactor({
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} subNavItems={getSettingsSubNavItems()}>
-            <Head title="Two-Factor Authentication" />
+        <AppLayout
+            breadcrumbs={breadcrumbs}
+            subNavItems={getSettingsSubNavItems()}
+        >
+            <Head title="Two-factor authentication" />
 
-            <h1 className="sr-only">Two-Factor Authentication Settings</h1>
+            <h1 className="sr-only">Two-factor authentication settings</h1>
 
             <SettingsLayout>
-                <div className="space-y-6">
-                    <HeadingSmall
-                        title="Two-Factor Authentication"
-                        description="Manage your two-factor authentication settings"
-                    />
-                    {twoFactorEnabled ? (
-                        <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="default">Enabled</Badge>
-                            <p className="text-muted-foreground">
-                                With two-factor authentication enabled, you will
-                                be prompted for a secure, random pin during
-                                login, which you can retrieve from the
-                                TOTP-supported application on your phone.
-                            </p>
-
-                            <TwoFactorRecoveryCodes
-                                recoveryCodesList={recoveryCodesList}
-                                fetchRecoveryCodes={fetchRecoveryCodes}
-                                errors={errors}
-                            />
-
-                            <div className="relative inline">
-                                <Form {...disable.form()}>
-                                    {({ processing }) => (
-                                        <Button
-                                            variant="destructive"
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            <ShieldBan /> Disable 2FA
-                                        </Button>
-                                    )}
-                                </Form>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="destructive">Disabled</Badge>
-                            <p className="text-muted-foreground">
-                                When you enable two-factor authentication, you
-                                will be prompted for a secure pin during login.
-                                This pin can be retrieved from a TOTP-supported
-                                application on your phone.
-                            </p>
-
-                            <div>
-                                {hasSetupData ? (
+                <SettingsSection
+                    title="Two-factor authentication"
+                    description={
+                        twoFactorEnabled
+                            ? 'When you sign in, you enter your password and then a six-digit code from the authenticator app on your phone.'
+                            : 'Add a second step to signing in: after your password, you enter a six-digit code from an authenticator app on your phone. Someone who learns your password still can’t get in.'
+                    }
+                    headerAction={<StatusPill enabled={twoFactorEnabled} />}
+                    footerHint={
+                        twoFactorEnabled
+                            ? 'Turning it off makes your account easier to break into.'
+                            : 'Works with 1Password, Google Authenticator, Authy, and similar apps.'
+                    }
+                    footerAction={
+                        twoFactorEnabled ? (
+                            <Form {...disable.form()}>
+                                {({ processing }) => (
                                     <Button
-                                        onClick={() => setShowSetupModal(true)}
+                                        variant="outline"
+                                        type="submit"
+                                        disabled={processing}
                                     >
-                                        <ShieldCheck />
-                                        Continue Setup
+                                        Turn off
                                     </Button>
-                                ) : (
-                                    <Form
-                                        {...enable.form()}
-                                        onSuccess={() =>
-                                            setShowSetupModal(true)
-                                        }
-                                    >
-                                        {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                            >
-                                                <ShieldCheck />
-                                                Enable 2FA
-                                            </Button>
-                                        )}
-                                    </Form>
                                 )}
-                            </div>
-                        </div>
-                    )}
+                            </Form>
+                        ) : hasSetupData ? (
+                            <Button onClick={() => setShowSetupModal(true)}>
+                                Continue setup
+                            </Button>
+                        ) : (
+                            <Form
+                                {...enable.form()}
+                                onSuccess={() => setShowSetupModal(true)}
+                            >
+                                {({ processing }) => (
+                                    <Button type="submit" disabled={processing}>
+                                        Turn on
+                                    </Button>
+                                )}
+                            </Form>
+                        )
+                    }
+                />
 
-                    <TwoFactorSetupModal
-                        isOpen={showSetupModal}
-                        onClose={() => setShowSetupModal(false)}
-                        requiresConfirmation={requiresConfirmation}
-                        twoFactorEnabled={twoFactorEnabled}
-                        qrCodeSvg={qrCodeSvg}
-                        manualSetupKey={manualSetupKey}
-                        clearSetupData={clearSetupData}
-                        fetchSetupData={fetchSetupData}
+                {twoFactorEnabled && (
+                    <TwoFactorRecoveryCodes
+                        recoveryCodesList={recoveryCodesList}
+                        fetchRecoveryCodes={fetchRecoveryCodes}
                         errors={errors}
                     />
-                </div>
+                )}
+
+                <TwoFactorSetupModal
+                    isOpen={showSetupModal}
+                    onClose={() => setShowSetupModal(false)}
+                    requiresConfirmation={requiresConfirmation}
+                    twoFactorEnabled={twoFactorEnabled}
+                    qrCodeSvg={qrCodeSvg}
+                    manualSetupKey={manualSetupKey}
+                    clearSetupData={clearSetupData}
+                    fetchSetupData={fetchSetupData}
+                    errors={errors}
+                />
             </SettingsLayout>
         </AppLayout>
     );

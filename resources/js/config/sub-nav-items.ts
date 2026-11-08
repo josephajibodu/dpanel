@@ -82,7 +82,7 @@ export function getSettingsSubNavItems(): SubNavItem[] {
     return [
         { title: 'Profile', href: edit().url },
         { title: 'Password', href: editPassword().url },
-        { title: 'Two-Factor Auth', href: show.url() },
+        { title: 'Two-factor auth', href: show.url() },
         { title: 'Appearance', href: editAppearance().url },
         { title: 'Team', href: '/settings/team' },
     ];
