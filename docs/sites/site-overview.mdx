@@ -34,6 +34,7 @@ Open a server, then click a site to see its page. The tabs along the top are:
 
 From the site's menu, choose **Edit Site** to change:
 
+- **Repository**: the account and repository deployments pull from, or **No repository**. Pick from the repositories of your own connected accounts. The next deployment uses the new repository; nothing changes on the server until then.
 - **Branch**: the branch deployments pull from. The next deployment uses it.
 - **Web directory**: the folder the web server serves, for example `/public`.
 - **PHP version**: any PHP version installed on the server. Not shown for Static HTML sites.
@@ -41,7 +42,13 @@ From the site's menu, choose **Edit Site** to change:
 
 Changes to the web directory and PHP version reach the web server within a few moments, without downtime. You need the **Manage sites** permission (and **Deploy** for Deploy on push).
 
-The domain and project type are fixed once a site is created; manage domains on the [Domains](/sites/domains) tab. Changing a site's repository is on the [roadmap](/roadmap).
+When you change the repository:
+
+- flitops adds the server's key to the new account, so the server can download the code, and takes it off the old account once no other site on the server uses it.
+- If **Deploy on push** was on, its webhook is removed from the old repository. Leave the switch on when you save and a new webhook is added to the new repository.
+- If the site uses a teammate's account, you can keep it, but you can only switch to one of your own accounts.
+
+The domain and project type are fixed once a site is created; manage domains on the [Domains](/sites/domains) tab.
 
 ## Site statuses
 

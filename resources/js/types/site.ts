@@ -12,6 +12,7 @@ export interface Site {
     system_user: string;
     is_isolated: boolean;
     repository: string | null;
+    source_control_account_id: number | null;
     short_repository: string | null;
     repository_url: string | null;
     repository_provider: 'github' | 'gitlab' | 'bitbucket' | 'custom' | null;

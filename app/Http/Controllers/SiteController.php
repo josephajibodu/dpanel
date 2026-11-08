@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sites\ChangeSiteRepositoryAction;
 use App\Actions\Sites\CreateSiteAction;
 use App\Actions\Sites\DeleteSiteAction;
 use App\Actions\Sites\SetDeployOnPushAction;
@@ -203,6 +204,9 @@ class SiteController extends Controller
             'site' => new SiteResource($site),
             'phpVersions' => $phpVersions,
             'supportsDeployOnPush' => $sourceControl->supportsDeployWebhooks($site),
+            'sourceControlAccounts' => SourceControlAccountResource::collection(
+                auth()->user()->sourceControlAccounts()->get(),
+            ),
         ]);
     }
 
@@ -212,8 +216,23 @@ class SiteController extends Controller
         Server $server,
         Site $site,
         SetDeployOnPushAction $setDeployOnPush,
+        ChangeSiteRepositoryAction $changeRepository,
     ): RedirectResponse {
         $validated = $request->validated();
+
+        if (array_key_exists('repository', $validated) || array_key_exists('source_control_account_id', $validated)) {
+            try {
+                $changeRepository->execute(
+                    $site,
+                    SourceControlAccount::find(array_key_exists('source_control_account_id', $validated)
+                        ? $validated['source_control_account_id']
+                        : $site->source_control_account_id),
+                    array_key_exists('repository', $validated) ? $validated['repository'] : $site->repository,
+                );
+            } catch (RuntimeException $exception) {
+                return back()->withErrors(['repository' => $exception->getMessage()]);
+            }
+        }
 
         if (array_key_exists('auto_deploy', $validated)) {
             try {
@@ -224,7 +243,7 @@ class SiteController extends Controller
         }
 
         $previousPhpVersion = $site->php_version;
-        $site->update(Arr::except($validated, 'auto_deploy'));
+        $site->update(Arr::except($validated, ['auto_deploy', 'repository', 'source_control_account_id']));
 
         $phpVersionChanged = $site->wasChanged('php_version');
 

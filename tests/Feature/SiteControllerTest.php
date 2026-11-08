@@ -3,6 +3,7 @@
 use App\Enums\ConnectionStatus;
 use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
+use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
 use App\Jobs\MoveSitePhpPoolJob;
@@ -280,4 +281,112 @@ it('refuses deploy on push for a site without a connected repository', function 
 
     expect($site->fresh()->auto_deploy)->toBeFalse();
     Http::assertNothingSent();
+});
+
+it('switches a site to another repository and adds the server key to the new account', function () {
+    Http::fake([
+        'api.github.com/user/keys*' => Http::response([]),
+        'gitlab.com/api/v4/user/keys*' => Http::response([]),
+    ]);
+    $this->server->update(['local_public_key' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIServerKey']);
+    $github = SourceControlAccount::factory()->github()->create(['user_id' => $this->user->id]);
+    $gitlab = SourceControlAccount::factory()->gitlab()->create(['user_id' => $this->user->id]);
+    $site = Site::factory()->forServer($this->server)->forSourceControlAccount($github)->create(['repository' => 'acme/old']);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => $gitlab->id,
+            'repository' => 'acme/web/new',
+            'branch' => 'develop',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($site->fresh())
+        ->repository->toBe('acme/web/new')
+        ->source_control_account_id->toBe($gitlab->id)
+        ->repository_provider->toBe(RepositoryProvider::Gitlab)
+        ->branch->toBe('develop');
+    Http::assertSent(fn ($request) => $request->method() === 'POST' && str_contains($request->url(), 'gitlab.com/api/v4/user/keys'));
+});
+
+it('moves the deploy on push webhook to the new repository', function () {
+    Http::fake([
+        'api.github.com/repos/acme/old/hooks/4242' => Http::response(null, 204),
+        'api.github.com/repos/acme/new/hooks' => Http::response(['id' => 5151], 201),
+        'api.github.com/*' => Http::response([]),
+    ]);
+    $account = SourceControlAccount::factory()->github()->create(['user_id' => $this->user->id]);
+    $site = Site::factory()->forServer($this->server)->forSourceControlAccount($account)->create([
+        'repository' => 'acme/old',
+        'auto_deploy' => true,
+        'deploy_webhook_id' => '4242',
+    ]);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => $account->id,
+            'repository' => 'acme/new',
+            'auto_deploy' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($site->fresh())
+        ->auto_deploy->toBeTrue()
+        ->deploy_webhook_id->toBe('5151');
+    Http::assertSent(fn ($request) => $request->method() === 'DELETE' && str_contains($request->url(), 'acme/old/hooks/4242'));
+});
+
+it('removes a site\'s repository', function () {
+    $account = SourceControlAccount::factory()->github()->create(['user_id' => $this->user->id]);
+    $site = Site::factory()->forServer($this->server)->forSourceControlAccount($account)->create(['repository' => 'acme/old']);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => null,
+            'repository' => null,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($site->fresh())
+        ->repository->toBeNull()
+        ->source_control_account_id->toBeNull()
+        ->repository_provider->toBeNull();
+});
+
+it('keeps a site on a teammate\'s account, but refuses a teammate\'s other accounts', function () {
+    Http::fake(['*' => Http::response([])]);
+    $teammate = User::factory()->create();
+    $teammateAccount = SourceControlAccount::factory()->github()->create(['user_id' => $teammate->id]);
+    $otherTeammateAccount = SourceControlAccount::factory()->gitlab()->create(['user_id' => $teammate->id]);
+    $site = Site::factory()->forServer($this->server)->forSourceControlAccount($teammateAccount)->create(['repository' => 'acme/app']);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => $teammateAccount->id,
+            'repository' => 'acme/app',
+            'branch' => 'release',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => $otherTeammateAccount->id,
+            'repository' => 'acme/other',
+        ])
+        ->assertSessionHasErrors('source_control_account_id');
+
+    expect($site->fresh())
+        ->branch->toBe('release')
+        ->source_control_account_id->toBe($teammateAccount->id);
+});
+
+it('needs an account to set a repository', function () {
+    $site = Site::factory()->forServer($this->server)->create(['source_control_account_id' => null, 'repository' => null]);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", [
+            'source_control_account_id' => null,
+            'repository' => 'acme/app',
+        ])
+        ->assertSessionHasErrors('source_control_account_id');
 });

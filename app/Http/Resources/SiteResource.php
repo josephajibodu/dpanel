@@ -33,6 +33,7 @@ class SiteResource extends JsonResource
             'system_user' => $this->systemUser(),
             'is_isolated' => $this->isIsolated(),
             'repository' => $this->repository,
+            'source_control_account_id' => $this->source_control_account_id,
             'short_repository' => $this->shortRepository(),
             'repository_url' => $this->repositoryUrl(),
             'repository_provider' => $this->repository_provider?->value,
