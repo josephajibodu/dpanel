@@ -83,7 +83,7 @@ it('creates an app server with every service when no type is given', function ()
 
     expect($server)
         ->type->toBe(ServerType::App)
-        ->php_version->toBe('8.3')
+        ->php_version->toBe('8.5')
         ->web_server->toBe('nginx')
         ->database_type->toBe('mysql');
     expect($server->installedServices()->pluck('type')->all())->toEqualCanonicalizing([

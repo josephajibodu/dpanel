@@ -65,7 +65,7 @@ class UpdateSiteRequest extends FormRequest
         $server = $this->route('server');
 
         if (! $server instanceof Server) {
-            return ['8.1', '8.2', '8.3', '8.4'];
+            return ['8.1', '8.2', '8.3', '8.4', '8.5'];
         }
 
         $versions = $server->installedServices()
@@ -77,6 +77,6 @@ class UpdateSiteRequest extends FormRequest
             ->values()
             ->all();
 
-        return ! empty($versions) ? $versions : ['8.1', '8.2', '8.3', '8.4'];
+        return ! empty($versions) ? $versions : ['8.1', '8.2', '8.3', '8.4', '8.5'];
     }
 }

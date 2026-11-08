@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +15,7 @@ class SetDefaultPhpVersionRequest extends FormRequest
     }
 
     /**
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -41,7 +42,7 @@ class SetDefaultPhpVersionRequest extends FormRequest
         $server = $this->route('server');
 
         if (! $server instanceof Server) {
-            return ['8.1', '8.2', '8.3', '8.4'];
+            return ['8.1', '8.2', '8.3', '8.4', '8.5'];
         }
 
         $versions = $server->installedServices()
@@ -53,6 +54,6 @@ class SetDefaultPhpVersionRequest extends FormRequest
             ->values()
             ->all();
 
-        return ! empty($versions) ? $versions : ['8.1', '8.2', '8.3', '8.4'];
+        return ! empty($versions) ? $versions : ['8.1', '8.2', '8.3', '8.4', '8.5'];
     }
 }

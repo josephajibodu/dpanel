@@ -154,7 +154,7 @@ class StoreSiteRequest extends FormRequest
         $server = Server::find($this->input('server_id'));
 
         if (! $server) {
-            return ['8.1', '8.2', '8.3', '8.4'];
+            return ['8.1', '8.2', '8.3', '8.4', '8.5'];
         }
 
         $versions = $server->installedServices()
@@ -167,7 +167,7 @@ class StoreSiteRequest extends FormRequest
             ->all();
 
         if (empty($versions)) {
-            return ['8.1', '8.2', '8.3', '8.4'];
+            return ['8.1', '8.2', '8.3', '8.4', '8.5'];
         }
 
         return $versions;

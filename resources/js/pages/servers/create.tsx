@@ -47,6 +47,7 @@ interface Props {
 type Mode = 'provider' | 'custom';
 
 const phpVersions = [
+    { value: '8.5', label: 'PHP 8.5' },
     { value: '8.4', label: 'PHP 8.4' },
     { value: '8.3', label: 'PHP 8.3' },
     { value: '8.2', label: 'PHP 8.2' },
@@ -84,7 +85,7 @@ function applyPreset(option: ServerTypeOption, current: Stack): Stack {
     return {
         type: option.value,
         php_version: option.services.php
-            ? (current.php_version ?? '8.3')
+            ? (current.php_version ?? '8.5')
             : null,
         web_server: option.services.web_server
             ? (current.web_server ?? 'nginx')
@@ -98,7 +99,7 @@ function applyPreset(option: ServerTypeOption, current: Stack): Stack {
 
 const defaultStack: Stack = {
     type: 'app',
-    php_version: '8.3',
+    php_version: '8.5',
     web_server: 'nginx',
     database_type: 'mysql',
     redis: true,

@@ -11,7 +11,7 @@ readonly class CustomServerData
         public string $ipAddress,
         public int $sshPort = 22,
         public ServerType $type = ServerType::App,
-        public ?string $phpVersion = '8.3',
+        public ?string $phpVersion = '8.5',
         public ?string $webServer = 'nginx',
         public ?string $databaseType = 'mysql',
         public bool $redis = true,

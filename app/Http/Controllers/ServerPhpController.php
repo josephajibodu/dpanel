@@ -24,7 +24,7 @@ use Inertia\Response;
 
 class ServerPhpController extends Controller
 {
-    private const AVAILABLE_VERSIONS = ['8.1', '8.2', '8.3', '8.4'];
+    private const AVAILABLE_VERSIONS = ['8.1', '8.2', '8.3', '8.4', '8.5'];
 
     public function index(Team $team, Server $server): Response
     {

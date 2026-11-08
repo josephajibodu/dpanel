@@ -53,7 +53,7 @@ it('shows PHP index for the server without SSH on initial load', function () {
             ->has('availableVersions')
             ->where('serverIsReady', false)
             ->where('defaultVersion', '8.3')
-            ->where('availableVersions', ['8.1', '8.2', '8.3', '8.4'])
+            ->where('availableVersions', ['8.1', '8.2', '8.3', '8.4', '8.5'])
         );
 });
 
