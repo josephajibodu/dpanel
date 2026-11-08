@@ -13,11 +13,15 @@ import { contact, register } from '@/routes';
 
 type BillingPeriod = 'monthly' | 'yearly';
 
+type Currency = 'usd' | 'ngn';
+
+/** Monthly price in each currency, with the yearly figure as a per-month rate. */
+type PlanPrice = { monthly: number; yearly: number };
+
 type Plan = {
     name: string;
     description: string;
-    monthlyPrice: number;
-    yearlyPrice: number;
+    prices: Record<Currency, PlanPrice>;
     cta: string;
     isFeatured?: boolean;
     highlights: string[];
@@ -27,8 +31,10 @@ const plans: Plan[] = [
     {
         name: 'Hobby',
         description: 'For side projects and trying flitops on a real server.',
-        monthlyPrice: 0,
-        yearlyPrice: 0,
+        prices: {
+            usd: { monthly: 0, yearly: 0 },
+            ngn: { monthly: 0, yearly: 0 },
+        },
         cta: 'Start for free',
         highlights: [
             '1 server',
@@ -41,8 +47,10 @@ const plans: Plan[] = [
     {
         name: 'Pro',
         description: 'For developers and freelancers running production apps.',
-        monthlyPrice: 15,
-        yearlyPrice: 12,
+        prices: {
+            usd: { monthly: 5, yearly: 4 },
+            ngn: { monthly: 5000, yearly: 4000 },
+        },
         cta: 'Start 14-day trial',
         isFeatured: true,
         highlights: [
@@ -57,8 +65,10 @@ const plans: Plan[] = [
     {
         name: 'Team',
         description: 'For agencies and teams sharing a fleet.',
-        monthlyPrice: 39,
-        yearlyPrice: 32,
+        prices: {
+            usd: { monthly: 15, yearly: 12 },
+            ngn: { monthly: 15000, yearly: 12000 },
+        },
         cta: 'Start 14-day trial',
         highlights: [
             'Everything in Pro',
@@ -110,6 +120,19 @@ const faqs: FaqItem[] = [
     },
 ];
 
+const currencyLabels: Record<Currency, string> = {
+    usd: 'USD $',
+    ngn: 'NGN ₦',
+};
+
+function formatPrice(amount: number, currency: Currency): string {
+    return new Intl.NumberFormat(currency === 'ngn' ? 'en-NG' : 'en-US', {
+        style: 'currency',
+        currency: currency.toUpperCase(),
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
 function PlanValue({ value }: { value: string | boolean }) {
     if (value === true) {
         return (
@@ -134,6 +157,7 @@ function PlanValue({ value }: { value: string | boolean }) {
 
 export default function Pricing() {
     const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
+    const [currency, setCurrency] = useState<Currency>('usd');
 
     return (
         <MarketingLayout
@@ -145,7 +169,7 @@ export default function Pricing() {
                 title="Flat pricing. Unlimited servers."
                 description="One price for the platform, however large your fleet grows. You pay your cloud provider directly for the servers."
             >
-                <div className="mt-10 flex justify-center">
+                <div className="mt-10 flex flex-wrap justify-center gap-3">
                     <div
                         role="radiogroup"
                         aria-label="Billing period"
@@ -174,16 +198,36 @@ export default function Pricing() {
                             </button>
                         ))}
                     </div>
+                    <div
+                        role="radiogroup"
+                        aria-label="Currency"
+                        className="inline-flex rounded-full border border-border bg-background p-1 text-sm"
+                    >
+                        {(['usd', 'ngn'] as const).map((option) => (
+                            <button
+                                key={option}
+                                type="button"
+                                role="radio"
+                                aria-checked={currency === option}
+                                onClick={() => setCurrency(option)}
+                                className={cn(
+                                    'rounded-full px-4 py-1.5 font-medium transition-colors',
+                                    currency === option
+                                        ? 'bg-foreground text-background'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {currencyLabels[option]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </PageHero>
 
             <section className="px-6">
                 <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
                     {plans.map((plan) => {
-                        const price =
-                            billingPeriod === 'yearly'
-                                ? plan.yearlyPrice
-                                : plan.monthlyPrice;
+                        const price = plan.prices[currency][billingPeriod];
 
                         return (
                             <div
@@ -218,7 +262,7 @@ export default function Pricing() {
 
                                 <p className="mt-8 flex items-baseline gap-1.5">
                                     <span className="text-5xl font-semibold tracking-tight tabular-nums">
-                                        ${price}
+                                        {formatPrice(price, currency)}
                                     </span>
                                     <span
                                         className={cn(
@@ -241,7 +285,7 @@ export default function Pricing() {
                                 >
                                     {price > 0 &&
                                         billingPeriod === 'yearly' &&
-                                        `Billed $${price * 12} yearly`}
+                                        `Billed ${formatPrice(price * 12, currency)} yearly`}
                                 </p>
 
                                 <Button
