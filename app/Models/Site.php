@@ -122,6 +122,11 @@ class Site extends Model
      * connects as the server user, so isolated sites need the switch;
      * other sites already run as the server user and get the command back
      * unchanged.
+     *
+     * sudo keeps the SSH session's folder, the server user's home, which the
+     * site's user can't enter. The command starts in the site user's own
+     * home instead, so tools that need their starting folder (like
+     * `find -exec`) work.
      */
     public function commandAsSystemUser(string $command): string
     {
@@ -129,7 +134,7 @@ class Site extends Model
             return $command;
         }
 
-        return 'sudo -u '.$this->escapeForShell($this->system_user).' -H bash -c '.$this->escapeForShell($command);
+        return 'sudo -u '.$this->escapeForShell($this->system_user).' -H bash -c '.$this->escapeForShell('cd ~ && '.$command);
     }
 
     /**

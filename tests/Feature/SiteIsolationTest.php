@@ -199,7 +199,8 @@ it('creates the site user and its own php-fpm pool, and points nginx at it', fun
         ->and($all)->toContain("location ^~ /.well-known/acme-challenge/ {\n    root /var/lib/flitops/acme;");
 
     // Site files are created by the site's own user, never chowned to the server user.
-    expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'mkdir -p /home/example_com/example.com/releases")))->toBeTrue()
+    expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'cd ~ && mkdir -p /home/example_com/example.com/releases")))->toBeTrue()
+        ->and($commands)->toContain("sudo -u 'example_com' -H bash -c 'cd ~ && find /home/example_com/example.com -type d -exec chmod 755 {} \\;'")
         ->and($all)->not->toContain('chown -R artisan')
         ->and($all)->not->toContain('/home/artisan/example.com')
         ->and($all)->toContain('chmod 600 /home/example_com/example.com/shared/.env');
@@ -359,7 +360,7 @@ it('clones as the server user and runs the deploy script as the site user', func
     // The clone uses the server user's key and hands the files to the site user.
     expect($clone)->toContain('ssh -i /home/artisan/.ssh/id_ed25519')
         ->and($clone)->toContain('CLONE_DIR=$(mktemp -d)')
-        ->and($clone)->toContain("| sudo -u 'example_com' -H bash -c 'mkdir -p \"\$1\" && tar -C \"\$1\" -xf -' _ \"\$RELEASE_PATH\"")
+        ->and($clone)->toContain("| sudo -u 'example_com' -H bash -c 'cd ~ && mkdir -p \"\$1\" && tar -C \"\$1\" -xf -' _ \"\$RELEASE_PATH\"")
         ->and($clone)->not->toStartWith('sudo -u');
 
     // The deploy script runs as the site user, without sudo or a git clone.
@@ -377,8 +378,8 @@ it('clones as the server user and runs the deploy script as the site user', func
         ->and(array_search($reload, $commands, true))->toBeGreaterThan(array_search($run, $commands, true));
 
     // Release housekeeping happens as the site user.
-    expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'ls -1 /home/example_com/example.com/releases")))->toBeTrue()
-        ->and(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'cd /home/example_com/example.com/releases/") && str_contains($c, 'git rev-parse HEAD')))->toBeTrue();
+    expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'cd ~ && ls -1 /home/example_com/example.com/releases")))->toBeTrue()
+        ->and(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'cd ~ && cd /home/example_com/example.com/releases/") && str_contains($c, 'git rev-parse HEAD')))->toBeTrue();
 });
 
 it('stops before running the deploy script when the clone fails', function () {
@@ -423,7 +424,7 @@ it('rolls back as the site user and reloads php-fpm as the server user', functio
 
     expect($rollback->fresh()->status)->toBe(DeploymentStatus::Finished);
 
-    expect($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'test -d '")
+    expect($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'cd ~ && test -d '")
         ->and($commands[1])->toStartWith("sudo -u 'example_com' -H bash -c")
         ->and($commands[1])->toContain('ln -sfn')
         ->and($commands[1])->toContain($target->ulid)
@@ -445,7 +446,7 @@ it('writes the environment file as the site user, readable only by it', function
     $envPath = '/home/example_com/example.com/shared/.env';
 
     expect($uploads)->toBe(['/tmp/tmp.fleetops/.env' => "APP_KEY=secret\n"])
-        ->and($commands)->toContain("cat '/tmp/tmp.fleetops/.env' | sudo -u 'example_com' -H bash -c 'umask 077 && cat > '\\''{$envPath}.flitops-tmp'\\'' && mv -f '\\''{$envPath}.flitops-tmp'\\'' '\\''{$envPath}'\\'''")
+        ->and($commands)->toContain("cat '/tmp/tmp.fleetops/.env' | sudo -u 'example_com' -H bash -c 'cd ~ && umask 077 && cat > '\\''{$envPath}.flitops-tmp'\\'' && mv -f '\\''{$envPath}.flitops-tmp'\\'' '\\''{$envPath}'\\'''")
         ->and($commands)->toContain("rm -rf '/tmp/tmp.fleetops'")
         ->and(implode("\n", $commands))->not->toContain('chown')
         ->and(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com'") && str_contains($c, 'artisan config:cache')))->toBeTrue();
@@ -461,7 +462,7 @@ it('runs site commands as the site user', function () {
     app(RunSiteCommand::class)->execute($run);
 
     expect($commands)->toHaveCount(1)
-        ->and($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'cd /home/example_com/example.com/current && bash -lc ");
+        ->and($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'cd ~ && cd /home/example_com/example.com/current && bash -lc ");
 });
 
 it('snapshots an isolated sqlite database as the site user and uploads it as the server user', function () {

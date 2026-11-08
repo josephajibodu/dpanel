@@ -156,7 +156,7 @@ it('adds the key to the site user own authorized_keys, as that user', function (
     (new SyncSshKeyJob($sshKey, $this->server, $this->site))->handle(sshKeyConnection($commands));
 
     expect($commands)->toHaveCount(1)
-        ->and($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh")
+        ->and($commands[0])->toStartWith("sudo -u 'example_com' -H bash -c 'cd ~ && mkdir -p ~/.ssh && chmod 700 ~/.ssh")
         ->and($commands[0])->toContain('~/.ssh/authorized_keys')
         ->and($commands[0])->not->toContain('/home/artisan')
         ->and(ServerSshKey::query()->sole()->status)->toBe('synced');
