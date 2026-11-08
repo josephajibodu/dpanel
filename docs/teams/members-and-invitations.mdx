@@ -29,9 +29,9 @@ In the **Team members** list, choose a new role next to the person's name. The c
 
 Click **Remove** next to the person in the **Team members** list. They lose access to the team immediately.
 
-<Warning>
-  Removing someone from the team stops them using flitops to reach your servers, but if they had their own SSH key synced to your servers, that key could still log in directly. When someone leaves, check [SSH keys](/connections/ssh-keys) and revoke any keys they added. flitops can remove a key from every server it was synced to in one step.
-</Warning>
+<Note>
+  When someone is removed from the team, or leaves it, flitops also takes their SSH keys off all of the team's servers and sites, so they can no longer log in directly. Lowering someone's role does the same where their new role no longer allows it: a Developer keeps keys on isolated sites but loses full server access, and a Viewer loses all SSH access. Keys they added to other teams' servers aren't touched.
+</Note>
 
 ## Rules that keep teams safe
 

@@ -22,7 +22,7 @@ flitops sets secure defaults, but some of security is in your hands. These are t
 ## Your team
 
 - **Give the lowest role that works.** Most people who ship code only need **Developer**. Keep **Owner** to one or two people. See [Roles and permissions](/teams/roles-and-permissions).
-- **Remove people promptly** when they leave, and delete their [SSH keys](/connections/ssh-keys).
+- **Remove people promptly** when they leave. Their [SSH keys](/connections/ssh-keys) are taken off the team's servers at the same time.
 - **Review members now and then.** Remove anyone who no longer needs access, and cancel old invitations.
 
 ## Your servers
@@ -52,7 +52,7 @@ flitops sets secure defaults, but some of security is in your hands. These are t
 ## If you think something is wrong
 
 1. **Change your flitops password** and check two-factor authentication is on.
-2. **Remove unknown members** from your teams, and **delete unknown SSH keys**.
+2. **Remove unknown members** from your teams (their SSH keys come off your servers with them), and check your servers' `authorized_keys` files for keys flitops didn't add.
 3. **Rotate** your cloud, Git and storage credentials, and any secrets in your sites' environments.
 4. **Check your servers** for unknown users, processes or cron jobs.
 5. **Contact us** at [hello@flitops.com](mailto:hello@flitops.com).
