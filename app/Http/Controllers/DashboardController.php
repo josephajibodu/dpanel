@@ -10,12 +10,13 @@ use App\Models\Deployment;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Models\Team;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(Team $team): Response
+    public function index(Request $request, Team $team): Response
     {
         $recentServers = $team->servers()
             ->with('installedServices')
@@ -43,6 +44,11 @@ class DashboardController extends Controller
                     ->where('created_at', '>=', now()->subDays(7))
                     ->count(),
                 'ssl_alerts' => count($sslAlerts),
+            ],
+            'onboarding' => [
+                'provider_accounts' => $team->providerAccounts()->where('is_valid', true)->count(),
+                'ssh_keys' => $request->user()->sshKeys()->count(),
+                'source_control_accounts' => $request->user()->sourceControlAccounts()->count(),
             ],
             'sslAlerts' => $sslAlerts,
             'recentServers' => ServerResource::collection($recentServers),

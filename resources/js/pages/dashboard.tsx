@@ -2,6 +2,10 @@ import { Head, Link } from '@inertiajs/react';
 import { formatDistanceToNow } from 'date-fns';
 import { PlusIcon } from 'lucide-react';
 
+import {
+    AddServerOptions,
+    GettingStartedChecklist,
+} from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { StatusBadge } from '@/components/status-badge';
@@ -59,6 +63,11 @@ interface Props {
         deployments_this_week: number;
         ssl_alerts: number;
     };
+    onboarding: {
+        provider_accounts: number;
+        ssh_keys: number;
+        source_control_accounts: number;
+    };
     sslAlerts: DashboardSslAlert[];
     recentServers: {
         data: Server[];
@@ -68,6 +77,7 @@ interface Props {
 
 export default function Dashboard({
     stats,
+    onboarding,
     sslAlerts,
     recentServers,
     recentDeployments,
@@ -82,6 +92,18 @@ export default function Dashboard({
     ];
 
     const servers = recentServers?.data ?? [];
+    const isWelcome = stats.servers === 0 && canManageServers;
+    const showChecklist = stats.sites === 0 && canManageServers;
+    const checklist = (
+        <GettingStartedChecklist
+            providerAccounts={onboarding.provider_accounts}
+            sshKeys={onboarding.ssh_keys}
+            sourceControlAccounts={onboarding.source_control_accounts}
+            servers={stats.servers}
+            sites={stats.sites}
+            firstServerId={servers[0]?.id ?? null}
+        />
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -91,13 +113,15 @@ export default function Dashboard({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Dashboard
+                            {isWelcome ? 'Welcome to FlitOps' : 'Dashboard'}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            An overview of your servers, sites, and deployments.
+                            {isWelcome
+                                ? 'Get your first site live in a few minutes.'
+                                : 'An overview of your servers, sites, and deployments.'}
                         </p>
                     </div>
-                    {canManageServers && (
+                    {canManageServers && !isWelcome && (
                         <Button asChild>
                             <Link href={teamPath('/servers/create')}>
                                 <PlusIcon className="mr-2 h-4 w-4" />
@@ -107,27 +131,19 @@ export default function Dashboard({
                     )}
                 </div>
 
-                {stats.servers === 0 ? (
+                {isWelcome ? (
+                    <>
+                        <AddServerOptions />
+                        {checklist}
+                    </>
+                ) : stats.servers === 0 ? (
                     <EmptyState
                         title="No servers yet"
-                        description={
-                            canManageServers
-                                ? 'Create your first server to start deploying sites with FlitOps.'
-                                : 'Servers added to this team will appear here.'
-                        }
-                        action={
-                            canManageServers && (
-                                <Button asChild>
-                                    <Link href={teamPath('/servers/create')}>
-                                        <PlusIcon className="mr-2 h-4 w-4" />
-                                        Create Server
-                                    </Link>
-                                </Button>
-                            )
-                        }
+                        description="Servers added to this team will appear here."
                     />
                 ) : (
                     <>
+                        {showChecklist && checklist}
                         <StatGroup>
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                 <Stat

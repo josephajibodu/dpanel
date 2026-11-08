@@ -4,9 +4,12 @@ use App\Enums\ServerStatus;
 use App\Enums\SiteDomainType;
 use App\Models\Certificate;
 use App\Models\Deployment;
+use App\Models\ProviderAccount;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\SourceControlAccount;
+use App\Models\SshKey;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +31,31 @@ it('shows an empty state when the team has no servers', function () {
             ->component('dashboard')
             ->where('stats.servers', 0)
             ->where('recentServers.data', [])
-            ->where('recentDeployments', []));
+            ->where('recentDeployments', [])
+            ->where('onboarding.provider_accounts', 0)
+            ->where('onboarding.ssh_keys', 0)
+            ->where('onboarding.source_control_accounts', 0));
+});
+
+it('counts only the team\'s valid provider accounts and the user\'s own keys and source control for the getting-started checklist', function () {
+    ProviderAccount::factory()->forTeam($this->team)->create();
+    ProviderAccount::factory()->forTeam($this->team)->create(['is_valid' => false]);
+    SshKey::factory()->create(['user_id' => $this->user->id]);
+    SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $otherUser = User::factory()->create();
+    $otherTeam = Team::factory()->forUser($otherUser)->create();
+    ProviderAccount::factory()->forTeam($otherTeam)->create();
+    SshKey::factory()->create(['user_id' => $otherUser->id]);
+    SourceControlAccount::factory()->forUser($otherUser)->github()->create();
+
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/dashboard")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('onboarding.provider_accounts', 1)
+            ->where('onboarding.ssh_keys', 1)
+            ->where('onboarding.source_control_accounts', 1));
 });
 
 it('shows real stats and recent activity for a team with servers and deployments', function () {

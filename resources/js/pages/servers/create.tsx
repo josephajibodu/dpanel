@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeftIcon, Loader2Icon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -223,8 +223,14 @@ export default function ServersCreate({
 }: Props) {
     const teamPath = useTeamPath();
     const accounts = providerAccounts.data;
+    const { url } = usePage();
+    const requestedMode = new URLSearchParams(url.split('?')[1] ?? '').get(
+        'mode',
+    );
     const [mode, setMode] = useState<Mode>(
-        accounts.length > 0 ? 'provider' : 'custom',
+        requestedMode === 'custom' || accounts.length === 0
+            ? 'custom'
+            : 'provider',
     );
     const [isGeneratingName, setIsGeneratingName] = useState(false);
     const { catalogs, load: loadCatalog } = useProviderCatalogs();
