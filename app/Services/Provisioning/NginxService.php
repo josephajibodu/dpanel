@@ -80,7 +80,7 @@ class NginxService
      */
     public static function noSitePage(): string
     {
-        return file_get_contents(resource_path('views/provisioning/no-site.html'));
+        return view('provisioning.no-site')->render();
     }
 
     /**

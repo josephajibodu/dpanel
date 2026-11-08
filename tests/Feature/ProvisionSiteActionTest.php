@@ -478,6 +478,28 @@ it('creates the releases/shared layout and a bootstrap release symlinked as curr
         ->toBeTrue('expected current to be symlinked to releases/bootstrap');
 });
 
+it('gives static html sites the coming-soon page as index.html and other sites as index.php', function (ProjectType $projectType, string $placeholderFile, string $otherFile) {
+    $server = Server::factory()->create(['status' => ServerStatus::Active]);
+    $site = Site::factory()->forServer($server)->pending()->create([
+        'repository' => null,
+        'source_control_account_id' => null,
+        'project_type' => $projectType,
+        'directory' => '/',
+    ]);
+
+    $execCalls = [];
+    $mockConnection = mockSshConnection($execCalls);
+    $this->app->instance(SshService::class, mockSshService($mockConnection));
+
+    app(ProvisionSiteAction::class)->execute($site);
+
+    expect(collect($execCalls)->contains(fn ($c) => str_contains($c, "releases/bootstrap/{$placeholderFile}") && str_contains($c, 'Coming soon.')))->toBeTrue()
+        ->and(collect($execCalls)->contains(fn ($c) => str_contains($c, "releases/bootstrap/{$otherFile}")))->toBeFalse();
+})->with([
+    'static html' => [ProjectType::StaticHtml, 'index.html', 'index.php'],
+    'php' => [ProjectType::PhpGeneric, 'index.php', 'index.html'],
+]);
+
 it('never clones the repository during provisioning — the first deploy does that', function () {
     $server = Server::factory()->create(['status' => ServerStatus::Active]);
     $site = Site::factory()->forServer($server)->pending()->create([

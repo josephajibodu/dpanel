@@ -42,7 +42,7 @@ it('ensures the ssl-cert package is installed so the catch-all vhost has a certi
 it('uploads the no-site page into the catch-all web root', function () {
     $files = Mockery::mock(RemoteFilesystem::class)->shouldIgnoreMissing();
     $files->shouldReceive('ensureDirectory')->once()->with('/var/www/flitops')->ordered();
-    $files->shouldReceive('put')->once()->with('/var/www/flitops/index.html', file_get_contents(resource_path('views/provisioning/no-site.html')))->ordered();
+    $files->shouldReceive('put')->once()->with('/var/www/flitops/index.html', NginxService::noSitePage())->ordered();
 
     $context = new ProvisioningContext(
         server: Server::factory()->make(),

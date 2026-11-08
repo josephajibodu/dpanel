@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
-<title>Nothing deployed here yet · flitops</title>
+<title>@yield('title') · flitops</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563EB'/%3E%3Cpath transform='translate(16 16) scale(0.75) translate(-16 -17)' fill='%23FFFFFF' fill-rule='evenodd' d='M8 6h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM20.75 9a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0zM8 14h10a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2zM14.75 17a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0zM8 22h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z'/%3E%3C/svg%3E">
 <style>
     :root {
@@ -318,32 +318,12 @@
 
 <main>
     <div class="content">
-        <p class="status">
-            <span class="status-code">404</span>
-            <span class="status-host"><!--# echo var="host" --></span>
-        </p>
-
-        <h1>Nothing deployed here. <span>Yet.</span></h1>
-
-        <p class="lead">This server is up and running, but none of its sites are set up to answer at this address.</p>
-
-        <section class="owner">
-            <h2>Is this your server?</h2>
-            <p>Create a site for this domain in flitops, or add the domain to one of your existing sites. As soon as it's saved, visitors will see your site instead of this page.</p>
-        </section>
-
-        <div class="actions">
-            <a class="button button-primary" href="https://flitops.com">
-                Open flitops
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
-            <a class="button button-secondary" href="https://docs.flitops.com/sites/creating-sites">How to add a site</a>
-        </div>
+@yield('content')
     </div>
 </main>
 
 <footer>
-    This server is managed with <a href="https://flitops.com">flitops</a>.
+    @yield('footer')
 </footer>
 </body>
 </html>

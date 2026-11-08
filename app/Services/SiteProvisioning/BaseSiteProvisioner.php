@@ -3,6 +3,7 @@
 namespace App\Services\SiteProvisioning;
 
 use App\Actions\Certificates\SyncWildcardCertificateForDomainAction;
+use App\Enums\ProjectType;
 use App\Enums\SiteProvisioningStep;
 use App\Models\Site;
 use App\Services\SourceControlService;
@@ -219,6 +220,10 @@ abstract class BaseSiteProvisioner
      * first deploy (ProvisionSiteAction triggers one automatically when a
      * repository is set), so `current` is never left dangling in the gap
      * before that runs.
+     *
+     * The placeholder is the flitops "coming soon" page. Static HTML sites get
+     * it as index.html, since their Nginx config doesn't run PHP; every other
+     * site gets it as index.php, which PHP sends out unchanged.
      */
     protected function createBootstrapRelease(): void
     {
@@ -231,13 +236,9 @@ abstract class BaseSiteProvisioner
             $this->runAsOwner("mkdir -p {$releasePath}/{$webDir}");
         }
 
-        $placeholderPath = $webDir && $webDir !== '/' ? "{$releasePath}/{$webDir}/index.php" : "{$releasePath}/index.php";
-        $appName = addslashes((string) config('app.name'));
-        $placeholder = <<<PHP
-<?php
-echo '<h1>Site coming soon!</h1>';
-echo "This site is hosted by {$appName}.";
-PHP;
+        $placeholderFile = $this->site->project_type === ProjectType::StaticHtml ? 'index.html' : 'index.php';
+        $placeholderPath = $webDir && $webDir !== '/' ? "{$releasePath}/{$webDir}/{$placeholderFile}" : "{$releasePath}/{$placeholderFile}";
+        $placeholder = view('provisioning.coming-soon')->render();
 
         $escapedPlaceholder = str_replace("'", "'\\''", $placeholder);
         $this->runAsOwner("echo '{$escapedPlaceholder}' > {$placeholderPath}");
