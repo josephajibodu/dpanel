@@ -45,7 +45,10 @@ export default function SshKeysIndex({
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [syncDialogOpen, setSyncDialogOpen] = useState(false);
     const [selectedKey, setSelectedKey] = useState<SshKey | null>(null);
-    const [detailsKey, setDetailsKey] = useState<SshKey | null>(null);
+    const [detailsKeyId, setDetailsKeyId] = useState<number | null>(null);
+    // Read from the latest props, so the dialog reflects a removal right away.
+    const detailsKey =
+        sshKeysData.data.find((key) => key.id === detailsKeyId) ?? null;
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Get servers from page props if available (loaded via deferred props)
@@ -62,7 +65,7 @@ export default function SshKeysIndex({
     };
 
     const handleOpenDetails = (sshKey: SshKey) => {
-        setDetailsKey(sshKey);
+        setDetailsKeyId(sshKey.id);
     };
 
     const confirmDelete = () => {
@@ -147,9 +150,11 @@ export default function SshKeysIndex({
                 <SshKeyDetailsDialog
                     key={detailsKey.id}
                     sshKey={detailsKey}
+                    teamServerIds={servers.map((server) => server.id)}
+                    canRemove={canAccessServers}
                     onOpenChange={(open) => {
                         if (!open) {
-                            setDetailsKey(null);
+                            setDetailsKeyId(null);
                         }
                     }}
                 />

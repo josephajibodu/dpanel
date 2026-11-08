@@ -49,9 +49,9 @@ ssh <user>@<server-ip>
 
 ## Revoking a key
 
-To remove a key from **everywhere at once**, choose **Delete Key**. flitops removes it from every server and site it was synced to, then deletes it from your account.
+To remove a key from **one server or site**, open the key's menu, choose **View details**, and click **Remove** next to that server or site. Its status shows **Revoking** until flitops has taken it off; refresh the page to see it gone. The key stays on everywhere else, and you can sync it back at any time.
 
-<Note>Removing a key from just one server or site, while keeping it on the others, isn't available in the dashboard yet. It's on the [roadmap](/roadmap). For now, delete the key and add it again, then sync it to only the servers you want.</Note>
+To remove a key from **everywhere at once**, choose **Delete Key**. flitops removes it from every server and site it was synced to, then deletes it from your account.
 
 <Tip>When someone leaves your team, ask them (or do it yourself if you're an Owner) to delete their SSH keys, so they can no longer log in to your servers directly.</Tip>
 

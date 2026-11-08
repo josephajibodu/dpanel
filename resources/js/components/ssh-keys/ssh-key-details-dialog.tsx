@@ -1,8 +1,11 @@
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { KeyIcon, ServerIcon } from 'lucide-react';
+import { useState } from 'react';
 
 import { CopyButton } from '@/components/copy-button';
 import { StatusBadge, type StatusColor } from '@/components/status-badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -10,10 +13,18 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { type SshKey, type SshKeyServerStatus } from '@/types/ssh-key';
+import { useTeamPath } from '@/hooks/use-team-path';
+import {
+    type SshKey,
+    type SshKeyServer,
+    type SshKeyServerStatus,
+} from '@/types/ssh-key';
 
 interface SshKeyDetailsDialogProps {
     sshKey: SshKey;
+    /** This team's servers; the key can only be removed from these here. */
+    teamServerIds: number[];
+    canRemove: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
@@ -54,9 +65,31 @@ function DetailField({
 
 export function SshKeyDetailsDialog({
     sshKey,
+    teamServerIds,
+    canRemove,
     onOpenChange,
 }: SshKeyDetailsDialogProps) {
+    const teamPath = useTeamPath();
+    const [removing, setRemoving] = useState<string | null>(null);
     const count = sshKey.servers_count ?? 0;
+
+    const placementKey = (placement: SshKeyServer) =>
+        `${placement.id}-${placement.system_user}`;
+
+    const removeFrom = (placement: SshKeyServer) => {
+        setRemoving(placementKey(placement));
+        router.post(
+            teamPath(`/ssh-keys/${sshKey.id}/revoke`),
+            placement.site_id
+                ? { site_ids: [placement.site_id] }
+                : { server_ids: [placement.id] },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onFinish: () => setRemoving(null),
+            },
+        );
+    };
     const serverLabel = count === 1 ? 'server' : 'servers';
 
     return (
@@ -105,7 +138,7 @@ export function SshKeyDetailsDialog({
                                     const info = statusInfo[server.status];
                                     return (
                                         <div
-                                            key={`${server.id}-${server.system_user}`}
+                                            key={placementKey(server)}
                                             className="flex items-center justify-between gap-2 rounded-md border p-2.5"
                                         >
                                             <span className="truncate text-sm font-medium">
@@ -114,11 +147,35 @@ export function SshKeyDetailsDialog({
                                                     {server.system_user}
                                                 </span>
                                             </span>
-                                            <StatusBadge
-                                                status={info.label}
-                                                color={info.color}
-                                                pulse={info.pulse}
-                                            />
+                                            <div className="flex shrink-0 items-center gap-2">
+                                                <StatusBadge
+                                                    status={info.label}
+                                                    color={info.color}
+                                                    pulse={info.pulse}
+                                                />
+                                                {canRemove &&
+                                                    teamServerIds.includes(
+                                                        server.id,
+                                                    ) &&
+                                                    server.status !==
+                                                        'revoking' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            disabled={
+                                                                removing !==
+                                                                null
+                                                            }
+                                                            onClick={() =>
+                                                                removeFrom(
+                                                                    server,
+                                                                )
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                            </div>
                                         </div>
                                     );
                                 })}

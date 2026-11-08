@@ -201,6 +201,22 @@ it('revokes a key from a chosen site through the keys page', function () {
     expect(ServerSshKey::query()->sole()->status)->toBe('revoking');
 });
 
+it('revokes a key from the server user only, leaving the site user\'s copy', function () {
+    Queue::fake();
+    [$member, $sshKey] = memberWithKey($this->team, TeamRoleKey::Admin);
+    $serverPlacement = ServerSshKey::query()->create(['ssh_key_id' => $sshKey->id, 'server_id' => $this->server->id, 'system_user' => 'artisan', 'status' => 'synced']);
+    $sitePlacement = ServerSshKey::query()->create(['ssh_key_id' => $sshKey->id, 'server_id' => $this->server->id, 'site_id' => $this->site->id, 'system_user' => 'example_com', 'status' => 'synced']);
+
+    $this->actingAs($member)
+        ->post(route('ssh-keys.revoke', [$this->team, $sshKey]), ['server_ids' => [$this->server->id]])
+        ->assertRedirect();
+
+    Queue::assertPushed(RevokeSshKeyJob::class, 1);
+    Queue::assertPushed(RevokeSshKeyJob::class, fn ($job) => $job->systemUser === 'artisan');
+    expect($serverPlacement->fresh()->status)->toBe('revoking')
+        ->and($sitePlacement->fresh()->status)->toBe('synced');
+});
+
 it('revokes every placement with its own user when the key is deleted', function () {
     Queue::fake();
     [$member, $sshKey] = memberWithKey($this->team, TeamRoleKey::Admin);
