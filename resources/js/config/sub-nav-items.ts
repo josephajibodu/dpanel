@@ -23,10 +23,8 @@ export function getServerSubNavItems(
         { title: 'Databases', href: `${base}/databases` },
         { title: 'Connections', href: `${base}/connections` },
         { title: 'PHP', href: `${base}/php` },
-        { title: 'Storage', href: `${base}/storage` },
         { title: 'Processes', href: `${base}/processes` },
         { title: 'Runtime', href: `${base}/runtime` },
-        { title: 'Observe', href: `${base}/observe` },
         {
             title: 'Terminal',
             href: `${base}/terminal`,

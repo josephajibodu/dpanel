@@ -47,7 +47,7 @@ interface Props {
     };
 }
 
-const DOCS_URL = 'https://laravel.com/docs/starter-kits#react';
+const DOCS_URL = 'https://docs.flitops.com/servers/creating-servers';
 
 export default function ServersIndex({ servers }: Props) {
     const teamPath = useTeamPath();

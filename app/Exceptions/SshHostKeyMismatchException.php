@@ -20,7 +20,7 @@ class SshHostKeyMismatchException extends SshConnectionException
             "This server's identity has changed since we first connected to it, so we stopped before sending anything to it. "
             .'This is expected if the server was rebuilt or reinstalled, but it can also mean someone is intercepting the connection. '
             .'If you rebuilt this server, reset its stored identity with the "Reset server identity" button on the server\'s Settings page, then try again '
-            ."(if you host FleetOps yourself, you can also run `php artisan flitops:server:forget-host-key {$server->id}`). "
+            ."(if you host FlitOps yourself, you can also run `php artisan flitops:server:forget-host-key {$server->id}`). "
             .'If you did not, contact your hosting provider before reconnecting.',
             $server->ip_address,
             $server->ssh_port,

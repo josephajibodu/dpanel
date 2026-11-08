@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class DeleteTeam
 {
     /**
-     * Delete the team and everything FleetOps stores for it, as one step: if
+     * Delete the team and everything FlitOps stores for it, as one step: if
      * any part fails, nothing is deleted and the user stays on this team.
      *
      * Backup records and schedules are removed first. A storage provider

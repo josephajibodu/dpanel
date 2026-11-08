@@ -178,7 +178,7 @@ function DeleteTeam({ team }: { team: Team }) {
         <div className="space-y-6">
             <HeadingSmall
                 title="Delete team"
-                description="Permanently delete this team and everything it holds in FleetOps"
+                description="Permanently delete this team and everything it holds in FlitOps"
             />
 
             <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
@@ -205,14 +205,14 @@ function DeleteTeam({ team }: { team: Team }) {
                         <DialogHeader>
                             <DialogTitle>Delete {team.name}?</DialogTitle>
                             <DialogDescription>
-                                This permanently removes the team from FleetOps: its servers, sites, databases, workers, cron jobs,
+                                This permanently removes the team from FlitOps: its servers, sites, databases, workers, cron jobs,
                                 deployment and backup history, the cloud provider and storage accounts connected to it, and all
                                 members and pending invitations.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div className="text-muted-foreground space-y-2 text-sm">
-                            <p>It does not touch anything outside FleetOps:</p>
+                            <p>It does not touch anything outside FlitOps:</p>
                             <ul className="list-disc space-y-1 pl-5">
                                 <li>
                                     The servers themselves keep running at your hosting provider, and keep being billed, until you

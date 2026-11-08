@@ -47,7 +47,7 @@ const rightNavItems: NavItem[] = [
     },
     {
         title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
+        href: 'https://docs.flitops.com',
         icon: BookOpen,
     },
 ];

@@ -638,7 +638,6 @@ function ServerMetricsOverview({
     serverId,
     initialMetric,
 }: ServerMetricsOverviewProps) {
-    const teamPath = useTeamPath();
     const { metric, isRefreshing, refresh } = useServerMetrics(
         serverId,
         initialMetric,
@@ -714,16 +713,6 @@ function ServerMetricsOverview({
                             label={stat.label}
                             value={stat.value}
                             hint={stat.hint}
-                            action={
-                                <Link
-                                    href={teamPath(
-                                        `/servers/${serverId}/observe`,
-                                    )}
-                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                >
-                                    View
-                                </Link>
-                            }
                         />
                     ))}
                 </div>
