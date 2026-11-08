@@ -6,6 +6,7 @@ use App\Actions\Sites\ProvisionSiteAction;
 use App\Actions\Sites\RunSiteCommand;
 use App\Enums\ConnectionStatus;
 use App\Enums\DeploymentStatus;
+use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
@@ -28,6 +29,7 @@ use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteCommandRun;
+use App\Models\SiteNginxFile;
 use App\Models\StorageProvider;
 use App\Models\Team;
 use App\Models\User;
@@ -594,6 +596,22 @@ it('moves isolated site pools when upgrading every site to the default php versi
         ->assertRedirect();
 
     Queue::assertPushed(MoveSitePhpPoolJob::class, fn ($job) => $job->site->is($site) && $job->previousPhpVersion === '8.3');
+});
+
+it('regenerates each site\'s main nginx config when upgrading every site to the default php version', function () {
+    Queue::fake();
+
+    $this->server->createService(ServiceType::Php, '8.3', true);
+    $this->server->createService(ServiceType::Php, '8.4', false);
+    $site = isolatedLaravelSite($this->server);
+    $main = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Main, 'path' => 'main.conf']);
+    $snippet = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Server]);
+
+    $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", ['version' => '8.4', 'upgrade_sites' => true]);
+
+    expect(SiteNginxFile::find($main->id))->toBeNull()
+        ->and(SiteNginxFile::find($snippet->id))->not->toBeNull();
 });
 
 it('creates the new pool and repoints nginx before removing the old pool', function () {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
+use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
@@ -349,6 +350,17 @@ class Site extends Model
     public function nginxFiles(): HasMany
     {
         return $this->hasMany(SiteNginxFile::class);
+    }
+
+    /**
+     * Drop the stored main Nginx configs, so the next sync regenerates them
+     * from the site's current web root and PHP version. A sync otherwise
+     * rewrites the stored copy as it is. Main configs are generated and
+     * read-only in the UI, so nothing a user wrote is lost.
+     */
+    public function forgetGeneratedNginxConfig(): void
+    {
+        $this->nginxFiles()->where('section', NginxFileSection::Main->value)->delete();
     }
 
     public function nginxHistory(): HasMany
