@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
 import {
@@ -110,7 +110,10 @@ export default function ServerPhpIndex({
         memory_limit: settings?.memory_limit ?? '',
     });
 
-    useEffect(() => {
+    // Refill the form when fresh settings arrive from the server.
+    const [syncedSettings, setSyncedSettings] = useState(settings);
+    if (settings !== syncedSettings) {
+        setSyncedSettings(settings);
         if (settings) {
             setSettingsForm({
                 upload_max_filesize: settings.upload_max_filesize ?? '',
@@ -119,7 +122,7 @@ export default function ServerPhpIndex({
                 memory_limit: settings.memory_limit ?? '',
             });
         }
-    }, [settings]);
+    }
 
     const [installVersion, setInstallVersion] = useState<string>('');
 

@@ -187,14 +187,16 @@ export function ProcessesPanel({
         return Number(value);
     };
 
+    const serverId = server?.id;
+
     const fetchLogs = useCallback(
         (w: Worker) => {
-            if (!server?.id) return;
+            if (!serverId) return;
             setLogsWorker(w);
             setLogsOpen(true);
             setLogsContent('');
             setLogsLoading(true);
-            fetch(teamPath(`/servers/${server.id}/workers/${w.id}/logs`), {
+            fetch(teamPath(`/servers/${serverId}/workers/${w.id}/logs`), {
                 headers: {
                     Accept: 'text/plain',
                     'X-Requested-With': 'XMLHttpRequest',
@@ -205,7 +207,7 @@ export function ProcessesPanel({
                 .catch(() => setLogsContent('Failed to load logs.'))
                 .finally(() => setLogsLoading(false));
         },
-        [server?.id, teamPath],
+        [serverId, teamPath],
     );
 
     const handleCreateWorker = (e: React.FormEvent) => {

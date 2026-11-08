@@ -22,8 +22,19 @@ configureEcho({
     },
 });
 
+/** The slice of Echo's internals the debug logging reaches into. */
+type RealtimeDebugEcho = {
+    connector?: {
+        pusher?: {
+            connection?: {
+                bind: (event: string, callback: (payload: never) => void) => void;
+            };
+        };
+    };
+};
+
 if (realtimeDebugEnabled) {
-    const pusherConnection = (echo() as any)?.connector?.pusher?.connection;
+    const pusherConnection = (echo() as unknown as RealtimeDebugEcho).connector?.pusher?.connection;
     pusherConnection?.bind('state_change', (states: { previous: string; current: string }) => {
         console.debug('[realtime] connection state change', states);
     });

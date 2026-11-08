@@ -315,7 +315,7 @@ function TeamNameForm({ team }: { team: Team }) {
                 clearTimeout(debounceRef.current);
             }
         };
-    }, [data.name, showSlugInput]);
+    }, [data.name, showSlugInput, setData, team.slug]);
 
     const handleShowSlugInput = () => {
         setShowSlugInput(true);

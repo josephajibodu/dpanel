@@ -1,7 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export interface PaginationMeta {
     current_page: number;

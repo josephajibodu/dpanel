@@ -39,18 +39,16 @@ export function DeploymentLog({ logs, isDeploying = false, className }: Deployme
         }
     };
 
-    const displayLogs = logs.length > 0 ? logs : (isDeploying ? PLACEHOLDER_LOGS : []);
+    const renderedLogs = useMemo(() => {
+        const displayLogs = logs.length > 0 ? logs : isDeploying ? PLACEHOLDER_LOGS : [];
 
-    const renderedLogs = useMemo(
-        () =>
-            displayLogs.map((log) => ({
-                ...log,
-                html: ansiUp.ansi_to_html(log.message),
-            })),
-        [displayLogs],
-    );
+        return displayLogs.map((log) => ({
+            ...log,
+            html: ansiUp.ansi_to_html(log.message),
+        }));
+    }, [logs, isDeploying]);
 
-    if (displayLogs.length === 0) {
+    if (renderedLogs.length === 0) {
         return (
             <div className={cn('flex items-center justify-center py-12 text-center', className)}>
                 <p className="text-muted-foreground text-sm">No logs yet. Deployment will start shortly...</p>

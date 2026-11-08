@@ -13,7 +13,7 @@ import {
     RotateCcwIcon,
     Trash2Icon,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -150,14 +150,17 @@ export default function SiteNginxIndex({
     // Monaco has no Caddyfile grammar, so Caddy files are shown as plain text.
     const editorLanguage = webServer === 'Nginx' ? 'nginx' : 'plaintext';
 
-    useEffect(() => {
-        if (selectedFile) {
-            const fresh = nginxFiles.find((f) => f.id === selectedFile.id);
-            if (fresh) {
-                setSelectedFile(fresh);
-            }
+    // Swap the open file for its fresh copy when the file list reloads.
+    const [syncedNginxFiles, setSyncedNginxFiles] = useState(nginxFiles);
+    if (nginxFiles !== syncedNginxFiles) {
+        setSyncedNginxFiles(nginxFiles);
+        const fresh = selectedFile
+            ? nginxFiles.find((f) => f.id === selectedFile.id)
+            : undefined;
+        if (fresh) {
+            setSelectedFile(fresh);
         }
-    }, [nginxFiles]);
+    }
 
     const openFile = useCallback((file: NginxFile) => {
         setSelectedFile(file);

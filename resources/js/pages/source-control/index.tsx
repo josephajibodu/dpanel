@@ -100,7 +100,9 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
     };
 
     const handleConnect = (provider: string) => {
-        window.location.href = `/auth/${provider}/redirect?redirect=${encodeURIComponent(teamPath('/source-control'))}`;
+        window.location.assign(
+            `/auth/${provider}/redirect?redirect=${encodeURIComponent(teamPath('/source-control'))}`,
+        );
     };
 
     const addProviderMenu = (

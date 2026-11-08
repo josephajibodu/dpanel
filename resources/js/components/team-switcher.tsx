@@ -146,7 +146,7 @@ function CreateTeamDialog({
             setSlugLoading(false);
             setShowSlugInput(false);
         }
-    }, [open]);
+    }, [open, reset]);
 
     // Debounce slug suggestion fetch as name changes
     useEffect(() => {
@@ -194,7 +194,7 @@ function CreateTeamDialog({
                 clearTimeout(debounceRef.current);
             }
         };
-    }, [data.name, showSlugInput]);
+    }, [data.name, showSlugInput, setData]);
 
     const handleShowSlugInput = () => {
         setShowSlugInput(true);

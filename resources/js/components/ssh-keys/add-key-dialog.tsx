@@ -1,3 +1,7 @@
+import { useForm } from '@inertiajs/react';
+import { KeyIcon, PlusIcon } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -5,9 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useTeamPath } from '@/hooks/use-team-path';
-import { useForm } from '@inertiajs/react';
-import { KeyIcon, PlusIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
 
 interface AddKeyDialogProps {
     trigger?: ReactNode;

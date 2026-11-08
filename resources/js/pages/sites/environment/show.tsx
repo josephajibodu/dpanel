@@ -61,13 +61,15 @@ export default function SiteEnvironmentShow({
         restart_queue: false,
     });
 
+    const setFormData = form.setData;
+
     // Sync deferred env_content into form once the deferred request resolves
     useEffect(() => {
         if (env_content !== undefined && !initialized.current) {
-            form.setData('env_content', env_content);
+            setFormData('env_content', env_content);
             initialized.current = true;
         }
-    }, [env_content]);
+    }, [env_content, setFormData]);
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();

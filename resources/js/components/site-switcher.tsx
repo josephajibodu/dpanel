@@ -5,8 +5,8 @@ import {
     switchToItem,
     type BreadcrumbSwitcherItem,
 } from '@/components/breadcrumb-switcher';
-import { useTeamPath } from '@/hooks/use-team-path';
 import { resolveCurrentServer } from '@/components/server-switcher';
+import { useTeamPath } from '@/hooks/use-team-path';
 import {
     type BreadcrumbItem as BreadcrumbItemType,
     type SharedData,

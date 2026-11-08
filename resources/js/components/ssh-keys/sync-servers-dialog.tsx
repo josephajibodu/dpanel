@@ -1,3 +1,7 @@
+import { router } from '@inertiajs/react';
+import { GlobeIcon, ServerIcon, UploadIcon } from 'lucide-react';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -6,9 +10,6 @@ import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import { type Server } from '@/types/server';
 import { type IsolatedSiteTarget, type SshKey } from '@/types/ssh-key';
-import { router } from '@inertiajs/react';
-import { GlobeIcon, ServerIcon, UploadIcon } from 'lucide-react';
-import { useState } from 'react';
 
 interface SyncServersDialogProps {
     sshKey: SshKey;

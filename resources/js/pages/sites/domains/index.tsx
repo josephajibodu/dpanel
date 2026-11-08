@@ -1,6 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
     CheckIcon,
     ChevronDownIcon,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FormEvent, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {

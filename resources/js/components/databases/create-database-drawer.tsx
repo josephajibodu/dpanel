@@ -1,7 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { PlusIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { type SharedData } from '@/types';
 
 interface CreateDatabaseDrawerProps {
     serverId: number;

@@ -1,3 +1,5 @@
+import { Head, usePage } from '@inertiajs/react';
+
 import { ProcessesPanel } from '@/components/processes/processes-panel';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -5,7 +7,6 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import type { CronJob, Server, Worker } from '@/types/server';
 import type { Site } from '@/types/site';
-import { Head, usePage } from '@inertiajs/react';
 
 interface Props {
     server: { data: Server } | Server;
