@@ -89,7 +89,7 @@ Verified against the code on 2026-11-07. `flitops.example.com` and PHP 8.4 are p
 - [x] Per-site environment variable storage
 - [x] Secrets encrypted at rest
 - [x] Easy update of env vars without manual SSH + file editing
-- [x] Audit trail of who changed what env var and when (2026-11-08) — every save on the Environment page records the user, the time, and which keys were added, changed or removed (`site_environment_history`), listed under "Change history" on that page. Values aren't shown there; the before/after files are stored encrypted for a later view/restore feature. Saving identical content records nothing; a site's first save through FlitOps is marked as such because the earlier file is unknown.
+- [x] Audit trail of who changed what env var and when (2026-11-08) — every save on the Environment page writes to the shared team activity log (`activity_logs`, `ActivityLog::record()`, events in the `ActivityEvent` enum): the user, the time, and which keys were added, changed or removed (names only, never values), listed under "Change history" on that page. Saving identical content records nothing; a site's first save through FlitOps is marked as such because the earlier file is unknown. Other actions can be logged by adding an `ActivityEvent` case and one `ActivityLog::record()` call; a team-wide Activity page doesn't exist yet.
 
 *Why it matters: Nomba/Paystack/Flutterwave API keys and DB credentials live here. This is the most sensitive layer of the whole stack.*
 

@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Site extends Model
 {
@@ -369,9 +370,9 @@ class Site extends Model
         return $this->hasMany(SiteNginxHistory::class)->latest('created_at');
     }
 
-    public function environmentHistory(): HasMany
+    public function activityLogs(): MorphMany
     {
-        return $this->hasMany(SiteEnvironmentHistory::class)->latest('created_at')->latest('id');
+        return $this->morphMany(ActivityLog::class, 'subject')->latest('created_at')->latest('id');
     }
 
     public function nginxSnippetsBasePath(): string

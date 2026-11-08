@@ -8,21 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('site_environment_history', function (Blueprint $table) {
+        Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('site_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('team_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->json('added_keys');
-            $table->json('changed_keys');
-            $table->json('removed_keys');
-            $table->longText('old_content')->nullable();
-            $table->longText('new_content');
+            $table->nullableMorphs('subject');
+            $table->string('event');
+            $table->json('properties')->nullable();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->index(['team_id', 'created_at']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('site_environment_history');
+        Schema::dropIfExists('activity_logs');
     }
 };

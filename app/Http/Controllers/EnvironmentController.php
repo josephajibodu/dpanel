@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityEvent;
 use App\Http\Resources\ServerResource;
 use App\Http\Resources\SiteResource;
 use App\Jobs\SyncEnvironmentJob;
+use App\Models\ActivityLog;
 use App\Models\Server;
 use App\Models\Site;
-use App\Models\SiteEnvironmentHistory;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\Ssh\SshService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,17 +32,18 @@ class EnvironmentController extends Controller
             'server' => new ServerResource($server),
             'site' => new SiteResource($site),
             'has_workers' => $hasWorkers,
-            'history' => $site->environmentHistory()
+            'history' => $site->activityLogs()
+                ->where('event', ActivityEvent::SiteEnvironmentUpdated)
                 ->with('user:id,name')
                 ->limit(50)
                 ->get()
-                ->map(fn (SiteEnvironmentHistory $entry): array => [
+                ->map(fn (ActivityLog $entry): array => [
                     'id' => $entry->id,
                     'user_name' => $entry->user?->name,
-                    'added_keys' => $entry->added_keys,
-                    'changed_keys' => $entry->changed_keys,
-                    'removed_keys' => $entry->removed_keys,
-                    'is_first_save' => $entry->old_content === null,
+                    'added_keys' => $entry->properties['added_keys'] ?? [],
+                    'changed_keys' => $entry->properties['changed_keys'] ?? [],
+                    'removed_keys' => $entry->properties['removed_keys'] ?? [],
+                    'is_first_save' => (bool) ($entry->properties['first_save'] ?? false),
                     'created_at' => $entry->created_at?->toIso8601String(),
                 ])
                 ->values()
@@ -80,7 +83,7 @@ class EnvironmentController extends Controller
         $restartQueue = (bool) ($validated['restart_queue'] ?? false);
         $variables = $this->parseEnvContent($validated['env_content']);
 
-        $this->recordHistory($site, $validated['env_content'], $variables, $request->user()?->id);
+        $this->recordActivity($site, $validated['env_content'], $variables, $request->user());
 
         $site->update(['env_content' => $validated['env_content']]);
 
@@ -111,15 +114,16 @@ class EnvironmentController extends Controller
     }
 
     /**
-     * Record who saved the environment and which keys the save added,
-     * changed or removed. Saving the same content again records nothing.
-     * When FlitOps has never stored this site's environment (it was only
-     * read from the server), the earlier file is unknown, so the entry is
-     * marked as a first save with no key breakdown.
+     * Record in the team activity log who saved the environment and which
+     * keys the save added, changed or removed (names only, never values).
+     * Saving the same content again records nothing. When FlitOps has never
+     * stored this site's environment (it was only read from the server), the
+     * earlier file is unknown, so the entry is marked as a first save with no
+     * key breakdown.
      *
      * @param  array<string, string>  $newVariables
      */
-    protected function recordHistory(Site $site, string $newContent, array $newVariables, ?int $userId): void
+    protected function recordActivity(Site $site, string $newContent, array $newVariables, ?User $user): void
     {
         $oldContent = $site->env_content;
 
@@ -135,7 +139,7 @@ class EnvironmentController extends Controller
             return;
         }
 
-        $oldVariables = [];
+        $properties = ['first_save' => true, 'added_keys' => [], 'changed_keys' => [], 'removed_keys' => []];
 
         if ($oldContent !== null) {
             try {
@@ -143,24 +147,20 @@ class EnvironmentController extends Controller
             } catch (ValidationException) {
                 $oldVariables = [];
             }
+
+            $properties = [
+                'first_save' => false,
+                'added_keys' => array_keys(array_diff_key($newVariables, $oldVariables)),
+                'changed_keys' => array_keys(array_filter(
+                    array_intersect_key($newVariables, $oldVariables),
+                    fn (string $value, string $key): bool => $oldVariables[$key] !== $value,
+                    ARRAY_FILTER_USE_BOTH,
+                )),
+                'removed_keys' => array_keys(array_diff_key($oldVariables, $newVariables)),
+            ];
         }
 
-        $isFirstSave = $oldContent === null;
-
-        $changedKeys = array_keys(array_filter(
-            array_intersect_key($newVariables, $oldVariables),
-            fn (string $value, string $key): bool => $oldVariables[$key] !== $value,
-            ARRAY_FILTER_USE_BOTH,
-        ));
-
-        $site->environmentHistory()->create([
-            'user_id' => $userId,
-            'added_keys' => $isFirstSave ? [] : array_values(array_keys(array_diff_key($newVariables, $oldVariables))),
-            'changed_keys' => array_values($changedKeys),
-            'removed_keys' => $isFirstSave ? [] : array_values(array_keys(array_diff_key($oldVariables, $newVariables))),
-            'old_content' => $oldContent,
-            'new_content' => $newContent,
-        ]);
+        ActivityLog::record($site->server->team, ActivityEvent::SiteEnvironmentUpdated, $site, $properties, $user);
     }
 
     /**
