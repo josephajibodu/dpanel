@@ -33,12 +33,11 @@ class AptPackageManager implements PackageManager
 
     public function installOrFail(string $package): void
     {
-        $this->runner->runQuietly("apt-get -o DPkg::Lock::Timeout=60 install -y {$package}", 900);
+        $this->runner->runQuietly("DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=60 install -y {$package}", 900);
     }
 
     public function setup(): void
     {
-        $this->runner->runQuietly('export DEBIAN_FRONTEND=noninteractive', 5);
         $this->runner->runQuietly('apt-get -o DPkg::Lock::Timeout=60 update', 900);
     }
 

@@ -51,7 +51,7 @@ class FinalTouchesService
         $context->runner->runQuietly("mkdir -p /home/{$serverUser}/sites && chown -R {$serverUser}:{$serverUser} /home/{$serverUser}", 120);
 
         // Cleanup
-        $context->runner->runQuietly('apt-get -o DPkg::Lock::Timeout=60 autoremove -y', 900);
+        $context->runner->runQuietly('DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=60 autoremove -y', 900);
         $context->runner->runQuietly('apt-get clean', 300);
     }
 }

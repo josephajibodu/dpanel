@@ -111,17 +111,22 @@ export default function ServersShow({
         previousStatus.current = data.status;
     }, [data.status, data.name, data.error_message]);
 
-    const initialLogLines: LogLine[] = (provisioningLogs ?? []).map(
-        (log) => ({
-            type: log.type as LogLine['type'],
-            message: log.message,
-            timestamp: log.created_at,
-        }),
-    );
+    const initialLogLines: LogLine[] = (provisioningLogs ?? []).map((log) => ({
+        type: log.type as LogLine['type'],
+        message: log.message,
+        timestamp: log.created_at,
+    }));
     const logs = useLogStream(
         `server.${data.id}`,
         '.provisioning.output',
         initialLogLines,
+    );
+
+    const [showLog, setShowLog] = useState(false);
+    const latestLogLine = logs.at(-1)?.message.replace(
+        // eslint-disable-next-line no-control-regex
+        /\x1b\[[0-9;]*m/g,
+        '',
     );
 
     const retryForm = useForm({});
@@ -144,6 +149,15 @@ export default function ServersShow({
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 {isProvisioningLifecycle ? (
                     <div className="mx-auto w-full max-w-2xl space-y-6">
+                        <div className="space-y-1">
+                            <h1 className="text-xl font-semibold tracking-tight">
+                                Setting up {data.name}
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                This keeps running if you leave the page.
+                            </p>
+                        </div>
+
                         <ProvisioningStepTimeline
                             heading="Provisioning progress"
                             waitingDescription="Waiting to start provisioning."
@@ -153,13 +167,33 @@ export default function ServersShow({
 
                         <StatGroup>
                             <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
-                                <div className="flex items-center gap-2 border-b px-4 py-3">
-                                    <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
-                                    <h2 className="font-medium">
-                                        Provisioning log
-                                    </h2>
+                                <div className="flex items-center justify-between gap-4 px-5 py-3">
+                                    <div className="min-w-0">
+                                        <h2 className="text-sm font-medium">
+                                            Provisioning log
+                                        </h2>
+                                        {!showLog && latestLogLine && (
+                                            <p className="mt-0.5 truncate font-log text-xs text-muted-foreground">
+                                                {latestLogLine}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowLog(!showLog)}
+                                        aria-expanded={showLog}
+                                    >
+                                        {showLog ? 'Hide' : 'Show'}
+                                    </Button>
                                 </div>
-                                <DeploymentLog logs={logs} isDeploying />
+                                {showLog && (
+                                    <DeploymentLog
+                                        logs={logs}
+                                        isDeploying
+                                        className="border-t"
+                                    />
+                                )}
                             </div>
                         </StatGroup>
                     </div>
@@ -223,16 +257,130 @@ export default function ServersShow({
                             <div className="space-y-6">
                                 {/* Sites */}
                                 {data.supports_sites && (
-                                <div id="sites" className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <CardTitle>Sites</CardTitle>
-                                            <CardDescription>
-                                                Websites deployed on this
-                                                server.
-                                            </CardDescription>
+                                    <div id="sites" className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <CardTitle>Sites</CardTitle>
+                                                <CardDescription>
+                                                    Websites deployed on this
+                                                    server.
+                                                </CardDescription>
+                                            </div>
+                                            {canCreateSite && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={teamPath(
+                                                            `/servers/${data.id}/sites/create`,
+                                                        )}
+                                                    >
+                                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                                        New site
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </div>
-                                        {canCreateSite && (
+                                        {sites.length === 0 ? (
+                                            <EmptyState
+                                                title="No sites on this server yet"
+                                                description={
+                                                    can('manage_sites')
+                                                        ? 'Get started by creating your first site.'
+                                                        : 'Sites added to this server will appear here.'
+                                                }
+                                                action={
+                                                    canCreateSite && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${data.id}/sites/create`,
+                                                                )}
+                                                            >
+                                                                <PlusIcon className="mr-2 h-4 w-4" />
+                                                                New site
+                                                            </Link>
+                                                        </Button>
+                                                    )
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>
+                                                                Domain
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Type
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Status
+                                                            </TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {sites.map((site) => (
+                                                            <TableRow
+                                                                key={site.id}
+                                                            >
+                                                                <TableCell>
+                                                                    <Link
+                                                                        href={teamPath(
+                                                                            `/servers/${data.id}/sites/${site.id}`,
+                                                                        )}
+                                                                        className="font-medium hover:underline"
+                                                                    >
+                                                                        {
+                                                                            site.domain
+                                                                        }
+                                                                    </Link>
+                                                                </TableCell>
+                                                                <TableCell className="text-xs text-muted-foreground">
+                                                                    {site.project_type_label ??
+                                                                        '—'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <SiteStatusBadge
+                                                                        status={
+                                                                            site.status
+                                                                        }
+                                                                        statusLabel={
+                                                                            site.status_label
+                                                                        }
+                                                                        statusColor={
+                                                                            site.status_color
+                                                                        }
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Databases */}
+                                {data.database_type !== null && (
+                                    <div id="databases" className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <CardTitle>Databases</CardTitle>
+                                                <CardDescription>
+                                                    Manage databases and
+                                                    database users on this
+                                                    server.
+                                                </CardDescription>
+                                            </div>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -240,166 +388,57 @@ export default function ServersShow({
                                             >
                                                 <Link
                                                     href={teamPath(
-                                                        `/servers/${data.id}/sites/create`,
+                                                        `/servers/${data.id}/databases`,
                                                     )}
                                                 >
-                                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                                    New site
+                                                    View All
                                                 </Link>
                                             </Button>
+                                        </div>
+                                        {databases.length === 0 ? (
+                                            <EmptyState title="No databases on this server yet" />
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>
+                                                                Name
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Charset
+                                                            </TableHead>
+                                                            <TableHead>
+                                                                Status
+                                                            </TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {databases.map((db) => (
+                                                            <TableRow
+                                                                key={db.id}
+                                                            >
+                                                                <TableCell className="font-mono font-medium">
+                                                                    {db.name}
+                                                                </TableCell>
+                                                                <TableCell className="text-xs text-muted-foreground">
+                                                                    {db.charset ??
+                                                                        '—'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <AutoStatusBadge
+                                                                        status={
+                                                                            db.status
+                                                                        }
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
                                         )}
                                     </div>
-                                    {sites.length === 0 ? (
-                                        <EmptyState
-                                            title="No sites on this server yet"
-                                            description={
-                                                can('manage_sites')
-                                                    ? 'Get started by creating your first site.'
-                                                    : 'Sites added to this server will appear here.'
-                                            }
-                                            action={
-                                                canCreateSite && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        asChild
-                                                    >
-                                                        <Link
-                                                            href={teamPath(
-                                                                `/servers/${data.id}/sites/create`,
-                                                            )}
-                                                        >
-                                                            <PlusIcon className="mr-2 h-4 w-4" />
-                                                            New site
-                                                        </Link>
-                                                    </Button>
-                                                )
-                                            }
-                                        />
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>
-                                                            Domain
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Type
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Status
-                                                        </TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {sites.map((site) => (
-                                                        <TableRow key={site.id}>
-                                                            <TableCell>
-                                                                <Link
-                                                                    href={teamPath(
-                                                                        `/servers/${data.id}/sites/${site.id}`,
-                                                                    )}
-                                                                    className="font-medium hover:underline"
-                                                                >
-                                                                    {
-                                                                        site.domain
-                                                                    }
-                                                                </Link>
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-muted-foreground">
-                                                                {site.project_type_label ??
-                                                                    '—'}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <SiteStatusBadge
-                                                                    status={
-                                                                        site.status
-                                                                    }
-                                                                    statusLabel={
-                                                                        site.status_label
-                                                                    }
-                                                                    statusColor={
-                                                                        site.status_color
-                                                                    }
-                                                                />
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                                </div>
-                                )}
-
-                                {/* Databases */}
-                                {data.database_type !== null && (
-                                <div id="databases" className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <CardTitle>Databases</CardTitle>
-                                            <CardDescription>
-                                                Manage databases and database
-                                                users on this server.
-                                            </CardDescription>
-                                        </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={teamPath(
-                                                    `/servers/${data.id}/databases`,
-                                                )}
-                                            >
-                                                View All
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                    {databases.length === 0 ? (
-                                        <EmptyState title="No databases on this server yet" />
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>
-                                                            Name
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Charset
-                                                        </TableHead>
-                                                        <TableHead>
-                                                            Status
-                                                        </TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {databases.map((db) => (
-                                                        <TableRow key={db.id}>
-                                                            <TableCell className="font-mono font-medium">
-                                                                {db.name}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-muted-foreground">
-                                                                {db.charset ??
-                                                                    '—'}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <AutoStatusBadge
-                                                                    status={
-                                                                        db.status
-                                                                    }
-                                                                />
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                                </div>
                                 )}
 
                                 {services.length > 0 && (

@@ -1,13 +1,20 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircleIcon, CheckIcon, ClipboardIcon, Loader2Icon, TriangleAlertIcon, XCircleIcon } from 'lucide-react';
+import {
+    ArrowLeftIcon,
+    CheckIcon,
+    CopyIcon,
+    Loader2Icon,
+    XIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import { Server } from '@/types/server';
 
@@ -23,13 +30,49 @@ interface ConnectionTestResult {
     message: string;
 }
 
-export default function ServerSetup({ server: serverProp, authorized_keys_command }: Props) {
-    const server = (serverProp as { data?: Server })?.data ?? (serverProp as Server);
+interface SetupStepProps {
+    number: number;
+    title: string;
+    description: React.ReactNode;
+    children: React.ReactNode;
+}
+
+/** One numbered step of the setup, separated from the next by a thin line. */
+function SetupStep({ number, title, description, children }: SetupStepProps) {
+    return (
+        <section className="flex gap-4 p-5">
+            <span
+                aria-hidden
+                className="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium text-muted-foreground tabular-nums"
+            >
+                {number}
+            </span>
+            <div className="min-w-0 flex-1 space-y-4">
+                <div className="space-y-0.5">
+                    <h2 className="text-sm font-medium">{title}</h2>
+                    <p className="text-sm text-muted-foreground">
+                        {description}
+                    </p>
+                </div>
+                {children}
+            </div>
+        </section>
+    );
+}
+
+export default function ServerSetup({
+    server: serverProp,
+    authorized_keys_command,
+}: Props) {
+    const server =
+        (serverProp as { data?: Server })?.data ?? (serverProp as Server);
     const teamPath = useTeamPath();
     const canProvision = usePermission()('manage_servers');
     const [copied, setCopied] = useState(false);
     const [testState, setTestState] = useState<ConnectionTestState>('idle');
-    const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+    const [testResult, setTestResult] = useState<ConnectionTestResult | null>(
+        null,
+    );
 
     const provisionForm = useForm({});
     const testForm = useForm({});
@@ -40,10 +83,14 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
         { title: 'Setup', href: teamPath(`/servers/${server.id}/setup`) },
     ];
 
-    useEcho<ConnectionTestResult>(`server.${server.id}`, '.server.connection.tested', (event) => {
-        setTestResult(event);
-        setTestState(event.successful ? 'success' : 'failed');
-    });
+    useEcho<ConnectionTestResult>(
+        `server.${server.id}`,
+        '.server.connection.tested',
+        (event) => {
+            setTestResult(event);
+            setTestState(event.successful ? 'success' : 'failed');
+        },
+    );
 
     const handleCopy = () => {
         navigator.clipboard.writeText(authorized_keys_command).then(() => {
@@ -69,118 +116,123 @@ export default function ServerSetup({ server: serverProp, authorized_keys_comman
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Setup — ${server.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Connect your server</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Add FlitOps to <span className="font-medium">{server.name}</span> ({server.ip_address}) before starting
-                        provisioning.
-                    </p>
+            <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" asChild>
+                        <Link
+                            href={teamPath('/servers')}
+                            aria-label="Back to servers"
+                        >
+                            <ArrowLeftIcon className="h-4 w-4" />
+                        </Link>
+                    </Button>
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-semibold tracking-tight">
+                            Connect {server.name}
+                        </h1>
+                        <p className="font-mono text-xs text-muted-foreground">
+                            {server.ip_address}:{server.ssh_port}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="mx-auto w-full max-w-2xl space-y-6">
-                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                        <TriangleAlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                        <p>Your server must have a fresh, unused installation of Ubuntu 22.04 or 24.04 with root SSH access enabled.</p>
-                    </div>
+                <Card className="gap-0 divide-y py-0">
+                    <SetupStep
+                        number={1}
+                        title="Add the FlitOps key"
+                        description="Run this as root on a fresh Ubuntu 22.04 or 24.04 server. It lets FlitOps log in over SSH."
+                    >
+                        <div className="relative rounded-md border bg-muted">
+                            <pre className="overflow-x-auto p-3 pr-12 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
+                                {authorized_keys_command}
+                            </pre>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleCopy}
+                                aria-label={copied ? 'Copied' : 'Copy command'}
+                                className="absolute top-1.5 right-1.5 size-8"
+                            >
+                                {copied ? (
+                                    <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                ) : (
+                                    <CopyIcon className="h-4 w-4" />
+                                )}
+                            </Button>
+                        </div>
+                    </SetupStep>
 
-                    {/* Step 1 — Add key */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Step 1 — Add FlitOps to your server</CardTitle>
-                            <CardDescription>
-                                Run this command as root on <strong>{server.ip_address}</strong> (port {server.ssh_port}).
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground text-sm">Run as root user</span>
-                                <button
-                                    type="button"
-                                    onClick={handleCopy}
-                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                                >
-                                    {copied ? (
-                                        <>
-                                            <CheckIcon className="h-3.5 w-3.5" />
-                                            Copied
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ClipboardIcon className="h-3.5 w-3.5" />
-                                            Copy
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                            <textarea
-                                readOnly
-                                value={authorized_keys_command}
-                                rows={3}
-                                className="bg-muted text-muted-foreground w-full rounded-md border px-3 py-2 font-mono text-xs leading-relaxed focus:outline-none"
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* Step 2 — Test connection */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Step 2 — Test connection</CardTitle>
-                            <CardDescription>
-                                Verify FlitOps can reach your server before starting the full provisioning run.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <SetupStep
+                        number={2}
+                        title="Test the connection"
+                        description="Check that FlitOps can reach the server before provisioning starts."
+                    >
+                        <div className="flex flex-wrap items-center gap-3">
                             <Button
                                 variant="outline"
+                                size="sm"
                                 onClick={handleTestConnection}
                                 disabled={testState === 'testing'}
                             >
-                                {testState === 'testing' && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                {testState === 'testing' ? 'Testing connection…' : 'Test connection'}
+                                {testState === 'testing' && (
+                                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                                )}
+                                {testState === 'testing'
+                                    ? 'Testing…'
+                                    : 'Test connection'}
                             </Button>
 
-                            {testState === 'success' && testResult && (
-                                <div className="flex items-start gap-2 text-sm text-green-700 dark:text-green-400">
-                                    <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                                    <span>{testResult.message}</span>
-                                </div>
+                            {testResult && (
+                                <p
+                                    role="status"
+                                    className={cn(
+                                        'flex items-start gap-1.5 text-sm',
+                                        testResult.successful
+                                            ? 'text-green-700 dark:text-green-400'
+                                            : 'text-red-700 dark:text-red-400',
+                                    )}
+                                >
+                                    {testResult.successful ? (
+                                        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                                    ) : (
+                                        <XIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                                    )}
+                                    {testResult.message}
+                                </p>
                             )}
+                        </div>
+                    </SetupStep>
 
-                            {testState === 'failed' && testResult && (
-                                <div className="flex items-start gap-2 text-sm text-red-700 dark:text-red-400">
-                                    <XCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                                    <span>{testResult.message}</span>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Step 3 — Provision */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Step 3 — Start provisioning</CardTitle>
-                            <CardDescription>
-                                FlitOps will install Nginx, PHP, your database, Redis, and Supervisor on your server.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center gap-3">
-                                {canProvision ? (
-                                    <Button onClick={handleProvision} disabled={provisionForm.processing}>
-                                        {provisionForm.processing && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                                        Start Provisioning
-                                    </Button>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">Ask an Owner or Admin to start provisioning.</p>
-                                )}
-                                <Button variant="outline" asChild>
-                                    <Link href={teamPath('/servers')}>Cancel</Link>
+                    <SetupStep
+                        number={3}
+                        title="Start provisioning"
+                        description="FlitOps installs the web server, PHP, your database, Redis and Supervisor, then shows progress as it goes."
+                    >
+                        {canProvision ? (
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={handleProvision}
+                                    disabled={provisionForm.processing}
+                                >
+                                    {provisionForm.processing && (
+                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                    )}
+                                    Start provisioning
+                                </Button>
+                                <Button variant="ghost" asChild>
+                                    <Link href={teamPath('/servers')}>
+                                        Cancel
+                                    </Link>
                                 </Button>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Ask an Owner or Admin to start provisioning.
+                            </p>
+                        )}
+                    </SetupStep>
+                </Card>
             </div>
         </AppLayout>
     );

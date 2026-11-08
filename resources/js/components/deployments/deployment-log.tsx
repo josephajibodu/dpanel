@@ -18,12 +18,20 @@ interface DeploymentLogProps {
 
 const ansiUp = new AnsiUp();
 
-export function DeploymentLog({ logs, isDeploying = false, className }: DeploymentLogProps) {
-    const logEndRef = useRef<HTMLDivElement>(null);
+export function DeploymentLog({
+    logs,
+    isDeploying = false,
+    className,
+}: DeploymentLogProps) {
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to bottom when new logs arrive
+    // Keep the newest line in view by scrolling the log box itself, not the page.
     useEffect(() => {
-        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const box = scrollRef.current;
+
+        if (box) {
+            box.scrollTop = box.scrollHeight;
+        }
     }, [logs]);
 
     const getLineColor = (type: string) => {
@@ -40,7 +48,8 @@ export function DeploymentLog({ logs, isDeploying = false, className }: Deployme
     };
 
     const renderedLogs = useMemo(() => {
-        const displayLogs = logs.length > 0 ? logs : isDeploying ? PLACEHOLDER_LOGS : [];
+        const displayLogs =
+            logs.length > 0 ? logs : isDeploying ? PLACEHOLDER_LOGS : [];
 
         return displayLogs.map((log) => ({
             ...log,
@@ -50,27 +59,38 @@ export function DeploymentLog({ logs, isDeploying = false, className }: Deployme
 
     if (renderedLogs.length === 0) {
         return (
-            <div className={cn('flex items-center justify-center py-12 text-center', className)}>
-                <p className="text-muted-foreground text-sm">No logs yet. Deployment will start shortly...</p>
+            <div
+                className={cn(
+                    'flex items-center justify-center py-12 text-center',
+                    className,
+                )}
+            >
+                <p className="text-sm text-muted-foreground">
+                    No logs yet. Deployment will start shortly...
+                </p>
             </div>
         );
     }
 
     return (
-        <div className={cn('bg-muted font-log text-[13px] leading-relaxed', className)}>
-            <div className="max-h-[600px] overflow-y-auto p-4">
+        <div
+            className={cn(
+                'bg-muted font-log text-[13px] leading-relaxed',
+                className,
+            )}
+        >
+            <div ref={scrollRef} className="max-h-[600px] overflow-y-auto p-4">
                 <div className="space-y-0.5">
                     {renderedLogs.map((log, index) => (
                         <div
                             key={index}
                             className={cn(
-                                'whitespace-pre-wrap break-words font-log [&_span]:text-inherit',
+                                'font-log break-words whitespace-pre-wrap [&_span]:text-inherit',
                                 getLineColor(log.type),
                             )}
                             dangerouslySetInnerHTML={{ __html: log.html }}
                         />
                     ))}
-                    <div ref={logEndRef} />
                 </div>
             </div>
         </div>
