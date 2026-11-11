@@ -196,7 +196,7 @@ describe('NginxConfigService', function () {
                 ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;');
         });
 
-        it('generates PHP generic config without framework routing', function () {
+        it('generates PHP generic config that hands unmatched URLs to index.php', function () {
             $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
 
             $site = Site::factory()->create([
@@ -212,11 +212,10 @@ describe('NginxConfigService', function () {
             $config = $service->generateForSiteDomain($site, $domain);
 
             expect($config)
-                ->toContain('try_files $uri $uri/ /index.php /index.html =404')
+                ->toContain('try_files $uri $uri/ /index.php?$query_string;')
                 ->toContain('try_files $uri =404')
                 ->toContain("fastcgi_pass unix:/run/php/php{$site->php_version}-fpm-".config('server.user').'.sock;')
-                ->not->toContain('error_page 404 /index.php')
-                ->not->toContain('/index.php?$query_string');
+                ->not->toContain('error_page 404 /index.php');
         });
 
         it('generates static HTML config without PHP-FPM', function () {
@@ -280,6 +279,26 @@ describe('NginxConfigService', function () {
             ->toContain('fastcgi_buffers 16 16k;')
             ->toContain('fastcgi_buffer_size 32k;');
     })->with([ProjectType::Laravel, ProjectType::PhpGeneric, ProjectType::WordPress]);
+
+    it('never lists a PHP file where nginx would send its source to visitors', function (ProjectType $projectType) {
+        $site = Site::factory()->create([
+            'domain' => 'source.test',
+            'project_type' => $projectType,
+        ]);
+
+        $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+        preg_match_all('/try_files\s+([^;]+);/', $config, $directives);
+
+        $servedAsPlainFiles = collect($directives[1])
+            ->flatMap(fn (string $entries): array => array_slice(preg_split('/\s+/', trim($entries)), 0, -1))
+            ->filter(fn (string $entry): bool => str_contains($entry, '.php'));
+
+        expect($directives[1])->not->toBeEmpty();
+        expect($servedAsPlainFiles->all())->toBeEmpty();
+    })->with(ProjectType::cases());
 
     it('redirects www to the bare domain from the main config', function () {
         $site = Site::factory()->create(['domain' => 'apex.com']);

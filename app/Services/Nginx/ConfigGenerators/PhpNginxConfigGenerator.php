@@ -8,6 +8,12 @@ class PhpNginxConfigGenerator extends BaseNginxConfigGenerator
 {
     /**
      * Generate the server block content for generic PHP applications.
+     *
+     * index.php must stay the last entry of the `location /` try_files.
+     * Nginx serves every earlier entry it finds as a plain file from that
+     * location, which would send visitors the PHP source. Only the last
+     * entry is looked up again, so it reaches the PHP-FPM location, which
+     * answers 404 when the site has no index.php.
      */
     protected function generateServerBlock(Site $site): string
     {
@@ -23,9 +29,9 @@ class PhpNginxConfigGenerator extends BaseNginxConfigGenerator
 
     charset utf-8;
 
-    # Handle static files and directories
+    # Serve files and directories that exist, hand everything else to index.php
     location / {
-        try_files \$uri \$uri/ /index.php /index.html =404;
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
 {$this->getCommonLocations()}
