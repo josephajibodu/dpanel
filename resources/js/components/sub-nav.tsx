@@ -1,11 +1,5 @@
 import { Link } from '@inertiajs/react';
 
-import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuList,
-    navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu';
 import { useActiveUrl } from '@/hooks/use-active-url';
 import { usePermission } from '@/hooks/use-permission';
 import { cn, toUrl } from '@/lib/utils';
@@ -14,18 +8,17 @@ import type { SubNavItem as SubNavItemType } from '@/types';
 interface SubNavProps {
     items: SubNavItemType[];
     /**
-     * Optional href for the item that should show the "pill" (secondary selected) style.
-     * When the current URL matches an item's href, that item gets the underline (primary active) style instead.
+     * Optional href for the item that should show the lighter "selected" pill.
+     * When the current URL matches an item's href, that item gets the stronger active pill instead.
      */
     selectedHref?: string;
     className?: string;
 }
 
-const activeUnderlineStyles =
-    'text-foreground dark:bg-transparent dark:text-neutral-100';
-const selectedPillStyles =
-    'rounded-md bg-muted/80 text-foreground dark:bg-neutral-800 dark:text-neutral-100';
-const inactiveStyles = 'text-muted-foreground';
+const activeStyles = 'bg-secondary text-foreground';
+const selectedStyles = 'bg-muted text-foreground';
+const inactiveStyles =
+    'text-muted-foreground hover:bg-foreground/5 hover:text-foreground';
 
 export function SubNav({ items, selectedHref, className }: SubNavProps) {
     const { urlIsActive } = useActiveUrl();
@@ -35,54 +28,33 @@ export function SubNav({ items, selectedHref, className }: SubNavProps) {
     );
 
     return (
-        <nav
-            className={cn(
-                'border-b border-sidebar-border/80 bg-background',
-                className,
-            )}
-        >
-            <div className="mx-auto flex h-12 w-full items-center px-4 md:max-w-7xl">
-                <NavigationMenu className="flex h-full w-full justify-start">
-                    <NavigationMenuList className="flex h-full items-center gap-1 space-x-0">
-                        {visibleItems.map((item) => {
-                            const isActive = urlIsActive(item.href, undefined, {
-                                exact: item.exactMatch,
-                            });
-                            const isSelected =
-                                !isActive &&
-                                selectedHref &&
-                                toUrl(item.href) === toUrl(selectedHref);
+        <nav className={cn('border-b bg-background', className)}>
+            <div className="flex w-full items-center gap-1 overflow-x-auto px-4 pb-3">
+                {visibleItems.map((item) => {
+                    const isActive = urlIsActive(item.href, undefined, {
+                        exact: item.exactMatch,
+                    });
+                    const isSelected =
+                        !isActive &&
+                        selectedHref &&
+                        toUrl(item.href) === toUrl(selectedHref);
 
-                            return (
-                                <NavigationMenuItem
-                                    key={item.href}
-                                    className="relative flex h-full items-center"
-                                >
-                                    <Link
-                                        href={item.href}
-                                        className={cn(
-                                            navigationMenuTriggerStyle(),
-                                            'h-9 cursor-pointer px-3',
-                                            isActive && activeUnderlineStyles,
-                                            isSelected && selectedPillStyles,
-                                            !isActive &&
-                                                !isSelected &&
-                                                inactiveStyles,
-                                        )}
-                                    >
-                                        {item.title}
-                                    </Link>
-                                    {isActive && (
-                                        <div
-                                            className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-foreground dark:bg-white"
-                                            aria-hidden
-                                        />
-                                    )}
-                                </NavigationMenuItem>
-                            );
-                        })}
-                    </NavigationMenuList>
-                </NavigationMenu>
+                    return (
+                        <Link
+                            key={toUrl(item.href)}
+                            href={item.href}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={cn(
+                                'inline-flex h-7 shrink-0 items-center rounded-full px-3 text-[13px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                isActive && activeStyles,
+                                isSelected && selectedStyles,
+                                !isActive && !isSelected && inactiveStyles,
+                            )}
+                        >
+                            {item.title}
+                        </Link>
+                    );
+                })}
             </div>
         </nav>
     );

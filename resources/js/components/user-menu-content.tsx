@@ -36,12 +36,12 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                     <Link
-                        className="block w-full cursor-pointer"
+                        className="w-full cursor-pointer"
                         href={edit()}
                         prefetch
                         onClick={cleanup}
                     >
-                        <GearIcon className="mr-2" />
+                        <GearIcon />
                         Settings
                     </Link>
                 </DropdownMenuItem>
@@ -49,13 +49,13 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link
-                    className="block w-full cursor-pointer"
+                    className="w-full cursor-pointer"
                     href={logout()}
                     as="button"
                     onClick={handleLogout}
                     data-test="logout-button"
                 >
-                    <SignOutIcon className="mr-2" />
+                    <SignOutIcon />
                     Log out
                 </Link>
             </DropdownMenuItem>

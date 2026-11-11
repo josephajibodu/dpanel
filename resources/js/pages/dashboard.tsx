@@ -7,6 +7,7 @@ import {
     GettingStartedChecklist,
 } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -110,26 +111,27 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
+                {isWelcome && (
+                    <div className="space-y-1 pt-6 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            {isWelcome ? 'Welcome to FlitOps' : 'Dashboard'}
+                            Welcome to FlitOps
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {isWelcome
-                                ? 'Get your first site live in a few minutes.'
-                                : 'An overview of your servers, sites, and deployments.'}
+                            Get your first site live in a few minutes.
                         </p>
                     </div>
-                    {canManageServers && !isWelcome && (
+                )}
+
+                {canManageServers && !isWelcome && (
+                    <PageActions>
                         <Button asChild>
                             <Link href={teamPath('/servers/create')}>
-                                <PlusIcon className="mr-2 h-4 w-4" />
+                                <PlusIcon className="h-4 w-4" />
                                 Create server
                             </Link>
                         </Button>
-                    )}
-                </div>
+                    </PageActions>
+                )}
 
                 {isWelcome ? (
                     <>
@@ -145,7 +147,7 @@ export default function Dashboard({
                     <>
                         {showChecklist && checklist}
                         <StatGroup>
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-border shadow-card sm:grid-cols-4">
                                 <Stat
                                     bordered
                                     label="Servers"

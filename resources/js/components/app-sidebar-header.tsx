@@ -12,20 +12,37 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useActiveUrl } from '@/hooks/use-active-url';
+import { useMainNav } from '@/hooks/use-main-nav';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({
     breadcrumbs = [],
+    actionsRef,
 }: {
     breadcrumbs?: BreadcrumbItemType[];
+    /** Receives the element that `PageActions` renders a page's buttons into. */
+    actionsRef?: (element: HTMLElement | null) => void;
 }) {
     const serverIndex = findServerBreadcrumbIndex(breadcrumbs);
     const siteIndex = findSiteBreadcrumbIndex(breadcrumbs);
+    const { groups, settings } = useMainNav();
+    const { urlIsActive } = useActiveUrl();
+
+    // The sidebar link this page sits under lends its icon to the page title.
+    const section = [...groups.flatMap((group) => group.items), settings].find(
+        (item) => item.isActive ?? urlIsActive(item.href),
+    );
+    const SectionIcon = section?.icon;
 
     return (
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
-            <div className="flex flex-1 items-center gap-2">
+        <header className="flex h-13 shrink-0 items-center gap-2 px-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
+
+                {SectionIcon && (
+                    <SectionIcon className="size-[18px] shrink-0 text-muted-foreground" />
+                )}
 
                 {breadcrumbs.length > 0 && (
                     <Breadcrumb>
@@ -71,6 +88,11 @@ export function AppSidebarHeader({
                     </Breadcrumb>
                 )}
             </div>
+
+            <div
+                ref={actionsRef}
+                className="flex shrink-0 items-center gap-2"
+            />
         </header>
     );
 }

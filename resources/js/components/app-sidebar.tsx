@@ -1,13 +1,3 @@
-import {
-    BookOpenIcon,
-    CloudIcon,
-    CodeIcon,
-    HardDriveIcon,
-    HardDrivesIcon,
-    HouseIcon,
-    KeyIcon,
-} from '@phosphor-icons/react';
-
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -18,52 +8,20 @@ import {
     SidebarFooter,
     SidebarHeader,
 } from '@/components/ui/sidebar';
-import { useTeamPath } from '@/hooks/use-team-path';
-import { type NavItem } from '@/types';
+import { useMainNav } from '@/hooks/use-main-nav';
+import { type SubNavItem } from '@/types';
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Documentation',
-        href: 'https://docs.flitops.com',
-        icon: BookOpenIcon,
-    },
-];
+interface AppSidebarProps {
+    /** The current section's pages, listed under the active sidebar link. */
+    subNavItems?: SubNavItem[];
+    subNavSelectedHref?: string;
+}
 
-export function AppSidebar() {
-    const teamPath = useTeamPath();
-
-    const mainNavItems: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: teamPath('/dashboard'),
-            icon: HouseIcon,
-        },
-        {
-            title: 'Servers',
-            href: teamPath('/servers'),
-            icon: HardDrivesIcon,
-        },
-        {
-            title: 'SSH Keys',
-            href: teamPath('/ssh-keys'),
-            icon: KeyIcon,
-        },
-        {
-            title: 'Provider Accounts',
-            href: teamPath('/provider-accounts'),
-            icon: CloudIcon,
-        },
-        {
-            title: 'Storage Providers',
-            href: teamPath('/storage-providers'),
-            icon: HardDriveIcon,
-        },
-        {
-            title: 'Source Control',
-            href: teamPath('/source-control'),
-            icon: CodeIcon,
-        },
-    ];
+export function AppSidebar({
+    subNavItems,
+    subNavSelectedHref,
+}: AppSidebarProps) {
+    const { groups, settings, documentation } = useMainNav();
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -72,11 +30,21 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain
+                    groups={groups}
+                    subNavItems={subNavItems}
+                    subNavSelectedHref={subNavSelectedHref}
+                />
             </SidebarContent>
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+            <SidebarFooter className="gap-0.5">
+                <NavFooter items={[documentation]} className="p-0" />
+                <NavMain
+                    groups={[{ items: [settings] }]}
+                    subNavItems={subNavItems}
+                    subNavSelectedHref={subNavSelectedHref}
+                    className="p-0"
+                />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

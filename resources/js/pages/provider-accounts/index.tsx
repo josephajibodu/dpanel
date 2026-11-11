@@ -10,6 +10,7 @@ import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,25 +85,16 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
             <Head title="Provider Accounts" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Provider Accounts
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Connect your cloud provider accounts to provision
-                            servers.
-                        </p>
-                    </div>
+                <PageActions>
                     {canManageProviders && (
                         <Button asChild>
                             <Link href={teamPath('/provider-accounts/create')}>
-                                <PlusIcon className="mr-2 h-4 w-4" />
+                                <PlusIcon className="h-4 w-4" />
                                 Connect provider
                             </Link>
                         </Button>
                     )}
-                </div>
+                </PageActions>
 
                 {accounts.data.length === 0 ? (
                     <EmptyState
@@ -126,7 +118,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                             '/provider-accounts/create',
                                         )}
                                     >
-                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        <PlusIcon className="h-4 w-4" />
                                         Connect provider
                                     </Link>
                                 </Button>
@@ -219,7 +211,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                                                 )
                                                             }
                                                         >
-                                                            <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
+                                                            <ArrowsClockwiseIcon className="h-4 w-4" />
                                                             Re-validate
                                                             Credentials
                                                         </DropdownMenuItem>
@@ -231,7 +223,7 @@ export default function ProviderAccountsIndex({ accounts }: Props) {
                                                             }
                                                             className="text-destructive focus:text-destructive"
                                                         >
-                                                            <TrashIcon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="h-4 w-4" />
                                                             Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
