@@ -11,17 +11,17 @@ interface SettingsSectionProps {
     footerHint?: ReactNode;
     /** Buttons on the right of the footer strip. */
     footerAction?: ReactNode;
-    /** Red border and footer, for actions that can't be undone. */
+    /** Red outline and footer, for actions that can't be undone. */
     variant?: 'default' | 'danger';
-    /** Lets the body run edge to edge under a divider, for lists of rows. */
+    /** Lets the body run edge to edge, for lists of rows. */
     flush?: boolean;
     children?: ReactNode;
     className?: string;
 }
 
 /**
- * One block of a settings page: a title and explanation, the controls, and an
- * optional footer strip with a hint on the left and the save button on the right.
+ * One block of a settings page: a title and explanation above a card that holds
+ * the controls, with an optional footer strip for a hint and the save button.
  */
 export function SettingsSection({
     title,
@@ -38,16 +38,10 @@ export function SettingsSection({
     const hasFooter = Boolean(footerHint || footerAction);
 
     return (
-        <section
-            className={cn(
-                'overflow-hidden rounded-xl border bg-card text-card-foreground',
-                isDanger && 'border-red-200 dark:border-red-900/60',
-                className,
-            )}
-        >
-            <div className="flex flex-col gap-4 px-6 pt-5 pb-5 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                    <h2 className="text-base font-semibold">{title}</h2>
+        <section className={cn('space-y-3', className)}>
+            <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-0.5">
+                    <h2 className="text-[15px] font-semibold">{title}</h2>
                     {description && (
                         <p className="max-w-xl text-sm text-muted-foreground">
                             {description}
@@ -57,26 +51,35 @@ export function SettingsSection({
                 {headerAction && <div className="shrink-0">{headerAction}</div>}
             </div>
 
-            {children && (
-                <div className={cn(flush ? 'border-t' : 'px-6 pb-6')}>
-                    {children}
-                </div>
-            )}
-
-            {hasFooter && (
+            {(children || hasFooter) && (
                 <div
                     className={cn(
-                        'flex flex-col gap-3 border-t bg-muted/40 px-6 py-3 sm:flex-row sm:items-center sm:justify-between',
-                        isDanger &&
-                            'border-red-200 bg-red-50/60 dark:border-red-900/60 dark:bg-red-950/20',
+                        'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-card',
+                        isDanger && 'ring-1 ring-destructive/30',
                     )}
                 >
-                    <div className="text-sm text-muted-foreground">
-                        {footerHint}
-                    </div>
-                    {footerAction && (
-                        <div className="flex shrink-0 items-center gap-3">
-                            {footerAction}
+                    {children && (
+                        <div className={cn(!flush && 'p-5')}>{children}</div>
+                    )}
+
+                    {hasFooter && (
+                        <div
+                            className={cn(
+                                'flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between',
+                                children && 'border-t bg-muted/60',
+                                children &&
+                                    isDanger &&
+                                    'border-destructive/20 bg-destructive/[0.05]',
+                            )}
+                        >
+                            <div className="text-sm text-muted-foreground">
+                                {footerHint}
+                            </div>
+                            {footerAction && (
+                                <div className="flex shrink-0 items-center gap-3">
+                                    {footerAction}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -99,7 +102,7 @@ export function SettingsRow({
     children?: ReactNode;
 }) {
     return (
-        <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-0.5">
                 <div className="text-sm font-medium">{label}</div>
                 {description && (

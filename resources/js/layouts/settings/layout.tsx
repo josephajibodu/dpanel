@@ -16,10 +16,10 @@ export default function SettingsLayout({
     }
 
     return (
-        <div className="px-4 py-6">
+        <div className="mx-auto w-full max-w-3xl px-4 py-6">
             <Heading title={title} description={description} />
 
-            <div className="mt-6 max-w-3xl space-y-6">{children}</div>
+            <div className="space-y-8">{children}</div>
         </div>
     );
 }

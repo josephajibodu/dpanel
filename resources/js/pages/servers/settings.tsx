@@ -1,12 +1,12 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 
 import { destroy as destroyServer } from '@/actions/App/Http/Controllers/ServerController';
 import { destroy as resetHostKey } from '@/actions/App/Http/Controllers/ServerHostKeyController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
+import { SettingsSection } from '@/components/settings-section';
 import { Button } from '@/components/ui/button';
-import { CardDescription, CardTitle } from '@/components/ui/card';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -19,42 +19,6 @@ interface Props {
     ssh_command: string | null;
     has_ssh_key: boolean;
     host_key: { type: string; fingerprint: string } | null;
-}
-
-function Section({
-    title,
-    description,
-    children,
-    tone = 'default',
-}: {
-    title: string;
-    description: string;
-    children: ReactNode;
-    tone?: 'default' | 'danger';
-}) {
-    return (
-        <section
-            className={
-                tone === 'danger'
-                    ? 'rounded-lg border border-destructive/30 bg-card shadow-md shadow-black/5 dark:shadow-black/20'
-                    : 'rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20'
-            }
-        >
-            <div
-                className={
-                    tone === 'danger'
-                        ? 'border-b border-destructive/20 px-6 py-4'
-                        : 'border-b px-6 py-4'
-                }
-            >
-                <CardTitle>{title}</CardTitle>
-                <CardDescription className="mt-1">
-                    {description}
-                </CardDescription>
-            </div>
-            <div className="p-6">{children}</div>
-        </section>
-    );
 }
 
 export default function ServerSettings({
@@ -113,7 +77,7 @@ export default function ServerSettings({
         >
             <Head title={`Settings - ${server.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4">
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-6 p-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">
                         Settings
@@ -123,8 +87,8 @@ export default function ServerSettings({
                     </p>
                 </div>
 
-                <div className="flex max-w-3xl flex-col gap-6">
-                    <Section
+                <div className="flex flex-col gap-8">
+                    <SettingsSection
                         title="SSH access"
                         description="Connect to this server from your own terminal."
                     >
@@ -163,9 +127,9 @@ export default function ServerSettings({
                                 </Button>
                             </div>
                         )}
-                    </Section>
+                    </SettingsSection>
 
-                    <Section
+                    <SettingsSection
                         title="Server identity"
                         description="The key this server proved its identity with the first time we connected. Every later connection must match it."
                     >
@@ -219,14 +183,14 @@ export default function ServerSettings({
                                 time we connect to this server.
                             </p>
                         )}
-                    </Section>
+                    </SettingsSection>
 
                     {can('manage_servers') &&
                         (isCustom ? (
-                            <Section
+                            <SettingsSection
                                 title="Disconnect server"
                                 description="Remove this server from Flitops. The machine and everything running on it stays in place."
-                                tone="danger"
+                                variant="danger"
                             >
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                     <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
@@ -256,12 +220,12 @@ export default function ServerSettings({
                                         Disconnect server
                                     </Button>
                                 </div>
-                            </Section>
+                            </SettingsSection>
                         ) : (
-                            <Section
+                            <SettingsSection
                                 title="Destroy server"
                                 description={`Delete this server at ${server.provider_label}, along with all its sites, databases and data.`}
-                                tone="danger"
+                                variant="danger"
                             >
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                     <p className="text-sm text-muted-foreground">
@@ -278,7 +242,7 @@ export default function ServerSettings({
                                         Destroy server
                                     </Button>
                                 </div>
-                            </Section>
+                            </SettingsSection>
                         ))}
                 </div>
 
