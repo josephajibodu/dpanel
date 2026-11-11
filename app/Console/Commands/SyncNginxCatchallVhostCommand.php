@@ -13,7 +13,7 @@ class SyncNginxCatchallVhostCommand extends Command
         {--server=* : Specific server ID(s) to target}
         {--all : Apply to every active server}';
 
-    protected $description = 'Push the current catch-all nginx vhost and its no-site page to already-provisioned servers.';
+    protected $description = 'Push the current catch-all config (Nginx or Caddy) and its no-site page to already-provisioned servers.';
 
     public function handle(SyncNginxCatchallVhostAction $action): int
     {
@@ -26,8 +26,8 @@ class SyncNginxCatchallVhostCommand extends Command
         }
 
         $servers = $this->option('all')
-            ? Server::query()->where('status', ServerStatus::Active)->where('web_server', 'nginx')->get()
-            : Server::query()->whereIn('id', $serverIds)->where('web_server', 'nginx')->get();
+            ? Server::query()->where('status', ServerStatus::Active)->whereNotNull('web_server')->get()
+            : Server::query()->whereIn('id', $serverIds)->whereNotNull('web_server')->get();
 
         if ($servers->isEmpty()) {
             $this->components->warn('No matching servers found.');

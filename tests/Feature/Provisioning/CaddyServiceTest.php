@@ -45,7 +45,11 @@ it('runs Caddy as the web user and loads every site config', function () {
         ->toContain("User=www-data\nGroup=www-data");
     expect($this->files['/etc/caddy/Caddyfile'])
         ->toContain('import /etc/caddy/sites/*.conf')
-        ->toContain('respond "No site is configured for this address." 404');
+        ->toContain("root * /var/www/flitops\n\ttemplates\n\trewrite * /index.html\n\tfile_server {\n\t\tstatus 404\n\t}");
+    expect($this->files['/var/www/flitops/index.html'])
+        ->toContain('Nothing deployed here.')
+        ->toContain('<span class="status-host">{{html .Host}}</span>')
+        ->not->toContain('<!--#');
     expect($this->files['/usr/local/sbin/flitops-caddy-reload'])->toContain('id -G www-data');
     expect($this->commands)
         ->toContain('chmod 755 /usr/local/sbin/flitops-caddy-reload')

@@ -3,13 +3,14 @@
 namespace App\Actions\Servers;
 
 use App\Models\Server;
+use App\Services\Provisioning\CaddyService;
 use App\Services\Provisioning\NginxService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 
 /**
- * Push the current catch-all vhost (app.conf) and the no-site page it serves
- * to an already-provisioned server, so servers provisioned before either
+ * Push the current catch-all config (Nginx's app.conf, or Caddy's main
+ * Caddyfile) and the no-site page it serves to an already-provisioned server, so servers provisioned before either
  * changed get them retroactively without a full re-provision.
  */
 class SyncNginxCatchallVhostAction
@@ -31,28 +32,31 @@ class SyncNginxCatchallVhostAction
 
     private function sync(Server $server, SshConnection $connection): void
     {
-        $installed = $connection->exec('dpkg -s ssl-cert >/dev/null 2>&1 && echo INSTALLED || true');
-        if (! str_contains($installed, 'INSTALLED')) {
-            $connection->exec('sudo apt-get -o DPkg::Lock::Timeout=60 install -y ssl-cert', 900);
-        }
-
         $noSitePageRoot = NginxService::NO_SITE_PAGE_ROOT;
-        $noSitePage = NginxService::NO_SITE_PAGE;
-        $escapedPage = str_replace("'", "'\\''", NginxService::noSitePage());
-
         $connection->exec("sudo mkdir -p {$noSitePageRoot}");
-        $connection->exec("echo '{$escapedPage}' | sudo tee {$noSitePage} > /dev/null");
 
-        $escapedConfig = str_replace("'", "'\\''", NginxService::buildServerConfig());
+        if ($server->web_server === 'caddy') {
+            $this->write($connection, NginxService::NO_SITE_PAGE, CaddyService::noSitePage());
+            $this->write($connection, CaddyService::CADDYFILE, CaddyService::buildCaddyfile());
+        } else {
+            $installed = $connection->exec('dpkg -s ssl-cert >/dev/null 2>&1 && echo INSTALLED || true');
+            if (! str_contains($installed, 'INSTALLED')) {
+                $connection->exec('sudo apt-get -o DPkg::Lock::Timeout=60 install -y ssl-cert', 900);
+            }
 
-        $connection->exec("echo '{$escapedConfig}' | sudo tee /etc/nginx/sites-available/app.conf > /dev/null");
-        $connection->exec('sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf');
-
-        $testResult = $connection->exec('sudo nginx -t 2>&1');
-        if (! str_contains($testResult, 'syntax is ok')) {
-            throw new \RuntimeException("Nginx configuration test failed on server {$server->id}: {$testResult}");
+            $this->write($connection, NginxService::NO_SITE_PAGE, NginxService::noSitePage());
+            $this->write($connection, '/etc/nginx/sites-available/app.conf', NginxService::buildServerConfig());
+            $connection->exec('sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf');
         }
 
-        $connection->exec('sudo systemctl reload nginx');
+        $server->webServer()->validate($connection);
+        $server->webServer()->reload($connection);
+    }
+
+    private function write(SshConnection $connection, string $path, string $content): void
+    {
+        $escaped = str_replace("'", "'\\''", $content);
+
+        $connection->exec("echo '{$escaped}' | sudo tee {$path} > /dev/null");
     }
 }

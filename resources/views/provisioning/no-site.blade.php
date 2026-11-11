@@ -5,7 +5,7 @@
 @section('content')
         <p class="status">
             <span class="status-code">404</span>
-            <span class="status-host"><!--# echo var="host" --></span>
+            <span class="status-host">{!! $host !!}</span>
         </p>
 
         <h1>Nothing deployed here. <span>Yet.</span></h1>

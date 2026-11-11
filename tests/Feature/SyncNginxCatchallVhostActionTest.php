@@ -2,6 +2,7 @@
 
 use App\Actions\Servers\SyncNginxCatchallVhostAction;
 use App\Enums\ServerStatus;
+use App\Exceptions\SshCommandException;
 use App\Models\Server;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -52,7 +53,9 @@ it('throws and disconnects when the pushed config fails nginx -t', function () {
 
     $connection = Mockery::mock(SshConnection::class);
     $connection->shouldReceive('exec')
-        ->andReturnUsing(fn (string $cmd) => str_contains($cmd, 'nginx -t') ? 'nginx: [emerg] bad config' : '');
+        ->andReturnUsing(fn (string $cmd) => str_contains($cmd, 'nginx -t')
+            ? throw new SshCommandException(command: $cmd, exitCode: 1, output: 'nginx: [emerg] bad config', stderr: '')
+            : '');
     $connection->shouldReceive('disconnect')->once();
 
     $sshService = Mockery::mock(SshService::class);
@@ -61,4 +64,33 @@ it('throws and disconnects when the pushed config fails nginx -t', function () {
 
     expect(fn () => app(SyncNginxCatchallVhostAction::class)->execute($server))
         ->toThrow(RuntimeException::class);
+});
+
+it('writes the Caddyfile and Caddy\'s no-site page on a Caddy server', function () {
+    $server = Server::factory()->create(['status' => ServerStatus::Active, 'web_server' => 'caddy']);
+
+    $execCalls = [];
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$execCalls) {
+        $execCalls[] = $cmd;
+
+        return '';
+    });
+    $connection->shouldReceive('disconnect')->once();
+
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->once()->andReturn($connection);
+    app()->instance(SshService::class, $sshService);
+
+    app(SyncNginxCatchallVhostAction::class)->execute($server);
+
+    $all = implode("\n", $execCalls);
+
+    expect($all)
+        ->toContain('{{html .Host}}')
+        ->toContain('| sudo tee /var/www/flitops/index.html > /dev/null')
+        ->toContain('| sudo tee /etc/caddy/Caddyfile > /dev/null')
+        ->toContain('caddy validate')
+        ->toContain('sudo /usr/local/sbin/flitops-caddy-reload')
+        ->not->toContain('nginx');
 });

@@ -45,6 +45,8 @@ class CaddyService
         $context->files->ensureDirectory(self::SITES_DIRECTORY);
         $context->files->ensureDirectory('/etc/caddy/flitops-conf');
         $context->files->ensureDirectory('/etc/caddy/ssl');
+        $context->files->ensureDirectory(NginxService::NO_SITE_PAGE_ROOT);
+        $context->files->put(NginxService::NO_SITE_PAGE, self::noSitePage());
         $context->files->put(self::CADDYFILE, self::buildCaddyfile());
 
         $context->files->put(self::RELOAD_SCRIPT, self::buildReloadScript($webUser));
@@ -81,20 +83,35 @@ INI;
     }
 
     /**
-     * The main Caddyfile: a catch-all that answers 404 for hostnames with no
-     * site, then every site's own config. Unknown HTTPS hostnames get no
+     * The flitops page shown for requests that match no site. Caddy fills in
+     * the requested host name (HTML-escaped) when it serves the page.
+     */
+    public static function noSitePage(): string
+    {
+        return NginxService::noSitePage('{{html .Host}}');
+    }
+
+    /**
+     * The main Caddyfile: a catch-all that answers every hostname with no
+     * site with the no-site page and a 404, then every site's own config. Unknown HTTPS hostnames get no
      * certificate, so another site's certificate is never served for them.
      */
     public static function buildCaddyfile(): string
     {
         $sitesDirectory = self::SITES_DIRECTORY;
+        $noSitePageRoot = NginxService::NO_SITE_PAGE_ROOT;
 
         return <<<CADDY
 # Managed by FlitOps - DO NOT EDIT
 # Each site domain has its own file in {$sitesDirectory}.
 
 :80 {
-	respond "No site is configured for this address." 404
+	root * {$noSitePageRoot}
+	templates
+	rewrite * /index.html
+	file_server {
+		status 404
+	}
 }
 
 import {$sitesDirectory}/*.conf

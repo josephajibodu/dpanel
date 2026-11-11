@@ -75,12 +75,13 @@ class NginxService
     }
 
     /**
-     * The flitops page shown for requests that match no site. nginx's SSI
-     * fills in the requested host name (HTML-escaped) when it's served.
+     * The flitops page shown for requests that match no site. The web server
+     * fills in the requested host name (HTML-escaped) when it serves the
+     * page: nginx through SSI by default, or whatever tag is given.
      */
-    public static function noSitePage(): string
+    public static function noSitePage(string $hostTag = '<!--# echo var="host" -->'): string
     {
-        return view('provisioning.no-site')->render();
+        return view('provisioning.no-site', ['host' => $hostTag])->render();
     }
 
     /**
