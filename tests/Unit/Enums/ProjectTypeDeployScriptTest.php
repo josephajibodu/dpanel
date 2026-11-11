@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ProjectType;
+use Symfony\Component\Process\Process;
 
 describe('ProjectType::defaultDeployScript', function () {
     it('never runs git itself — cloning is the zero-downtime deploy strategy\'s job', function (ProjectType $type) {
@@ -31,6 +32,33 @@ describe('ProjectType::defaultDeployScript', function () {
         // A worker restarted from here would come straight back up on the
         // old release — see ProjectType::postActivationScript().
         expect(ProjectType::Laravel->defaultDeployScript())->not->toContain('queue:restart');
+    });
+
+    it('does not run Composer for a plain PHP app without a composer.json', function () {
+        $release = sys_get_temp_dir().'/php-deploy-script-'.bin2hex(random_bytes(4));
+        mkdir($release);
+
+        // `false` stands in for Composer, so the deploy fails if it is run.
+        $deploy = new Process(['bash', '-c', "set -e\nCOMPOSER='false'\n".ProjectType::PhpGeneric->defaultDeployScript()], $release);
+        $deploy->run();
+
+        rmdir($release);
+
+        expect($deploy->getExitCode())->toBe(0);
+    });
+
+    it('installs Composer packages for a plain PHP app that has a composer.json', function () {
+        $release = sys_get_temp_dir().'/php-deploy-script-'.bin2hex(random_bytes(4));
+        mkdir($release);
+        file_put_contents("{$release}/composer.json", '{}');
+
+        $deploy = new Process(['bash', '-c', "set -e\nCOMPOSER='echo composer'\n".ProjectType::PhpGeneric->defaultDeployScript()], $release);
+        $deploy->run();
+
+        unlink("{$release}/composer.json");
+        rmdir($release);
+
+        expect($deploy->getOutput())->toContain('composer install --no-dev');
     });
 });
 

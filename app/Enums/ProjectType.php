@@ -107,10 +107,15 @@ $PHP bin/console cache:warmup --env=prod
 SCRIPT;
     }
 
+    /**
+     * Composer only runs when the app has a composer.json: without one it
+     * exits with an error, which would fail the deploy of a PHP app that
+     * uses no packages.
+     */
     private function phpDeployScript(): string
     {
         return <<<'SCRIPT'
-$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+if [ -f composer.json ]; then $COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi
 SCRIPT;
     }
 
