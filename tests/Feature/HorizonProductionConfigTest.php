@@ -71,6 +71,18 @@ it('consumes every queue the app dispatches to', function () {
     }
 });
 
+it('keeps long backups off the workers that apply server changes', function () {
+    $sharingWithBackups = collect(horizonProductionSupervisors())
+        ->map(fn (SupervisorOptions $supervisor) => explode(',', $supervisor->queue))
+        ->filter(fn (array $queues) => in_array('backups', $queues, true))
+        ->flatten()
+        ->unique()
+        ->values()
+        ->all();
+
+    expect($sharingWithBackups)->toBe(['backups']);
+});
+
 it('runs no supervisor beyond the ones production defines', function () {
     expect(array_keys(horizonProductionSupervisors()))
         ->toBe(array_keys(config('horizon.environments.production')));

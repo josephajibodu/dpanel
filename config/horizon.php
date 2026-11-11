@@ -234,12 +234,22 @@ return [
             ],
             'supervisor-provisioning' => [
                 'connection' => 'redis',
-                'queue' => ['provisioning', 'backups'],
+                'queue' => ['provisioning'],
                 'balance' => 'simple',
                 'processes' => 2,
                 'tries' => 1,
-                // 3600s to cover RunBackupJob/RestoreBackupJob's own timeout,
-                // which is longer than a typical provisioning step.
+                'timeout' => 3600,
+            ],
+            // Backups have workers of their own: one can run for an hour, and
+            // two of them on the provisioning workers would hold up every
+            // config, cron, worker, database and site command change.
+            'supervisor-backups' => [
+                'connection' => 'redis',
+                'queue' => ['backups'],
+                'balance' => 'simple',
+                'processes' => 2,
+                'tries' => 1,
+                // Covers RunBackupJob/RestoreBackupJob's own timeout.
                 'timeout' => 3600,
             ],
             'supervisor-deploy' => [
