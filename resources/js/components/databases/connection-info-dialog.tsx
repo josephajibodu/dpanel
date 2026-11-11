@@ -1,5 +1,10 @@
 import { Link } from '@inertiajs/react';
-import { EyeIcon, EyeOffIcon, KeyIcon, Loader2Icon } from 'lucide-react';
+import {
+    CircleNotchIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    KeyIcon,
+} from '@phosphor-icons/react';
 import { type ReactNode, useState } from 'react';
 
 import { CopyButton } from '@/components/copy-button';
@@ -381,9 +386,9 @@ export function ConnectionInfoDialog({
                                                 }
                                             >
                                                 {revealing ? (
-                                                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                                 ) : revealed ? (
-                                                    <EyeOffIcon className="h-4 w-4" />
+                                                    <EyeSlashIcon className="h-4 w-4" />
                                                 ) : (
                                                     <EyeIcon className="h-4 w-4" />
                                                 )}

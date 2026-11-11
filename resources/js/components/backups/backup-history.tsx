@@ -1,12 +1,12 @@
 import { router } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
-    CheckCircle2Icon,
-    DownloadIcon,
-    MoreVerticalIcon,
-    RotateCcwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    ArrowCounterClockwiseIcon,
+    CheckCircleIcon,
+    DotsThreeVerticalIcon,
+    DownloadSimpleIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -147,7 +147,7 @@ export function BackupHistory({
                                     </TableCell>
                                     <TableCell>
                                         {backup.verified_at ? (
-                                            <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+                                            <CheckCircleIcon className="h-4 w-4 text-green-600" />
                                         ) : (
                                             <span className="text-sm text-muted-foreground">
                                                 —
@@ -172,7 +172,7 @@ export function BackupHistory({
                                                         size="icon"
                                                         className="h-8 w-8"
                                                     >
-                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                        <DotsThreeVerticalIcon className="h-4 w-4" />
                                                         <span className="sr-only">
                                                             Actions
                                                         </span>
@@ -188,7 +188,7 @@ export function BackupHistory({
                                                                 <a
                                                                     href={`${backupsUrl}/${backup.id}/download`}
                                                                 >
-                                                                    <DownloadIcon className="mr-2 h-4 w-4" />
+                                                                    <DownloadSimpleIcon className="mr-2 h-4 w-4" />
                                                                     Download
                                                                 </a>
                                                             </DropdownMenuItem>
@@ -203,7 +203,7 @@ export function BackupHistory({
                                                                     )
                                                                 }
                                                             >
-                                                                <RotateCcwIcon className="mr-2 h-4 w-4" />
+                                                                <ArrowCounterClockwiseIcon className="mr-2 h-4 w-4" />
                                                                 Restore
                                                             </DropdownMenuItem>
                                                         )}
@@ -216,7 +216,7 @@ export function BackupHistory({
                                                                 )
                                                             }
                                                         >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="mr-2 h-4 w-4" />
                                                             Delete
                                                         </DropdownMenuItem>
                                                     )}

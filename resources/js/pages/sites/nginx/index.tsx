@@ -1,18 +1,18 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import Editor from '@monaco-editor/react';
 import {
-    ChevronDownIcon,
-    ChevronRightIcon,
+    ArrowCounterClockwiseIcon,
+    ArrowsClockwiseIcon,
+    CaretDownIcon,
+    CaretRightIcon,
     ClockIcon,
     FileIcon,
     FilePlusIcon,
     GlobeIcon,
     LockIcon,
-    PencilIcon,
-    RefreshCwIcon,
-    RotateCcwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    PencilSimpleIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -345,7 +345,7 @@ export default function SiteNginxIndex({
                                 disabled={isRefreshing}
                                 title="Sync file contents from server"
                             >
-                                <RefreshCwIcon
+                                <ArrowsClockwiseIcon
                                     className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
                                 />
                                 Refresh
@@ -397,9 +397,9 @@ export default function SiteNginxIndex({
                                         className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/50"
                                     >
                                         {isDomainCollapsed ? (
-                                            <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                            <CaretRightIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                         ) : (
-                                            <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                            <CaretDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                         )}
                                         <GlobeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                         <span className="flex-1 truncate font-mono text-xs">
@@ -441,9 +441,9 @@ export default function SiteNginxIndex({
                                                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium hover:bg-muted/50"
                                                         >
                                                             {isSectionCollapsed ? (
-                                                                <ChevronRightIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                <CaretRightIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                                                             ) : (
-                                                                <ChevronDownIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                <CaretDownIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                                                             )}
                                                             <span className="capitalize">
                                                                 {section.label}
@@ -534,7 +534,7 @@ export default function SiteNginxIndex({
                                                                                             className="rounded p-0.5 text-muted-foreground hover:text-foreground"
                                                                                             title="Rename"
                                                                                         >
-                                                                                            <PencilIcon className="h-3 w-3" />
+                                                                                            <PencilSimpleIcon className="h-3 w-3" />
                                                                                         </button>
                                                                                         <button
                                                                                             onClick={(
@@ -548,7 +548,7 @@ export default function SiteNginxIndex({
                                                                                             className="rounded p-0.5 text-muted-foreground hover:text-destructive"
                                                                                             title="Delete"
                                                                                         >
-                                                                                            <Trash2Icon className="h-3 w-3" />
+                                                                                            <TrashIcon className="h-3 w-3" />
                                                                                         </button>
                                                                                     </div>
                                                                                 )}
@@ -734,7 +734,7 @@ export default function SiteNginxIndex({
                                                             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                                                             title="Restore this version"
                                                         >
-                                                            <RotateCcwIcon className="h-3 w-3" />
+                                                            <ArrowCounterClockwiseIcon className="h-3 w-3" />
                                                             Restore
                                                         </button>
                                                     )}

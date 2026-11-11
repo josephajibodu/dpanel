@@ -1,12 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
     BookOpenIcon,
+    DotsThreeVerticalIcon,
     EyeIcon,
-    MoreVerticalIcon,
     PlusIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -255,7 +255,7 @@ export default function ServersIndex({ servers }: Props) {
                                                                         size="icon"
                                                                         className="h-8 w-8"
                                                                     >
-                                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                                        <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                         <span className="sr-only">
                                                                             Actions
                                                                         </span>
@@ -284,7 +284,7 @@ export default function ServersIndex({ servers }: Props) {
                                                                                 }
                                                                                 className="text-destructive focus:text-destructive"
                                                                             >
-                                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                                <TrashIcon className="mr-2 h-4 w-4" />
                                                                                 Delete
                                                                             </DropdownMenuItem>
                                                                         )}

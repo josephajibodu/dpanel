@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { CheckIcon, MinusIcon } from 'lucide-react';
+import { CheckIcon, MinusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import CallToAction from '@/components/marketing/call-to-action';

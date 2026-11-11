@@ -1,5 +1,5 @@
 import { InertiaLinkProps } from '@inertiajs/react';
-import { LucideIcon } from 'lucide-react';
+import { type Icon } from '@phosphor-icons/react';
 
 import { Team, TeamPermission } from './team';
 
@@ -30,7 +30,7 @@ export interface NavGroup {
 export interface NavItem {
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
-    icon?: LucideIcon | null;
+    icon?: Icon | null;
     isActive?: boolean;
 }
 

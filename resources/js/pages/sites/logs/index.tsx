@@ -1,5 +1,5 @@
 import { Deferred, Head, router, usePage } from '@inertiajs/react';
-import { RefreshCwIcon } from 'lucide-react';
+import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -107,7 +107,7 @@ export default function SiteLogsIndex({
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
                             >
-                                <RefreshCwIcon
+                                <ArrowsClockwiseIcon
                                     className={`mr-1.5 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
                                 />
                                 Refresh

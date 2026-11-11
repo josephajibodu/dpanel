@@ -1,4 +1,4 @@
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react';
 
 import { Appearance, useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';

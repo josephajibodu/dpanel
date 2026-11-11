@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { MonitorIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
 
 import { MarketingWordmark } from '@/components/marketing/marketing-header';
 import { type Appearance, useAppearance } from '@/hooks/use-appearance';

@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { XIcon } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { dismiss } from '@/routes/notifications';

@@ -1,6 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { EyeIcon, Loader2Icon, LockIcon } from 'lucide-react';
+import { CircleNotchIcon, EyeIcon, LockIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -212,7 +212,7 @@ export default function SiteEnvironmentShow({
 
                             {isLoading && (
                                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-background/70 backdrop-blur-xs">
-                                    <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    <CircleNotchIcon className="h-6 w-6 animate-spin text-muted-foreground" />
                                     <p className="text-xs text-muted-foreground">
                                         Loading environment...
                                     </p>
@@ -269,7 +269,7 @@ export default function SiteEnvironmentShow({
                                     }
                                 >
                                     {form.processing && (
-                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                                     )}
                                     Save & Sync
                                 </Button>

@@ -1,4 +1,4 @@
-import { CheckIcon, LockIcon } from 'lucide-react';
+import { CheckIcon, LockIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/lib/utils';
 

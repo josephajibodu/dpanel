@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import { FormSection, SummaryCard } from '@/components/create-form';

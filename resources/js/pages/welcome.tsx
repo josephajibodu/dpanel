@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRightIcon, CheckIcon } from 'lucide-react';
+import { ArrowRightIcon, CheckIcon } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 
 import BackdropGrid from '@/components/marketing/backdrop-grid';

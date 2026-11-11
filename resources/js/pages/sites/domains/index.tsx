@@ -1,18 +1,18 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
+    ArrowSquareOutIcon,
+    CaretDownIcon,
+    CaretUpIcon,
     CheckIcon,
-    ChevronDownIcon,
-    ChevronUpIcon,
+    CircleNotchIcon,
     CopyIcon,
-    ExternalLinkIcon,
+    DotsThreeVerticalIcon,
     GlobeIcon,
-    Loader2Icon,
     LockIcon,
-    MoreVerticalIcon,
     ShieldCheckIcon,
-    ShieldXIcon,
-} from 'lucide-react';
+    ShieldWarningIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { FormEvent, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -193,7 +193,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                                 {hostnameError && <p className="text-destructive text-sm">{hostnameError}</p>}
                             </div>
                             <Button type="submit" disabled={validating} className="shrink-0 sm:mt-0">
-                                {validating ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
+                                {validating ? <CircleNotchIcon className="size-4 animate-spin" /> : 'Add domain'}
                             </Button>
                         </form>
                     )}
@@ -317,7 +317,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                             disabled={addForm.processing}
                             onClick={() => submitAddDomain()}
                         >
-                            {addForm.processing ? <Loader2Icon className="size-4 animate-spin" /> : 'Add domain'}
+                            {addForm.processing ? <CircleNotchIcon className="size-4 animate-spin" /> : 'Add domain'}
                         </Button>
                     </SheetFooter>
                 </SheetContent>
@@ -408,14 +408,14 @@ function DomainRow({
                             className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
                         >
                             {open ? 'Hide DNS records' : 'View DNS records'}
-                            {open ? <ChevronUpIcon className="size-3" /> : <ChevronDownIcon className="size-3" />}
+                            {open ? <CaretUpIcon className="size-3" /> : <CaretDownIcon className="size-3" />}
                         </button>
                     )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                     {isDeleting && (
                         <span className="border-destructive/40 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
-                            <Loader2Icon className="size-3 animate-spin" /> Deleting
+                            <CircleNotchIcon className="size-3 animate-spin" /> Deleting
                         </span>
                     )}
                     {!isDeleting && domain.type === 'system' && (
@@ -441,7 +441,7 @@ function DomainRow({
                                 </>
                             ) : (
                                 <>
-                                    <ShieldXIcon className="size-3" /> Unverified
+                                    <ShieldWarningIcon className="size-3" /> Unverified
                                 </>
                             )}
                         </span>
@@ -494,7 +494,7 @@ function DomainRow({
                         onClick={handleVerify}
                     >
                         {verifying ? (
-                            <Loader2Icon className="size-3.5 animate-spin" />
+                            <CircleNotchIcon className="size-3.5 animate-spin" />
                         ) : (
                             <ShieldCheckIcon className="size-3.5" />
                         )}
@@ -504,13 +504,13 @@ function DomainRow({
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild disabled={isDeleting}>
                         <Button variant="ghost" size="icon" className="size-8 shrink-0" disabled={isDeleting}>
-                            <MoreVerticalIcon className="size-4" />
+                            <DotsThreeVerticalIcon className="size-4" />
                             <span className="sr-only">Actions</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onVisit(domain.hostname)}>
-                            <ExternalLinkIcon className="mr-2 size-4" /> Visit
+                            <ArrowSquareOutIcon className="mr-2 size-4" /> Visit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onCopy(`https://${domain.hostname}`)}>
                             <CopyIcon className="mr-2 size-4" /> Copy URL
@@ -573,7 +573,7 @@ function DomainRow({
                         >
                             {isCustomUnverified ? (
                                 <div className="mb-3 flex items-start gap-2">
-                                    <ShieldXIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <ShieldWarningIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                                     <p className="text-sm text-amber-800 dark:text-amber-200">
                                         Add these records at your DNS provider, then click <span className="font-medium">Verify</span>.
                                         SSL is issued automatically once verified.

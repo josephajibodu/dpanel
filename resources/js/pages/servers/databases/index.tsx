@@ -1,15 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    DatabaseBackupIcon,
+    ArrowsClockwiseIcon,
+    DatabaseIcon,
+    DotsThreeVerticalIcon,
     EyeIcon,
-    EyeOffIcon,
+    EyeSlashIcon,
     LinkIcon,
-    MoreVerticalIcon,
-    PencilIcon,
+    PencilSimpleIcon,
     PlusIcon,
-    RefreshCwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -439,7 +439,7 @@ export default function ServerDatabasesIndex({
                                                                         isDeleting
                                                                     }
                                                                 >
-                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                    <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                     <span className="sr-only">
                                                                         Actions
                                                                     </span>
@@ -454,7 +454,7 @@ export default function ServerDatabasesIndex({
                                                                             `/servers/${server.id}/databases/${db.id}/backups`,
                                                                         )}
                                                                     >
-                                                                        <DatabaseBackupIcon className="mr-2 h-4 w-4" />
+                                                                        <DatabaseIcon className="mr-2 h-4 w-4" />
                                                                         Backups
                                                                     </Link>
                                                                 </DropdownMenuItem>
@@ -470,7 +470,7 @@ export default function ServerDatabasesIndex({
                                                                             );
                                                                         }}
                                                                     >
-                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                        <TrashIcon className="mr-2 h-4 w-4" />
                                                                         Delete
                                                                     </DropdownMenuItem>
                                                                 )}
@@ -588,7 +588,7 @@ export default function ServerDatabasesIndex({
                                                                     isDeleting
                                                                 }
                                                             >
-                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                                <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                 <span className="sr-only">
                                                                     Actions
                                                                 </span>
@@ -620,7 +620,7 @@ export default function ServerDatabasesIndex({
                                                                             )
                                                                         }
                                                                     >
-                                                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                                                        <PencilSimpleIcon className="mr-2 h-4 w-4" />
                                                                         Edit
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem
@@ -630,7 +630,7 @@ export default function ServerDatabasesIndex({
                                                                             )
                                                                         }
                                                                     >
-                                                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                                        <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
                                                                         Reset
                                                                         password
                                                                     </DropdownMenuItem>
@@ -645,7 +645,7 @@ export default function ServerDatabasesIndex({
                                                                             );
                                                                         }}
                                                                     >
-                                                                        <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                        <TrashIcon className="mr-2 h-4 w-4" />
                                                                         Delete
                                                                     </DropdownMenuItem>
                                                                 </>
@@ -790,7 +790,7 @@ export default function ServerDatabasesIndex({
                                     tabIndex={-1}
                                 >
                                     {showDbPassword ? (
-                                        <EyeOffIcon className="h-4 w-4" />
+                                        <EyeSlashIcon className="h-4 w-4" />
                                     ) : (
                                         <EyeIcon className="h-4 w-4" />
                                     )}

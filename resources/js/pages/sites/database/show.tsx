@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { LinkIcon, PlusIcon, UploadIcon } from 'lucide-react';
+import { LinkIcon, PlusIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { BackupHistory } from '@/components/backups/backup-history';
@@ -137,7 +137,7 @@ export default function SiteDatabaseShow({
                                 variant="outline"
                                 onClick={() => setIsImportOpen(true)}
                             >
-                                <UploadIcon className="mr-2 h-4 w-4" />
+                                <UploadSimpleIcon className="mr-2 h-4 w-4" />
                                 Import dump
                             </Button>
                         )}

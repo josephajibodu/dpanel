@@ -1,4 +1,4 @@
-import { Loader2Icon } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/lib/utils';
 
@@ -44,7 +44,7 @@ export function StatusBadge({
                 className,
             )}
         >
-            {pulse && <Loader2Icon className="h-3 w-3 animate-spin" />}
+            {pulse && <CircleNotchIcon className="h-3 w-3 animate-spin" />}
             {status}
         </span>
     );

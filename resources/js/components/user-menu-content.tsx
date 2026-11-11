@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { GearIcon, SignOutIcon } from '@phosphor-icons/react';
 
 import {
     DropdownMenuGroup,
@@ -41,7 +41,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         prefetch
                         onClick={cleanup}
                     >
-                        <Settings className="mr-2" />
+                        <GearIcon className="mr-2" />
                         Settings
                     </Link>
                 </DropdownMenuItem>
@@ -55,7 +55,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     onClick={handleLogout}
                     data-test="logout-button"
                 >
-                    <LogOut className="mr-2" />
+                    <SignOutIcon className="mr-2" />
                     Log out
                 </Link>
             </DropdownMenuItem>

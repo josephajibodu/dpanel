@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Loader2Icon } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -185,7 +185,7 @@ export function SummaryCard({
                 <div className="flex flex-col gap-2">
                     <Button type="submit" disabled={processing || disabled}>
                         {processing && (
-                            <Loader2Icon className="h-4 w-4 animate-spin" />
+                            <CircleNotchIcon className="h-4 w-4 animate-spin" />
                         )}
                         {submitLabel}
                     </Button>

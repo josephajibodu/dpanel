@@ -1,6 +1,10 @@
 import { Head, router } from '@inertiajs/react';
+import {
+    ArrowsClockwiseIcon,
+    DotsThreeVerticalIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { format } from 'date-fns';
-import { MoreVerticalIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -183,7 +187,7 @@ export default function StorageProvidersIndex({
                                                             size="icon"
                                                             className="h-8 w-8"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             <span className="sr-only">
                                                                 Actions
                                                             </span>
@@ -197,7 +201,7 @@ export default function StorageProvidersIndex({
                                                                 )
                                                             }
                                                         >
-                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                            <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
                                                             Re-validate
                                                             Credentials
                                                         </DropdownMenuItem>
@@ -209,7 +213,7 @@ export default function StorageProvidersIndex({
                                                             }
                                                             className="text-destructive focus:text-destructive"
                                                         >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="mr-2 h-4 w-4" />
                                                             Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

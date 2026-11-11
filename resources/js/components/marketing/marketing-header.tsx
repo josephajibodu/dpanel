@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRightIcon, MenuIcon } from 'lucide-react';
+import { ArrowRightIcon, ListIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -139,7 +139,7 @@ export default function MarketingHeader({
                                 className="md:hidden"
                                 aria-label="Open menu"
                             >
-                                <MenuIcon className="size-5" />
+                                <ListIcon className="size-5" />
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="top" className="px-6 pt-5 pb-8">

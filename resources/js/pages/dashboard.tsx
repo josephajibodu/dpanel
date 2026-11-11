@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
+import { PlusIcon } from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
-import { PlusIcon } from 'lucide-react';
 
 import {
     AddServerOptions,

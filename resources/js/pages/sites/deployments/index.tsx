@@ -1,11 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
-    HistoryIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    RocketIcon,
-} from 'lucide-react';
+    CircleNotchIcon,
+    ClockCounterClockwiseIcon,
+    DotsThreeVerticalIcon,
+    RocketLaunchIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -149,12 +149,12 @@ export default function SiteDeploymentsIndex({
                         >
                             {isDeploying ? (
                                 <>
-                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                    <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                                     Deploying...
                                 </>
                             ) : (
                                 <>
-                                    <RocketIcon className="mr-2 h-4 w-4" />
+                                    <RocketLaunchIcon className="mr-2 h-4 w-4" />
                                     Deploy Now
                                 </>
                             )}
@@ -255,7 +255,7 @@ export default function SiteDeploymentsIndex({
                                                             size="icon"
                                                             className="h-8 w-8"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             <span className="sr-only">
                                                                 Actions
                                                             </span>
@@ -282,7 +282,7 @@ export default function SiteDeploymentsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <HistoryIcon className="mr-2 h-4 w-4" />
+                                                                    <ClockCounterClockwiseIcon className="mr-2 h-4 w-4" />
                                                                     Rollback
                                                                 </DropdownMenuItem>
                                                             )}

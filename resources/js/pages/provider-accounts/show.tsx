@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeftIcon, ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { format } from 'date-fns';
-import { ArrowLeftIcon, RefreshCwIcon } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
@@ -78,7 +78,7 @@ export default function ProviderAccountShow({ account }: Props) {
                     </div>
                     {canManageProviders && (
                         <Button variant="outline" onClick={handleValidate}>
-                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                            <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
                             Re-validate
                         </Button>
                     )}

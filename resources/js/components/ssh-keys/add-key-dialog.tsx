@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { KeyIcon, PlusIcon } from 'lucide-react';
+import { KeyIcon, PlusIcon } from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 
 import InputError from '@/components/input-error';

@@ -3,10 +3,10 @@ import { useEcho } from '@laravel/echo-react';
 import {
     ArrowLeftIcon,
     CheckIcon,
+    CircleNotchIcon,
     CopyIcon,
-    Loader2Icon,
     XIcon,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -176,7 +176,7 @@ export default function ServerSetup({
                                 disabled={testState === 'testing'}
                             >
                                 {testState === 'testing' && (
-                                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                 )}
                                 {testState === 'testing'
                                     ? 'Testing…'
@@ -216,7 +216,7 @@ export default function ServerSetup({
                                     disabled={provisionForm.processing}
                                 >
                                     {provisionForm.processing && (
-                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                     )}
                                     Start provisioning
                                 </Button>

@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { CaretUpDownIcon, CheckIcon } from '@phosphor-icons/react';
 
 import { SwitcherIcon } from '@/components/switcher-icon';
 import {
@@ -89,7 +89,7 @@ export function BreadcrumbSwitcher({
                             )}
                             aria-label={menuLabel}
                         >
-                            <ChevronsUpDown className="size-3 opacity-60" />
+                            <CaretUpDownIcon className="size-3 opacity-60" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="min-w-52">
                             <DropdownMenuLabel className="text-muted-foreground text-xs">
@@ -105,7 +105,7 @@ export function BreadcrumbSwitcher({
                                     <SwitcherIcon label={item.label} />
                                     <span className="truncate">{item.label}</span>
                                     {item.id === currentId && (
-                                        <Check className="ml-auto size-3.5 shrink-0" />
+                                        <CheckIcon className="ml-auto size-3.5 shrink-0" />
                                     )}
                                 </DropdownMenuItem>
                             ))}

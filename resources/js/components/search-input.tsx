@@ -1,4 +1,4 @@
-import { SearchIcon } from 'lucide-react';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ export function SearchInput({
 }: SearchInputProps) {
     return (
         <div className={cn('relative w-full max-w-sm', className)}>
-            <SearchIcon className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
                 type="search"
                 placeholder={placeholder}

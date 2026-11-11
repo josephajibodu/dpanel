@@ -1,14 +1,14 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { format, formatDistanceToNow } from 'date-fns';
 import {
-    AlertCircleIcon,
-    ExternalLinkIcon,
+    ArrowSquareOutIcon,
+    CircleNotchIcon,
+    DotsThreeVerticalIcon,
     GitBranchIcon,
     LinkIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+    WarningCircleIcon,
+} from '@phosphor-icons/react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
 
 import { retry } from '@/actions/App/Http/Controllers/SiteController';
@@ -313,7 +313,7 @@ export default function SitesShow({
                     <div className="space-y-6">
                         {siteData.status === 'failed' && (
                             <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
-                                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                                <WarningCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                                 <div className="flex-1 space-y-1">
                                     <p className="font-medium text-red-800 dark:text-red-200">
                                         Site creation failed
@@ -332,7 +332,7 @@ export default function SitesShow({
                                             disabled={retryForm.processing}
                                         >
                                             {retryForm.processing && (
-                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                                             )}
                                             Retry
                                         </Button>
@@ -368,7 +368,7 @@ export default function SitesShow({
                                                     variant="ghost"
                                                     size="icon"
                                                 >
-                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                    <DotsThreeVerticalIcon className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
@@ -390,7 +390,7 @@ export default function SitesShow({
                                                         'installing'
                                                     }
                                                 >
-                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                    <TrashIcon className="mr-2 h-4 w-4" />
                                                     Delete Site
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -411,7 +411,7 @@ export default function SitesShow({
                                                 className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
                                             >
                                                 {siteData.domain}
-                                                <ExternalLinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                                <ArrowSquareOutIcon className="h-3.5 w-3.5 text-muted-foreground" />
                                             </a>
                                             {(siteData.aliases ?? []).map(
                                                 (alias) => (
@@ -423,7 +423,7 @@ export default function SitesShow({
                                                         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
                                                     >
                                                         {alias}
-                                                        <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                                        <ArrowSquareOutIcon className="h-3.5 w-3.5" />
                                                     </a>
                                                 ),
                                             )}
@@ -687,7 +687,7 @@ export default function SitesShow({
                                     >
                                         {isDeploying ? (
                                             <>
-                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                                                 Deploying...
                                             </>
                                         ) : (

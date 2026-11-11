@@ -1,5 +1,10 @@
 import { router, useForm, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, Loader2, Plus } from 'lucide-react';
+import {
+    CaretUpDownIcon,
+    CheckIcon,
+    CircleNotchIcon,
+    PlusIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -76,7 +81,7 @@ export function TeamSwitcher() {
                                             : 'Team'}
                                     </span>
                                 </div>
-                                <ChevronsUpDown className="ml-auto size-4 shrink-0 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
+                                <CaretUpDownIcon className="ml-auto size-4 shrink-0 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
@@ -99,7 +104,7 @@ export function TeamSwitcher() {
                                     </div>
                                     {team.name}
                                     {team.id === currentTeam.id && (
-                                        <Check className="ml-auto size-4" />
+                                        <CheckIcon className="ml-auto size-4" />
                                     )}
                                 </DropdownMenuItem>
                             ))}
@@ -109,7 +114,7 @@ export function TeamSwitcher() {
                                 onClick={() => setCreateOpen(true)}
                             >
                                 <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                                    <Plus className="size-4" />
+                                    <PlusIcon className="size-4" />
                                 </div>
                                 <div className="font-medium text-muted-foreground">
                                     Create team
@@ -244,7 +249,7 @@ function CreateTeamDialog({
                             <p className="text-sm text-muted-foreground">
                                 {slugLoading ? (
                                     <span className="inline-flex items-center gap-1">
-                                        <Loader2 className="size-3 animate-spin" />
+                                        <CircleNotchIcon className="size-3 animate-spin" />
                                         Generating handle…
                                     </span>
                                 ) : slugPreview ? (

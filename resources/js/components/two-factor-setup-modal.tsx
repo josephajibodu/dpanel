@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/react';
+import { CheckIcon, CopyIcon, ScanIcon } from '@phosphor-icons/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
-import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import InputError from '@/components/input-error';
@@ -45,7 +45,7 @@ function GridScanIcon() {
                         />
                     ))}
                 </div>
-                <ScanLine className="relative z-20 size-6 text-foreground" />
+                <ScanIcon className="relative z-20 size-6 text-foreground" />
             </div>
         </div>
     );
@@ -66,7 +66,7 @@ function TwoFactorSetupStep({
 }) {
     const { resolvedAppearance } = useAppearance();
     const [copiedText, copy] = useClipboard();
-    const IconComponent = copiedText === manualSetupKey ? Check : Copy;
+    const IconComponent = copiedText === manualSetupKey ? CheckIcon : CopyIcon;
 
     return (
         <>

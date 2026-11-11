@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
+import { HardDrivesIcon, KeyIcon } from '@phosphor-icons/react';
 import { format } from 'date-fns';
-import { KeyIcon, ServerIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { CopyButton } from '@/components/copy-button';
@@ -118,7 +118,7 @@ export function SshKeyDetailsDialog({
 
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
-                            <ServerIcon className="h-4 w-4" />
+                            <HardDrivesIcon className="h-4 w-4" />
                             {count} {serverLabel}
                         </span>
                         <span>·</span>

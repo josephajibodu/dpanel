@@ -1,11 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
-    ExternalLinkIcon,
-    MoreVerticalIcon,
+    ArrowSquareOutIcon,
+    DotsThreeVerticalIcon,
     PlusIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -241,7 +241,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             rel="noopener noreferrer"
                                                             aria-label={`Visit ${account.provider_label}`}
                                                         >
-                                                            <ExternalLinkIcon className="h-4 w-4" />
+                                                            <ArrowSquareOutIcon className="h-4 w-4" />
                                                         </a>
                                                     </Button>
                                                 )}
@@ -254,7 +254,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             size="icon"
                                                             className="h-8 w-8"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             <span className="sr-only">
                                                                 Actions
                                                             </span>
@@ -269,7 +269,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             }
                                                             className="text-destructive focus:text-destructive"
                                                         >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="mr-2 h-4 w-4" />
                                                             Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

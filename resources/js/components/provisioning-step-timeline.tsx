@@ -1,4 +1,4 @@
-import { CheckIcon, CircleIcon, Loader2Icon } from 'lucide-react';
+import { CheckIcon, CircleIcon, CircleNotchIcon } from '@phosphor-icons/react';
 
 import { StatGroup } from '@/components/ui/stat-group';
 import { cn } from '@/lib/utils';
@@ -62,7 +62,7 @@ export function ProvisioningStepTimeline({
                     </div>
                     {currentStepValue === 0 && (
                         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Loader2Icon
+                            <CircleNotchIcon
                                 className="h-3.5 w-3.5 animate-spin"
                                 aria-hidden
                             />
@@ -89,7 +89,7 @@ export function ProvisioningStepTimeline({
                                     {isCompleted ? (
                                         <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
                                     ) : isCurrent ? (
-                                        <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin text-primary" />
                                     ) : (
                                         <CircleIcon className="h-3 w-3 text-muted-foreground/50" />
                                     )}

@@ -1,4 +1,4 @@
-import { CheckIcon, GitCommitHorizontalIcon } from 'lucide-react';
+import { CheckIcon, GitCommitIcon } from '@phosphor-icons/react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
 import { cn } from '@/lib/utils';
@@ -131,7 +131,7 @@ export default function ProductPreview() {
                         <div className="overflow-hidden rounded-xl bg-neutral-950 ring-1 ring-white/10">
                             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                                 <span className="flex items-center gap-2 font-log text-[11px] text-white/60">
-                                    <GitCommitHorizontalIcon className="size-3.5" />
+                                    <GitCommitIcon className="size-3.5" />
                                     a41f9c2 · Add order export to CSV
                                 </span>
                                 <span className="font-log text-[11px] text-white/40">

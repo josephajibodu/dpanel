@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRightIcon } from 'lucide-react';
+import { ArrowRightIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { contact, register } from '@/routes';

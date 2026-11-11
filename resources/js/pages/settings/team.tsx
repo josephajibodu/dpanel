@@ -1,6 +1,11 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
+import {
+    CircleNotchIcon,
+    EnvelopeSimpleIcon,
+    UserMinusIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader2, MailIcon, UserMinus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { destroy as destroyTeam } from '@/actions/App/Http/Controllers/TeamController';
@@ -256,7 +261,7 @@ function MembersCard({
                                 onClick={() => setMemberToRemove(member)}
                                 className="size-8 p-0 text-muted-foreground hover:text-destructive"
                             >
-                                <UserMinus className="size-4" />
+                                <UserMinusIcon className="size-4" />
                                 <span className="sr-only">
                                     Remove {member.name}
                                 </span>
@@ -275,7 +280,7 @@ function MembersCard({
                         className="flex items-center gap-3 px-6 py-3"
                     >
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
-                            <MailIcon className="size-3.5" />
+                            <EnvelopeSimpleIcon className="size-3.5" />
                         </span>
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm">
@@ -309,7 +314,7 @@ function MembersCard({
                                 }
                                 className="size-8 p-0 text-muted-foreground"
                             >
-                                <X className="size-4" />
+                                <XIcon className="size-4" />
                                 <span className="sr-only">
                                     Cancel invitation for {invitation.email}
                                 </span>
@@ -596,7 +601,7 @@ function TeamNameForm({ team }: { team: Team }) {
                             <p className="text-sm text-muted-foreground">
                                 {slugLoading ? (
                                     <span className="inline-flex items-center gap-1">
-                                        <Loader2 className="size-3 animate-spin" />
+                                        <CircleNotchIcon className="size-3 animate-spin" />
                                         Generating handle…
                                     </span>
                                 ) : (

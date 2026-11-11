@@ -1,11 +1,11 @@
-import { format } from 'date-fns';
 import {
+    DotsThreeVerticalIcon,
+    HardDrivesIcon,
     InfoIcon,
-    MoreVerticalIcon,
-    ServerIcon,
-    Trash2Icon,
-    UploadIcon,
-} from 'lucide-react';
+    TrashIcon,
+    UploadSimpleIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -50,7 +50,7 @@ export function SshKeyTableRow({
             <TableCell className="font-medium">{sshKey.name}</TableCell>
             <TableCell>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <ServerIcon className="h-4 w-4 shrink-0" />
+                    <HardDrivesIcon className="h-4 w-4 shrink-0" />
                     <span>
                         {count} {serverLabel}
                     </span>
@@ -67,7 +67,7 @@ export function SshKeyTableRow({
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVerticalIcon className="h-4 w-4" />
+                            <DotsThreeVerticalIcon className="h-4 w-4" />
                             <span className="sr-only">Actions</span>
                         </Button>
                     </DropdownMenuTrigger>
@@ -78,7 +78,7 @@ export function SshKeyTableRow({
                         </DropdownMenuItem>
                         {onSync && (
                             <DropdownMenuItem onClick={onSync}>
-                                <UploadIcon className="mr-2 h-4 w-4" />
+                                <UploadSimpleIcon className="mr-2 h-4 w-4" />
                                 Sync to Servers
                             </DropdownMenuItem>
                         )}
@@ -86,7 +86,7 @@ export function SshKeyTableRow({
                             onClick={onDelete}
                             className="text-destructive"
                         >
-                            <Trash2Icon className="mr-2 h-4 w-4" />
+                            <TrashIcon className="mr-2 h-4 w-4" />
                             Delete Key
                         </DropdownMenuItem>
                     </DropdownMenuContent>

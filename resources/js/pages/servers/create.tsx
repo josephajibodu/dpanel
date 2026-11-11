@@ -1,5 +1,9 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeftIcon, Loader2Icon, RefreshCwIcon } from 'lucide-react';
+import {
+    ArrowLeftIcon,
+    ArrowsClockwiseIcon,
+    CircleNotchIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -696,9 +700,9 @@ function NameField({
                     aria-label="Generate a new name"
                 >
                     {isGenerating ? (
-                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                     ) : (
-                        <RefreshCwIcon className="h-4 w-4" />
+                        <ArrowsClockwiseIcon className="h-4 w-4" />
                     )}
                 </Button>
             </div>
@@ -753,7 +757,7 @@ function CatalogSection({
                     className="flex items-center gap-2 text-sm text-muted-foreground"
                     role="status"
                 >
-                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                     Loading from {account.provider_label}…
                 </p>
                 <Skeleton className="h-9 w-full" />
@@ -772,7 +776,7 @@ function CatalogSection({
                     size="sm"
                     onClick={onRetry}
                 >
-                    <RefreshCwIcon className="h-4 w-4" />
+                    <ArrowsClockwiseIcon className="h-4 w-4" />
                     Try again
                 </Button>
             </div>

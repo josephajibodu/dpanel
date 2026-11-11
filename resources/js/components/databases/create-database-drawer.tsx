@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { type SharedData } from '@/types';

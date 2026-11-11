@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react';
 
 import PageHero from '@/components/marketing/page-hero';
 import MarketingLayout from '@/layouts/marketing-layout';

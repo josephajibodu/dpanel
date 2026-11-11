@@ -1,16 +1,15 @@
 import { router, usePage } from '@inertiajs/react';
 import {
+    ArrowsClockwiseIcon,
+    CircleNotchIcon,
+    DotsThreeVerticalIcon,
     FileTextIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    PencilIcon,
+    PencilSimpleIcon,
     PlayIcon,
     PlusIcon,
     PowerIcon,
-    PowerOffIcon,
-    RefreshCwIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -515,7 +514,7 @@ export function ProcessesPanel({
                                                             }
                                                             aria-label="Actions"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
@@ -527,7 +526,7 @@ export function ProcessesPanel({
                                                                     )
                                                                 }
                                                             >
-                                                                <PencilIcon className="mr-2 h-4 w-4" />
+                                                                <PencilSimpleIcon className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
                                                         )}
@@ -571,7 +570,7 @@ export function ProcessesPanel({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PowerOffIcon className="mr-2 h-4 w-4" />
+                                                                    <PowerIcon className="mr-2 h-4 w-4" />
                                                                     Stop
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
@@ -587,7 +586,7 @@ export function ProcessesPanel({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                                    <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
                                                                     Restart
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
@@ -602,7 +601,7 @@ export function ProcessesPanel({
                                                                     }}
                                                                     className="text-destructive focus:text-destructive"
                                                                 >
-                                                                    <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                    <TrashIcon className="mr-2 h-4 w-4" />
                                                                     Delete
                                                                 </DropdownMenuItem>
                                                             </>
@@ -715,7 +714,7 @@ export function ProcessesPanel({
                                                                 }
                                                                 aria-label="Actions"
                                                             >
-                                                                <MoreVerticalIcon className="h-4 w-4" />
+                                                                <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
@@ -726,7 +725,7 @@ export function ProcessesPanel({
                                                                     )
                                                                 }
                                                             >
-                                                                <PencilIcon className="mr-2 h-4 w-4" />
+                                                                <PencilSimpleIcon className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
@@ -761,7 +760,7 @@ export function ProcessesPanel({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PowerOffIcon className="mr-2 h-4 w-4" />
+                                                                    <PowerIcon className="mr-2 h-4 w-4" />
                                                                     Disable
                                                                 </DropdownMenuItem>
                                                             )}
@@ -777,7 +776,7 @@ export function ProcessesPanel({
                                                                 }}
                                                                 className="text-destructive focus:text-destructive"
                                                             >
-                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                <TrashIcon className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
@@ -1565,7 +1564,7 @@ export function ProcessesPanel({
                     <div className="max-h-[60vh] overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
                         {logsLoading ? (
                             <div className="flex items-center gap-2 text-muted-foreground">
-                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                                <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                 Loading logs…
                             </div>
                         ) : logsContent ? (

@@ -1,12 +1,12 @@
 import {
-    BookOpen,
+    BookOpenIcon,
     CloudIcon,
     CodeIcon,
     HardDriveIcon,
+    HardDrivesIcon,
+    HouseIcon,
     KeyIcon,
-    LayoutGrid,
-    ServerIcon,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -25,7 +25,7 @@ const footerNavItems: NavItem[] = [
     {
         title: 'Documentation',
         href: 'https://docs.flitops.com',
-        icon: BookOpen,
+        icon: BookOpenIcon,
     },
 ];
 
@@ -36,12 +36,12 @@ export function AppSidebar() {
         {
             title: 'Dashboard',
             href: teamPath('/dashboard'),
-            icon: LayoutGrid,
+            icon: HouseIcon,
         },
         {
             title: 'Servers',
             href: teamPath('/servers'),
-            icon: ServerIcon,
+            icon: HardDrivesIcon,
         },
         {
             title: 'SSH Keys',

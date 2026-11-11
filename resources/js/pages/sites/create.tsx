@@ -1,14 +1,14 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeftIcon,
+    ArrowsClockwiseIcon,
     CheckIcon,
+    CircleNotchIcon,
     EyeIcon,
-    EyeOffIcon,
-    Loader2Icon,
+    EyeSlashIcon,
     PlusIcon,
-    RefreshCwIcon,
     XCircleIcon,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -1240,7 +1240,7 @@ export default function SitesCreate({
                                         }
                                     >
                                         {showDbPassword ? (
-                                            <EyeOffIcon className="h-4 w-4" />
+                                            <EyeSlashIcon className="h-4 w-4" />
                                         ) : (
                                             <EyeIcon className="h-4 w-4" />
                                         )}
@@ -1284,7 +1284,7 @@ function RemoteError({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
             <p className="text-sm text-destructive">{message}</p>
             <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-                <RefreshCwIcon className="h-4 w-4" />
+                <ArrowsClockwiseIcon className="h-4 w-4" />
                 Try again
             </Button>
         </div>
@@ -1382,7 +1382,7 @@ function SubdomainField({
                     />
                     <span className="absolute top-1/2 right-2 -translate-y-1/2">
                         {status === 'checking' && (
-                            <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+                            <CircleNotchIcon className="size-4 animate-spin text-muted-foreground" />
                         )}
                         {status === 'available' && (
                             <CheckIcon className="size-4 text-emerald-600" />
@@ -1487,7 +1487,7 @@ function DatabaseField({
                     ))}
                     {pendingDatabases.map((db) => (
                         <SelectItem key={db.id} value={String(db.id)} disabled>
-                            <Loader2Icon className="h-3 w-3 animate-spin" />
+                            <CircleNotchIcon className="h-3 w-3 animate-spin" />
                             {db.name}
                             <span className="text-xs text-muted-foreground">
                                 creating…
@@ -1510,7 +1510,7 @@ function DatabaseField({
             </Select>
             {pendingDatabases.length > 0 && (
                 <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2Icon className="h-3 w-3 animate-spin" />
+                    <CircleNotchIcon className="h-3 w-3 animate-spin" />
                     {pendingDatabases.length === 1
                         ? `"${pendingDatabases[0].name}" is being created…`
                         : `${pendingDatabases.length} databases are being created…`}
