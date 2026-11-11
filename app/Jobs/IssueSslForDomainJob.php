@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\WwwRedirect;
 use App\Events\SiteDomainsUpdated;
+use App\Exceptions\SshCommandException;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Notifications\SslCertificateRequestFailed;
@@ -71,18 +72,24 @@ class IssueSslForDomainJob implements ShouldQueue
                 $domainFlags .= ' -d '.escapeshellarg($this->siteDomain->wwwHostname());
             }
 
-            $result = $connection->exec(
-                'sudo certbot certonly --webroot'
-                .' --webroot-path='.escapeshellarg($webRoot)
-                ." {$domainFlags}"
-                .' --non-interactive'
-                .' --agree-tos'
-                .' --email '.escapeshellarg($email)
-                .' --no-eff-email 2>&1'
-            );
-
-            if (! str_contains($result, 'Congratulations') && ! str_contains($result, 'Certificate not yet due for renewal')) {
-                throw new \RuntimeException("Certbot failed for {$hostname}: {$result}");
+            // Naming the certificate keeps it at the same path when the
+            // names it covers change (www added or dropped), instead of
+            // certbot starting a second certificate beside it.
+            try {
+                $connection->exec(
+                    'sudo certbot certonly --webroot'
+                    .' --webroot-path='.escapeshellarg($webRoot)
+                    .' --cert-name '.escapeshellarg($hostname)
+                    ." {$domainFlags}"
+                    .' --renew-with-new-domains'
+                    .' --non-interactive'
+                    .' --agree-tos'
+                    .' --email '.escapeshellarg($email)
+                    .' --no-eff-email 2>&1',
+                    300,
+                );
+            } catch (SshCommandException $exception) {
+                throw new \RuntimeException("Certbot failed for {$hostname}: {$exception->output}");
             }
 
             $letsencryptBase = "/etc/letsencrypt/live/{$hostname}";

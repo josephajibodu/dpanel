@@ -23,6 +23,7 @@ use App\Models\SiteDomain;
 use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Bus;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -112,9 +113,22 @@ class SiteDomainController extends Controller
             }
         }
 
+        $coveredWww = $siteDomain->effectiveWwwRedirect() !== WwwRedirect::None;
         $siteDomain->update($data);
+        $coversWww = $siteDomain->effectiveWwwRedirect() !== WwwRedirect::None;
 
-        SyncSiteNginxJob::dispatch($site);
+        // A certificate flitops requested lists the www address only while
+        // the domain redirects it, so it's requested again when that changes.
+        // The config goes first: the new address has to answer the
+        // certificate check.
+        if ($coveredWww !== $coversWww && $siteDomain->hasSsl() && ! $server->webServer()->obtainsCertificates()) {
+            Bus::chain([
+                new SyncSiteNginxJob($site),
+                new IssueSslForDomainJob($siteDomain, $site),
+            ])->dispatch();
+        } else {
+            SyncSiteNginxJob::dispatch($site);
+        }
         broadcast(new SiteDomainsUpdated($site));
 
         return redirect()

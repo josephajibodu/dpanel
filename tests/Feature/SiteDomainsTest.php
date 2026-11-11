@@ -3,6 +3,7 @@
 use App\Enums\SiteDomainType;
 use App\Enums\WwwRedirect;
 use App\Jobs\DeleteSiteDomainJob;
+use App\Jobs\IssueSslForDomainJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Jobs\VerifyCustomDomainJob;
 use App\Models\Server;
@@ -11,6 +12,7 @@ use App\Models\SiteDomain;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia;
 
@@ -237,3 +239,48 @@ it('sets primary domain', function () {
 
     Queue::assertPushed(SyncSiteNginxJob::class);
 });
+
+it('requests the certificate again, after the config, when a www redirect starts or stops covering www', function (WwwRedirect $from, WwwRedirect $to) {
+    Bus::fake();
+
+    $domain = SiteDomain::factory()->for($this->site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'www_redirect' => $from,
+        'verified_at' => now(),
+        'ssl_enabled_at' => now(),
+    ]);
+
+    $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$domain->ulid}", ['www_redirect' => $to->value])
+        ->assertRedirect();
+
+    Bus::assertChained([SyncSiteNginxJob::class, IssueSslForDomainJob::class]);
+})->with([
+    'redirect turned on' => [WwwRedirect::None, WwwRedirect::FromWww],
+    'redirect turned off' => [WwwRedirect::FromWww, WwwRedirect::None],
+]);
+
+it('only rebuilds the config when a www change leaves the certificate\'s names alone', function (array $domainState, string $webServer, WwwRedirect $to) {
+    Bus::fake();
+    $this->server->update(['web_server' => $webServer]);
+
+    $domain = SiteDomain::factory()->for($this->site)->create([
+        'type' => SiteDomainType::Custom,
+        'www_redirect' => WwwRedirect::FromWww,
+        'verified_at' => now(),
+        ...$domainState,
+    ]);
+
+    $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/domains/{$domain->ulid}", ['www_redirect' => $to->value])
+        ->assertRedirect();
+
+    Bus::assertDispatched(SyncSiteNginxJob::class);
+    Bus::assertNotDispatched(IssueSslForDomainJob::class);
+})->with([
+    'direction switched' => [['hostname' => 'example.com', 'ssl_enabled_at' => now()], 'nginx', WwwRedirect::ToWww],
+    'no HTTPS yet' => [['hostname' => 'example.com', 'ssl_enabled_at' => null], 'nginx', WwwRedirect::None],
+    'a subdomain' => [['hostname' => 'app.example.com', 'ssl_enabled_at' => now()], 'nginx', WwwRedirect::None],
+    'Caddy gets its own certificates' => [['hostname' => 'example.com', 'ssl_enabled_at' => now()], 'caddy', WwwRedirect::None],
+]);

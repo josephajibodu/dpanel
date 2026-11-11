@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\SiteDomainType;
+use App\Enums\WwwRedirect;
 use App\Exceptions\SshCommandException;
 use App\Jobs\IssueSslForDomainJob;
 use App\Models\Server;
@@ -142,8 +143,65 @@ it('installs a certbot deploy hook that copies renewals into the nginx path and 
         ->and($execCalls)->toContain("sudo chmod 755 {$hookPath}");
 })->with([
     'newly issued' => 'Congratulations! Your certificate has been saved.',
+    'newly issued by a newer certbot' => 'Successfully received certificate.',
     'renew clicked before the certificate is due' => 'Certificate not yet due for renewal; no action taken.',
 ]);
+
+it('requests one named certificate covering the www address a bare domain redirects', function () {
+    Queue::fake();
+
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com.ng',
+        'www_redirect' => WwwRedirect::FromWww,
+        'verified_at' => now(),
+    ]);
+
+    $certbotCommand = null;
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturnUsing(function (string $cmd) use (&$certbotCommand) {
+        if (str_contains($cmd, 'certbot certonly')) {
+            $certbotCommand = $cmd;
+        }
+
+        return str_contains($cmd, 'which certbot') ? '/usr/bin/certbot' : '';
+    });
+    $connection->shouldReceive('disconnect');
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturn($connection);
+
+    (new IssueSslForDomainJob($domain, $site))->handle($sshService);
+
+    expect($certbotCommand)
+        ->toContain("--cert-name 'example.com.ng' -d 'example.com.ng' -d 'www.example.com.ng' --renew-with-new-domains");
+});
+
+it('fails with certbot\'s own explanation when the request is refused', function () {
+    $server = Server::factory()->create(['ip_address' => '203.0.113.10']);
+    $site = Site::factory()->create(['server_id' => $server->id]);
+    $domain = SiteDomain::factory()->for($site)->create([
+        'type' => SiteDomainType::Custom,
+        'hostname' => 'example.com',
+        'verified_at' => now(),
+        'ssl_enabled_at' => null,
+    ]);
+
+    $connection = Mockery::mock(SshConnection::class)->makePartial();
+    $connection->shouldReceive('exec')->andReturnUsing(fn (string $cmd) => match (true) {
+        str_contains($cmd, 'certbot certonly') => throw new SshCommandException(command: $cmd, exitCode: 1, output: 'DNS problem: NXDOMAIN looking up A for example.com', stderr: ''),
+        str_contains($cmd, 'which certbot') => '/usr/bin/certbot',
+        default => '',
+    });
+    $connection->shouldReceive('disconnect');
+    $sshService = Mockery::mock(SshService::class);
+    $sshService->shouldReceive('connect')->andReturn($connection);
+
+    expect(fn () => (new IssueSslForDomainJob($domain, $site))->handle($sshService))
+        ->toThrow(RuntimeException::class, 'Certbot failed for example.com: DNS problem: NXDOMAIN looking up A for example.com');
+    expect($domain->fresh()->ssl_enabled_at)->toBeNull();
+});
 
 it('hands the challenge folder back to the site user so the release can still be pruned', function () {
     Queue::fake();
