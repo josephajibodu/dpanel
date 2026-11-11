@@ -34,9 +34,9 @@ class FinalTouchesService
             $context->packages->ensureInstalled('certbot');
         }
 
-        // Firewall
+        // Firewall. The SSH port is the one FlitOps connects on, which a custom server may have moved off 22.
         $context->packages->ensureInstalled('ufw');
-        $context->runner->runQuietly('ufw allow 22', 60);
+        $context->runner->runQuietly("ufw allow {$context->server->ssh_port}", 60);
         $context->runner->runQuietly('ufw allow 80', 60);
         $context->runner->runQuietly('ufw allow 443', 60);
 

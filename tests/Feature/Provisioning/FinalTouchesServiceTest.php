@@ -57,6 +57,23 @@ it('skips composer on servers without PHP', function () {
     expect(implode("\n", $commands))->not->toContain('getcomposer.org');
 });
 
+it('opens the port the server takes SSH on before enabling the firewall', function (int $sshPort, string $allowed) {
+    $commands = runFinalTouches(Server::factory()->make(['ssh_port' => $sshPort]));
+
+    expect(array_search($allowed, $commands, true))
+        ->toBeInt()
+        ->toBeLessThan(array_search('ufw --force enable', $commands, true));
+})->with([
+    'the default port' => [22, 'ufw allow 22'],
+    'a custom port' => [2222, 'ufw allow 2222'],
+]);
+
+it('leaves port 22 closed on a server that takes SSH on another port', function () {
+    $commands = runFinalTouches(Server::factory()->make(['ssh_port' => 2222]));
+
+    expect($commands)->not->toContain('ufw allow 22');
+});
+
 it('installs certbot and opens only TCP 443 on Nginx servers', function () {
     $commands = runFinalTouches(Server::factory()->make(['web_server' => 'nginx']));
 
