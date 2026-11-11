@@ -252,7 +252,7 @@ export default function Pricing() {
                                 </p>
 
                                 <p className="mt-10 flex items-baseline gap-2">
-                                    <span className="text-6xl font-medium tracking-[-0.035em] tabular-nums">
+                                    <span className="text-6xl font-normal tracking-[-0.035em] tabular-nums">
                                         {formatPrice(price, currency)}
                                     </span>
                                     <span className="text-muted-foreground">

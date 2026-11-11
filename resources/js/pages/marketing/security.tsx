@@ -145,7 +145,7 @@ export default function Security() {
                                 key={practice.area}
                                 className="grid gap-10 border-t border-border py-14 lg:grid-cols-[1fr_2fr] lg:gap-20"
                             >
-                                <h3 className="text-3xl font-medium tracking-[-0.02em]">
+                                <h3 className="text-3xl font-normal tracking-[-0.02em]">
                                     {practice.area}
                                 </h3>
                                 <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
@@ -168,7 +168,7 @@ export default function Security() {
 
             <section className="px-6 lg:px-8">
                 <div className="mx-auto grid max-w-7xl gap-8 border-t border-foreground pt-14 lg:grid-cols-[1fr_2fr] lg:gap-20">
-                    <h2 className="text-3xl font-medium tracking-[-0.02em]">
+                    <h2 className="text-3xl font-normal tracking-[-0.02em]">
                         Found a vulnerability?
                     </h2>
                     <div className="flex flex-col gap-5">

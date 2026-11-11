@@ -234,7 +234,7 @@ export default function Features() {
                             className="grid scroll-mt-18 gap-10 border-t border-border py-16 sm:py-20 lg:grid-cols-[1fr_2fr] lg:gap-20"
                         >
                             <div className="lg:sticky lg:top-28 lg:self-start">
-                                <h2 className="text-3xl font-medium tracking-[-0.02em]">
+                                <h2 className="text-3xl font-normal tracking-[-0.02em]">
                                     {group.title}
                                 </h2>
                                 <p className="mt-4 max-w-sm text-lg leading-relaxed text-muted-foreground">

@@ -117,10 +117,27 @@ const steps: { title: string; description: string; visual: ReactNode }[] = [
 ];
 
 const stats = [
-    { value: '4', label: 'cloud providers, or any Ubuntu server over SSH' },
-    { value: '5', label: 'server roles, from one box to a full fleet' },
-    { value: '0', label: 'seconds of downtime when a deploy goes live' },
-    { value: '$0', label: 'for your first server, with no card required' },
+    {
+        label: 'Cloud providers',
+        value: '4',
+        description: 'Or bring any Ubuntu server over SSH.',
+    },
+    {
+        label: 'Server roles',
+        value: '5',
+        description: 'From one box to a full fleet.',
+    },
+    {
+        label: 'Downtime per deploy',
+        value: '0',
+        unit: 's',
+        description: 'Each release switches over when it is ready.',
+    },
+    {
+        label: 'To get started',
+        value: '$0',
+        description: 'Free for your first server. No card required.',
+    },
 ];
 
 const serverRoles = [
@@ -221,7 +238,7 @@ export default function Welcome({
         >
             <section className="px-6 pt-14 sm:pt-24 lg:px-8">
                 <div className="mx-auto max-w-7xl">
-                    <h1 className="max-w-5xl text-[2.75rem] leading-[1.02] font-medium tracking-[-0.035em] text-balance sm:text-7xl lg:text-[5.25rem]">
+                    <h1 className="max-w-5xl text-[2.75rem] leading-[1.02] font-normal tracking-[-0.035em] text-balance sm:text-7xl lg:text-[5.25rem]">
                         The deployment platform for{' '}
                         <span className="text-brand dark:text-blue-400">
                             servers you own.
@@ -285,12 +302,20 @@ export default function Welcome({
                                 key={stat.label}
                                 className="border-border py-10 pr-6 not-first:pl-6 max-lg:odd:pl-0 max-lg:even:border-l max-lg:nth-[n+3]:border-t sm:py-12 lg:not-first:border-l"
                             >
-                                <dd className="text-5xl font-medium tracking-[-0.035em] sm:text-6xl">
-                                    {stat.value}
-                                </dd>
-                                <dt className="mt-3 max-w-[14rem] text-muted-foreground">
+                                <dt className="font-log text-xs tracking-[0.08em] text-muted-foreground uppercase">
                                     {stat.label}
                                 </dt>
+                                <dd className="mt-5 text-6xl leading-none font-normal tracking-[-0.04em] sm:text-7xl">
+                                    {stat.value}
+                                    {stat.unit && (
+                                        <span className="ml-0.5 align-top text-3xl tracking-normal sm:text-4xl">
+                                            {stat.unit}
+                                        </span>
+                                    )}
+                                </dd>
+                                <dd className="mt-4 max-w-[15rem] text-muted-foreground">
+                                    {stat.description}
+                                </dd>
                             </div>
                         ))}
                     </dl>
@@ -332,7 +357,14 @@ export default function Welcome({
                 <div className="mx-auto max-w-7xl">
                     <SectionHeading
                         eyebrow="How it works"
-                        title="From a blank account to live in minutes"
+                        title={
+                            <>
+                                From a blank account{' '}
+                                <span className="text-muted-foreground">
+                                    to live in minutes.
+                                </span>
+                            </>
+                        }
                         description="No runbooks, no hand-written Nginx configs, no SSH sessions at midnight."
                     />
 
@@ -363,7 +395,14 @@ export default function Welcome({
                     <div>
                         <SectionHeading
                             eyebrow="Servers"
-                            title="One server today. A fleet when you need it."
+                            title={
+                                <>
+                                    One server today.{' '}
+                                    <span className="text-muted-foreground">
+                                        A fleet when you need it.
+                                    </span>
+                                </>
+                            }
                             description="Start with everything on a single machine. When traffic grows, split the database, queues, and cache onto their own servers and connect them privately, without rebuilding anything."
                         />
                         <div className="mt-10">
@@ -416,7 +455,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            <section className="dark bg-neutral-950 px-6 py-24 text-foreground sm:py-32 lg:px-8">
+            <section className="dark mx-2 rounded-[2rem] bg-neutral-950 px-4 py-24 text-foreground sm:mx-3 sm:rounded-[2.5rem] sm:px-5 sm:py-32">
                 <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-2 lg:gap-20">
                     <div>
                         <SectionHeading

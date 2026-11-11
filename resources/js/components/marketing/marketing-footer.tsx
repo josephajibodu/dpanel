@@ -104,15 +104,13 @@ export default function MarketingFooter() {
 
                     {footerColumns.map((column) => (
                         <div key={column.title}>
-                            <p className="text-sm text-muted-foreground">
-                                {column.title}
-                            </p>
-                            <ul className="mt-5 space-y-3.5 text-[15px] font-medium">
+                            <p className="font-medium">{column.title}</p>
+                            <ul className="mt-5 space-y-3.5 text-[15px] text-muted-foreground">
                                 {column.links.map((link) => (
                                     <li key={link.title}>
                                         <Link
                                             href={link.href}
-                                            className="underline-offset-4 hover:underline"
+                                            className="transition-colors hover:text-foreground"
                                         >
                                             {link.title}
                                         </Link>

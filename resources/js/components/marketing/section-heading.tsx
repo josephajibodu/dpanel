@@ -27,7 +27,7 @@ export default function SectionHeading({
             )}
             <Heading
                 className={cn(
-                    'font-medium text-balance',
+                    'font-normal text-balance',
                     Heading === 'h1'
                         ? 'text-[2.75rem] leading-[1.02] tracking-[-0.035em] sm:text-7xl'
                         : 'text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl',

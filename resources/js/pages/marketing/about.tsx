@@ -40,7 +40,7 @@ export default function About() {
 
             <section className="px-6 lg:px-8">
                 <div className="mx-auto grid max-w-7xl gap-10 border-t border-border pt-14 lg:grid-cols-[1fr_2fr] lg:gap-20">
-                    <h2 className="text-3xl font-medium tracking-[-0.02em]">
+                    <h2 className="text-3xl font-normal tracking-[-0.02em]">
                         Why we built it
                     </h2>
                     <div className="max-w-3xl space-y-6 text-xl leading-relaxed text-muted-foreground">

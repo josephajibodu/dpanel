@@ -27,7 +27,7 @@ export default function LegalDocument({
                     <p className="font-log text-xs font-medium tracking-[0.08em] text-brand uppercase dark:text-blue-400">
                         Legal
                     </p>
-                    <h1 className="mt-5 text-[2.75rem] leading-[1.02] font-medium tracking-[-0.035em] sm:text-7xl">
+                    <h1 className="mt-5 text-[2.75rem] leading-[1.02] font-normal tracking-[-0.035em] sm:text-7xl">
                         {title}
                     </h1>
                     <p className="mt-7 text-sm text-muted-foreground">
