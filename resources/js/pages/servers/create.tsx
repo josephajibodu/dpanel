@@ -36,6 +36,7 @@ import { ProviderAccount } from '@/types/provider-account';
 import {
     ProviderRegion,
     ProviderSize,
+    ProviderSizeOffer,
     ServerTypeOption,
     ServerTypeValue,
 } from '@/types/server';
@@ -188,14 +189,69 @@ function formatPrice(price: number, currency: string): string {
     );
 }
 
-/** Whether the provider offers this size in the given region. */
-function isSizeAvailableIn(size: ProviderSize, regionSlug: string): boolean {
+/** Hourly prices are fractions of a cent, so they keep more decimals. */
+function formatHourlyPrice(price: number, currency: string): string {
+    return new Intl.NumberFormat('en', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 4,
+    }).format(price);
+}
+
+function formatTransfer(terabytes: number): string {
+    return `${Number(terabytes.toFixed(2))} TB`;
+}
+
+const cpuTypeLabels = { shared: 'Shared vCPU', dedicated: 'Dedicated vCPU' };
+
+const architectureLabels = { x86: 'x86', arm: 'Arm64' };
+
+/** The processor a size runs on, e.g. "x86 (AMD)" or "Arm64". */
+function formatProcessor(size: ProviderSize): string | null {
+    const architecture = size.architecture
+        ? architectureLabels[size.architecture]
+        : null;
+
+    if (architecture && size.cpu_vendor) {
+        return `${architecture} (${size.cpu_vendor})`;
+    }
+
+    return architecture ?? size.cpu_vendor;
+}
+
+/** What sets one group of sizes apart, e.g. "Cost-optimized · Shared vCPU · Arm64". */
+function describeSizeGroup(size: ProviderSize): string {
+    return [
+        size.category,
+        size.cpu_type ? cpuTypeLabels[size.cpu_type] : null,
+        formatProcessor(size),
+    ]
+        .filter(Boolean)
+        .join(' · ');
+}
+
+/** Whether the provider lists this size in the given region. */
+function isSizeListedIn(size: ProviderSize, regionSlug: string): boolean {
     return size.regions === null || size.regions.includes(regionSlug);
 }
 
-/** The size's monthly price before tax in the given region. */
-function sizePriceIn(size: ProviderSize, regionSlug: string): number {
-    return size.region_prices[regionSlug] ?? size.price_monthly;
+/** Whether the provider can create this size in the given region right now. */
+function isSizeInStockIn(size: ProviderSize, regionSlug: string): boolean {
+    return !size.unavailable_regions.includes(regionSlug);
+}
+
+/** The size's prices before tax and included traffic in the given region. */
+function sizeOfferIn(
+    size: ProviderSize,
+    regionSlug: string,
+): ProviderSizeOffer {
+    return {
+        price_monthly: size.price_monthly,
+        price_hourly: size.price_hourly,
+        transfer: size.transfer,
+        ...size.region_overrides[regionSlug],
+    };
 }
 
 /** What each provider leaves out of, or folds into, the prices shown here. */
@@ -204,19 +260,19 @@ const providerPricing: Record<
     { note: string; url: string }
 > = {
     hetzner: {
-        note: 'Prices exclude VAT. Traffic beyond the included amount is billed by Hetzner.',
+        note: 'Prices exclude VAT.',
         url: 'https://www.hetzner.com/cloud/',
     },
     digitalocean: {
-        note: 'Includes a public IPv4 address. Bandwidth beyond the included amount is billed by DigitalOcean.',
+        note: 'Includes a public IPv4 address. Traffic beyond the included amount costs $0.01 per GB.',
         url: 'https://www.digitalocean.com/pricing/droplets',
     },
     vultr: {
-        note: 'Includes a public IPv4 address. Bandwidth beyond the included amount is billed by Vultr.',
+        note: 'Includes a public IPv4 address. Traffic beyond the included amount is billed by Vultr.',
         url: 'https://www.vultr.com/pricing/',
     },
     aws: {
-        note: 'An estimate from us-east-1 prices, including a 30 GB disk and a fixed public IP. Other regions and data transfer can cost more.',
+        note: 'An estimate from us-east-1 prices; other regions can cost more. Outgoing traffic is billed per GB after the first 100 GB a month, and T3 sizes cost extra while their CPU stays busy above its baseline.',
         url: 'https://aws.amazon.com/ec2/pricing/on-demand/',
     },
 };
@@ -282,17 +338,17 @@ export default function ServersCreate({
         null;
     const selectedSize =
         sizes.find((size) => size.slug === providerForm.data.size) ?? null;
-    const sizePrice =
+    const sizeOffer =
         selectedSize && selectedRegion
-            ? sizePriceIn(selectedSize, selectedRegion.slug)
+            ? sizeOfferIn(selectedSize, selectedRegion.slug)
             : null;
-    const ipv4Price = selectedRegion?.ipv4_price_monthly ?? null;
 
-    // Keep the chosen size only if the new region offers it too.
+    // Keep the chosen size only if the new region can create it too.
     const handleRegionChange = (regionSlug: string) => {
         const sizeStillAvailable =
             selectedSize !== null &&
-            isSizeAvailableIn(selectedSize, regionSlug);
+            isSizeListedIn(selectedSize, regionSlug) &&
+            isSizeInStockIn(selectedSize, regionSlug);
 
         providerForm.setData({
             ...providerForm.data,
@@ -513,6 +569,9 @@ export default function ServersCreate({
                                           selectedSize.slug)
                                         : null,
                                 },
+                                ...(selectedSize
+                                    ? sizeSpecRows(selectedSize, sizeOffer)
+                                    : []),
                                 {
                                     label: 'Type',
                                     value: stackType?.label ?? null,
@@ -523,24 +582,28 @@ export default function ServersCreate({
                             disabled={accounts.length === 0}
                             cancelHref={teamPath('/servers')}
                         >
-                            {selectedAccount && selectedSize && sizePrice ? (
+                            {selectedAccount &&
+                            selectedRegion &&
+                            selectedSize &&
+                            sizeOffer?.price_monthly ? (
                                 <CostBreakdown
                                     costs={{
                                         currency: selectedSize.currency,
                                         lines: [
                                             {
                                                 label: 'Server',
-                                                amount: sizePrice,
+                                                amount: sizeOffer.price_monthly,
                                             },
-                                            ...(ipv4Price
-                                                ? [
-                                                      {
-                                                          label: 'Public IPv4',
-                                                          amount: ipv4Price,
-                                                      },
-                                                  ]
-                                                : []),
+                                            ...selectedRegion.extra_charges.map(
+                                                (charge) => ({
+                                                    label: charge.label,
+                                                    amount: charge.price_monthly,
+                                                }),
+                                            ),
                                         ],
+                                        hourly: sizeOffer.price_hourly,
+                                        trafficPricePerTb:
+                                            selectedRegion.traffic_price_per_tb,
                                         ...providerPricing[
                                             selectedAccount.provider
                                         ],
@@ -783,10 +846,10 @@ function CatalogSection({
         );
     }
 
-    // Only offer regions where at least one size can actually be created.
+    // Only offer regions where the provider lists at least one size.
     const regions = catalog.regions.filter((option) =>
         catalog.sizes.some((sizeOption) =>
-            isSizeAvailableIn(sizeOption, option.slug),
+            isSizeListedIn(sizeOption, option.slug),
         ),
     );
 
@@ -819,7 +882,7 @@ function CatalogSection({
                 ) : (
                     <SizeTable
                         sizes={catalog.sizes.filter((option) =>
-                            isSizeAvailableIn(option, region),
+                            isSizeListedIn(option, region),
                         )}
                         region={region}
                         selected={size}
@@ -839,9 +902,50 @@ interface SizeTableProps {
     onSelect: (slug: string) => void;
 }
 
+/** The chosen size's hardware and included traffic, as rows for the summary. */
+function sizeSpecRows(
+    size: ProviderSize,
+    offer: ProviderSizeOffer | null,
+): { label: string; value: string | null }[] {
+    const processor = formatProcessor(size);
+    const transfer = offer?.transfer ?? null;
+
+    return [
+        {
+            label: 'CPU',
+            value: [size.vcpus, size.cpu_type, 'vCPU']
+                .filter(Boolean)
+                .join(' '),
+        },
+        ...(processor ? [{ label: 'Processor', value: processor }] : []),
+        { label: 'Memory', value: formatMemory(size.memory) },
+        {
+            label: 'Disk',
+            value: [`${size.disk} GB`, size.disk_type]
+                .filter(Boolean)
+                .join(' '),
+        },
+        ...(transfer !== null
+            ? [
+                  {
+                      label: 'Traffic',
+                      value: `${formatTransfer(transfer)} included`,
+                  },
+              ]
+            : []),
+    ];
+}
+
+const sizeColumns =
+    'grid grid-cols-[1rem_minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)] items-center gap-3 px-3';
+
+const sizeColumnsWithTraffic =
+    'grid grid-cols-[1rem_minmax(0,1.4fr)_repeat(4,minmax(0,1fr))_minmax(0,1.2fr)] items-center gap-3 px-3';
+
 /**
- * The sizes offered in one region, grouped by the provider's own families
- * (e.g. Hetzner's "Cost-optimized") and priced for that region.
+ * The sizes listed in one region, grouped the way the provider groups them
+ * (family, shared or dedicated vCPUs, processor) and priced for that region.
+ * Sizes the provider can't create there right now are shown but can't be picked.
  */
 function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
     if (sizes.length === 0) {
@@ -853,16 +957,16 @@ function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
     }
 
     // Sizes arrive cheapest first, so each group starts with its cheapest size.
-    const groups = new Map<string | null, ProviderSize[]>();
+    const groups = new Map<string, ProviderSize[]>();
     for (const option of sizes) {
-        groups.set(option.category, [
-            ...(groups.get(option.category) ?? []),
-            option,
-        ]);
+        const group = describeSizeGroup(option);
+        groups.set(group, [...(groups.get(group) ?? []), option]);
     }
 
-    const columns =
-        'grid grid-cols-[1rem_minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)] items-center gap-3 px-3';
+    const showsTraffic = sizes.some(
+        (option) => sizeOfferIn(option, region).transfer !== null,
+    );
+    const columns = showsTraffic ? sizeColumnsWithTraffic : sizeColumns;
 
     return (
         <div
@@ -882,19 +986,21 @@ function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
                 <span>vCPU</span>
                 <span>RAM</span>
                 <span>Disk</span>
+                {showsTraffic && <span>Traffic</span>}
                 <span className="text-right">Price</span>
             </div>
 
-            {[...groups.entries()].map(([category, options]) => (
-                <div key={category ?? 'all'}>
-                    {category && (
+            {[...groups.entries()].map(([group, options]) => (
+                <div key={group}>
+                    {group && (
                         <div className="border-b bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                            {category}
+                            {group}
                         </div>
                     )}
                     {options.map((option) => {
                         const isSelected = option.slug === selected;
-                        const price = sizePriceIn(option, region);
+                        const isInStock = isSizeInStockIn(option, region);
+                        const offer = sizeOfferIn(option, region);
 
                         return (
                             <button
@@ -902,27 +1008,42 @@ function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
                                 type="button"
                                 role="radio"
                                 aria-checked={isSelected}
+                                disabled={!isInStock}
                                 onClick={() => onSelect(option.slug)}
                                 className={cn(
                                     columns,
-                                    'w-full border-b py-2 text-left transition-colors focus-visible:bg-muted focus-visible:outline-none',
+                                    'w-full border-b py-2 text-left transition-colors focus-visible:bg-muted focus-visible:outline-none disabled:text-muted-foreground',
                                     isSelected
                                         ? 'bg-muted/60'
-                                        : 'hover:bg-muted/40',
+                                        : 'enabled:hover:bg-muted/40',
                                 )}
                             >
                                 <RadioDot selected={isSelected} />
-                                <span className="truncate font-medium">
-                                    {option.label ?? option.slug}
+                                <span className="min-w-0">
+                                    <span className="block truncate font-medium">
+                                        {option.label ?? option.slug}
+                                    </span>
+                                    {!isInStock && (
+                                        <span className="block truncate text-xs">
+                                            Unavailable
+                                        </span>
+                                    )}
                                 </span>
                                 <span>{option.vcpus}</span>
                                 <span>{formatMemory(option.memory)}</span>
                                 <span>{option.disk} GB</span>
+                                {showsTraffic && (
+                                    <span>
+                                        {offer.transfer !== null
+                                            ? formatTransfer(offer.transfer)
+                                            : '—'}
+                                    </span>
+                                )}
                                 <span className="text-right whitespace-nowrap">
-                                    {price > 0 ? (
+                                    {offer.price_monthly > 0 ? (
                                         <>
                                             {formatPrice(
-                                                price,
+                                                offer.price_monthly,
                                                 option.currency,
                                             )}
                                             <span className="text-muted-foreground">
@@ -934,6 +1055,15 @@ function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
                                             —
                                         </span>
                                     )}
+                                    {offer.price_hourly ? (
+                                        <span className="block text-xs text-muted-foreground">
+                                            {formatHourlyPrice(
+                                                offer.price_hourly,
+                                                option.currency,
+                                            )}
+                                            /hr
+                                        </span>
+                                    ) : null}
                                 </span>
                             </button>
                         );
@@ -948,6 +1078,10 @@ function SizeTable({ sizes, region, selected, onSelect }: SizeTableProps) {
 interface Costs {
     currency: string;
     lines: { label: string; amount: number }[];
+    /** The server's own hourly price, when the provider quotes one. */
+    hourly: number | null;
+    /** Price per TB of traffic beyond the included amount, when the provider publishes it. */
+    trafficPricePerTb: number | null;
     note: string;
     url: string;
 }
@@ -987,7 +1121,13 @@ function CostBreakdown({ costs }: { costs: Costs }) {
                 </span>
             </div>
             <p className="text-xs text-muted-foreground">
+                {costs.hourly
+                    ? `The server is billed by the hour at ${formatHourlyPrice(costs.hourly, costs.currency)}. `
+                    : null}
                 {costs.note}{' '}
+                {costs.trafficPricePerTb
+                    ? `Traffic beyond the included amount costs ${formatPrice(costs.trafficPricePerTb, costs.currency)} per TB. `
+                    : null}
                 <a
                     href={costs.url}
                     target="_blank"

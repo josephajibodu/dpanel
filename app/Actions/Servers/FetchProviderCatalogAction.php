@@ -27,14 +27,14 @@ class FetchProviderCatalogAction
 
     /**
      * @return array{
-     *     regions: list<array{slug: string, name: string, ipv4_price_monthly: float|null}>,
+     *     regions: list<array<string, mixed>>,
      *     sizes: list<array<string, mixed>>
      * }
      */
     public function execute(ProviderAccount $account): array
     {
         return Cache::remember(
-            "provider-accounts:{$account->id}:catalog:v2",
+            "provider-accounts:{$account->id}:catalog:v3",
             self::CACHE_TTL_SECONDS,
             fn (): array => $this->fetchFromProvider($account),
         );
@@ -42,7 +42,7 @@ class FetchProviderCatalogAction
 
     /**
      * @return array{
-     *     regions: list<array{slug: string, name: string, ipv4_price_monthly: float|null}>,
+     *     regions: list<array<string, mixed>>,
      *     sizes: list<array<string, mixed>>
      * }
      */

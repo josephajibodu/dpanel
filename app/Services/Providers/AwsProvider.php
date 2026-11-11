@@ -33,29 +33,41 @@ class AwsProvider implements ProviderContract
     private const int ROOT_VOLUME_GB = 30;
 
     /**
-     * Approximate monthly cost of the 30 GB gp3 root volume ($0.08/GB) plus
-     * the Elastic IP ($0.005/hour), added to each instance price below.
+     * What AWS bills each month on top of the instance itself, at us-east-1
+     * prices: the 30 GB gp3 root volume ($0.08/GB) and the Elastic IP
+     * ($0.005/hour).
+     *
+     * @var list<array{label: string, price_monthly: float}>
      */
-    private const float MONTHLY_EXTRAS = 2.40 + 3.65;
+    private const array EXTRA_CHARGES = [
+        ['label' => '30 GB disk (gp3)', 'price_monthly' => 2.40],
+        ['label' => 'Public IPv4 address', 'price_monthly' => 3.65],
+    ];
+
+    /**
+     * The hours AWS counts in a month when it quotes a monthly price.
+     */
+    private const int HOURS_PER_MONTH = 730;
 
     /**
      * Instance types offered when creating a server, with us-east-1 on-demand
      * Linux prices per month (730 hours). Prices in other regions are similar
      * but not identical, and AWS has no simple price API, so these are a guide.
+     * All of them run on Intel x86 processors.
      *
-     * @var array<string, array{vcpus: int, memory: int, price: float}>
+     * @var array<string, array{vcpus: int, memory: int, price: float, family: string}>
      */
     private const array INSTANCE_TYPES = [
-        't3.small' => ['vcpus' => 2, 'memory' => 2048, 'price' => 15.18],
-        't3.medium' => ['vcpus' => 2, 'memory' => 4096, 'price' => 30.37],
-        't3.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 60.74],
-        'c6i.large' => ['vcpus' => 2, 'memory' => 4096, 'price' => 62.05],
-        'm6i.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 70.08],
-        'r6i.large' => ['vcpus' => 2, 'memory' => 16384, 'price' => 91.98],
-        't3.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 121.47],
-        'c6i.xlarge' => ['vcpus' => 4, 'memory' => 8192, 'price' => 124.10],
-        'm6i.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 140.16],
-        't3.2xlarge' => ['vcpus' => 8, 'memory' => 32768, 'price' => 242.94],
+        't3.small' => ['vcpus' => 2, 'memory' => 2048, 'price' => 15.18, 'family' => 'General purpose, burstable'],
+        't3.medium' => ['vcpus' => 2, 'memory' => 4096, 'price' => 30.37, 'family' => 'General purpose, burstable'],
+        't3.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 60.74, 'family' => 'General purpose, burstable'],
+        'c6i.large' => ['vcpus' => 2, 'memory' => 4096, 'price' => 62.05, 'family' => 'Compute optimized'],
+        'm6i.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 70.08, 'family' => 'General purpose'],
+        'r6i.large' => ['vcpus' => 2, 'memory' => 16384, 'price' => 91.98, 'family' => 'Memory optimized'],
+        't3.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 121.47, 'family' => 'General purpose, burstable'],
+        'c6i.xlarge' => ['vcpus' => 4, 'memory' => 8192, 'price' => 124.10, 'family' => 'Compute optimized'],
+        'm6i.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 140.16, 'family' => 'General purpose'],
+        't3.2xlarge' => ['vcpus' => 8, 'memory' => 32768, 'price' => 242.94, 'family' => 'General purpose, burstable'],
     ];
 
     /**
@@ -130,6 +142,7 @@ class AwsProvider implements ProviderContract
             ->map(fn ($r) => new ProviderRegion(
                 slug: $r['RegionName'],
                 name: (self::REGION_NAMES[$r['RegionName']] ?? $r['RegionName']).' ('.$r['RegionName'].')',
+                extraCharges: self::EXTRA_CHARGES,
             ))
             ->sortBy('slug')
             ->values();
@@ -143,7 +156,12 @@ class AwsProvider implements ProviderContract
                 vcpus: $type['vcpus'],
                 memory: $type['memory'],
                 disk: self::ROOT_VOLUME_GB,
-                priceMonthly: round($type['price'] + self::MONTHLY_EXTRAS, 2),
+                priceMonthly: $type['price'],
+                category: $type['family'],
+                priceHourly: round($type['price'] / self::HOURS_PER_MONTH, 4),
+                architecture: 'x86',
+                cpuVendor: 'Intel',
+                diskType: 'gp3 SSD',
             ))
             ->sortBy('priceMonthly')
             ->values();

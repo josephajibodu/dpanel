@@ -28,3 +28,35 @@ it('asks for every size, not just the first page', function () {
 
     Http::assertSent(fn (Request $request) => str_contains($request->url(), '/sizes') && $request['per_page'] === 200);
 });
+
+it('gives each size its hourly price, included traffic and whether its vCPUs are shared', function () {
+    Http::preventStrayRequests();
+    $size = fn (string $slug, string $description, float $monthly): array => [
+        'slug' => $slug,
+        'description' => $description,
+        'available' => true,
+        'vcpus' => 2,
+        'memory' => 4096,
+        'disk' => 80,
+        'transfer' => 4.0,
+        'price_monthly' => $monthly,
+        'price_hourly' => 0.03571,
+        'regions' => ['fra1'],
+    ];
+    Http::fake(['api.digitalocean.com/v2/sizes*' => Http::response(['sizes' => [
+        $size('s-2vcpu-4gb', 'Basic', 24.0),
+        $size('g-2vcpu-8gb', 'General Purpose', 63.0),
+    ]])]);
+    $provider = new DigitalOceanProvider;
+    $provider->setCredentials(['api_token' => 'test-token']);
+
+    $sizes = $provider->getSizes()->keyBy('slug');
+
+    expect($sizes['s-2vcpu-4gb'])
+        ->category->toBe('Basic')
+        ->priceHourly->toBe(0.03571)
+        ->transfer->toBe(4.0)
+        ->architecture->toBe('x86')
+        ->cpuType->toBe('shared')
+        ->and($sizes['g-2vcpu-8gb']->cpuType)->toBe('dedicated');
+});

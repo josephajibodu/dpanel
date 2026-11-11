@@ -211,3 +211,20 @@ it('reports invalid credentials', function () {
 
     expect($provider->validateCredentials())->toBeFalse();
 });
+
+it('lists the disk and public IP as separate charges instead of hiding them in the size price', function () {
+    $provider = fakeAws(['DescribeRegions' => ['Regions' => [['RegionName' => 'us-east-1']]]]);
+
+    $size = $provider->getSizes()->firstWhere('slug', 't3.small');
+    $region = $provider->getRegions()->sole();
+
+    expect($size)
+        ->priceMonthly->toBe(15.18)
+        ->priceHourly->toBe(0.0208)
+        ->category->toBe('General purpose, burstable')
+        ->architecture->toBe('x86')
+        ->and($region->extraCharges)->toBe([
+            ['label' => '30 GB disk (gp3)', 'price_monthly' => 2.40],
+            ['label' => 'Public IPv4 address', 'price_monthly' => 3.65],
+        ]);
+});

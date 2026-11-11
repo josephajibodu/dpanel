@@ -130,6 +130,6 @@ Your tokens and keys are encrypted before they're saved and are never sent back 
 
 flitops shows an estimated monthly price for each size when you create a server, taken from your provider. You're billed by your provider, not by flitops, for the servers you create. Notes shown on the form:
 
-- **Hetzner** prices exclude VAT. Traffic beyond the included amount is billed by Hetzner.
-- **DigitalOcean** and **Vultr** prices include a public IPv4 address. Bandwidth beyond the included amount is billed by the provider.
-- **AWS** prices are an estimate from `us-east-1`, including a 30 GB disk and a fixed public IP. Other regions and data transfer can cost more.
+- **Hetzner** prices exclude VAT. The public IPv4 address is listed as its own line, and the form shows what traffic beyond the included amount costs per TB in the chosen region.
+- **DigitalOcean** and **Vultr** prices include a public IPv4 address. Traffic beyond the included amount is billed by the provider.
+- **AWS** prices are an estimate from `us-east-1`, with the 30 GB disk and the fixed public IP listed as their own lines. Other regions can cost more. Outgoing traffic is billed per GB after the first 100 GB a month, and T3 sizes cost extra while their CPU stays busy above its baseline.

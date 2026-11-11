@@ -52,8 +52,18 @@ class HetznerProvider implements ProviderContract
     private const array CATEGORY_LABELS = [
         'cost_optimized' => 'Cost-optimized',
         'regular_purpose' => 'Regular performance',
-        'general_purpose' => 'General purpose (dedicated vCPU)',
+        'general_purpose' => 'General purpose',
     ];
+
+    /**
+     * Labels for the kinds of disk Hetzner attaches to a server type.
+     */
+    private const array DISK_TYPE_LABELS = [
+        'local' => 'NVMe SSD',
+        'network' => 'Network storage',
+    ];
+
+    private const int BYTES_PER_TB = 1024 ** 4;
 
     /**
      * The most items Hetzner returns per page. It sends 25 by default, which
@@ -63,12 +73,17 @@ class HetznerProvider implements ProviderContract
 
     /**
      * Hetzner's price list, fetched once per instance: it holds the account's
-     * currency and the per-location price of a public IPv4 address.
+     * currency and the per-location prices of a public IPv4 address and of
+     * traffic beyond the included amount.
      *
      * @var array<string, mixed>|null
      */
     private ?array $pricing = null;
 
+    /**
+     * Each location carries what Hetzner bills there on top of the server
+     * itself: the public IPv4 address, and traffic beyond the included amount.
+     */
     public function getRegions(): Collection
     {
         $response = $this->http->get('locations');
@@ -81,25 +96,38 @@ class HetznerProvider implements ProviderContract
             );
         }
 
-        $ipv4Prices = collect($this->pricing()['primary_ips'] ?? [])
-            ->firstWhere('type', 'ipv4')['prices'] ?? [];
+        $pricing = $this->pricing();
+
+        $ipv4Prices = collect(collect($pricing['primary_ips'] ?? [])->firstWhere('type', 'ipv4')['prices'] ?? [])
+            ->keyBy('location');
+
+        // Hetzner lists the traffic price on every server type, but it is the
+        // same for all types in a location.
+        $trafficPrices = collect($pricing['server_types'] ?? [])
+            ->flatMap(fn ($type) => $type['prices'] ?? [])
+            ->keyBy('location');
 
         return collect($response->json('locations'))
-            ->map(function ($l) use ($ipv4Prices) {
-                $ipv4Price = collect($ipv4Prices)->firstWhere('location', $l['name'])['price_monthly']['net'] ?? null;
+            ->map(function ($l) use ($ipv4Prices, $trafficPrices) {
+                $ipv4Price = $ipv4Prices[$l['name']]['price_monthly']['net'] ?? null;
+                $trafficPrice = $trafficPrices[$l['name']]['price_per_tb_traffic']['net'] ?? null;
 
                 return new ProviderRegion(
                     slug: $l['name'],
                     name: $l['description'].' ('.$l['city'].')',
-                    ipv4PriceMonthly: $ipv4Price === null ? null : (float) $ipv4Price,
+                    extraCharges: $ipv4Price === null ? [] : [
+                        ['label' => 'Public IPv4 address', 'price_monthly' => (float) $ipv4Price],
+                    ],
+                    trafficPricePerTb: $trafficPrice === null ? null : (float) $trafficPrice,
                 );
             })
             ->values();
     }
 
     /**
-     * Each size carries the locations it can be created in today and its
-     * price in each, before tax, which is how Hetzner's console shows it.
+     * Each size carries the locations Hetzner lists it in, with its price and
+     * included traffic in each, before tax, which is how Hetzner's console
+     * shows it. Locations where it is out of stock are kept and marked.
      */
     public function getSizes(): Collection
     {
@@ -118,30 +146,38 @@ class HetznerProvider implements ProviderContract
         return collect($response->json('server_types'))
             ->filter(fn ($s) => ($s['deprecation'] ?? null) === null && ! ($s['deprecated'] ?? false))
             ->map(function ($s) use ($currency) {
-                $regions = collect($s['locations'] ?? [])
-                    ->filter(fn ($l) => ($l['available'] ?? true) && ($l['deprecation'] ?? null) === null)
-                    ->pluck('name');
+                $locations = collect($s['locations'] ?? [])
+                    ->filter(fn ($l) => ($l['deprecation'] ?? null) === null);
 
-                $regionPrices = collect($s['prices'] ?? [])
+                $regions = $locations->pluck('name');
+
+                $regionOverrides = collect($s['prices'] ?? [])
                     ->filter(fn ($p) => $regions->contains($p['location']))
-                    ->mapWithKeys(fn ($p) => [$p['location'] => (float) $p['price_monthly']['net']]);
+                    ->mapWithKeys(fn ($p) => [$p['location'] => [
+                        'price_monthly' => (float) $p['price_monthly']['net'],
+                        'price_hourly' => isset($p['price_hourly']) ? (float) $p['price_hourly']['net'] : null,
+                        'transfer' => isset($p['included_traffic']) ? round($p['included_traffic'] / self::BYTES_PER_TB, 2) : null,
+                    ]]);
 
-                $category = self::CATEGORY_LABELS[$s['category'] ?? ''] ?? null;
-                if ($category !== null && ($s['architecture'] ?? null) === 'arm') {
-                    $category .= ' (Arm)';
-                }
+                $cheapest = $regionOverrides->sortBy('price_monthly')->first();
 
                 return new ProviderSize(
                     slug: $s['name'],
                     vcpus: $s['cores'],
                     memory: (int) round($s['memory'] * 1024), // Convert GB to MB
                     disk: $s['disk'],
-                    priceMonthly: (float) ($regionPrices->min() ?? 0),
+                    priceMonthly: $cheapest['price_monthly'] ?? 0.0,
                     label: $s['description'] ?? null,
-                    category: $category,
+                    category: self::CATEGORY_LABELS[$s['category'] ?? ''] ?? null,
                     regions: $regions->values()->all(),
-                    regionPrices: $regionPrices->all(),
+                    regionOverrides: $regionOverrides->all(),
                     currency: $currency,
+                    priceHourly: $cheapest['price_hourly'] ?? null,
+                    transfer: $cheapest['transfer'] ?? null,
+                    architecture: $s['architecture'] ?? null,
+                    cpuType: $s['cpu_type'] ?? null,
+                    diskType: self::DISK_TYPE_LABELS[$s['storage_type'] ?? ''] ?? null,
+                    unavailableRegions: $locations->reject(fn ($l) => $l['available'] ?? true)->pluck('name')->values()->all(),
                 );
             })
             ->filter(fn (ProviderSize $size) => $size->regions !== [])

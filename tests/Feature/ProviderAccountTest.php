@@ -275,7 +275,7 @@ describe('catalog', function () {
             ->getJson("/{$this->team->slug}/provider-accounts/{$this->account->id}/catalog");
 
         $response->assertOk()
-            ->assertJsonPath('regions', [['slug' => 'nyc1', 'name' => 'New York 1', 'ipv4_price_monthly' => null]])
+            ->assertJsonPath('regions', [['slug' => 'nyc1', 'name' => 'New York 1', 'extra_charges' => [], 'traffic_price_per_tb' => null]])
             ->assertJsonPath('sizes.*.slug', ['s-1vcpu-1gb', 's-2vcpu-4gb']);
         $this->assertDatabaseHas('provider_regions', ['provider' => 'digitalocean', 'code' => 'nyc1']);
         $this->assertDatabaseHas('provider_sizes', ['provider' => 'digitalocean', 'code' => 's-1vcpu-1gb', 'memory' => '1 GB']);

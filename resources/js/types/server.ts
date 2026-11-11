@@ -71,11 +71,21 @@ export interface ServerTypeOption {
 export interface ProviderRegion {
     slug: string;
     name: string;
-    /** Monthly price of the public IPv4 address, when the provider bills it separately. */
-    ipv4_price_monthly: number | null;
+    /** What the provider bills each month on top of the size, e.g. the public IPv4 address. */
+    extra_charges: { label: string; price_monthly: number }[];
+    /** Price per TB of traffic beyond the amount included with the size. */
+    traffic_price_per_tb: number | null;
 }
 
-export interface ProviderSize {
+/** A size's prices before tax and its included traffic, which can differ by region. */
+export interface ProviderSizeOffer {
+    price_monthly: number;
+    price_hourly: number | null;
+    /** Outgoing traffic included each month, in TB. */
+    transfer: number | null;
+}
+
+export interface ProviderSize extends ProviderSizeOffer {
     slug: string;
     /** The provider's own name for the size, e.g. "CPX 22". */
     label: string | null;
@@ -84,12 +94,19 @@ export interface ProviderSize {
     vcpus: number;
     memory: number;
     disk: number;
-    /** Lowest monthly price before tax; used when a region has no price of its own. */
-    price_monthly: number;
-    /** Monthly price before tax per region slug, where it differs by region. */
-    region_prices: Record<string, number>;
-    /** Region slugs the size can be created in; null means every region. */
+    /** The kind of disk, e.g. "NVMe SSD". */
+    disk_type: string | null;
+    architecture: 'x86' | 'arm' | null;
+    /** Whether the vCPUs are shared with other customers or dedicated to this server. */
+    cpu_type: 'shared' | 'dedicated' | null;
+    /** Who makes the processor, e.g. "AMD". */
+    cpu_vendor: string | null;
+    /** What differs from the figures above in a region, keyed by region slug. */
+    region_overrides: Record<string, Partial<ProviderSizeOffer>>;
+    /** Region slugs the provider lists the size in; null means every region. */
     regions: string[] | null;
+    /** Listed regions where the provider can't create the size right now. */
+    unavailable_regions: string[];
     currency: string;
     description: string;
 }

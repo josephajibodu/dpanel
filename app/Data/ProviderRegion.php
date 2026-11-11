@@ -5,24 +5,32 @@ namespace App\Data;
 readonly class ProviderRegion
 {
     /**
-     * @param  float|null  $ipv4PriceMonthly  What the provider charges per month for the server's public IPv4 address
-     *                                        in this region, when it bills that separately from the size.
+     * @param  list<array{label: string, price_monthly: float}>  $extraCharges  What the provider bills each month on top of the size
+     *                                                                          for a server in this region, e.g. its public IPv4 address.
+     * @param  float|null  $trafficPricePerTb  What the provider charges per TB of traffic beyond the amount included with the size.
      */
     public function __construct(
         public string $slug,
         public string $name,
-        public ?float $ipv4PriceMonthly = null,
+        public array $extraCharges = [],
+        public ?float $trafficPricePerTb = null,
     ) {}
 
     /**
-     * @return array{slug: string, name: string, ipv4_price_monthly: float|null}
+     * @return array{
+     *     slug: string,
+     *     name: string,
+     *     extra_charges: list<array{label: string, price_monthly: float}>,
+     *     traffic_price_per_tb: float|null
+     * }
      */
     public function toArray(): array
     {
         return [
             'slug' => $this->slug,
             'name' => $this->name,
-            'ipv4_price_monthly' => $this->ipv4PriceMonthly,
+            'extra_charges' => $this->extraCharges,
+            'traffic_price_per_tb' => $this->trafficPricePerTb,
         ];
     }
 }

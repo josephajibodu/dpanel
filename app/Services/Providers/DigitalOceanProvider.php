@@ -14,13 +14,13 @@ use Illuminate\Support\Facades\Http;
 
 class DigitalOceanProvider implements ProviderContract
 {
+    private string $apiToken = '';
+
     /**
      * The most items DigitalOcean returns per page. It sends 20 by default,
      * which is fewer than the sizes it sells.
      */
     private const int MAX_PER_PAGE = 200;
-
-    private string $apiToken = '';
 
     private PendingRequest $http;
 
@@ -72,6 +72,10 @@ class DigitalOceanProvider implements ProviderContract
             ->values();
     }
 
+    /**
+     * DigitalOcean charges the same price in every region. Its "Basic"
+     * Droplets share their vCPUs; every other class has dedicated ones.
+     */
     public function getSizes(): Collection
     {
         $response = $this->http->get('sizes', ['per_page' => self::MAX_PER_PAGE]);
@@ -95,6 +99,10 @@ class DigitalOceanProvider implements ProviderContract
                 label: $s['slug'],
                 category: $s['description'] ?? null,
                 regions: $s['regions'] ?? null,
+                priceHourly: isset($s['price_hourly']) ? (float) $s['price_hourly'] : null,
+                transfer: isset($s['transfer']) ? (float) $s['transfer'] : null,
+                architecture: 'x86',
+                cpuType: str_starts_with($s['description'] ?? '', 'Basic') ? 'shared' : 'dedicated',
             ))
             ->sortBy('priceMonthly')
             ->values();
