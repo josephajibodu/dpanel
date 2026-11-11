@@ -71,7 +71,7 @@ class EnvironmentController extends Controller
 
     public function update(Request $request, Team $team, Server $server, Site $site): RedirectResponse
     {
-        $this->authorize('deploy', $site);
+        $this->authorize('changeDeploySettings', $site);
 
         $validated = $request->validate([
             'env_content' => ['required', 'string'],

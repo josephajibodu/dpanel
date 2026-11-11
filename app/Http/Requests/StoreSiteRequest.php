@@ -19,7 +19,10 @@ class StoreSiteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('create', [Site::class, $this->route('server')]);
+        return $this->user()->can(
+            $this->boolean('isolated', true) ? 'create' : 'createWithoutIsolation',
+            [Site::class, $this->route('server')],
+        );
     }
 
     /**

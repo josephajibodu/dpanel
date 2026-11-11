@@ -6,6 +6,7 @@ use App\Models\Server;
 use App\Rules\AllowedProcessUser;
 use App\Rules\NoControlCharacters;
 use App\Rules\ValidCronExpression;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,11 +14,14 @@ class UpdateCronJobRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('manageProcesses', $this->route('server'));
+        /** @var Server $server */
+        $server = $this->route('server');
+
+        return $this->user()->can('defineProcess', [$server, AllowedProcessUser::siteFor($server, $this->input('site_id'))]);
     }
 
     /**
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

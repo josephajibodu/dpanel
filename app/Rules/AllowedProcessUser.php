@@ -6,6 +6,7 @@ use App\Models\Server;
 use App\Models\Site;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Translation\PotentiallyTranslatedString;
 
 /**
  * Workers and cron jobs may only run as a user FlitOps created, never as
@@ -25,9 +26,15 @@ class AllowedProcessUser implements ValidationRule
      */
     public static function forSiteId(Server $server, mixed $siteId): self
     {
-        $site = is_numeric($siteId) ? $server->sites()->find((int) $siteId) : null;
+        return new self(self::siteFor($server, $siteId));
+    }
 
-        return new self($site);
+    /**
+     * The server's site a job with this site id is tied to, if any.
+     */
+    public static function siteFor(Server $server, mixed $siteId): ?Site
+    {
+        return is_numeric($siteId) ? $server->sites()->find((int) $siteId) : null;
     }
 
     /**
@@ -39,7 +46,7 @@ class AllowedProcessUser implements ValidationRule
     }
 
     /**
-     * @param  \Closure(string, ?string=): \Illuminate\Translation\PotentiallyTranslatedString  $fail
+     * @param  Closure(string, ?string=): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {

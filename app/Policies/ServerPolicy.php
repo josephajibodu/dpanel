@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\TeamPermission;
 use App\Models\Server;
+use App\Models\Site;
 use App\Models\Team;
 use App\Models\User;
 
@@ -99,6 +100,19 @@ class ServerPolicy
     public function manageProcesses(User $user, Server $server): bool
     {
         return $user->hasTeamPermission($server->team, TeamPermission::ManageProcesses);
+    }
+
+    /**
+     * Determine whether the user can create or change a worker or cron job
+     * tied to the given site, or to no site. Only a job tied to an isolated
+     * site runs as that site's own user. Every other job runs as the server
+     * user, who can sudo, so it needs the same permission as a shell as that
+     * user.
+     */
+    public function defineProcess(User $user, Server $server, ?Site $site): bool
+    {
+        return $this->manageProcesses($user, $server)
+            && ($site?->isIsolated() || $user->hasTeamPermission($server->team, TeamPermission::AccessServersAsAdmin));
     }
 
     /**

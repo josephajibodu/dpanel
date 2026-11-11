@@ -13,7 +13,10 @@ class UpdateWorkerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('manageProcesses', $this->route('server'));
+        /** @var Server $server */
+        $server = $this->route('server');
+
+        return $this->user()->can('defineProcess', [$server, AllowedProcessUser::siteFor($server, $this->input('site_id'))]);
     }
 
     /**
