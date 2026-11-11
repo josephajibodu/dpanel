@@ -194,7 +194,7 @@ From the FlitOps database: 4 isolated sites (Bouclay included) with 30 successfu
 ## Full audit (2026-11-11)
 A read of the whole backend before opening FlitOps to other teams. Not covered in depth: the React frontend, the four cloud provider clients, the internals of converting a site to isolation, PHP and Node version management, and the source-control login flow. Every test fakes the SSH connection, so none of the fixes below has run on a real server.
 
-### Fixed (branch `worktree-full-audit`, not yet merged to `main`)
+### Fixed (merged to `main` on 2026-11-11)
 - [x] A remote command that ran out of time counted as a success (de7e847). The SSH library keeps the previous command's exit code when the current one reports none, so this affected every command, not only provisioning. A timed-out command now fails with "timed out", and its channel is closed so later commands can run.
 - [x] Provisioning always opened port 22 in the firewall, locking out a custom server that takes SSH on another port (8b5a28d). It now opens the port FlitOps connects on.
 - [x] A Developer could reach root (e732100). The server user can sudo, and a site that isn't isolated runs as that user. Choosing what runs as the server user now needs `AccessServersAsAdmin`: the deploy script, environment file, commands, repository, branch and auto-deploy on a site that isn't isolated; creating a site without isolation; and workers and cron jobs that aren't tied to an isolated site. Developers can still deploy, cancel and roll back those sites.
