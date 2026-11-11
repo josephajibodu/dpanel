@@ -38,50 +38,52 @@ export default function About() {
                 description="flitops gives developers and teams the experience of a managed platform on servers they control and pay for directly."
             />
 
-            <section className="px-6">
-                <div className="mx-auto max-w-3xl space-y-6 text-lg leading-relaxed text-muted-foreground">
-                    <p>
-                        <span className="font-medium text-foreground">
-                            Most teams face the same choice.
-                        </span>{' '}
-                        Rent a managed platform and accept its pricing, limits,
-                        and opinions, or run your own servers and become a
-                        part-time systems administrator.
-                    </p>
-                    <p>
-                        We built flitops to remove that trade-off. It handles
-                        the work an operations team would do, provisioning
-                        hardened servers, deploying every push without downtime,
-                        issuing certificates, backing up databases, and keeping
-                        workers alive, while the servers themselves stay in your
-                        cloud account.
-                    </p>
-                    <p>
-                        The result is the polish of a platform with the
-                        economics and freedom of owning your stack.
-                    </p>
+            <section className="px-6 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-10 border-t border-border pt-14 lg:grid-cols-[1fr_2fr] lg:gap-20">
+                    <h2 className="text-3xl font-medium tracking-[-0.02em]">
+                        Why we built it
+                    </h2>
+                    <div className="max-w-3xl space-y-6 text-xl leading-relaxed text-muted-foreground">
+                        <p>
+                            <span className="text-foreground">
+                                Most teams face the same choice.
+                            </span>{' '}
+                            Rent a managed platform and accept its pricing,
+                            limits, and opinions, or run your own servers and
+                            become a part-time systems administrator.
+                        </p>
+                        <p>
+                            We built flitops to remove that trade-off. It
+                            handles the work an operations team would do,
+                            provisioning hardened servers, deploying every push
+                            without downtime, issuing certificates, backing up
+                            databases, and keeping workers alive, while the
+                            servers themselves stay in your cloud account.
+                        </p>
+                        <p>
+                            The result is the polish of a platform with the
+                            economics and freedom of owning your stack.
+                        </p>
+                    </div>
                 </div>
             </section>
 
-            <section className="px-6 pt-24 sm:pt-32">
-                <div className="mx-auto max-w-6xl">
-                    <SectionHeading
-                        eyebrow="What we believe"
-                        title="The principles behind the product"
-                    />
-                    <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+            <section className="px-6 pt-24 sm:pt-32 lg:px-8">
+                <div className="mx-auto max-w-7xl">
+                    <SectionHeading title="The principles behind the product" />
+                    <div className="mt-16 grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:gap-x-20">
                         {beliefs.map((belief, index) => (
                             <div
                                 key={belief.title}
-                                className="bg-background p-8 sm:p-10"
+                                className="border-t border-foreground pt-6"
                             >
-                                <span className="font-log text-xs text-muted-foreground">
+                                <span className="text-sm font-medium text-muted-foreground tabular-nums">
                                     {String(index + 1).padStart(2, '0')}
                                 </span>
-                                <h3 className="mt-5 text-lg font-semibold tracking-tight">
+                                <h3 className="mt-10 text-2xl font-medium tracking-tight">
                                     {belief.title}
                                 </h3>
-                                <p className="mt-3 leading-relaxed text-muted-foreground">
+                                <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground">
                                     {belief.description}
                                 </p>
                             </div>

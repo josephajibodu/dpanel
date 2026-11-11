@@ -114,17 +114,17 @@ export default function Security() {
                 description="flitops has the keys to your servers. Here is exactly how we take care of them."
             />
 
-            <section className="px-6">
-                <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3">
+            <section className="px-6 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-3 md:gap-10">
                     {principles.map((principle) => (
                         <div
                             key={principle.title}
-                            className="rounded-2xl border border-border bg-muted/30 p-7"
+                            className="border-t border-foreground pt-6"
                         >
-                            <h2 className="font-semibold tracking-tight">
+                            <h2 className="text-2xl font-medium tracking-tight">
                                 {principle.title}
                             </h2>
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            <p className="mt-3 leading-relaxed text-muted-foreground">
                                 {principle.description}
                             </p>
                         </div>
@@ -132,33 +132,29 @@ export default function Security() {
                 </div>
             </section>
 
-            <div className="px-6 pt-24 sm:pt-32">
-                <div className="mx-auto max-w-6xl">
+            <div className="px-6 pt-24 sm:pt-32 lg:px-8">
+                <div className="mx-auto max-w-7xl">
                     <SectionHeading
-                        eyebrow="In practice"
                         title="The details that matter"
                         description="Security is mostly a long list of careful defaults. These are ours."
                     />
 
-                    <div className="mt-16 divide-y divide-border border-y border-border">
+                    <div className="mt-16">
                         {practices.map((practice) => (
                             <section
                                 key={practice.area}
-                                className="grid gap-10 py-14 lg:grid-cols-[1fr_2.2fr]"
+                                className="grid gap-10 border-t border-border py-14 lg:grid-cols-[1fr_2fr] lg:gap-20"
                             >
-                                <h3 className="text-xl font-semibold tracking-tight">
+                                <h3 className="text-3xl font-medium tracking-[-0.02em]">
                                     {practice.area}
                                 </h3>
-                                <dl className="grid gap-x-10 gap-y-9 sm:grid-cols-2">
+                                <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
                                     {practice.items.map((item) => (
-                                        <div
-                                            key={item.title}
-                                            className="border-l border-border pl-5"
-                                        >
-                                            <dt className="font-medium">
+                                        <div key={item.title}>
+                                            <dt className="text-lg font-medium">
                                                 {item.title}
                                             </dt>
-                                            <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                            <dd className="mt-2 leading-relaxed text-muted-foreground">
                                                 {item.description}
                                             </dd>
                                         </div>
@@ -170,23 +166,21 @@ export default function Security() {
                 </div>
             </div>
 
-            <section className="px-6 pt-24 sm:pt-32">
-                <div className="mx-auto grid max-w-6xl gap-8 rounded-3xl border border-border p-8 sm:p-12 lg:grid-cols-2 lg:items-center">
-                    <div>
-                        <h2 className="text-2xl font-semibold tracking-tight">
-                            Found a vulnerability?
-                        </h2>
-                        <p className="mt-3 max-w-md leading-relaxed text-muted-foreground">
+            <section className="px-6 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-8 border-t border-foreground pt-14 lg:grid-cols-[1fr_2fr] lg:gap-20">
+                    <h2 className="text-3xl font-medium tracking-[-0.02em]">
+                        Found a vulnerability?
+                    </h2>
+                    <div className="flex flex-col gap-5">
+                        <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
                             We appreciate responsible disclosure. Report it
                             privately and we will acknowledge it within two
                             business days, keep you updated, and credit you once
                             it is fixed if you would like.
                         </p>
-                    </div>
-                    <div className="flex flex-col gap-3 text-sm lg:items-end">
                         <a
                             href="mailto:hello@flitops.com?subject=Security%20report"
-                            className="font-medium text-foreground underline underline-offset-4"
+                            className="self-start text-xl font-medium underline underline-offset-4"
                         >
                             hello@flitops.com
                         </a>

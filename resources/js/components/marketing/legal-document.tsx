@@ -21,35 +21,35 @@ export default function LegalDocument({
     sections: LegalSection[];
 }) {
     return (
-        <div className="px-6 pt-20 pb-24 sm:pt-28 sm:pb-32">
-            <div className="mx-auto max-w-6xl">
-                <header className="max-w-3xl border-b border-border pb-10">
-                    <p className="text-sm font-medium text-brand dark:text-blue-400">
+        <div className="px-6 pt-16 pb-24 sm:pt-24 sm:pb-32 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+                <header className="max-w-3xl">
+                    <p className="font-log text-xs font-medium tracking-[0.08em] text-brand uppercase dark:text-blue-400">
                         Legal
                     </p>
-                    <h1 className="mt-3 text-4xl font-semibold tracking-[-0.025em] sm:text-5xl">
+                    <h1 className="mt-5 text-[2.75rem] leading-[1.02] font-medium tracking-[-0.035em] sm:text-7xl">
                         {title}
                     </h1>
-                    <p className="mt-4 text-sm text-muted-foreground">
+                    <p className="mt-7 text-sm text-muted-foreground">
                         Effective {effectiveDate}
                     </p>
-                    <div className="mt-6 text-lg leading-relaxed text-muted-foreground">
+                    <div className="mt-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">
                         {summary}
                     </div>
                 </header>
 
-                <div className="mt-14 grid gap-14 lg:grid-cols-[220px_1fr]">
+                <div className="mt-16 grid gap-14 border-t border-border pt-14 lg:grid-cols-[1fr_2fr] lg:gap-20">
                     <nav aria-label="On this page" className="hidden lg:block">
-                        <div className="sticky top-24">
-                            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        <div className="sticky top-28">
+                            <p className="text-sm text-muted-foreground">
                                 On this page
                             </p>
-                            <ol className="mt-4 space-y-2.5 text-sm">
+                            <ol className="mt-5 space-y-3 font-medium">
                                 {sections.map((section) => (
                                     <li key={section.id}>
                                         <a
                                             href={`#${section.id}`}
-                                            className="text-muted-foreground transition-colors hover:text-foreground"
+                                            className="underline-offset-4 hover:underline"
                                         >
                                             {section.title}
                                         </a>
@@ -59,15 +59,15 @@ export default function LegalDocument({
                         </div>
                     </nav>
 
-                    <div className="max-w-3xl space-y-12">
+                    <div className="max-w-3xl space-y-14">
                         {sections.map((section, index) => (
                             <section
                                 key={section.id}
                                 id={section.id}
                                 className="scroll-mt-24"
                             >
-                                <h2 className="text-xl font-semibold tracking-tight">
-                                    <span className="mr-3 font-log text-sm text-muted-foreground">
+                                <h2 className="text-2xl font-medium tracking-tight">
+                                    <span className="mr-3 text-muted-foreground tabular-nums">
                                         {index + 1}.
                                     </span>
                                     {section.title}

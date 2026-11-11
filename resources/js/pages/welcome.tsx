@@ -1,8 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRightIcon, CheckIcon } from '@phosphor-icons/react';
+import {
+    ArrowRightIcon,
+    CheckIcon,
+    HardDrivesIcon,
+} from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 
-import BackdropGrid from '@/components/marketing/backdrop-grid';
 import CallToAction from '@/components/marketing/call-to-action';
 import FaqList, { type FaqItem } from '@/components/marketing/faq-list';
 import {
@@ -10,14 +13,18 @@ import {
     CertificateVisual,
     MetricsVisual,
     ProcessVisual,
+    ProviderVisual,
+    ProvisionVisual,
+    PushVisual,
     TeamVisual,
     TerminalVisual,
 } from '@/components/marketing/feature-visuals';
 import ProductPreview from '@/components/marketing/product-preview';
+import Scene, { type SceneTone } from '@/components/marketing/scene';
 import SectionHeading from '@/components/marketing/section-heading';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import MarketingLayout from '@/layouts/marketing-layout';
-import { cn } from '@/lib/utils';
 import {
     contact,
     features,
@@ -42,89 +49,104 @@ const capabilities: {
     title: string;
     description: string;
     visual: ReactNode;
-    className?: string;
+    tone: SceneTone;
 }[] = [
     {
         title: 'Domains and SSL, handled',
         description:
-            "Add a domain and flitops verifies DNS, issues a Let's Encrypt certificate, and renews it long before it expires. Wildcards included.",
+            "Add a domain and flitops verifies DNS, issues a Let's Encrypt certificate, and renews it long before it expires.",
         visual: <CertificateVisual />,
-        className: 'sm:col-span-2',
+        tone: 'green',
     },
     {
         title: 'Backups you can restore',
         description:
             'Scheduled database backups to S3 or Cloudflare R2, restorable in a click.',
         visual: <BackupVisual />,
+        tone: 'blue',
     },
     {
         title: 'A terminal in the browser',
         description:
             'A real shell on any server, behind a fresh password check.',
         visual: <TerminalVisual />,
+        tone: 'amber',
     },
     {
         title: 'Workers that stay up',
         description:
             'Queue workers, daemons, and cron jobs, supervised and restarted on failure.',
         visual: <ProcessVisual />,
+        tone: 'violet',
     },
     {
         title: 'Know before your users do',
         description:
             'Live server metrics, uptime checks on every site, and alerts when a certificate needs attention.',
         visual: <MetricsVisual />,
+        tone: 'green',
     },
     {
         title: 'Built for teams',
         description:
-            'Invite your team with owner, admin, developer, and viewer roles. Everyone sees the same fleet, with the right level of access.',
+            'Owner, admin, developer, and viewer roles, so everyone sees the same fleet with the right level of access.',
         visual: <TeamVisual />,
-        className:
-            'sm:col-span-2 lg:col-span-3 lg:flex-row lg:items-center lg:gap-16 [&>div]:lg:flex-1',
+        tone: 'blue',
     },
 ];
 
-const steps = [
+const steps: { title: string; description: string; visual: ReactNode }[] = [
     {
         title: 'Connect your cloud',
         description:
-            'Add an API token for DigitalOcean, Hetzner, Vultr, or AWS — or bring any Ubuntu server over SSH.',
-        detail: 'Hetzner · CX32 · Falkenstein',
+            'Add an API token for DigitalOcean, Hetzner, Vultr, or AWS, or bring any Ubuntu server over SSH.',
+        visual: <ProviderVisual />,
     },
     {
         title: 'Provision a server',
         description:
             'Pick a role and flitops installs Nginx, PHP, your database, Redis, and Node, hardened and ready.',
-        detail: 'Nginx · PHP 8.4 · MySQL 8 · Redis',
+        visual: <ProvisionVisual />,
     },
     {
         title: 'Push to deploy',
         description:
             'Link a repository. Every push builds a fresh release and switches over with zero downtime.',
-        detail: 'git push origin main',
+        visual: <PushVisual />,
     },
+];
+
+const stats = [
+    { value: '4', label: 'cloud providers, or any Ubuntu server over SSH' },
+    { value: '5', label: 'server roles, from one box to a full fleet' },
+    { value: '0', label: 'seconds of downtime when a deploy goes live' },
+    { value: '$0', label: 'for your first server, with no card required' },
 ];
 
 const serverRoles = [
     {
         name: 'App server',
+        host: 'fra-app-1',
         description: 'Everything on one box: PHP, Nginx, database, and Redis.',
     },
     {
         name: 'Web server',
+        host: 'fra-web-1',
         description: 'PHP and Nginx, talking to a database elsewhere.',
     },
     {
         name: 'Worker server',
+        host: 'fra-worker-1',
         description: 'Background jobs and queues, nothing public.',
     },
     {
         name: 'Database server',
+        host: 'fra-db-1',
         description: 'MySQL, PostgreSQL, or MariaDB on its own machine.',
     },
     {
         name: 'Cache server',
+        host: 'fra-cache-1',
         description: 'A dedicated Redis for cache, sessions, and queues.',
     },
 ];
@@ -169,22 +191,19 @@ function Capability({
     title,
     description,
     visual,
-    className,
+    tone,
 }: (typeof capabilities)[number]) {
     return (
-        <div
-            className={cn(
-                'group flex flex-col justify-between gap-8 rounded-2xl border border-border bg-muted/30 p-6 transition-colors hover:bg-muted/50 sm:p-7',
-                className,
-            )}
-        >
-            <div>
-                <h3 className="font-semibold tracking-tight">{title}</h3>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
+            <Scene tone={tone} className="flex h-60 items-center px-6 sm:px-8">
+                <div className="w-full">{visual}</div>
+            </Scene>
+            <div className="p-6 sm:p-8">
+                <h3 className="text-xl font-medium tracking-tight">{title}</h3>
+                <p className="mt-2 leading-relaxed text-muted-foreground">
                     {description}
                 </p>
             </div>
-            <div>{visual}</div>
         </div>
     );
 }
@@ -200,92 +219,102 @@ export default function Welcome({
             description="flitops provisions servers on your own cloud, installs your stack, and ships every git push as a zero-downtime deployment."
             canRegister={canRegister}
         >
-            <section className="relative px-6 pt-16 pb-20 sm:pt-24">
-                <BackdropGrid />
-
-                <div className="mx-auto max-w-3xl text-center">
-                    <Link
-                        href={features()}
-                        className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 py-1 pr-3 pl-1 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur transition-colors hover:text-foreground"
-                    >
-                        <span className="rounded-full bg-brand-accent px-2 py-0.5 text-neutral-950">
-                            New
-                        </span>
-                        Provision servers on AWS
-                        <ArrowRightIcon className="size-3" />
-                    </Link>
-
-                    <h1 className="mt-8 text-[2.75rem] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-7xl">
-                        Ship to servers you own.
-                        <span className="block text-muted-foreground">
-                            Skip the ops team.
+            <section className="px-6 pt-14 sm:pt-24 lg:px-8">
+                <div className="mx-auto max-w-7xl">
+                    <h1 className="max-w-5xl text-[2.75rem] leading-[1.02] font-medium tracking-[-0.035em] text-balance sm:text-7xl lg:text-[5.25rem]">
+                        The deployment platform for{' '}
+                        <span className="text-brand dark:text-blue-400">
+                            servers you own.
                         </span>
                     </h1>
 
-                    <p className="mx-auto mt-7 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
+                    <p className="mt-8 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground sm:text-xl">
                         flitops provisions servers on your own cloud, installs a
                         production-ready stack, and turns every git push into a
                         zero-downtime deployment.
                     </p>
 
-                    <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                    <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <Button
                             asChild
                             size="lg"
-                            className="h-11 rounded-full px-6"
+                            className="h-12 px-7 text-base"
                         >
                             <Link href={canRegister ? register() : login()}>
                                 Start for free
-                                <ArrowRightIcon />
                             </Link>
                         </Button>
                         <Button
                             asChild
                             size="lg"
                             variant="outline"
-                            className="h-11 rounded-full px-6"
+                            className="h-12 px-7 text-base"
                         >
                             <a href="#how-it-works">See how it works</a>
                         </Button>
+                        <p className="text-sm text-muted-foreground sm:ml-3">
+                            Free for your first server. No card required.
+                        </p>
                     </div>
 
-                    <p className="mt-5 text-xs text-muted-foreground">
-                        Free for your first server. No card required.
-                    </p>
-                </div>
-
-                <div className="mt-16 sm:mt-20">
-                    <ProductPreview />
+                    <Scene
+                        tone="brand"
+                        className="mt-16 rounded-3xl px-4 pt-4 sm:mt-20 sm:px-10 sm:pt-10 lg:px-16 lg:pt-16"
+                    >
+                        <ProductPreview />
+                    </Scene>
                 </div>
             </section>
 
-            <section className="px-6 pb-8">
-                <div className="mx-auto max-w-5xl">
-                    <p className="text-center text-sm text-muted-foreground">
-                        Works with the clouds and tools you already use
-                    </p>
-                    <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-                        {integrations.map((integration) => (
-                            <li
-                                key={integration}
-                                className="text-lg font-semibold tracking-tight text-foreground/35 transition-colors hover:text-foreground/70"
+            <section className="px-6 lg:px-8">
+                <div className="mx-auto max-w-7xl">
+                    <div className="flex flex-col gap-5 border-b border-border py-10 lg:flex-row lg:items-center lg:gap-16">
+                        <p className="shrink-0 text-sm text-muted-foreground">
+                            Works with
+                        </p>
+                        <ul className="flex flex-wrap gap-x-10 gap-y-3 font-medium lg:flex-1 lg:justify-between">
+                            {integrations.map((integration) => (
+                                <li key={integration}>{integration}</li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <dl className="grid grid-cols-2 border-b border-border lg:grid-cols-4">
+                        {stats.map((stat) => (
+                            <div
+                                key={stat.label}
+                                className="border-border py-10 pr-6 not-first:pl-6 max-lg:odd:pl-0 max-lg:even:border-l max-lg:nth-[n+3]:border-t sm:py-12 lg:not-first:border-l"
                             >
-                                {integration}
-                            </li>
+                                <dd className="text-5xl font-medium tracking-[-0.035em] sm:text-6xl">
+                                    {stat.value}
+                                </dd>
+                                <dt className="mt-3 max-w-[14rem] text-muted-foreground">
+                                    {stat.label}
+                                </dt>
+                            </div>
                         ))}
-                    </ul>
+                    </dl>
                 </div>
             </section>
 
-            <section className="px-6 py-24 sm:py-32">
-                <div className="mx-auto max-w-6xl">
-                    <SectionHeading
-                        eyebrow="The platform"
-                        title="Everything between git push and production"
-                        description="The work a platform team would do for you, done on servers you control."
-                    />
+            <section className="px-6 py-24 sm:py-32 lg:px-8">
+                <div className="mx-auto max-w-7xl">
+                    <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+                        <SectionHeading
+                            eyebrow="The platform"
+                            title="Everything between git push and production"
+                            description="The work a platform team would do for you, done on servers you control."
+                        />
+                        <Link
+                            href={features()}
+                            className="inline-flex shrink-0 items-center gap-2 font-medium underline-offset-4 hover:underline"
+                        >
+                            Explore every feature
+                            <ArrowRightIcon className="size-4" />
+                        </Link>
+                    </div>
 
-                    <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         {capabilities.map((capability) => (
                             <Capability
                                 key={capability.title}
@@ -293,70 +322,59 @@ export default function Welcome({
                             />
                         ))}
                     </div>
-
-                    <div className="mt-10 text-center">
-                        <Link
-                            href={features()}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-brand"
-                        >
-                            Explore every feature
-                            <ArrowRightIcon className="size-4" />
-                        </Link>
-                    </div>
                 </div>
             </section>
 
             <section
                 id="how-it-works"
-                className="scroll-mt-20 border-y border-border bg-muted/30 px-6 py-24 sm:py-32"
+                className="scroll-mt-18 bg-muted px-6 py-24 sm:py-32 lg:px-8"
             >
-                <div className="mx-auto max-w-6xl">
+                <div className="mx-auto max-w-7xl">
                     <SectionHeading
                         eyebrow="How it works"
                         title="From a blank account to live in minutes"
                         description="No runbooks, no hand-written Nginx configs, no SSH sessions at midnight."
                     />
 
-                    <ol className="mt-16 grid gap-4 lg:grid-cols-3">
+                    <ol className="mt-16 grid gap-5 lg:grid-cols-3">
                         {steps.map((step, index) => (
                             <li
                                 key={step.title}
-                                className="relative rounded-2xl border border-border bg-background p-7"
+                                className="flex flex-col rounded-2xl bg-card p-6 shadow-card sm:p-8"
                             >
-                                <span className="font-log text-xs text-muted-foreground">
-                                    {String(index + 1).padStart(2, '0')}
+                                <span className="flex size-9 items-center justify-center rounded-full bg-brand font-log text-sm font-medium text-white">
+                                    {index + 1}
                                 </span>
-                                <h3 className="mt-6 text-lg font-semibold tracking-tight">
+                                <h3 className="mt-6 text-2xl font-medium tracking-tight">
                                     {step.title}
                                 </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                <p className="mt-3 mb-8 leading-relaxed text-muted-foreground">
                                     {step.description}
                                 </p>
-                                <p className="mt-8 rounded-lg bg-muted/60 px-3 py-2 font-log text-xs text-muted-foreground">
-                                    {step.detail}
-                                </p>
+                                <div className="mt-auto">{step.visual}</div>
                             </li>
                         ))}
                     </ol>
                 </div>
             </section>
 
-            <section className="px-6 py-24 sm:py-32">
-                <div className="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-2">
+            <section className="px-6 py-24 sm:py-32 lg:px-8">
+                <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
                     <div>
                         <SectionHeading
-                            align="left"
                             eyebrow="Servers"
                             title="One server today. A fleet when you need it."
                             description="Start with everything on a single machine. When traffic grows, split the database, queues, and cache onto their own servers and connect them privately, without rebuilding anything."
                         />
                         <div className="mt-10">
-                            <p className="text-sm font-medium">Deploy any of</p>
-                            <ul className="mt-3 flex flex-wrap gap-2">
+                            <p className="text-sm text-muted-foreground">
+                                Deploy any of
+                            </p>
+                            <ul className="mt-3 flex flex-wrap gap-2 font-medium">
                                 {frameworks.map((framework) => (
                                     <li
                                         key={framework}
-                                        className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground"
+                                        className="rounded-full bg-secondary px-3.5 py-1.5 text-sm"
                                     >
                                         {framework}
                                     </li>
@@ -365,67 +383,77 @@ export default function Welcome({
                         </div>
                     </div>
 
-                    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
-                        {serverRoles.map((role, index) => (
+                    <Scene tone="green" className="rounded-3xl p-4 sm:p-10">
+                        <ul className="divide-y divide-border overflow-hidden rounded-2xl bg-card shadow-overlay">
+                            {serverRoles.map((role) => (
+                                <li
+                                    key={role.name}
+                                    className="flex items-center gap-4 px-5 py-4"
+                                >
+                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                                        <HardDrivesIcon className="size-[18px]" />
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="font-medium">
+                                            {role.name}
+                                            <span className="ml-2 font-log text-xs font-normal text-muted-foreground">
+                                                {role.host}
+                                            </span>
+                                        </p>
+                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                            {role.description}
+                                        </p>
+                                    </div>
+                                    <StatusBadge
+                                        status="Active"
+                                        color="green"
+                                        className="ml-auto max-sm:hidden"
+                                    />
+                                </li>
+                            ))}
+                        </ul>
+                    </Scene>
+                </div>
+            </section>
+
+            <section className="dark bg-neutral-950 px-6 py-24 text-foreground sm:py-32 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-2 lg:gap-20">
+                    <div>
+                        <SectionHeading
+                            eyebrow="Security"
+                            title="Secure by default, not by checklist"
+                            description="Every server flitops builds starts hardened. The careful choices are already made, so you don't have to remember them."
+                        />
+                        <Button
+                            asChild
+                            size="lg"
+                            className="mt-10 h-12 px-7 text-base"
+                        >
+                            <Link href={security()}>
+                                How we protect your fleet
+                            </Link>
+                        </Button>
+                    </div>
+                    <ul className="self-start border-t border-border">
+                        {securityPoints.map((point) => (
                             <li
-                                key={role.name}
-                                className="flex items-start gap-5 bg-background p-5 sm:p-6"
+                                key={point}
+                                className="flex gap-4 border-b border-border py-5"
                             >
-                                <span className="mt-0.5 font-log text-xs text-muted-foreground">
-                                    {String(index + 1).padStart(2, '0')}
-                                </span>
-                                <div>
-                                    <p className="font-medium">{role.name}</p>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        {role.description}
-                                    </p>
-                                </div>
+                                <CheckIcon
+                                    weight="bold"
+                                    className="mt-1 size-4 shrink-0 text-emerald-400"
+                                />
+                                {point}
                             </li>
                         ))}
                     </ul>
                 </div>
             </section>
 
-            <section className="px-6">
-                <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-border bg-muted/30 p-8 sm:p-14">
-                    <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr]">
-                        <div>
-                            <SectionHeading
-                                align="left"
-                                eyebrow="Security"
-                                title="Secure by default, not by checklist"
-                                description="Every server flitops builds starts hardened. The careful choices are already made, so you don't have to remember them."
-                            />
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="mt-8 rounded-full"
-                            >
-                                <Link href={security()}>
-                                    How we protect your fleet
-                                    <ArrowRightIcon />
-                                </Link>
-                            </Button>
-                        </div>
-                        <ul className="grid content-center gap-4 sm:grid-cols-2">
-                            {securityPoints.map((point) => (
-                                <li
-                                    key={point}
-                                    className="flex gap-3 text-sm leading-relaxed"
-                                >
-                                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-brand dark:text-blue-400" />
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <section className="px-6 py-24 sm:py-32">
-                <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.6fr]">
+            <section className="px-6 pt-24 sm:pt-32 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
                     <SectionHeading
-                        align="left"
                         eyebrow="Questions"
                         title="Good to know"
                         description={

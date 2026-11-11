@@ -43,29 +43,31 @@ export default function Contact() {
                 description="Real people read every message. We usually reply within one business day."
             />
 
-            <section className="px-6 pb-24 sm:pb-32">
-                <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
+            <section className="px-6 pb-24 sm:pb-32 lg:px-8">
+                <ul className="mx-auto max-w-7xl border-t border-border">
                     {channels.map((channel) => (
-                        <a
+                        <li
                             key={channel.title}
-                            href={`mailto:${contactEmail}?subject=${encodeURIComponent(channel.subject)}`}
-                            className="group flex flex-col rounded-2xl border border-border bg-background p-7 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lg hover:shadow-black/5"
+                            className="border-b border-border"
                         >
-                            <div className="flex items-center justify-between">
-                                <h2 className="font-semibold tracking-tight">
+                            <a
+                                href={`mailto:${contactEmail}?subject=${encodeURIComponent(channel.subject)}`}
+                                className="group grid gap-x-10 gap-y-2 py-8 lg:grid-cols-[1fr_1.4fr_auto] lg:items-center"
+                            >
+                                <h2 className="text-2xl font-medium tracking-tight">
                                     {channel.title}
                                 </h2>
-                                <ArrowUpRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
-                            </div>
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                {channel.description}
-                            </p>
-                            <p className="mt-8 text-sm font-medium">
-                                {contactEmail}
-                            </p>
-                        </a>
+                                <p className="max-w-md leading-relaxed text-muted-foreground">
+                                    {channel.description}
+                                </p>
+                                <p className="mt-2 flex items-center gap-2 font-medium underline-offset-4 group-hover:underline lg:mt-0">
+                                    {contactEmail}
+                                    <ArrowUpRightIcon className="size-4" />
+                                </p>
+                            </a>
+                        </li>
                     ))}
-                </div>
+                </ul>
             </section>
         </MarketingLayout>
     );

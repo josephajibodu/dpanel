@@ -1,4 +1,4 @@
-import { CheckIcon, LockIcon } from '@phosphor-icons/react';
+import { CheckIcon, CircleNotchIcon, LockIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/lib/utils';
 
@@ -87,11 +87,11 @@ export function TeamVisual() {
     ];
 
     return (
-        <ul className="space-y-1.5">
+        <ul className="divide-y divide-border rounded-lg bg-background ring-1 ring-border">
             {members.map((member) => (
                 <li
                     key={member.name}
-                    className="flex items-center gap-2.5 text-xs"
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs"
                 >
                     <span className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
                         {member.initials}
@@ -139,7 +139,7 @@ export function MetricsVisual() {
     ];
 
     return (
-        <div className="space-y-3.5">
+        <div className="space-y-3.5 rounded-lg bg-background p-3.5 ring-1 ring-border">
             {metrics.map((metric) => (
                 <div key={metric.label} className="text-xs">
                     <div className="flex justify-between">
@@ -162,6 +162,89 @@ export function MetricsVisual() {
                 <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                 storefront.acme.com is up · checked 40s ago
             </p>
+        </div>
+    );
+}
+
+export function ProviderVisual() {
+    const providers = ['DigitalOcean', 'Hetzner', 'Vultr', 'AWS'];
+
+    return (
+        <ul className="grid grid-cols-2 gap-2">
+            {providers.map((provider) => (
+                <li
+                    key={provider}
+                    className={cn(
+                        'flex items-center gap-2.5 rounded-lg bg-background px-3 py-2.5 text-xs font-medium ring-1',
+                        provider === 'Hetzner'
+                            ? 'ring-2 ring-brand'
+                            : 'ring-border',
+                    )}
+                >
+                    <span
+                        className={cn(
+                            'flex size-3.5 items-center justify-center rounded-full border',
+                            provider === 'Hetzner'
+                                ? 'border-brand bg-brand'
+                                : 'border-input',
+                        )}
+                    >
+                        {provider === 'Hetzner' && (
+                            <span className="size-1.5 rounded-full bg-white" />
+                        )}
+                    </span>
+                    {provider}
+                </li>
+            ))}
+            <li className="col-span-2 rounded-lg bg-background px-3 py-2.5 font-log text-[11px] text-muted-foreground ring-1 ring-border">
+                CX32 · Falkenstein · Ubuntu 24.04
+            </li>
+        </ul>
+    );
+}
+
+export function ProvisionVisual() {
+    const steps = [
+        { name: 'Nginx', done: true },
+        { name: 'PHP 8.4', done: true },
+        { name: 'MySQL 8', done: true },
+        { name: 'Redis', done: false },
+    ];
+
+    return (
+        <ul className="divide-y divide-border rounded-lg bg-background ring-1 ring-border">
+            {steps.map((step) => (
+                <li
+                    key={step.name}
+                    className="flex items-center gap-3 px-3 py-2.5 text-xs"
+                >
+                    {step.done ? (
+                        <span className="flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white">
+                            <CheckIcon weight="bold" className="size-2.5" />
+                        </span>
+                    ) : (
+                        <CircleNotchIcon className="size-4 animate-spin text-brand motion-reduce:animate-none dark:text-blue-400" />
+                    )}
+                    <span className="font-medium">{step.name}</span>
+                    <span className="ml-auto text-muted-foreground">
+                        {step.done ? 'Installed' : 'Installing'}
+                    </span>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+export function PushVisual() {
+    return (
+        <div className="rounded-lg bg-neutral-950 p-3.5 font-log text-[11px] leading-relaxed ring-1 ring-white/10">
+            <p className="text-white/85">
+                <span className="text-blue-400">~$</span> git push origin main
+            </p>
+            <p className="text-white/45">To github.com:acme/storefront.git</p>
+            <p className="text-white/45"> 7be03d1..a41f9c2 main → main</p>
+            <p className="mt-2 text-white/85">flitops is deploying a41f9c2</p>
+            <p className="text-emerald-400">✓ Live in 14.2s, no downtime</p>
         </div>
     );
 }

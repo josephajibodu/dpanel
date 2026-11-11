@@ -137,7 +137,7 @@ function PlanValue({ value }: { value: string | boolean }) {
     if (value === true) {
         return (
             <CheckIcon
-                className="mx-auto size-4 text-foreground"
+                className="size-4 text-foreground"
                 aria-label="Included"
             />
         );
@@ -146,7 +146,7 @@ function PlanValue({ value }: { value: string | boolean }) {
     if (value === false) {
         return (
             <MinusIcon
-                className="mx-auto size-4 text-muted-foreground/50"
+                className="size-4 text-muted-foreground/50"
                 aria-label="Not included"
             />
         );
@@ -169,11 +169,11 @@ export default function Pricing() {
                 title="Flat pricing. Unlimited servers."
                 description="One price for the platform, however large your fleet grows. You pay your cloud provider directly for the servers."
             >
-                <div className="mt-10 flex flex-wrap justify-center gap-3">
+                <div className="mt-12 flex flex-wrap gap-3">
                     <div
                         role="radiogroup"
                         aria-label="Billing period"
-                        className="inline-flex rounded-full border border-border bg-background p-1 text-sm"
+                        className="inline-flex rounded-full bg-secondary p-1 text-sm"
                     >
                         {(['monthly', 'yearly'] as const).map((period) => (
                             <button
@@ -185,13 +185,13 @@ export default function Pricing() {
                                 className={cn(
                                     'rounded-full px-4 py-1.5 font-medium capitalize transition-colors',
                                     billingPeriod === period
-                                        ? 'bg-foreground text-background'
+                                        ? 'bg-background text-foreground shadow-button'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
                                 {period}
                                 {period === 'yearly' && (
-                                    <span className="ml-1.5 text-xs opacity-70">
+                                    <span className="ml-1.5 text-muted-foreground">
                                         −20%
                                     </span>
                                 )}
@@ -201,7 +201,7 @@ export default function Pricing() {
                     <div
                         role="radiogroup"
                         aria-label="Currency"
-                        className="inline-flex rounded-full border border-border bg-background p-1 text-sm"
+                        className="inline-flex rounded-full bg-secondary p-1 text-sm"
                     >
                         {(['usd', 'ngn'] as const).map((option) => (
                             <button
@@ -213,7 +213,7 @@ export default function Pricing() {
                                 className={cn(
                                     'rounded-full px-4 py-1.5 font-medium transition-colors',
                                     currency === option
-                                        ? 'bg-foreground text-background'
+                                        ? 'bg-background text-foreground shadow-button'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -224,8 +224,8 @@ export default function Pricing() {
                 </div>
             </PageHero>
 
-            <section className="px-6">
-                <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
+            <section className="px-6 lg:px-8">
+                <div className="mx-auto grid max-w-7xl overflow-hidden rounded-2xl border border-border lg:grid-cols-3">
                     {plans.map((plan) => {
                         const price = plan.prices[currency][billingPeriod];
 
@@ -233,56 +233,33 @@ export default function Pricing() {
                             <div
                                 key={plan.name}
                                 className={cn(
-                                    'relative flex flex-col rounded-2xl border p-8',
-                                    plan.isFeatured
-                                        ? 'border-foreground/15 bg-neutral-950 text-white shadow-2xl ring-1 shadow-brand/20 ring-white/10 dark:bg-neutral-900'
-                                        : 'border-border bg-background',
+                                    'flex flex-col border-border p-8 not-last:border-b sm:p-10 lg:not-last:border-r lg:not-last:border-b-0',
+                                    plan.isFeatured && 'bg-muted',
                                 )}
                             >
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-lg font-semibold">
+                                    <h2 className="text-2xl font-medium tracking-tight">
                                         {plan.name}
                                     </h2>
                                     {plan.isFeatured && (
-                                        <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-medium text-white">
+                                        <span className="rounded-full bg-foreground px-2.5 py-0.5 text-xs font-medium text-background">
                                             Most popular
                                         </span>
                                     )}
                                 </div>
-                                <p
-                                    className={cn(
-                                        'mt-2 min-h-10 text-sm',
-                                        plan.isFeatured
-                                            ? 'text-white/60'
-                                            : 'text-muted-foreground',
-                                    )}
-                                >
+                                <p className="mt-2 min-h-12 text-muted-foreground">
                                     {plan.description}
                                 </p>
 
-                                <p className="mt-8 flex items-baseline gap-1.5">
-                                    <span className="text-5xl font-semibold tracking-tight tabular-nums">
+                                <p className="mt-10 flex items-baseline gap-2">
+                                    <span className="text-6xl font-medium tracking-[-0.035em] tabular-nums">
                                         {formatPrice(price, currency)}
                                     </span>
-                                    <span
-                                        className={cn(
-                                            'text-sm',
-                                            plan.isFeatured
-                                                ? 'text-white/60'
-                                                : 'text-muted-foreground',
-                                        )}
-                                    >
+                                    <span className="text-muted-foreground">
                                         {price === 0 ? 'forever' : '/ month'}
                                     </span>
                                 </p>
-                                <p
-                                    className={cn(
-                                        'mt-1 h-5 text-xs',
-                                        plan.isFeatured
-                                            ? 'text-white/50'
-                                            : 'text-muted-foreground',
-                                    )}
-                                >
+                                <p className="mt-2 h-5 text-sm text-muted-foreground">
                                     {price > 0 &&
                                         billingPeriod === 'yearly' &&
                                         `Billed ${formatPrice(price * 12, currency)} yearly`}
@@ -292,33 +269,20 @@ export default function Pricing() {
                                     asChild
                                     size="lg"
                                     variant={
-                                        plan.isFeatured
-                                            ? 'secondary'
-                                            : 'outline'
+                                        plan.isFeatured ? 'default' : 'outline'
                                     }
-                                    className={cn(
-                                        'mt-8 h-11 rounded-full',
-                                        plan.isFeatured &&
-                                            'bg-white text-neutral-950 hover:bg-white/90',
-                                    )}
+                                    className="mt-8 h-12 text-base"
                                 >
                                     <Link href={register()}>{plan.cta}</Link>
                                 </Button>
 
-                                <ul className="mt-8 space-y-3 text-sm">
+                                <ul className="mt-10 space-y-3.5 border-t border-border pt-8">
                                     {plan.highlights.map((highlight) => (
                                         <li
                                             key={highlight}
                                             className="flex gap-3"
                                         >
-                                            <CheckIcon
-                                                className={cn(
-                                                    'mt-0.5 size-4 shrink-0',
-                                                    plan.isFeatured
-                                                        ? 'text-blue-400'
-                                                        : 'text-brand dark:text-blue-400',
-                                                )}
-                                            />
+                                            <CheckIcon className="mt-1 size-4 shrink-0" />
                                             {highlight}
                                         </li>
                                     ))}
@@ -328,7 +292,7 @@ export default function Pricing() {
                     })}
                 </div>
 
-                <p className="mx-auto mt-8 max-w-6xl text-center text-sm text-muted-foreground">
+                <p className="mx-auto mt-8 max-w-7xl text-muted-foreground">
                     Running a large fleet or need an invoice and a contract?{' '}
                     <Link
                         href={contact()}
@@ -340,16 +304,16 @@ export default function Pricing() {
                 </p>
             </section>
 
-            <section className="px-6 pt-24 sm:pt-32">
-                <div className="mx-auto max-w-6xl">
+            <section className="px-6 pt-24 sm:pt-32 lg:px-8">
+                <div className="mx-auto max-w-7xl">
                     <SectionHeading title="Compare plans" />
                     <div className="mt-12 overflow-x-auto">
-                        <table className="w-full min-w-[640px] text-sm">
+                        <table className="w-full min-w-[640px]">
                             <thead>
-                                <tr className="border-b border-border">
+                                <tr className="border-b border-foreground">
                                     <th
                                         scope="col"
-                                        className="py-4 pr-4 text-left font-medium text-muted-foreground"
+                                        className="py-4 pr-4 text-left"
                                     >
                                         <span className="sr-only">Feature</span>
                                     </th>
@@ -357,14 +321,14 @@ export default function Pricing() {
                                         <th
                                             key={plan.name}
                                             scope="col"
-                                            className="w-1/5 px-4 py-4 text-center font-semibold"
+                                            className="w-1/5 px-4 py-4 text-left text-lg font-medium"
                                         >
                                             {plan.name}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
+                            <tbody className="divide-y divide-border border-b border-border">
                                 {comparisonRows.map((row) => (
                                     <tr key={row.label}>
                                         <th
@@ -376,7 +340,7 @@ export default function Pricing() {
                                         {row.values.map((value, index) => (
                                             <td
                                                 key={index}
-                                                className="px-4 py-4 text-center text-muted-foreground"
+                                                className="px-4 py-4 text-muted-foreground"
                                             >
                                                 <PlanValue value={value} />
                                             </td>
@@ -389,9 +353,9 @@ export default function Pricing() {
                 </div>
             </section>
 
-            <section className="px-6 pt-24 sm:pt-32">
-                <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.6fr]">
-                    <SectionHeading align="left" title="Billing questions" />
+            <section className="px-6 pt-24 sm:pt-32 lg:px-8">
+                <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+                    <SectionHeading title="Billing questions" />
                     <FaqList items={faqs} />
                 </div>
             </section>

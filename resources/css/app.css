@@ -12,6 +12,12 @@
         'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
         'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
+    /* The public site's typeface; the dashboard stays on Inter. */
+    --font-marketing:
+        'Host Grotesk', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+
     --font-log:
         'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         'Liberation Mono', 'Courier New', monospace;
@@ -24,15 +30,21 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
+    --color-brand: #2563eb;
+}
+
+/*
+ * Aliases of the theme variables below. They are inlined so a utility such as
+ * `bg-background` reads the variable where it is used, which lets a `dark`
+ * class on any element re-theme everything inside it.
+ */
+@theme inline {
     --shadow-card: var(--elevation-card);
     --shadow-button: var(--elevation-button);
     --shadow-button-primary: var(--elevation-button-primary);
     --shadow-overlay: var(--elevation-overlay);
 
     --color-link: var(--link);
-
-    --color-brand: #2563eb;
-    --color-brand-accent: #ff7a59;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);

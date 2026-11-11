@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRightIcon, ListIcon } from '@phosphor-icons/react';
+import { ListIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -41,7 +41,7 @@ export function MarketingWordmark({ className }: { className?: string }) {
             <span className="flex size-7 items-center justify-center rounded-[7px] bg-brand text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]">
                 <AppLogoIcon className="size-4 fill-current" />
             </span>
-            <span className="text-[17px] font-semibold tracking-tight">
+            <span className="text-lg font-semibold tracking-tight">
                 flitops
             </span>
         </Link>
@@ -73,23 +73,21 @@ export default function MarketingHeader({
     return (
         <header
             className={cn(
-                'sticky top-0 z-50 border-b transition-colors duration-300',
-                hasScrolled
-                    ? 'border-border/70 bg-background/80 backdrop-blur-xl'
-                    : 'border-transparent bg-transparent',
+                'sticky top-0 z-50 border-b bg-background transition-colors duration-200',
+                hasScrolled ? 'border-border' : 'border-transparent',
             )}
         >
-            <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-                <div className="flex items-center gap-10">
+            <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
+                <div className="flex items-center gap-12">
                     <MarketingWordmark />
 
-                    <nav className="hidden items-center gap-1 text-sm md:flex">
+                    <nav className="hidden items-center gap-8 text-[15px] font-medium md:flex">
                         {marketingNavigation.map((item) => (
                             <Link
                                 key={item.title}
                                 href={item.href}
                                 className={cn(
-                                    'rounded-md px-3 py-1.5 transition-colors hover:text-foreground',
+                                    'transition-colors hover:text-foreground',
                                     currentPath === item.href
                                         ? 'text-foreground'
                                         : 'text-muted-foreground',
@@ -103,28 +101,20 @@ export default function MarketingHeader({
 
                 <div className="flex items-center gap-2">
                     {auth.user ? (
-                        <Button asChild size="sm" className="rounded-full px-4">
-                            <Link href={dashboardHref}>
-                                Open dashboard
-                                <ArrowRightIcon />
-                            </Link>
+                        <Button asChild className="h-9 px-4">
+                            <Link href={dashboardHref}>Open dashboard</Link>
                         </Button>
                     ) : (
                         <>
                             <Button
                                 asChild
                                 variant="ghost"
-                                size="sm"
-                                className="hidden rounded-full sm:inline-flex"
+                                className="hidden h-9 px-4 sm:inline-flex"
                             >
                                 <Link href={login()}>Log in</Link>
                             </Button>
                             {canRegister && (
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className="rounded-full px-4"
-                                >
+                                <Button asChild className="h-9 px-4">
                                     <Link href={register()}>Start free</Link>
                                 </Button>
                             )}
@@ -142,7 +132,10 @@ export default function MarketingHeader({
                                 <ListIcon className="size-5" />
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="top" className="px-6 pt-5 pb-8">
+                        <SheetContent
+                            side="top"
+                            className="px-6 pt-5 pb-8 font-marketing [font-feature-settings:normal]"
+                        >
                             <SheetTitle className="sr-only">Menu</SheetTitle>
                             <MarketingWordmark />
                             <nav className="mt-4 flex flex-col">
@@ -150,7 +143,7 @@ export default function MarketingHeader({
                                     <Link
                                         key={item.title}
                                         href={item.href}
-                                        className="border-b border-border/60 py-3.5 text-base font-medium"
+                                        className="border-b border-border py-4 text-lg font-medium"
                                     >
                                         {item.title}
                                     </Link>
@@ -158,7 +151,7 @@ export default function MarketingHeader({
                                 {!auth.user && (
                                     <Link
                                         href={login()}
-                                        className="py-3.5 text-base font-medium"
+                                        className="py-4 text-lg font-medium"
                                     >
                                         Log in
                                     </Link>
