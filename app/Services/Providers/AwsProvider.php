@@ -10,7 +10,9 @@ use App\Data\ProviderSize;
 use App\Exceptions\ProviderApiException;
 use Aws\Ec2\Ec2Client;
 use Aws\Exception\AwsException;
+use Aws\Pricing\PricingClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Amazon EC2.
@@ -26,23 +28,36 @@ class AwsProvider implements ProviderContract
      */
     private const string CANONICAL_OWNER_ID = '099720109477';
 
-    private const string UBUNTU_IMAGE_NAME = 'ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*';
+    /**
+     * The official Ubuntu 24.04 image for each processor architecture.
+     *
+     * @var array<string, array{name: string, architecture: string}>
+     */
+    private const array UBUNTU_IMAGES = [
+        'x86' => ['name' => 'ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*', 'architecture' => 'x86_64'],
+        'arm' => ['name' => 'ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-*', 'architecture' => 'arm64'],
+    ];
+
+    /**
+     * Who makes the processors of each architecture's instance types below.
+     */
+    private const array CPU_VENDORS = ['x86' => 'Intel', 'arm' => 'AWS Graviton'];
 
     private const string SECURITY_GROUP_NAME = 'flitops';
 
     private const int ROOT_VOLUME_GB = 30;
 
     /**
-     * What AWS bills each month on top of the instance itself, at us-east-1
-     * prices: the 30 GB gp3 root volume ($0.08/GB) and the Elastic IP
-     * ($0.005/hour).
-     *
-     * @var list<array{label: string, price_monthly: float}>
+     * The us-east-1 price of the gp3 root volume per GB a month, used when
+     * AWS's real prices can't be read.
      */
-    private const array EXTRA_CHARGES = [
-        ['label' => '30 GB disk (gp3)', 'price_monthly' => 2.40],
-        ['label' => 'Public IPv4 address', 'price_monthly' => 3.65],
-    ];
+    private const float ESTIMATED_DISK_PRICE_PER_GB = 0.08;
+
+    /**
+     * The monthly price of the Elastic IP ($0.005/hour), which AWS charges
+     * the same in every region.
+     */
+    private const float PUBLIC_IP_PRICE_MONTHLY = 3.65;
 
     /**
      * The hours AWS counts in a month when it quotes a monthly price.
@@ -50,24 +65,41 @@ class AwsProvider implements ProviderContract
     private const int HOURS_PER_MONTH = 730;
 
     /**
-     * Instance types offered when creating a server, with us-east-1 on-demand
-     * Linux prices per month (730 hours). Prices in other regions are similar
-     * but not identical, and AWS has no simple price API, so these are a guide.
-     * All of them run on Intel x86 processors.
+     * AWS only answers price questions from a few regions; the answer covers
+     * every region.
+     */
+    private const string PRICING_API_REGION = 'us-east-1';
+
+    private const string PRICES_CACHE_KEY = 'aws:ec2-prices:v1';
+
+    /**
+     * Instance types offered when creating a server. The price is the
+     * us-east-1 on-demand Linux price per month (730 hours); it is only a
+     * guide, shown when AWS's real per-region prices can't be read.
      *
-     * @var array<string, array{vcpus: int, memory: int, price: float, family: string}>
+     * @var array<string, array{vcpus: int, memory: int, price: float, family: string, architecture: string}>
      */
     private const array INSTANCE_TYPES = [
-        't3.small' => ['vcpus' => 2, 'memory' => 2048, 'price' => 15.18, 'family' => 'General purpose, burstable'],
-        't3.medium' => ['vcpus' => 2, 'memory' => 4096, 'price' => 30.37, 'family' => 'General purpose, burstable'],
-        't3.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 60.74, 'family' => 'General purpose, burstable'],
-        'c6i.large' => ['vcpus' => 2, 'memory' => 4096, 'price' => 62.05, 'family' => 'Compute optimized'],
-        'm6i.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 70.08, 'family' => 'General purpose'],
-        'r6i.large' => ['vcpus' => 2, 'memory' => 16384, 'price' => 91.98, 'family' => 'Memory optimized'],
-        't3.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 121.47, 'family' => 'General purpose, burstable'],
-        'c6i.xlarge' => ['vcpus' => 4, 'memory' => 8192, 'price' => 124.10, 'family' => 'Compute optimized'],
-        'm6i.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 140.16, 'family' => 'General purpose'],
-        't3.2xlarge' => ['vcpus' => 8, 'memory' => 32768, 'price' => 242.94, 'family' => 'General purpose, burstable'],
+        't4g.small' => ['vcpus' => 2, 'memory' => 2048, 'price' => 12.26, 'family' => 'General purpose, burstable', 'architecture' => 'arm'],
+        't3.small' => ['vcpus' => 2, 'memory' => 2048, 'price' => 15.18, 'family' => 'General purpose, burstable', 'architecture' => 'x86'],
+        't4g.medium' => ['vcpus' => 2, 'memory' => 4096, 'price' => 24.53, 'family' => 'General purpose, burstable', 'architecture' => 'arm'],
+        't3.medium' => ['vcpus' => 2, 'memory' => 4096, 'price' => 30.37, 'family' => 'General purpose, burstable', 'architecture' => 'x86'],
+        't4g.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 49.06, 'family' => 'General purpose, burstable', 'architecture' => 'arm'],
+        'c7g.large' => ['vcpus' => 2, 'memory' => 4096, 'price' => 52.93, 'family' => 'Compute optimized', 'architecture' => 'arm'],
+        'm7g.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 59.57, 'family' => 'General purpose', 'architecture' => 'arm'],
+        't3.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 60.74, 'family' => 'General purpose, burstable', 'architecture' => 'x86'],
+        'c6i.large' => ['vcpus' => 2, 'memory' => 4096, 'price' => 62.05, 'family' => 'Compute optimized', 'architecture' => 'x86'],
+        'm6i.large' => ['vcpus' => 2, 'memory' => 8192, 'price' => 70.08, 'family' => 'General purpose', 'architecture' => 'x86'],
+        'r7g.large' => ['vcpus' => 2, 'memory' => 16384, 'price' => 78.18, 'family' => 'Memory optimized', 'architecture' => 'arm'],
+        'r6i.large' => ['vcpus' => 2, 'memory' => 16384, 'price' => 91.98, 'family' => 'Memory optimized', 'architecture' => 'x86'],
+        't4g.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 98.11, 'family' => 'General purpose, burstable', 'architecture' => 'arm'],
+        'c7g.xlarge' => ['vcpus' => 4, 'memory' => 8192, 'price' => 105.85, 'family' => 'Compute optimized', 'architecture' => 'arm'],
+        'm7g.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 119.14, 'family' => 'General purpose', 'architecture' => 'arm'],
+        't3.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 121.47, 'family' => 'General purpose, burstable', 'architecture' => 'x86'],
+        'c6i.xlarge' => ['vcpus' => 4, 'memory' => 8192, 'price' => 124.10, 'family' => 'Compute optimized', 'architecture' => 'x86'],
+        'm6i.xlarge' => ['vcpus' => 4, 'memory' => 16384, 'price' => 140.16, 'family' => 'General purpose', 'architecture' => 'x86'],
+        't4g.2xlarge' => ['vcpus' => 8, 'memory' => 32768, 'price' => 196.22, 'family' => 'General purpose, burstable', 'architecture' => 'arm'],
+        't3.2xlarge' => ['vcpus' => 8, 'memory' => 32768, 'price' => 242.94, 'family' => 'General purpose, burstable', 'architecture' => 'x86'],
     ];
 
     /**
@@ -134,37 +166,197 @@ class AwsProvider implements ProviderContract
         }
     }
 
+    /**
+     * Each region carries what AWS bills there on top of the instance: the
+     * root volume, priced per region, and the fixed public IP.
+     */
     public function getRegions(): Collection
     {
         $result = $this->call('fetch regions', fn () => $this->client('us-east-1')->describeRegions());
+
+        $diskPrices = $this->prices()['disk'] ?? [];
 
         return collect($result['Regions'])
             ->map(fn ($r) => new ProviderRegion(
                 slug: $r['RegionName'],
                 name: (self::REGION_NAMES[$r['RegionName']] ?? $r['RegionName']).' ('.$r['RegionName'].')',
-                extraCharges: self::EXTRA_CHARGES,
+                extraCharges: [
+                    [
+                        'label' => self::ROOT_VOLUME_GB.' GB disk (gp3)',
+                        'price_monthly' => round(self::ROOT_VOLUME_GB * ($diskPrices[$r['RegionName']] ?? self::ESTIMATED_DISK_PRICE_PER_GB), 2),
+                    ],
+                    ['label' => 'Public IPv4 address', 'price_monthly' => self::PUBLIC_IP_PRICE_MONTHLY],
+                ],
             ))
             ->sortBy('slug')
             ->values();
     }
 
+    /**
+     * Each size carries the regions AWS sells it in and its real price in
+     * each. When the account may not read AWS's prices, every size is offered
+     * everywhere at its us-east-1 price and marked as an estimate.
+     */
     public function getSizes(): Collection
     {
+        $prices = $this->prices();
+
         return collect(self::INSTANCE_TYPES)
-            ->map(fn ($type, $slug) => new ProviderSize(
-                slug: $slug,
-                vcpus: $type['vcpus'],
-                memory: $type['memory'],
-                disk: self::ROOT_VOLUME_GB,
-                priceMonthly: $type['price'],
-                category: $type['family'],
-                priceHourly: round($type['price'] / self::HOURS_PER_MONTH, 4),
-                architecture: 'x86',
-                cpuVendor: 'Intel',
-                diskType: 'gp3 SSD',
-            ))
+            ->map(function ($type, $slug) use ($prices) {
+                $regionOverrides = collect($prices['instances'][$slug] ?? [])
+                    ->map(fn (float $hourly) => [
+                        'price_monthly' => round($hourly * self::HOURS_PER_MONTH, 2),
+                        'price_hourly' => $hourly,
+                    ]);
+
+                $cheapest = $regionOverrides->sortBy('price_monthly')->first();
+
+                return new ProviderSize(
+                    slug: $slug,
+                    vcpus: $type['vcpus'],
+                    memory: $type['memory'],
+                    disk: self::ROOT_VOLUME_GB,
+                    priceMonthly: $cheapest['price_monthly'] ?? $type['price'],
+                    category: $type['family'],
+                    regions: $prices === null ? null : $regionOverrides->keys()->all(),
+                    regionOverrides: $regionOverrides->all(),
+                    priceHourly: $cheapest['price_hourly'] ?? round($type['price'] / self::HOURS_PER_MONTH, 4),
+                    architecture: $type['architecture'],
+                    cpuVendor: self::CPU_VENDORS[$type['architecture']],
+                    diskType: 'gp3 SSD',
+                    priceIsEstimate: $prices === null,
+                );
+            })
+            ->filter(fn (ProviderSize $size) => $size->regions !== [])
             ->sortBy('priceMonthly')
             ->values();
+    }
+
+    /**
+     * AWS's published on-demand prices: the hourly price of each instance
+     * type and the monthly price per GB of a gp3 disk, both per region.
+     *
+     * The prices are the same for every AWS customer, so one answer is kept
+     * for a day and shared by all accounts. Null means this account couldn't
+     * read them (its IAM policy lacks pricing:GetProducts, or AWS failed);
+     * that isn't kept, so the next request tries again.
+     *
+     * @return array{instances: array<string, array<string, float>>, disk: array<string, float>}|null
+     */
+    private function prices(): ?array
+    {
+        if ($prices = Cache::get(self::PRICES_CACHE_KEY)) {
+            return $prices;
+        }
+
+        try {
+            $prices = [
+                'instances' => $this->instancePrices(),
+                'disk' => $this->diskPrices(),
+            ];
+        } catch (AwsException $e) {
+            if ($e->getAwsErrorCode() !== 'AccessDeniedException') {
+                report($e);
+            }
+
+            return null;
+        }
+
+        if ($prices['instances'] === []) {
+            return null;
+        }
+
+        Cache::put(self::PRICES_CACHE_KEY, $prices, now()->addDay());
+
+        return $prices;
+    }
+
+    /**
+     * The on-demand hourly price of each offered instance type running
+     * Linux, keyed by instance type and then region.
+     *
+     * @return array<string, array<string, float>>
+     */
+    private function instancePrices(): array
+    {
+        $products = $this->pricedProducts([
+            'instanceType' => implode(',', array_keys(self::INSTANCE_TYPES)),
+            'operatingSystem' => 'Linux',
+            'tenancy' => 'Shared',
+            'preInstalledSw' => 'NA',
+            'capacitystatus' => 'Used',
+            'locationType' => 'AWS Region',
+        ]);
+
+        $prices = [];
+
+        foreach ($products as $product) {
+            $prices[$product['attributes']['instanceType']][$product['attributes']['regionCode']] = $product['price'];
+        }
+
+        return $prices;
+    }
+
+    /**
+     * The monthly price per GB of a gp3 disk, keyed by region.
+     *
+     * @return array<string, float>
+     */
+    private function diskPrices(): array
+    {
+        $products = $this->pricedProducts([
+            'productFamily' => 'Storage',
+            'volumeApiName' => 'gp3',
+            'locationType' => 'AWS Region',
+        ]);
+
+        return array_column(
+            array_map(fn (array $product) => ['region' => $product['attributes']['regionCode'], 'price' => $product['price']], $products),
+            'price',
+            'region',
+        );
+    }
+
+    /**
+     * Ask AWS's price list for the EC2 products matching every filter, with
+     * the on-demand price of each. Products AWS lists without a price are
+     * left out.
+     *
+     * @param  array<string, string>  $filters  Attribute name => value. Several values separated by commas match any of them.
+     * @return list<array{attributes: array<string, string>, price: float}>
+     */
+    private function pricedProducts(array $filters): array
+    {
+        $pages = $this->pricingClient()->getPaginator('GetProducts', [
+            'ServiceCode' => 'AmazonEC2',
+            'MaxResults' => 100,
+            'Filters' => collect($filters)
+                ->map(fn (string $value, string $field) => [
+                    'Type' => str_contains($value, ',') ? 'ANY_OF' : 'TERM_MATCH',
+                    'Field' => $field,
+                    'Value' => $value,
+                ])
+                ->values()
+                ->all(),
+        ]);
+
+        $products = [];
+
+        foreach ($pages as $page) {
+            foreach ($page['PriceList'] ?? [] as $item) {
+                // Each item arrives as a JSON document of its own.
+                $item = is_string($item) ? json_decode($item, true) : $item;
+
+                $offer = collect($item['terms']['OnDemand'] ?? [])->first();
+                $price = collect($offer['priceDimensions'] ?? [])->first()['pricePerUnit']['USD'] ?? null;
+
+                if ((float) $price > 0) {
+                    $products[] = ['attributes' => $item['product']['attributes'], 'price' => (float) $price];
+                }
+            }
+        }
+
+        return $products;
     }
 
     public function createServer(
@@ -177,7 +369,7 @@ class AwsProvider implements ProviderContract
         $client = $this->client($region);
 
         $result = $this->call('create server', fn () => $client->runInstances([
-            'ImageId' => $this->ubuntuImageId($client),
+            'ImageId' => $this->ubuntuImageId($client, self::INSTANCE_TYPES[$size]['architecture'] ?? 'x86'),
             'InstanceType' => $size,
             'MinCount' => 1,
             'MaxCount' => 1,
@@ -308,15 +500,18 @@ class AwsProvider implements ProviderContract
     }
 
     /**
-     * Find the newest official Ubuntu 24.04 image in the client's region.
+     * Find the newest official Ubuntu 24.04 image in the client's region for
+     * the given processor architecture ("x86" or "arm").
      */
-    private function ubuntuImageId(Ec2Client $client): string
+    private function ubuntuImageId(Ec2Client $client, string $architecture): string
     {
+        $ubuntu = self::UBUNTU_IMAGES[$architecture];
+
         $result = $this->call('find Ubuntu image', fn () => $client->describeImages([
             'Owners' => [self::CANONICAL_OWNER_ID],
             'Filters' => [
-                ['Name' => 'name', 'Values' => [self::UBUNTU_IMAGE_NAME]],
-                ['Name' => 'architecture', 'Values' => ['x86_64']],
+                ['Name' => 'name', 'Values' => [$ubuntu['name']]],
+                ['Name' => 'architecture', 'Values' => [$ubuntu['architecture']]],
                 ['Name' => 'state', 'Values' => ['available']],
             ],
         ]));
@@ -424,6 +619,18 @@ class AwsProvider implements ProviderContract
     {
         return $this->clients[$region] ??= new Ec2Client([
             'region' => $region,
+            'version' => 'latest',
+            'credentials' => $this->credentials,
+            'retries' => 3,
+            'http' => ['timeout' => 30],
+            ...($this->handler ? ['handler' => $this->handler] : []),
+        ]);
+    }
+
+    private function pricingClient(): PricingClient
+    {
+        return new PricingClient([
+            'region' => self::PRICING_API_REGION,
             'version' => 'latest',
             'credentials' => $this->credentials,
             'retries' => 3,

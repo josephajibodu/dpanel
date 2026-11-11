@@ -19,6 +19,7 @@ readonly class ProviderSize
      * @param  string|null  $cpuVendor  Who makes the processor, e.g. "AMD".
      * @param  string|null  $diskType  The kind of disk, e.g. "NVMe SSD".
      * @param  list<string>  $unavailableRegions  Listed regions where the provider can't create the size right now, e.g. out of stock.
+     * @param  bool  $priceIsEstimate  Whether the prices are a rough guide because the provider's real ones couldn't be read.
      */
     public function __construct(
         public string $slug,
@@ -38,6 +39,7 @@ readonly class ProviderSize
         public ?string $cpuVendor = null,
         public ?string $diskType = null,
         public array $unavailableRegions = [],
+        public bool $priceIsEstimate = false,
     ) {}
 
     /**
@@ -59,6 +61,7 @@ readonly class ProviderSize
      *     regions: list<string>|null,
      *     unavailable_regions: list<string>,
      *     currency: string,
+     *     price_is_estimate: bool,
      *     description: string
      * }
      */
@@ -82,6 +85,7 @@ readonly class ProviderSize
             'regions' => $this->regions,
             'unavailable_regions' => $this->unavailableRegions,
             'currency' => $this->currency,
+            'price_is_estimate' => $this->priceIsEstimate,
             'description' => $this->description(),
         ];
     }

@@ -90,7 +90,8 @@ Don't have any of these? You can still use flitops with any Ubuntu server. See [
             "ec2:AllocateAddress",
             "ec2:AssociateAddress",
             "ec2:DisassociateAddress",
-            "ec2:ReleaseAddress"
+            "ec2:ReleaseAddress",
+            "pricing:GetProducts"
           ],
           "Resource": "*"
         }
@@ -98,7 +99,7 @@ Don't have any of these? You can still use flitops with any Ubuntu server. See [
     }
     ```
 
-    This lets flitops create, manage and delete EC2 servers, and nothing else. It can't read your other AWS services, billing or users.
+    This lets flitops create, manage and delete EC2 servers, and read AWS's public price list (`pricing:GetProducts`) so each size shows its real price in each region. It can't read your other AWS services, your bill or your users. Without the price list permission, servers still work, but prices are shown as an estimate from `us-east-1`.
 
     **What flitops creates in your AWS account:** each server gets a fixed public IP address (an Elastic IP) so its address never changes, and flitops creates one security group per region for its servers. When you delete a server in flitops, its instance, Elastic IP and key pair are removed too.
   </Accordion>
@@ -132,4 +133,4 @@ flitops shows an estimated monthly price for each size when you create a server,
 
 - **Hetzner** prices exclude VAT. The public IPv4 address is listed as its own line, and the form shows what traffic beyond the included amount costs per TB in the chosen region.
 - **DigitalOcean** and **Vultr** prices include a public IPv4 address. Traffic beyond the included amount is billed by the provider.
-- **AWS** prices are an estimate from `us-east-1`, with the 30 GB disk and the fixed public IP listed as their own lines. Other regions can cost more. Outgoing traffic is billed per GB after the first 100 GB a month, and T3 sizes cost extra while their CPU stays busy above its baseline.
+- **AWS** prices are the on-demand prices for the chosen region, with the 30 GB disk and the fixed public IP listed as their own lines. Outgoing traffic is billed per GB after the first 100 GB a month, and burstable sizes (T3 and T4g) cost extra while their CPU stays busy above its baseline. If the account's IAM policy lacks `pricing:GetProducts`, the form shows an estimate from `us-east-1` prices instead and says so.

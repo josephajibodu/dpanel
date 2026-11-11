@@ -108,6 +108,8 @@ export interface ProviderSize extends ProviderSizeOffer {
     /** Listed regions where the provider can't create the size right now. */
     unavailable_regions: string[];
     currency: string;
+    /** Whether the prices are a rough guide because the provider's real ones couldn't be read. */
+    price_is_estimate: boolean;
     description: string;
 }
 

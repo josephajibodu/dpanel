@@ -69,7 +69,8 @@ const providerInfo: Record<
 };
 
 /**
- * The least an IAM user needs for Flitops to create and delete EC2 servers.
+ * The least an IAM user needs for Flitops to create and delete EC2 servers,
+ * and to read AWS's public price list so sizes show their real prices.
  */
 const awsIamPolicy = JSON.stringify(
     {
@@ -95,6 +96,7 @@ const awsIamPolicy = JSON.stringify(
                     'ec2:AssociateAddress',
                     'ec2:DisassociateAddress',
                     'ec2:ReleaseAddress',
+                    'pricing:GetProducts',
                 ],
                 Resource: '*',
             },
@@ -351,7 +353,8 @@ export default function ProviderAccountsCreate({ providers }: Props) {
                                 <CardDescription>
                                     Attach this policy to the IAM user so
                                     Flitops can create, manage and delete EC2
-                                    servers, and nothing else.
+                                    servers and read AWS's public price list,
+                                    and nothing else.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

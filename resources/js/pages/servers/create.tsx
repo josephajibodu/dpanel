@@ -254,10 +254,13 @@ function sizeOfferIn(
     };
 }
 
-/** What each provider leaves out of, or folds into, the prices shown here. */
+/**
+ * What each provider leaves out of, or folds into, the prices shown here, and
+ * what to say when its real prices couldn't be read.
+ */
 const providerPricing: Record<
     ProviderAccount['provider'],
-    { note: string; url: string }
+    { note: string; estimateNote?: string; url: string }
 > = {
     hetzner: {
         note: 'Prices exclude VAT.',
@@ -272,7 +275,9 @@ const providerPricing: Record<
         url: 'https://www.vultr.com/pricing/',
     },
     aws: {
-        note: 'An estimate from us-east-1 prices; other regions can cost more. Outgoing traffic is billed per GB after the first 100 GB a month, and T3 sizes cost extra while their CPU stays busy above its baseline.',
+        note: 'Outgoing traffic is billed per GB after the first 100 GB a month, and T3 and T4g sizes cost extra while their CPU stays busy above its baseline.',
+        estimateNote:
+            "An estimate from us-east-1 prices; other regions can cost more. Add pricing:GetProducts to this account's IAM policy to see real prices.",
         url: 'https://aws.amazon.com/ec2/pricing/on-demand/',
     },
 };
@@ -604,6 +609,8 @@ export default function ServersCreate({
                                         hourly: sizeOffer.price_hourly,
                                         trafficPricePerTb:
                                             selectedRegion.traffic_price_per_tb,
+                                        isEstimate:
+                                            selectedSize.price_is_estimate,
                                         ...providerPricing[
                                             selectedAccount.provider
                                         ],
@@ -1082,7 +1089,11 @@ interface Costs {
     hourly: number | null;
     /** Price per TB of traffic beyond the included amount, when the provider publishes it. */
     trafficPricePerTb: number | null;
+    /** Whether the provider's real prices couldn't be read. */
+    isEstimate: boolean;
     note: string;
+    /** What to say about the prices when they are an estimate. */
+    estimateNote?: string;
     url: string;
 }
 
@@ -1123,6 +1134,9 @@ function CostBreakdown({ costs }: { costs: Costs }) {
             <p className="text-xs text-muted-foreground">
                 {costs.hourly
                     ? `The server is billed by the hour at ${formatHourlyPrice(costs.hourly, costs.currency)}. `
+                    : null}
+                {costs.isEstimate && costs.estimateNote
+                    ? `${costs.estimateNote} `
                     : null}
                 {costs.note}{' '}
                 {costs.trafficPricePerTb
