@@ -20,7 +20,12 @@ import {
 } from '@/actions/App/Http/Controllers/TeamMemberController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
-import { SavedNote, SettingsSection } from '@/components/settings-section';
+import {
+    SavedNote,
+    SettingsRow,
+    SettingsRows,
+    SettingsSection,
+} from '@/components/settings-section';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -94,6 +99,7 @@ export default function TeamSettings({
     assignableRoles,
     can,
 }: Props) {
+    const getInitials = useInitials();
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Team settings', href: '/settings/team' },
     ];
@@ -115,7 +121,8 @@ export default function TeamSettings({
 
             <SettingsLayout
                 title={team.name}
-                description={`Team settings · ${summary}`}
+                description={summary}
+                avatar={getInitials(team.name)}
             >
                 {can.updateTeam && <TeamNameForm team={team} />}
 
@@ -134,10 +141,10 @@ export default function TeamSettings({
                         variant="danger"
                         flush
                     >
-                        <div className="divide-y">
+                        <SettingsRows>
                             {can.leaveTeam && <LeaveTeam team={team} />}
                             {can.deleteTeam && <DeleteTeam team={team} />}
-                        </div>
+                        </SettingsRows>
                     </SettingsSection>
                 )}
             </SettingsLayout>
@@ -205,11 +212,11 @@ function MembersCard({
             }
             flush
         >
-            <ul className="divide-y">
+            <ul className="divide-y px-5">
                 {members.map((member) => (
                     <li
                         key={member.id}
-                        className="flex items-center gap-3 px-6 py-3"
+                        className="flex items-center gap-3 py-3"
                     >
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium dark:bg-neutral-700">
                             {getInitials(member.name)}
@@ -277,7 +284,7 @@ function MembersCard({
                 {invitations.map((invitation) => (
                     <li
                         key={`invite-${invitation.id}`}
-                        className="flex items-center gap-3 px-6 py-3"
+                        className="flex items-center gap-3 py-3"
                     >
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
                             <EnvelopeSimpleIcon className="size-3.5" />
@@ -363,14 +370,10 @@ function LeaveTeam({ team }: { team: Team }) {
     };
 
     return (
-        <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p className="text-sm font-medium">Leave team</p>
-                <p className="text-sm text-muted-foreground">
-                    You lose access until someone invites you again.
-                </p>
-            </div>
-
+        <SettingsRow
+            label="Leave team"
+            description="You lose access until someone invites you again."
+        >
             <Button variant="outline" onClick={() => setOpen(true)}>
                 Leave team
             </Button>
@@ -385,7 +388,7 @@ function LeaveTeam({ team }: { team: Team }) {
                 loading={leaving}
                 onConfirm={leave}
             />
-        </div>
+        </SettingsRow>
     );
 }
 
@@ -401,15 +404,10 @@ function DeleteTeam({ team }: { team: Team }) {
     } = useForm({ name: '' });
 
     return (
-        <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p className="text-sm font-medium">Delete team</p>
-                <p className="text-sm text-muted-foreground">
-                    Removes the team and everything in it from FlitOps. This
-                    can’t be undone.
-                </p>
-            </div>
-
+        <SettingsRow
+            label="Delete team"
+            description="Removes the team and everything in it from FlitOps. This can’t be undone."
+        >
             <Dialog
                 onOpenChange={(open) => {
                     if (!open) {
@@ -496,7 +494,7 @@ function DeleteTeam({ team }: { team: Team }) {
                     </form>
                 </DialogContent>
             </Dialog>
-        </div>
+        </SettingsRow>
     );
 }
 

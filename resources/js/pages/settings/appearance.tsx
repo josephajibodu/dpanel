@@ -23,9 +23,7 @@ export default function Appearance() {
         >
             <Head title="Appearance settings" />
 
-            <h1 className="sr-only">Appearance settings</h1>
-
-            <SettingsLayout>
+            <SettingsLayout title="Appearance">
                 <SettingsSection
                     title="Theme"
                     description="Choose how FlitOps looks on this device. Changes apply straight away."

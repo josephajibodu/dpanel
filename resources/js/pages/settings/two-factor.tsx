@@ -1,7 +1,11 @@
 import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
 
-import { SettingsSection } from '@/components/settings-section';
+import {
+    SettingsRow,
+    SettingsRows,
+    SettingsSection,
+} from '@/components/settings-section';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Button } from '@/components/ui/button';
@@ -69,53 +73,59 @@ export default function TwoFactor({
         >
             <Head title="Two-factor authentication" />
 
-            <h1 className="sr-only">Two-factor authentication settings</h1>
-
-            <SettingsLayout>
-                <SettingsSection
-                    title="Two-factor authentication"
-                    description={
-                        twoFactorEnabled
-                            ? 'When you sign in, you enter your password and then a six-digit code from the authenticator app on your phone.'
-                            : 'Add a second step to signing in: after your password, you enter a six-digit code from an authenticator app on your phone. Someone who learns your password still can’t get in.'
-                    }
-                    headerAction={<StatusPill enabled={twoFactorEnabled} />}
-                    footerHint={
-                        twoFactorEnabled
-                            ? 'Turning it off makes your account easier to break into.'
-                            : 'Works with 1Password, Google Authenticator, Authy, and similar apps.'
-                    }
-                    footerAction={
-                        twoFactorEnabled ? (
-                            <Form {...disable.form()}>
-                                {({ processing }) => (
-                                    <Button
-                                        variant="outline"
-                                        type="submit"
-                                        disabled={processing}
-                                    >
-                                        Turn off
-                                    </Button>
-                                )}
-                            </Form>
-                        ) : hasSetupData ? (
-                            <Button onClick={() => setShowSetupModal(true)}>
-                                Continue setup
-                            </Button>
-                        ) : (
-                            <Form
-                                {...enable.form()}
-                                onSuccess={() => setShowSetupModal(true)}
-                            >
-                                {({ processing }) => (
-                                    <Button type="submit" disabled={processing}>
-                                        Turn on
-                                    </Button>
-                                )}
-                            </Form>
-                        )
-                    }
-                />
+            <SettingsLayout
+                title="Two-factor authentication"
+                description={
+                    twoFactorEnabled
+                        ? 'When you sign in, you enter your password and then a six-digit code from the authenticator app on your phone.'
+                        : 'Add a second step to signing in: after your password, you enter a six-digit code from an authenticator app on your phone. Someone who learns your password still can’t get in.'
+                }
+            >
+                <SettingsSection flush>
+                    <SettingsRows>
+                        <SettingsRow
+                            label="Authenticator app"
+                            description={
+                                twoFactorEnabled
+                                    ? 'Turning it off makes your account easier to break into.'
+                                    : 'Works with 1Password, Google Authenticator, Authy, and similar apps.'
+                            }
+                        >
+                            <StatusPill enabled={twoFactorEnabled} />
+                            {twoFactorEnabled ? (
+                                <Form {...disable.form()}>
+                                    {({ processing }) => (
+                                        <Button
+                                            variant="outline"
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Turn off
+                                        </Button>
+                                    )}
+                                </Form>
+                            ) : hasSetupData ? (
+                                <Button onClick={() => setShowSetupModal(true)}>
+                                    Continue setup
+                                </Button>
+                            ) : (
+                                <Form
+                                    {...enable.form()}
+                                    onSuccess={() => setShowSetupModal(true)}
+                                >
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Turn on
+                                        </Button>
+                                    )}
+                                </Form>
+                            )}
+                        </SettingsRow>
+                    </SettingsRows>
+                </SettingsSection>
 
                 {twoFactorEnabled && (
                     <TwoFactorRecoveryCodes

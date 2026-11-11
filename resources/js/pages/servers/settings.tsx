@@ -11,6 +11,7 @@ import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Server } from '@/types/server';
 
@@ -77,174 +78,160 @@ export default function ServerSettings({
         >
             <Head title={`Settings - ${server.name}`} />
 
-            <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-6 p-4">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                        Settings
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        SSH access, identity and lifecycle for {server.name}.
-                    </p>
-                </div>
-
-                <div className="flex flex-col gap-8">
-                    <SettingsSection
-                        title="SSH access"
-                        description="Connect to this server from your own terminal."
-                    >
-                        {has_ssh_key && ssh_command ? (
-                            <div className="flex items-center gap-2 rounded-md border bg-muted/40 py-1 pr-1 pl-3">
-                                <code className="flex-1 truncate font-mono text-sm">
-                                    {ssh_command}
-                                </code>
-                                <CopyButton value={ssh_command} />
-                            </div>
-                        ) : !server.ip_address ? (
+            <SettingsLayout
+                title="Settings"
+                description={`SSH access, identity and lifecycle for ${server.name}.`}
+            >
+                <SettingsSection
+                    title="SSH access"
+                    description="Connect to this server from your own terminal."
+                >
+                    {has_ssh_key && ssh_command ? (
+                        <div className="flex items-center gap-2 rounded-md border bg-muted/40 py-1 pr-1 pl-3">
+                            <code className="flex-1 truncate font-mono text-sm">
+                                {ssh_command}
+                            </code>
+                            <CopyButton value={ssh_command} />
+                        </div>
+                    ) : !server.ip_address ? (
+                        <p className="text-sm text-muted-foreground">
+                            This server doesn&apos;t have an IP address yet. It
+                            may still be provisioning.
+                        </p>
+                    ) : !can('access_servers') ? (
+                        <p className="text-sm text-muted-foreground">
+                            Your role doesn&apos;t include SSH access to this
+                            team&apos;s servers.
+                        </p>
+                    ) : (
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-muted-foreground">
-                                This server doesn&apos;t have an IP address yet.
-                                It may still be provisioning.
+                                Add an SSH key and sync it to this server to get
+                                a connect command here.
                             </p>
-                        ) : !can('access_servers') ? (
-                            <p className="text-sm text-muted-foreground">
-                                Your role doesn&apos;t include SSH access to
-                                this team&apos;s servers.
-                            </p>
-                        ) : (
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-muted-foreground">
-                                    Add an SSH key and sync it to this server to
-                                    get a connect command here.
-                                </p>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="shrink-0"
-                                    asChild
-                                >
-                                    <Link href={teamPath('/ssh-keys')}>
-                                        Add SSH key
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
-                    </SettingsSection>
-
-                    <SettingsSection
-                        title="Server identity"
-                        description="The key this server proved its identity with the first time we connected. Every later connection must match it."
-                    >
-                        {host_key ? (
-                            <div className="flex flex-col gap-6">
-                                <dl className="divide-y rounded-md border text-sm">
-                                    <div className="grid gap-1 px-4 py-3 sm:grid-cols-[7rem_1fr] sm:items-center">
-                                        <dt className="text-muted-foreground">
-                                            Key type
-                                        </dt>
-                                        <dd className="font-mono">
-                                            {host_key.type}
-                                        </dd>
-                                    </div>
-                                    <div className="grid gap-1 px-4 py-2 sm:grid-cols-[7rem_1fr] sm:items-center">
-                                        <dt className="text-muted-foreground">
-                                            Fingerprint
-                                        </dt>
-                                        <dd className="flex items-center gap-2">
-                                            <span className="flex-1 font-mono break-all">
-                                                {host_key.fingerprint}
-                                            </span>
-                                            <CopyButton
-                                                value={host_key.fingerprint}
-                                            />
-                                        </dd>
-                                    </div>
-                                </dl>
-                                {can('manage_servers') && (
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <p className="text-sm text-muted-foreground">
-                                            Rebuilt or reinstalled this server?
-                                            Reset so we record its new identity.
-                                        </p>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="shrink-0"
-                                            onClick={() =>
-                                                setResetHostKeyDialogOpen(true)
-                                            }
-                                        >
-                                            Reset identity
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">
-                                Not recorded yet. We&apos;ll record it the next
-                                time we connect to this server.
-                            </p>
-                        )}
-                    </SettingsSection>
-
-                    {can('manage_servers') &&
-                        (isCustom ? (
-                            <SettingsSection
-                                title="Disconnect server"
-                                description="Remove this server from Flitops. The machine and everything running on it stays in place."
-                                variant="danger"
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                asChild
                             >
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                    <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-                                        <li>
-                                            Flitops&apos; SSH key is removed
-                                            from the server, so we can no longer
-                                            log in.
-                                        </li>
-                                        <li>
-                                            Deploy webhooks, GitHub deploy keys
-                                            and free flitops.xyz domains are
-                                            removed.
-                                        </li>
-                                        <li>
-                                            Your sites, databases and other SSH
-                                            keys stay on the server.
-                                        </li>
-                                    </ul>
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        className="shrink-0"
-                                        onClick={() =>
-                                            setRemoveDialogOpen(true)
-                                        }
-                                    >
-                                        Disconnect server
-                                    </Button>
+                                <Link href={teamPath('/ssh-keys')}>
+                                    Add SSH key
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
+                </SettingsSection>
+
+                <SettingsSection
+                    title="Server identity"
+                    description="The key this server proved its identity with the first time we connected. Every later connection must match it."
+                >
+                    {host_key ? (
+                        <div className="flex flex-col gap-6">
+                            <dl className="divide-y rounded-md border text-sm">
+                                <div className="grid gap-1 px-4 py-3 sm:grid-cols-[7rem_1fr] sm:items-center">
+                                    <dt className="text-muted-foreground">
+                                        Key type
+                                    </dt>
+                                    <dd className="font-mono">
+                                        {host_key.type}
+                                    </dd>
                                 </div>
-                            </SettingsSection>
-                        ) : (
-                            <SettingsSection
-                                title="Destroy server"
-                                description={`Delete this server at ${server.provider_label}, along with all its sites, databases and data.`}
-                                variant="danger"
-                            >
+                                <div className="grid gap-1 px-4 py-2 sm:grid-cols-[7rem_1fr] sm:items-center">
+                                    <dt className="text-muted-foreground">
+                                        Fingerprint
+                                    </dt>
+                                    <dd className="flex items-center gap-2">
+                                        <span className="flex-1 font-mono break-all">
+                                            {host_key.fingerprint}
+                                        </span>
+                                        <CopyButton
+                                            value={host_key.fingerprint}
+                                        />
+                                    </dd>
+                                </div>
+                            </dl>
+                            {can('manage_servers') && (
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                     <p className="text-sm text-muted-foreground">
-                                        This can&apos;t be undone.
+                                        Rebuilt or reinstalled this server?
+                                        Reset so we record its new identity.
                                     </p>
                                     <Button
-                                        variant="destructive"
+                                        variant="outline"
                                         size="sm"
                                         className="shrink-0"
                                         onClick={() =>
-                                            setRemoveDialogOpen(true)
+                                            setResetHostKeyDialogOpen(true)
                                         }
                                     >
-                                        Destroy server
+                                        Reset identity
                                     </Button>
                                 </div>
-                            </SettingsSection>
-                        ))}
-                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            Not recorded yet. We&apos;ll record it the next time
+                            we connect to this server.
+                        </p>
+                    )}
+                </SettingsSection>
+
+                {can('manage_servers') &&
+                    (isCustom ? (
+                        <SettingsSection
+                            title="Disconnect server"
+                            description="Remove this server from Flitops. The machine and everything running on it stays in place."
+                            variant="danger"
+                        >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                                    <li>
+                                        Flitops&apos; SSH key is removed from
+                                        the server, so we can no longer log in.
+                                    </li>
+                                    <li>
+                                        Deploy webhooks, GitHub deploy keys and
+                                        free flitops.xyz domains are removed.
+                                    </li>
+                                    <li>
+                                        Your sites, databases and other SSH keys
+                                        stay on the server.
+                                    </li>
+                                </ul>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="shrink-0"
+                                    onClick={() => setRemoveDialogOpen(true)}
+                                >
+                                    Disconnect server
+                                </Button>
+                            </div>
+                        </SettingsSection>
+                    ) : (
+                        <SettingsSection
+                            title="Destroy server"
+                            description={`Delete this server at ${server.provider_label}, along with all its sites, databases and data.`}
+                            variant="danger"
+                        >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                    This can&apos;t be undone.
+                                </p>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="shrink-0"
+                                    onClick={() => setRemoveDialogOpen(true)}
+                                >
+                                    Destroy server
+                                </Button>
+                            </div>
+                        </SettingsSection>
+                    ))}
 
                 <ConfirmDialog
                     open={resetHostKeyDialogOpen}
@@ -280,7 +267,7 @@ export default function ServerSettings({
                         onConfirm={handleRemove}
                     />
                 )}
-            </div>
+            </SettingsLayout>
         </AppLayout>
     );
 }

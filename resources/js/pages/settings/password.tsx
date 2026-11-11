@@ -31,9 +31,10 @@ export default function Password() {
         >
             <Head title="Password settings" />
 
-            <h1 className="sr-only">Password settings</h1>
-
-            <SettingsLayout>
+            <SettingsLayout
+                title="Password"
+                description="Change the password you sign in with. You’ll need your current one."
+            >
                 <Form
                     {...PasswordController.update.form()}
                     options={{
@@ -57,8 +58,6 @@ export default function Password() {
                 >
                     {({ errors, processing, recentlySuccessful }) => (
                         <SettingsSection
-                            title="Password"
-                            description="Change the password you sign in with. You’ll need your current one."
                             footerHint="Use a long, random password. A password manager can make one for you."
                             footerAction={
                                 <>

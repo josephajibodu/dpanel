@@ -41,15 +41,17 @@ export default function Profile({
         >
             <Head title="Profile settings" />
 
-            <h1 className="sr-only">Profile settings</h1>
-
-            <SettingsLayout>
+            <SettingsLayout
+                title={auth.user.name}
+                description={auth.user.email}
+                avatar={getInitials(auth.user.name)}
+            >
                 <Form
                     {...ProfileController.update.form()}
                     options={{
                         preserveScroll: true,
                     }}
-                    className="space-y-6"
+                    className="flex flex-col gap-10"
                 >
                     {({ processing, recentlySuccessful, errors }) => (
                         <>
@@ -69,65 +71,56 @@ export default function Profile({
                                     </>
                                 }
                             >
-                                <div className="flex flex-col gap-6 sm:flex-row">
-                                    <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-lg font-medium dark:bg-neutral-700">
-                                        {getInitials(auth.user.name)}
-                                    </span>
-
-                                    <div className="grid flex-1 gap-4 sm:grid-cols-2">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">Name</Label>
-                                            <Input
-                                                id="name"
-                                                defaultValue={auth.user.name}
-                                                name="name"
-                                                required
-                                                autoComplete="name"
-                                                placeholder="Ada Lovelace"
-                                            />
-                                            <InputError message={errors.name} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="email">
-                                                Email address
-                                            </Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                defaultValue={auth.user.email}
-                                                name="email"
-                                                required
-                                                autoComplete="username"
-                                                placeholder="ada@example.com"
-                                            />
-                                            <InputError
-                                                message={errors.email}
-                                            />
-                                        </div>
-
-                                        {isUnverified && (
-                                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:col-span-2 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                                                Your email address isn’t
-                                                verified yet.{' '}
-                                                <Link
-                                                    href={send()}
-                                                    as="button"
-                                                    className="font-medium underline underline-offset-4"
-                                                >
-                                                    Resend the verification
-                                                    email
-                                                </Link>
-                                                {status ===
-                                                    'verification-link-sent' && (
-                                                    <p className="mt-1 font-medium">
-                                                        A new verification link
-                                                        is on its way.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="name">Name</Label>
+                                        <Input
+                                            id="name"
+                                            defaultValue={auth.user.name}
+                                            name="name"
+                                            required
+                                            autoComplete="name"
+                                            placeholder="Ada Lovelace"
+                                        />
+                                        <InputError message={errors.name} />
                                     </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">
+                                            Email address
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            defaultValue={auth.user.email}
+                                            name="email"
+                                            required
+                                            autoComplete="username"
+                                            placeholder="ada@example.com"
+                                        />
+                                        <InputError message={errors.email} />
+                                    </div>
+
+                                    {isUnverified && (
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:col-span-2 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                                            Your email address isn’t verified
+                                            yet.{' '}
+                                            <Link
+                                                href={send()}
+                                                as="button"
+                                                className="font-medium underline underline-offset-4"
+                                            >
+                                                Resend the verification email
+                                            </Link>
+                                            {status ===
+                                                'verification-link-sent' && (
+                                                <p className="mt-1 font-medium">
+                                                    A new verification link is
+                                                    on its way.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </SettingsSection>
 
