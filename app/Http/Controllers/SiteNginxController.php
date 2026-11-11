@@ -98,10 +98,6 @@ class SiteNginxController extends Controller
             return redirect()->back()->with('error', 'Server must be active and connected.');
         }
 
-        if ($request->validated('section') === NginxFileSection::Main->value) {
-            return redirect()->back()->with('error', 'Main configuration files are auto-generated and cannot be created manually.');
-        }
-
         $domain = $site->domains()->findOrFail($request->validated('domain_id'));
 
         $path = $request->resolvedPath();
@@ -126,13 +122,17 @@ class SiteNginxController extends Controller
             $request->user()?->id,
         );
 
-        return redirect()->back()->with('success', 'Nginx file created and queued for deployment.');
+        return redirect()->back()->with('success', 'File created and queued to be applied.');
     }
 
     public function update(UpdateNginxFileRequest $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
     {
         if (! $server->isReady()) {
             return redirect()->back()->with('error', 'Server must be active and connected.');
+        }
+
+        if ($nginxFile->section->isReadOnly()) {
+            return redirect()->back()->with('error', 'The main configuration is written by flitops and cannot be edited.');
         }
 
         $oldContent = $nginxFile->content;
@@ -151,7 +151,7 @@ class SiteNginxController extends Controller
             $request->user()?->id,
         );
 
-        return redirect()->back()->with('success', 'Nginx file updated and queued for deployment.');
+        return redirect()->back()->with('success', 'File saved and queued to be applied.');
     }
 
     public function rename(RenameNginxFileRequest $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
@@ -172,7 +172,7 @@ class SiteNginxController extends Controller
             return redirect()->back();
         }
 
-        if ($site->nginxFiles()->where('path', $newPath)->exists()) {
+        if ($site->nginxFiles()->where('site_domain_id', $nginxFile->site_domain_id)->where('path', $newPath)->exists()) {
             return redirect()->back()->withErrors(['name' => "A file at {$newPath} already exists."]);
         }
 
@@ -190,7 +190,7 @@ class SiteNginxController extends Controller
             $request->user()?->id,
         );
 
-        return redirect()->back()->with('success', 'Nginx file renamed.');
+        return redirect()->back()->with('success', 'File renamed.');
     }
 
     public function destroy(Request $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
@@ -205,21 +205,11 @@ class SiteNginxController extends Controller
             return redirect()->back()->with('error', 'Server must be active and connected.');
         }
 
-        $absolutePath = $nginxFile->absolutePath();
-        $path = $nginxFile->path;
-        $content = $nginxFile->content;
+        $nginxFile->update(['sync_status' => 'pending', 'sync_error' => null]);
 
-        $nginxFile->delete();
+        DeleteSiteNginxFileJob::dispatch($nginxFile, $request->user()?->id);
 
-        DeleteSiteNginxFileJob::dispatch(
-            $site,
-            $absolutePath,
-            $path,
-            $content,
-            $request->user()?->id,
-        );
-
-        return redirect()->back()->with('success', 'Nginx file deleted.');
+        return redirect()->back()->with('success', 'File queued for removal.');
     }
 
     public function history(Request $request, Team $team, Server $server, Site $site, int $historyId): JsonResponse
@@ -248,34 +238,28 @@ class SiteNginxController extends Controller
             return redirect()->back()->with('error', 'Cannot restore from a delete event.');
         }
 
-        $file = $site->nginxFiles()->where('path', $entry->path)->first();
+        $file = $site->nginxFiles()->find($entry->site_nginx_file_id);
 
         if ($file === null) {
-            $section = NginxFileSection::from(explode('/', $entry->path)[0]);
-            $file = $site->nginxFiles()->create([
-                'section' => $section,
-                'path' => $entry->path,
-                'content' => $entry->new_content,
-                'sync_status' => 'pending',
-            ]);
-        } else {
-            $oldContent = $file->content;
-            $file->update([
-                'content' => $entry->new_content,
-                'sync_status' => 'pending',
-                'sync_error' => null,
-            ]);
+            return redirect()->back()->with('error', 'This file has been deleted. Create it again to bring it back.');
         }
+
+        $oldContent = $file->content;
+        $file->update([
+            'content' => $entry->new_content,
+            'sync_status' => 'pending',
+            'sync_error' => null,
+        ]);
 
         ApplySiteNginxFileJob::dispatch(
             $file,
             NginxHistoryEvent::Updated,
-            $oldContent ?? null,
+            $oldContent,
             null,
             $request->user()?->id,
         );
 
-        return redirect()->back()->with('success', 'Nginx file restored.');
+        return redirect()->back()->with('success', 'File restored.');
     }
 
     public function refresh(Request $request, Team $team, Server $server, Site $site): RedirectResponse
@@ -288,6 +272,6 @@ class SiteNginxController extends Controller
 
         SyncSiteNginxFilesJob::dispatch($site);
 
-        return redirect()->back()->with('success', 'Syncing nginx files from server…');
+        return redirect()->back()->with('success', 'Reading the files from the server…');
     }
 }

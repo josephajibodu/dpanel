@@ -9,6 +9,7 @@ use App\Jobs\DeleteSiteNginxFileJob;
 use App\Jobs\SyncSiteNginxFilesJob;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\SiteNginxFile;
 use App\Models\SiteNginxHistory;
 use App\Models\Team;
@@ -42,7 +43,7 @@ it('renders the nginx index page with files and history', function () {
             ->component('sites/nginx/index')
             ->has('nginxFiles', 1)
             ->has('nginxHistory', 1)
-            ->has('sections', 5)
+            ->has('sections', 3)
             ->has('domains', 1)
             ->where('sections.0.value', 'main')
             ->where('sections.0.read_only', true)
@@ -97,25 +98,6 @@ it('creates a nginx file and dispatches apply job', function () {
 
     Queue::assertPushed(ApplySiteNginxFileJob::class, fn ($job) => $job->historyEvent === NginxHistoryEvent::Created
     );
-});
-
-it('creates a locations file with sub_path', function () {
-    Queue::fake();
-
-    $this->actingAs($this->user)
-        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx", [
-            'domain_id' => $this->domain->id,
-            'section' => 'locations',
-            'name' => 'performance.conf',
-            'sub_path' => 'php',
-            'content' => "fastcgi_buffers 16 16k;\n",
-        ]);
-
-    $this->assertDatabaseHas('site_nginx_files', [
-        'site_id' => $this->site->id,
-        'site_domain_id' => $this->domain->id,
-        'path' => 'locations/php/performance.conf',
-    ]);
 });
 
 it('rejects a duplicate path on create', function () {
@@ -197,10 +179,10 @@ it('deletes a nginx file and dispatches delete job', function () {
 
     $response->assertRedirect()->assertSessionHas('success');
 
-    $this->assertDatabaseMissing('site_nginx_files', ['id' => $file->id]);
+    // The file stays until the web server accepts the config without it.
+    $this->assertDatabaseHas('site_nginx_files', ['id' => $file->id, 'sync_status' => 'pending']);
 
-    Queue::assertPushed(DeleteSiteNginxFileJob::class, fn ($job) => $job->path === 'server/security.conf' && $job->deletedContent === "# to be deleted\n"
-    );
+    Queue::assertPushed(DeleteSiteNginxFileJob::class, fn ($job) => $job->nginxFile->is($file) && $job->userId === $this->user->id);
 });
 
 it('restores a previous version', function () {
@@ -267,7 +249,7 @@ it('rejects creating a main-section file', function () {
             'content' => '# main',
         ]);
 
-    $response->assertRedirect()->assertSessionHas('error');
+    $response->assertSessionHasErrors('section');
     Queue::assertNothingPushed();
 });
 
@@ -320,22 +302,69 @@ it('blocks refresh when server is not ready', function () {
     Queue::assertNothingPushed();
 });
 
-it('offers only the sections Caddy supports on a Caddy server', function () {
-    $this->server->update(['web_server' => 'caddy']);
+it('rejects saving over the main configuration', function () {
+    Queue::fake();
+
+    $file = SiteNginxFile::factory()->forDomain($this->domain)->inSection(NginxFileSection::Main, 'example-com.conf')->create([
+        'content' => "# generated\n",
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx/{$file->id}", [
+            'content' => "# hand edit\n",
+        ]);
+
+    $response->assertRedirect()->assertSessionHas('error');
+    expect($file->fresh()->content)->toBe("# generated\n");
+    Queue::assertNothingPushed();
+});
+
+it('does not restore a version of a file that has been deleted', function () {
+    Queue::fake();
+
+    $history = SiteNginxHistory::factory()->forSite($this->site)->create([
+        'site_nginx_file_id' => null,
+        'event' => NginxHistoryEvent::Updated,
+        'path' => 'server/security.conf',
+        'new_content' => "# gone\n",
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx-history/{$history->id}/restore");
+
+    $response->assertRedirect()->assertSessionHas('error');
+    $this->assertDatabaseMissing('site_nginx_files', ['site_id' => $this->site->id, 'path' => 'server/security.conf']);
+    Queue::assertNothingPushed();
+});
+
+it('allows renaming to a name another domain of the site already uses', function () {
+    Queue::fake();
+
+    $otherDomain = SiteDomain::factory()->create(['site_id' => $this->site->id, 'hostname' => 'other.example.com']);
+    SiteNginxFile::factory()->forDomain($otherDomain)->inSection(NginxFileSection::Server, 'headers.conf')->create();
+    $file = SiteNginxFile::factory()->forDomain($this->domain)->inSection(NginxFileSection::Server, 'security.conf')->create();
+
+    $this->actingAs($this->user)
+        ->patch("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx/{$file->id}/rename", ['name' => 'headers.conf'])
+        ->assertSessionHasNoErrors();
+
+    expect($file->fresh()->path)->toBe('server/headers.conf');
+});
+
+it('offers the same sections on Nginx and Caddy', function (string $webServer) {
+    $this->server->update(['web_server' => $webServer]);
 
     $response = $this->actingAs($this->user)
         ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx");
 
     $response->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('webServer', 'Caddy')
             ->where('sections', fn ($sections) => collect($sections)->pluck('value')->all() === ['main', 'server', 'after'])
         );
-});
+})->with(['nginx', 'caddy']);
 
-it('refuses a section Caddy does not support', function () {
+it('refuses a section that does not exist', function () {
     Queue::fake();
-    $this->server->update(['web_server' => 'caddy']);
 
     $response = $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx", [
@@ -345,7 +374,6 @@ it('refuses a section Caddy does not support', function () {
             'content' => 'redir / /home',
         ]);
 
-    $response->assertSessionHasErrors(['section' => "Caddy doesn't support this section."]);
-    $this->assertDatabaseMissing('site_nginx_files', ['site_id' => $this->site->id, 'path' => 'before/redirect.conf']);
+    $response->assertSessionHasErrors('section');
     Queue::assertNothingPushed();
 });

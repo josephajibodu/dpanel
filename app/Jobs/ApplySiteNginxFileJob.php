@@ -115,7 +115,13 @@ class ApplySiteNginxFileJob implements ShouldQueue
                 'nginx_file_id' => $this->nginxFile->id,
                 'message' => $e->getMessage(),
             ]);
-            $this->nginxFile->update(['sync_status' => 'failed', 'sync_error' => $e->getMessage()]);
+            $this->nginxFile->update([
+                'sync_status' => 'failed',
+                'sync_error' => $e->getMessage(),
+                // A rename that didn't happen keeps the name the server still has.
+                ...($this->historyEvent === NginxHistoryEvent::Renamed && $this->oldPath ? ['path' => $this->oldPath] : []),
+            ]);
+
             throw $e;
         } finally {
             broadcast(new SiteNginxUpdated($site));

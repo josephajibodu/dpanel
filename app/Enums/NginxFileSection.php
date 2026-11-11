@@ -2,33 +2,30 @@
 
 namespace App\Enums;
 
+/**
+ * Where a web server config file belongs. The same for Nginx and Caddy.
+ */
 enum NginxFileSection: string
 {
     case Main = 'main';
-    case Before = 'before';
     case Server = 'server';
-    case Locations = 'locations';
     case After = 'after';
 
     public function label(): string
     {
         return match ($this) {
-            self::Main => 'Main Configuration',
-            self::Before => 'Before',
-            self::Server => 'Server',
-            self::Locations => 'Locations',
-            self::After => 'After',
+            self::Main => 'Main configuration',
+            self::Server => 'Inside the site block',
+            self::After => 'Outside the site block',
         };
     }
 
     public function description(): string
     {
         return match ($this) {
-            self::Main => 'Auto-generated per-domain site configuration',
-            self::Before => 'Loaded before the server block',
-            self::Server => 'Injected inside the server block',
-            self::Locations => 'Injected as location directives',
-            self::After => 'Loaded after the server block',
+            self::Main => 'Written by flitops from the site\'s settings. Read-only.',
+            self::Server => 'Rules for this site: headers, redirects, upload limits, proxied paths.',
+            self::After => 'Advanced: definitions that sit beside the site, or extra site blocks.',
         };
     }
 

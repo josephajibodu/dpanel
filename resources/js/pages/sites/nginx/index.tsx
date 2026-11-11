@@ -131,9 +131,11 @@ export default function SiteNginxIndex({
     const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
     const [createDialog, setCreateDialog] = useState(false);
-    const [createDomainId, setCreateDomainId] = useState('');
-    const [createSection, setCreateSection] = useState('');
-    const [createSubPath, setCreateSubPath] = useState('');
+    const defaultDomainId = String(
+        (domains.find((d) => d.is_primary) ?? domains[0])?.id ?? '',
+    );
+    const [createDomainId, setCreateDomainId] = useState(defaultDomainId);
+    const [createSection, setCreateSection] = useState('server');
     const [createName, setCreateName] = useState('');
     const [createContent, setCreateContent] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -149,6 +151,10 @@ export default function SiteNginxIndex({
         resolvedAppearance === 'dark' ? 'nginx-dark' : 'nginx-light';
     // Monaco has no Caddyfile grammar, so Caddy files are shown as plain text.
     const editorLanguage = webServer === 'Nginx' ? 'nginx' : 'plaintext';
+    const selectedFileIsReadOnly =
+        !canManageNginx ||
+        (sections.find((s) => s.value === selectedFile?.section)?.read_only ??
+            false);
 
     // Swap the open file for its fresh copy when the file list reloads.
     const [syncedNginxFiles, setSyncedNginxFiles] = useState(nginxFiles);
@@ -190,16 +196,14 @@ export default function SiteNginxIndex({
                 domain_id: parseInt(createDomainId),
                 section: createSection,
                 name: createName,
-                sub_path: createSubPath || undefined,
                 content: createContent,
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     setCreateDialog(false);
-                    setCreateDomainId('');
-                    setCreateSection('');
-                    setCreateSubPath('');
+                    setCreateDomainId(defaultDomainId);
+                    setCreateSection('server');
                     setCreateName('');
                     setCreateContent('');
                 },
@@ -327,8 +331,9 @@ export default function SiteNginxIndex({
                             {webServer}
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Manage {webServer} configuration snippets for{' '}
-                            {site.domain}.
+                            flitops writes the {webServer} configuration for{' '}
+                            {site.domain}. Add files here for anything extra you
+                            need.
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -588,7 +593,11 @@ export default function SiteNginxIndex({
                                                 />
                                             )}
                                     </div>
-                                    {canManageNginx && (
+                                    {selectedFileIsReadOnly ? (
+                                        <span className="text-xs text-muted-foreground">
+                                            Read-only
+                                        </span>
+                                    ) : (
                                         <Button
                                             size="sm"
                                             onClick={handleSave}
@@ -648,7 +657,7 @@ export default function SiteNginxIndex({
                                             padding: { top: 8, bottom: 8 },
                                             fontFamily:
                                                 'Menlo, Monaco, "Courier New", monospace',
-                                            readOnly: !canManageNginx,
+                                            readOnly: selectedFileIsReadOnly,
                                         }}
                                     />
                                 </div>
@@ -745,8 +754,9 @@ export default function SiteNginxIndex({
                     <DialogHeader>
                         <DialogTitle>New {webServer} file</DialogTitle>
                         <DialogDescription>
-                            Create a configuration snippet in one of the{' '}
-                            {webServer} include sections.
+                            flitops checks the file before applying it. If{' '}
+                            {webServer} rejects it, nothing changes on your
+                            site.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
@@ -779,13 +789,13 @@ export default function SiteNginxIndex({
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Section</Label>
+                            <Label>Where it goes</Label>
                             <Select
                                 value={createSection}
                                 onValueChange={setCreateSection}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Choose section…" />
+                                    <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {sections
@@ -795,35 +805,19 @@ export default function SiteNginxIndex({
                                                 key={s.value}
                                                 value={s.value}
                                             >
-                                                <span className="font-medium">
-                                                    {s.label}
-                                                </span>
-                                                <span className="ml-2 text-xs text-muted-foreground">
-                                                    {s.description}
-                                                </span>
+                                                {s.label}
                                             </SelectItem>
                                         ))}
                                 </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground">
+                                {
+                                    sections.find(
+                                        (s) => s.value === createSection,
+                                    )?.description
+                                }
+                            </p>
                         </div>
-                        {createSection === 'locations' && (
-                            <div className="space-y-2">
-                                <Label>Sub-path (optional)</Label>
-                                <Input
-                                    value={createSubPath}
-                                    onChange={(e) =>
-                                        setCreateSubPath(e.target.value)
-                                    }
-                                    placeholder="e.g. php"
-                                    className="font-mono"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Creates the file under locations/
-                                    {createSubPath || 'example'}/
-                                    {createName || 'file.conf'}
-                                </p>
-                            </div>
-                        )}
                         <div className="space-y-2">
                             <Label>Filename</Label>
                             <Input

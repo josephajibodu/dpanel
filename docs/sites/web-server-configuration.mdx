@@ -9,29 +9,27 @@ Editing needs the **Manage sites** permission. Everyone in the team can view the
 
 ## How files are organised
 
-Files are grouped by **domain**, then by **section**. The section decides where in the configuration your file is included:
+flitops writes one **main configuration** per domain. It is rebuilt from the site's settings (PHP version, web directory, HTTPS, www redirect) every time one of them changes, so it is **read-only**: you can open it to see exactly what is running, but you don't edit it.
 
-| Section | Where it goes | Use it for |
+Your own configuration lives in separate files that the main configuration includes. This works the same way on Nginx and Caddy. Files are grouped by **domain**, and each one goes in one of two places:
+
+| Where it goes | What it means | Use it for |
 | --- | --- | --- |
-| **Main Configuration** | The generated configuration for the domain. **Read-only**, since flitops manages it. | Reading what flitops set up. |
-| **Before** | Loaded before the site's `server` block. | `map` blocks, `upstream` definitions, rate-limit zones. |
-| **Server** | Included inside the `server` block. | Headers, `client_max_body_size`, `gzip` settings. |
-| **Locations** | Included as `location` blocks inside the server block. | Redirects for specific paths, reverse proxies, caching rules for assets. |
-| **After** | Loaded after the server block. | Extra `server` blocks, such as a redirect from an old domain. |
+| **Inside the site block** | Added to the site's own block (`server { … }` in Nginx, the site's `{ … }` in Caddy). This is the one you'll want most of the time. | Headers, redirects, upload limits, `location` rules, reverse proxies. |
+| **Outside the site block** | Placed beside the site's block. For advanced setups. | Nginx `map`, `upstream` and rate-limit zones, or an extra block for another address. |
 
-On **Caddy** servers the same structure applies, and files are shown as plain text.
+Because your files are kept apart from the main configuration, changing the PHP version or turning on HTTPS never overwrites them.
 
 ## Creating a file
 
 1. Click **New file**.
-2. Choose the **Domain** and **Section**.
-3. Optionally enter a **Sub-path** to group files into a folder (letters, numbers, hyphens, underscores and slashes).
-4. Enter a **Filename** ending in `.conf`, for example `uploads.conf`.
-5. Write the **Content** and save.
+2. Choose the **Domain**, and **where it goes** (inside the site block unless you know you need otherwise).
+3. Enter a **Filename** ending in `.conf`, for example `uploads.conf`.
+4. Write the **Content** and save.
 
 ### Example: a different upload limit for one site
 
-The server-wide upload limit follows PHP's **Post max size** (see [PHP settings](/servers/php#php-settings)). To give one site its own limit, create `uploads.conf` in the **Server** section:
+The server-wide upload limit follows PHP's **Post max size** (see [PHP settings](/servers/php#php-settings)). To give one site its own limit, create `uploads.conf` **inside the site block**:
 
 ```nginx uploads.conf
 client_max_body_size 256M;
@@ -41,7 +39,7 @@ PHP's limits still apply, so raise them on the server's PHP tab too.
 
 ### Example: proxy a WebSocket server
 
-In the **Locations** section, create `websockets.conf`:
+Create `websockets.conf` **inside the site block**:
 
 ```nginx websockets.conf
 location /app/ {
@@ -55,15 +53,15 @@ location /app/ {
 
 ## Changes are checked before they go live
 
-When you save, create or rename a file, flitops writes it to the server and asks the web server to **test the whole configuration**. If the test fails (for example, a missing semicolon), flitops puts the previous version back and shows the error, so a typo can't take your site down. If it passes, the web server reloads gracefully, without dropping connections.
+When you save, create, rename or delete a file, flitops writes it to the server and asks the web server to **test the whole configuration**. If the test fails (for example, a missing semicolon), flitops puts the previous version back and shows the error, so a typo can't take your site down. If it passes, the web server reloads gracefully, without dropping connections.
 
 ## Renaming and deleting
 
-Open a file and use **Rename** or **Delete**. Deleting removes the file from the server and reloads the web server.
+Hover a file and use **Rename** or **Delete**. Deleting removes the file from the server and reloads the web server. If another file still depends on it, the web server's check fails and the file is kept.
 
 ## History
 
-Click **History** to see every change to the site's files: who made it, when, and what changed. Select an entry to see that version, and click **Restore this version** to put it back.
+Click **History** to see every change to the site's files: who made it, when, and what changed. Select an entry to see that version, and click **Restore this version** to put it back. A file that has been deleted can't be restored from history; create it again instead.
 
 ## Keeping in sync with the server
 

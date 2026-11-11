@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\NginxHistoryEvent;
 use App\Events\SiteNginxUpdated;
-use App\Models\Site;
+use App\Models\SiteNginxFile;
 use App\Models\SiteNginxHistory;
 use App\Services\Ssh\SshService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,48 +21,68 @@ class DeleteSiteNginxFileJob implements ShouldQueue
 
     public int $timeout = 30;
 
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(
-        public Site $site,
-        public string $absolutePath,
-        public string $path,
-        public ?string $deletedContent,
+        public SiteNginxFile $nginxFile,
         public ?int $userId,
     ) {
         $this->onQueue('provisioning');
     }
 
+    /**
+     * The file is set aside, not removed, until the web server accepts the
+     * config without it. Another file may still rely on what it defines, and
+     * removing it then would leave a config the web server can't reload.
+     */
     public function handle(SshService $sshService): void
     {
-        broadcast(new SiteNginxUpdated($this->site));
+        $site = $this->nginxFile->site;
+        $absolutePath = $this->nginxFile->absolutePath();
+        $backupPath = $absolutePath.'.flitops-bak';
 
         try {
-            $connection = $sshService->connect($this->site->server);
+            $connection = $sshService->connect($site->server);
+            $webServer = $site->server->webServer();
 
             try {
-                $connection->exec("sudo rm -f {$this->absolutePath}");
-                $this->site->server->webServer()->reload($connection);
+                $connection->exec("sudo mv -f {$absolutePath} {$backupPath} 2>/dev/null || true");
+
+                try {
+                    $webServer->validate($connection);
+                } catch (\RuntimeException $validationException) {
+                    $connection->exec("sudo mv -f {$backupPath} {$absolutePath} 2>/dev/null || true");
+
+                    throw $validationException;
+                }
+
+                $connection->exec("sudo rm -f {$backupPath}");
+                $webServer->reload($connection);
             } finally {
                 $connection->disconnect();
             }
 
             SiteNginxHistory::create([
-                'site_id' => $this->site->id,
+                'site_id' => $site->id,
                 'site_nginx_file_id' => null,
                 'user_id' => $this->userId,
                 'event' => NginxHistoryEvent::Deleted,
-                'path' => $this->path,
-                'old_content' => $this->deletedContent,
+                'path' => $this->nginxFile->path,
+                'old_content' => $this->nginxFile->content,
                 'new_content' => null,
             ]);
+
+            $this->nginxFile->delete();
         } catch (\Throwable $e) {
             Log::error('DeleteSiteNginxFileJob failed', [
-                'site_id' => $this->site->id,
-                'path' => $this->path,
+                'nginx_file_id' => $this->nginxFile->id,
                 'message' => $e->getMessage(),
             ]);
+            $this->nginxFile->update(['sync_status' => 'failed', 'sync_error' => $e->getMessage()]);
+
             throw $e;
         } finally {
-            broadcast(new SiteNginxUpdated($this->site));
+            broadcast(new SiteNginxUpdated($site));
         }
     }
 }
