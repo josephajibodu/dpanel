@@ -2,7 +2,6 @@
 
 namespace App\Contracts;
 
-use App\Enums\NginxFileSection;
 use App\Enums\ServiceType;
 use App\Models\Site;
 use App\Services\Ssh\SshConnection;
@@ -74,11 +73,4 @@ interface WebServerContract
      * itself, so flitops doesn't run certbot for them.
      */
     public function obtainsCertificates(): bool;
-
-    /**
-     * The config editor sections this web server supports.
-     *
-     * @return array<int, NginxFileSection>
-     */
-    public function fileSections(): array;
 }

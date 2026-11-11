@@ -2,28 +2,26 @@
 
 namespace App\Services\WebServer;
 
-use App\Contracts\WebServerContract;
-use App\Enums\NginxFileSection;
 use App\Enums\ServiceType;
 use App\Exceptions\SshCommandException;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Caddy\CaddyConfigGenerator;
 use App\Services\Nginx\NginxConfigService;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\Provisioning\CaddyService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use RuntimeException;
 
-class CaddyWebServer implements WebServerContract
+class CaddyWebServer extends BaseWebServer
 {
     public function __construct(
+        NginxConfigService $siteConfig,
+        SshService $sshService,
         private CaddyConfigGenerator $generator,
-        private NginxConfigService $sslDecider,
-        private SiteNginxSyncService $nginxSync,
-        private SshService $sshService,
-    ) {}
+    ) {
+        parent::__construct($siteConfig, $sshService);
+    }
 
     public function serviceType(): ServiceType
     {
@@ -33,40 +31,6 @@ class CaddyWebServer implements WebServerContract
     public function label(): string
     {
         return 'Caddy';
-    }
-
-    /**
-     * Main configs are always regenerated: the editor can't change them, so
-     * there are no edits to keep, and regenerating picks up a new PHP
-     * version, folder or certificate without patching stored files.
-     */
-    public function syncSite(Site $site, ?SshConnection $connection = null): void
-    {
-        $site->loadMissing('server', 'domains');
-
-        $shouldDisconnect = $connection === null;
-        $connection ??= $this->sshService->connect($site->server);
-
-        try {
-            $expectedBasenames = [];
-
-            foreach ($site->domains()->where('is_enabled', true)->get() as $domain) {
-                $basename = NginxConfigService::configFileName($site, $domain);
-                $expectedBasenames[] = $basename;
-
-                $this->writeDomainConfig($connection, $site, $domain, $basename);
-            }
-
-            $this->removeOrphanConfigs($connection, $site, $expectedBasenames);
-
-            $this->validateAndReload($connection);
-
-            $this->nginxSync->synchronizeAppUrl($connection, $site);
-        } finally {
-            if ($shouldDisconnect) {
-                $connection->disconnect();
-            }
-        }
     }
 
     public function validate(SshConnection $connection): void
@@ -90,12 +54,6 @@ class CaddyWebServer implements WebServerContract
     public function reload(SshConnection $connection): void
     {
         $connection->exec('sudo '.CaddyService::RELOAD_SCRIPT, 60);
-    }
-
-    public function validateAndReload(SshConnection $connection): void
-    {
-        $this->validate($connection);
-        $this->reload($connection);
     }
 
     public function siteConfigPaths(string $configFileName): array
@@ -131,17 +89,9 @@ class CaddyWebServer implements WebServerContract
         return true;
     }
 
-    public function fileSections(): array
+    protected function generateDomainConfig(Site $site, SiteDomain $domain): string
     {
-        return [NginxFileSection::Main, NginxFileSection::Server, NginxFileSection::After];
-    }
-
-    private function writeDomainConfig(SshConnection $connection, Site $site, SiteDomain $domain, string $basename): void
-    {
-        $snippetsBase = $domain->nginxSnippetsBasePath();
-        $connection->exec("sudo mkdir -p {$snippetsBase}/server {$snippetsBase}/after");
-
-        $ssl = $this->sslDecider->shouldUseSsl($domain);
+        $ssl = $this->siteConfig->shouldUseSsl($domain);
 
         // Free-domain hostnames are served with the wildcard certificate
         // flitops installs; Caddy obtains certificates for custom domains itself.
@@ -149,38 +99,7 @@ class CaddyWebServer implements WebServerContract
             ? $this->certificateDirectory($site->id, $domain->id)
             : null;
 
-        $config = $this->generator->generate($site, $domain, $ssl, $certificateDirectory);
-        $configPath = $this->siteConfigPaths($basename)[0];
-
-        $escapedConfig = str_replace("'", "'\\''", $config);
-        $connection->exec("echo '{$escapedConfig}' | sudo tee {$configPath} > /dev/null");
-
-        $site->nginxFiles()->updateOrCreate(
-            ['site_domain_id' => $domain->id, 'section' => NginxFileSection::Main->value, 'path' => $basename],
-            [
-                'content' => $config,
-                'hash' => md5($config),
-                'last_synced_at' => now(),
-                'sync_status' => 'synced',
-                'sync_error' => null,
-            ],
-        );
-    }
-
-    /**
-     * @param  array<int, string>  $expectedBasenames
-     */
-    private function removeOrphanConfigs(SshConnection $connection, Site $site, array $expectedBasenames): void
-    {
-        $orphans = $site->nginxFiles()
-            ->where('section', NginxFileSection::Main->value)
-            ->whereNotIn('path', $expectedBasenames)
-            ->get();
-
-        foreach ($orphans as $orphan) {
-            $connection->exec('sudo rm -f '.$this->siteConfigPaths($orphan->path)[0]);
-            $orphan->delete();
-        }
+        return $this->generator->generate($site, $domain, $ssl, $certificateDirectory);
     }
 
     private function isFreeDomain(SiteDomain $domain): bool

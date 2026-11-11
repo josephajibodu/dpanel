@@ -19,16 +19,6 @@ class NginxConfigService
         return "{$normalized}.conf";
     }
 
-    public static function configPath(Site $site, SiteDomain $domain): string
-    {
-        return '/etc/nginx/sites-available/'.self::configFileName($site, $domain);
-    }
-
-    public static function enabledPath(Site $site, SiteDomain $domain): string
-    {
-        return '/etc/nginx/sites-enabled/'.self::configFileName($site, $domain);
-    }
-
     /**
      * Generate the Nginx configuration for one site domain (single server_name group per file).
      */

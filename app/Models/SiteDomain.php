@@ -62,6 +62,42 @@ class SiteDomain extends Model
         return $this->ssl_enabled_at !== null;
     }
 
+    /**
+     * Whether this is a bare registered domain (example.com, example.com.ng)
+     * rather than a subdomain of one. Only a bare domain has a `www.` twin
+     * worth redirecting.
+     */
+    public function isApex(): bool
+    {
+        $labels = explode('.', strtolower($this->hostname));
+
+        if (count($labels) === 2) {
+            return true;
+        }
+
+        // Country domains registered under a second level: example.com.ng, example.co.uk.
+        return count($labels) === 3
+            && strlen($labels[2]) === 2
+            && in_array($labels[1], ['co', 'com', 'org', 'net', 'gov', 'edu', 'ac'], true);
+    }
+
+    /**
+     * The www redirect that actually applies. A redirect set on a subdomain
+     * is ignored, since `www.app.example.com` isn't an address anyone uses.
+     */
+    public function effectiveWwwRedirect(): WwwRedirect
+    {
+        return $this->isApex() ? $this->www_redirect : WwwRedirect::None;
+    }
+
+    /**
+     * The `www.` twin of a bare domain.
+     */
+    public function wwwHostname(): string
+    {
+        return 'www.'.$this->hostname;
+    }
+
     public function uniqueIds(): array
     {
         return ['ulid'];

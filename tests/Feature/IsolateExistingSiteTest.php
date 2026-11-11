@@ -153,9 +153,8 @@ it('moves a site to its own user and rewrites everything that named the old fold
         ->and($all)->toContain("chmod 600 '\\''".NEW_ROOT."/shared/.env'\\''")
         ->and($all)->toContain('artisan config:cache');
 
-    // nginx: the stored config (user edit kept) points at the new folder and socket.
+    // nginx: the rebuilt config points at the new folder and socket.
     expect($this->mainNginx->fresh()->content)->toContain('root '.NEW_ROOT.'/current/public;')
-        ->toContain('# my edit')
         ->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-example_com.sock;')
         ->not->toContain('artisan')
         ->and($all)->toContain('root '.NEW_ROOT.'/current/public;')

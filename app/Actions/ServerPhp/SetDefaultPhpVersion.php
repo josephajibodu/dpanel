@@ -39,8 +39,6 @@ class SetDefaultPhpVersion
                 ->each(function (Site $site) use ($version) {
                     $previousPhpVersion = $site->php_version;
                     $site->update(['php_version' => $version]);
-                    $site->forgetGeneratedNginxConfig();
-
                     if ($site->isIsolated()) {
                         MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
                     } else {

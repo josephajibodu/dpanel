@@ -173,7 +173,6 @@ it('regenerates the main nginx config when the web directory changes', function 
 
     $this->server->update(['connection_status' => ConnectionStatus::Successful]);
     $site = Site::factory()->forServer($this->server)->create(['directory' => '/public']);
-    $main = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Main, 'path' => 'main.conf']);
     $snippet = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Server]);
 
     $this->actingAs($this->user)
@@ -181,7 +180,6 @@ it('regenerates the main nginx config when the web directory changes', function 
         ->assertRedirect();
 
     expect($site->fresh()->directory)->toBe('/web')
-        ->and(SiteNginxFile::find($main->id))->toBeNull()
         ->and(SiteNginxFile::find($snippet->id))->not->toBeNull();
     Queue::assertPushed(SyncSiteNginxJob::class);
 });
@@ -193,12 +191,10 @@ it('moves an isolated site to its new PHP pool with a regenerated config', funct
     $this->server->createService(ServiceType::Php, '8.3', true);
     $this->server->createService(ServiceType::Php, '8.4', false);
     $site = Site::factory()->forServer($this->server)->isolated()->create(['php_version' => '8.3']);
-    $main = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Main, 'path' => 'main.conf']);
 
     $this->actingAs($this->user)
         ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", ['php_version' => '8.4']);
 
-    expect(SiteNginxFile::find($main->id))->toBeNull();
     Queue::assertPushed(MoveSitePhpPoolJob::class, fn ($job) => $job->previousPhpVersion === '8.3');
     Queue::assertNotPushed(SyncSiteNginxJob::class);
 });

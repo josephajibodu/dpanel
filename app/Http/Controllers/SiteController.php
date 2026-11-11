@@ -248,8 +248,6 @@ class SiteController extends Controller
         $phpVersionChanged = $site->wasChanged('php_version');
 
         if (($phpVersionChanged || $site->wasChanged('directory')) && $server->isReady()) {
-            $site->forgetGeneratedNginxConfig();
-
             if ($phpVersionChanged && $site->isIsolated()) {
                 MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
             } else {

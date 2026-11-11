@@ -83,7 +83,7 @@ class SiteNginxController extends Controller
             'nginxHistory' => Inertia::live($history, on: $nginxUpdated),
             'domains' => $domains,
             'webServer' => $server->webServer()->label(),
-            'sections' => collect($server->webServer()->fileSections())->map(fn ($s) => [
+            'sections' => collect(NginxFileSection::cases())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
                 'description' => $s->description(),
@@ -100,10 +100,6 @@ class SiteNginxController extends Controller
 
         if ($request->validated('section') === NginxFileSection::Main->value) {
             return redirect()->back()->with('error', 'Main configuration files are auto-generated and cannot be created manually.');
-        }
-
-        if (! in_array(NginxFileSection::from($request->validated('section')), $server->webServer()->fileSections(), true)) {
-            return redirect()->back()->withErrors(['section' => "{$server->webServer()->label()} doesn't support this section."]);
         }
 
         $domain = $site->domains()->findOrFail($request->validated('domain_id'));

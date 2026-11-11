@@ -5,7 +5,6 @@ use App\Enums\WwwRedirect;
 use App\Models\Certificate;
 use App\Models\Server;
 use App\Models\Site;
-use App\Models\SiteDomain;
 use App\Services\Nginx\NginxConfigService;
 use Illuminate\Support\Facades\Config;
 
@@ -132,7 +131,7 @@ describe('NginxConfigService', function () {
             ->toContain('server_name my-site.flitops.xyz');
     });
 
-    it('SSL config has only the HTTPS server block — no inline HTTP redirect', function () {
+    it('sends HTTP visitors to HTTPS from the same file as the HTTPS site', function () {
         $server = Server::factory()->create([
             'ip_address' => '203.0.113.10',
         ]);
@@ -150,7 +149,7 @@ describe('NginxConfigService', function () {
         expect($config)
             ->toContain('listen 443 ssl http2')
             ->toContain('server_name test.com')
-            ->not->toContain('return 301'); // redirect lives in before/ssl_redirect.conf
+            ->toContain('return 301 https://$host$request_uri;');
     });
 
     describe('project type configurations', function () {
@@ -282,19 +281,69 @@ describe('NginxConfigService', function () {
             ->toContain('fastcgi_buffer_size 32k;');
     })->with([ProjectType::Laravel, ProjectType::PhpGeneric, ProjectType::WordPress]);
 
-    it('does not inline www redirects — they are reserved for a future before/ snippet', function () {
-        $server = Server::factory()->create(['ip_address' => '192.168.1.1']);
-        $site = Site::factory()->create([
-            'server_id' => $server->id,
-            'domain' => 'apex.com',
-        ]);
-        $d = SiteDomain::query()->where('site_id', $site->id)->where('hostname', 'apex.com')->firstOrFail();
-        $d->update(['www_redirect' => WwwRedirect::FromWww]);
+    it('redirects www to the bare domain from the main config', function () {
+        $site = Site::factory()->create(['domain' => 'apex.com']);
+        $domain = $site->domains()->firstOrFail();
+        $domain->update(['www_redirect' => WwwRedirect::FromWww]);
 
-        $service = new NginxConfigService;
-        $config = $service->generateForSiteDomain($site, $d->fresh());
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
 
-        expect($config)->not->toContain('return 301');
+        expect($config)
+            ->toContain("server_name www.apex.com;\n")
+            ->toContain('return 301 http://apex.com$request_uri;')
+            ->toContain("server_name apex.com;\n");
+    });
+
+    it('answers the www redirect over HTTPS with the domain\'s certificate', function () {
+        $site = Site::factory()->create(['domain' => 'apex.com']);
+        $domain = $site->domains()->firstOrFail();
+        $domain->update(['www_redirect' => WwwRedirect::ToWww]);
+
+        $config = (new NginxConfigService)->generateWithSslForSiteDomain($site, $domain);
+
+        expect($config)
+            ->toContain("    listen [::]:443 ssl http2;\n    ssl_certificate /etc/nginx/ssl/domains/{$site->id}/{$domain->id}/server.crt;")
+            ->toContain("server_name apex.com;\n")
+            ->toContain('return 301 https://www.apex.com$request_uri;')
+            ->toContain("server_name www.apex.com;\n");
+    });
+
+    it('treats a country domain like example.com.ng as a bare domain', function () {
+        $site = Site::factory()->create(['domain' => 'shop.com.ng']);
+        $domain = $site->domains()->firstOrFail();
+        $domain->update(['www_redirect' => WwwRedirect::FromWww]);
+
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+        expect($config)->toContain('return 301 http://shop.com.ng$request_uri;');
+    });
+
+    it('ignores a www redirect set on a subdomain', function (WwwRedirect $redirect) {
+        $site = Site::factory()->create(['domain' => 'app.example.com']);
+        $domain = $site->domains()->firstOrFail();
+        $domain->update(['www_redirect' => $redirect]);
+
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+        expect($config)
+            ->toContain("server_name app.example.com;\n")
+            ->not->toContain('www.app.example.com');
+    })->with([WwwRedirect::FromWww, WwwRedirect::ToWww]);
+
+    it('keeps the site\'s error log and certificate checks in the main config, and includes only the user\'s two folders', function () {
+        $site = Site::factory()->create(['domain' => 'myapp.com']);
+        $domain = $site->domains()->firstOrFail();
+        $snippets = $domain->nginxSnippetsBasePath();
+
+        $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+        expect($config)
+            ->toContain("error_log /var/log/nginx/{$site->ulid}-error.log;")
+            ->toContain("location ^~ /.well-known/acme-challenge/ {\n        root {$site->acmeChallengeRoot()};")
+            ->toContain("include {$snippets}/server/*.conf;")
+            ->toContain("include {$snippets}/after/*.conf;")
+            ->not->toContain('/before/')
+            ->not->toContain('/locations/');
     });
 
     describe('SSL cert paths', function () {

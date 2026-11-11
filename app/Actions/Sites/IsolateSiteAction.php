@@ -4,7 +4,6 @@ namespace App\Actions\Sites;
 
 use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
-use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
 use App\Enums\SiteDomainType;
 use App\Enums\SiteStatus;
@@ -67,11 +66,6 @@ class IsolateSiteAction
      * @var list<string>
      */
     private array $completed = [];
-
-    /**
-     * @var array<int, string> Original content of the site's main nginx files, by id.
-     */
-    private array $originalNginxContent = [];
 
     /**
      * @var array<int, string> Original users of the site's workers, by id.
@@ -292,25 +286,11 @@ class IsolateSiteAction
     }
 
     /**
-     * Repoint the site's stored main nginx configs at the new folder and
-     * PHP-FPM socket (they're kept as written, user edits included), then
-     * regenerate everything and reload nginx after `nginx -t` passes.
+     * Rebuild the site's web server configs, which now point at the new
+     * folder and PHP-FPM socket, and reload once they pass the config check.
      */
     private function switchNginx(): void
     {
-        $serverSocket = '#/run/php/php[0-9.]+-fpm-'.preg_quote((string) config('server.user'), '#').'\.sock#';
-
-        $mainFiles = $this->site->nginxFiles()->where('section', NginxFileSection::Main->value)->get();
-
-        foreach ($mainFiles as $file) {
-            $this->originalNginxContent[$file->id] = (string) $file->content;
-
-            $content = str_replace($this->oldRoot.'/', $this->newRoot.'/', (string) $file->content);
-            $content = (string) preg_replace($serverSocket, $this->site->phpFpmSocket($this->phpVersion()), $content);
-
-            $file->update(['content' => $content, 'hash' => md5($content)]);
-        }
-
         $this->site->server->webServer()->syncSite($this->site, $this->connection);
     }
 
@@ -435,10 +415,6 @@ class IsolateSiteAction
 
     private function undoNginx(): void
     {
-        foreach ($this->originalNginxContent as $id => $content) {
-            $this->site->nginxFiles()->whereKey($id)->update(['content' => $content, 'hash' => md5($content)]);
-        }
-
         $this->site->system_user = null;
 
         try {

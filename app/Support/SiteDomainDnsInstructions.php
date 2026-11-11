@@ -23,25 +23,19 @@ class SiteDomainDnsInstructions
             return [];
         }
 
-        $hostname = $domain->hostname;
-        $parts = explode('.', $hostname);
-        $isTwoLabelApex = count($parts) === 2;
-        $recordName = $isTwoLabelApex ? '@' : $parts[0];
+        $isApex = $domain->isApex();
+        $recordName = $isApex ? '@' : explode('.', $domain->hostname)[0];
 
         $records = [];
 
-        if ($domain->wildcard_enabled && $isTwoLabelApex) {
+        if ($domain->wildcard_enabled && $isApex) {
             $records[] = ['type' => 'A', 'name' => '@', 'value' => $ip];
             $records[] = ['type' => 'A', 'name' => '*', 'value' => $ip];
         } else {
             $records[] = ['type' => 'A', 'name' => $recordName, 'value' => $ip];
         }
 
-        if ($isTwoLabelApex && $domain->www_redirect === WwwRedirect::FromWww) {
-            $records[] = ['type' => 'A', 'name' => 'www', 'value' => $ip];
-        }
-
-        if ($isTwoLabelApex && $domain->www_redirect === WwwRedirect::ToWww) {
+        if ($domain->effectiveWwwRedirect() !== WwwRedirect::None) {
             $records[] = ['type' => 'A', 'name' => 'www', 'value' => $ip];
         }
 

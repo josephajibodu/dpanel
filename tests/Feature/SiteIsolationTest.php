@@ -196,7 +196,7 @@ it('creates the site user and its own php-fpm pool, and points nginx at it', fun
 
     expect($all)->toContain('fastcgi_pass unix:/run/php/php8.3-fpm-example_com.sock;')
         ->and($all)->not->toContain('php8.3-fpm-artisan.sock')
-        ->and($all)->toContain("location ^~ /.well-known/acme-challenge/ {\n    root /var/lib/flitops/acme;");
+        ->and($all)->toContain("location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/flitops/acme;");
 
     // Site files are created by the site's own user, never chowned to the server user.
     expect(collect($commands)->contains(fn ($c) => str_starts_with($c, "sudo -u 'example_com' -H bash -c 'cd ~ && mkdir -p /home/example_com/example.com/releases")))->toBeTrue()
@@ -604,15 +604,14 @@ it('regenerates each site\'s main nginx config when upgrading every site to the 
 
     $this->server->createService(ServiceType::Php, '8.3', true);
     $this->server->createService(ServiceType::Php, '8.4', false);
-    $site = isolatedLaravelSite($this->server);
-    $main = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Main, 'path' => 'main.conf']);
+    $site = Site::factory()->forServer($this->server)->create(['php_version' => '8.3']);
     $snippet = SiteNginxFile::factory()->forSite($site)->create(['section' => NginxFileSection::Server]);
 
     $this->actingAs($this->user)
         ->patch("/{$this->team->slug}/servers/{$this->server->id}/php/default-version", ['version' => '8.4', 'upgrade_sites' => true]);
 
-    expect(SiteNginxFile::find($main->id))->toBeNull()
-        ->and(SiteNginxFile::find($snippet->id))->not->toBeNull();
+    Queue::assertPushed(SyncSiteNginxJob::class, fn ($job) => $job->site->is($site));
+    expect(SiteNginxFile::find($snippet->id))->not->toBeNull();
 });
 
 it('creates the new pool and repoints nginx before removing the old pool', function () {

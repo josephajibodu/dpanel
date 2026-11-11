@@ -5,11 +5,8 @@ use App\Enums\NginxFileSection;
 use App\Enums\ServerStatus;
 use App\Models\Server;
 use App\Models\Site;
-use App\Models\SiteNginxFile;
 use App\Models\Team;
 use App\Models\User;
-use App\Services\Nginx\NginxConfigService;
-use App\Services\Nginx\SiteNginxSyncService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -50,20 +47,12 @@ beforeEach(function () {
     $this->site = Site::factory()->forServer($this->server)->create();
 });
 
-it('points every domain at the site\'s own error log, including configs a user has edited', function () {
-    $domain = $this->site->domains()->firstOrFail();
-    SiteNginxFile::factory()->forDomain($domain)
-        ->inSection(NginxFileSection::Main, NginxConfigService::configFileName($this->site, $domain))
-        ->create(['content' => '# edited by hand']);
-
+it('points every domain at the site\'s own error log', function () {
     $commands = [];
-    app(SiteNginxSyncService::class)->sync($this->site, errorLogConnection($commands));
+    $this->server->webServer()->syncSite($this->site, errorLogConnection($commands));
 
-    $snippet = "error_log /var/log/nginx/{$this->site->ulid}-error.log;\n";
-
-    expect($commands)->toContain("echo '{$snippet}' | sudo tee {$domain->nginxSnippetsBasePath()}/server/error_log.conf > /dev/null")
-        ->and($this->site->nginxFiles()->where('path', 'server/error_log.conf')->value('content'))->toBe($snippet)
-        ->and($this->site->nginxFiles()->where('section', NginxFileSection::Main->value)->value('content'))->toBe('# edited by hand');
+    expect($this->site->nginxFiles()->where('section', NginxFileSection::Main->value)->value('content'))
+        ->toContain("error_log /var/log/nginx/{$this->site->ulid}-error.log;");
 });
 
 it('shows the last lines of the site\'s error log', function () {

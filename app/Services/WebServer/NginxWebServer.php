@@ -2,21 +2,15 @@
 
 namespace App\Services\WebServer;
 
-use App\Contracts\WebServerContract;
-use App\Enums\NginxFileSection;
 use App\Enums\ServiceType;
 use App\Exceptions\SshCommandException;
 use App\Models\Site;
-use App\Services\Nginx\SiteNginxSyncService;
+use App\Models\SiteDomain;
 use App\Services\Ssh\SshConnection;
 use RuntimeException;
 
-class NginxWebServer implements WebServerContract
+class NginxWebServer extends BaseWebServer
 {
-    public function __construct(
-        private SiteNginxSyncService $siteSync,
-    ) {}
-
     public function serviceType(): ServiceType
     {
         return ServiceType::Nginx;
@@ -25,11 +19,6 @@ class NginxWebServer implements WebServerContract
     public function label(): string
     {
         return 'Nginx';
-    }
-
-    public function syncSite(Site $site, ?SshConnection $connection = null): void
-    {
-        $this->siteSync->sync($site, $connection);
     }
 
     public function validate(SshConnection $connection): void
@@ -92,8 +81,31 @@ class NginxWebServer implements WebServerContract
         return false;
     }
 
-    public function fileSections(): array
+    protected function generateDomainConfig(Site $site, SiteDomain $domain): string
     {
-        return NginxFileSection::cases();
+        return $this->siteConfig->generateForSiteDomainAuto($site, $domain);
+    }
+
+    /**
+     * Also clears what earlier versions kept beside the user's files: the
+     * `before` and `locations` folders, and flitops' own redirect, error-log
+     * and certificate-check files. All of that is now part of the main config.
+     */
+    protected function prepareDomain(SshConnection $connection, Site $site, SiteDomain $domain): void
+    {
+        $snippetsBase = $domain->nginxSnippetsBasePath();
+
+        $connection->exec(
+            "sudo mkdir -p {$snippetsBase}/server {$snippetsBase}/after"
+            ." && sudo rm -rf {$snippetsBase}/before {$snippetsBase}/locations"
+            ." {$snippetsBase}/server/acme_challenge.conf {$snippetsBase}/server/error_log.conf"
+        );
+
+        $site->nginxFiles()
+            ->where('site_domain_id', $domain->id)
+            ->where(fn ($query) => $query
+                ->whereIn('section', ['before', 'locations'])
+                ->orWhereIn('path', ['server/acme_challenge.conf', 'server/error_log.conf']))
+            ->delete();
     }
 }

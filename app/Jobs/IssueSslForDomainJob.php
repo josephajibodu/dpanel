@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Enums\NginxFileSection;
+use App\Enums\WwwRedirect;
 use App\Events\SiteDomainsUpdated;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -66,14 +66,9 @@ class IssueSslForDomainJob implements ShouldQueue
 
             // For apex domains with a www redirect, include www in the cert so that
             // both the primary hostname and the www redirect server block work over HTTPS.
-            $parts = explode('.', $hostname);
-            $isApex = count($parts) === 2 && ! str_starts_with($hostname, 'www.');
-            $wwwRedirect = $this->siteDomain->www_redirect->value;
-            $includeWww = $isApex && in_array($wwwRedirect, ['from_www', 'to_www'], true);
-
             $domainFlags = '-d '.escapeshellarg($hostname);
-            if ($includeWww) {
-                $domainFlags .= ' -d '.escapeshellarg('www.'.$hostname);
+            if ($this->siteDomain->effectiveWwwRedirect() !== WwwRedirect::None) {
+                $domainFlags .= ' -d '.escapeshellarg($this->siteDomain->wwwHostname());
             }
 
             $result = $connection->exec(
@@ -110,12 +105,6 @@ class IssueSslForDomainJob implements ShouldQueue
                 ...($expiresAt !== null ? ['ssl_expires_at' => $expiresAt] : []),
             ]);
             broadcast(new SiteDomainsUpdated($this->site));
-
-            // Clear the stale main nginx file so SyncSiteNginxJob regenerates it with SSL.
-            $this->site->nginxFiles()
-                ->where('site_domain_id', $this->siteDomain->id)
-                ->where('section', NginxFileSection::Main->value)
-                ->delete();
 
             SyncSiteNginxJob::dispatch($this->site);
         } finally {
