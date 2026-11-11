@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { MonitorIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
 
 import { MarketingWordmark } from '@/components/marketing/marketing-header';
 import { type Appearance, useAppearance } from '@/hooks/use-appearance';
@@ -91,29 +91,26 @@ function AppearanceSwitch() {
 
 export default function MarketingFooter() {
     return (
-        <footer className="border-t border-border">
-            <div className="mx-auto max-w-6xl px-6 pt-16 pb-10">
-                <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
-                    <div className="max-w-xs">
+        <footer className="dark bg-neutral-950 text-foreground">
+            <div className="mx-auto max-w-7xl px-6 pt-20 pb-10 lg:px-8">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-12 lg:grid-cols-[1.6fr_repeat(4,1fr)]">
+                    <div className="col-span-2 max-w-xs lg:col-span-1">
                         <MarketingWordmark />
-                        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                        <p className="mt-5 leading-relaxed text-muted-foreground">
                             Provision, deploy, and run your applications on
-                            servers you own, with the polish of a managed
-                            platform.
+                            servers you own.
                         </p>
                     </div>
 
                     {footerColumns.map((column) => (
                         <div key={column.title}>
-                            <p className="text-sm font-medium">
-                                {column.title}
-                            </p>
-                            <ul className="mt-4 space-y-3 text-sm">
+                            <p className="font-medium">{column.title}</p>
+                            <ul className="mt-5 space-y-3.5 text-[15px] text-muted-foreground">
                                 {column.links.map((link) => (
                                     <li key={link.title}>
                                         <Link
                                             href={link.href}
-                                            className="text-muted-foreground transition-colors hover:text-foreground"
+                                            className="transition-colors hover:text-foreground"
                                         >
                                             {link.title}
                                         </Link>
@@ -124,7 +121,7 @@ export default function MarketingFooter() {
                     ))}
                 </div>
 
-                <div className="mt-16 flex flex-col-reverse items-start justify-between gap-6 border-t border-border pt-8 text-sm text-muted-foreground sm:flex-row sm:items-center">
+                <div className="mt-20 flex flex-col-reverse items-start justify-between gap-6 border-t border-border pt-8 text-sm text-muted-foreground sm:flex-row sm:items-center">
                     <p>
                         &copy; {new Date().getFullYear()} flitops. All rights
                         reserved.

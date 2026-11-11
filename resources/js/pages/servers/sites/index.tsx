@@ -1,10 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import {
+    DotsThreeVerticalIcon,
+    PlusIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { format } from 'date-fns';
-import { MoreVerticalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { SearchInput } from '@/components/search-input';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
@@ -103,15 +108,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
             <Head title={`Sites - ${server.name}`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Sites
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Sites on {server.name}.
-                        </p>
-                    </div>
+                <PageActions>
                     {canManageSites && (
                         <div className="flex shrink-0 items-center gap-2">
                             <Button asChild>
@@ -120,13 +117,13 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                         `/servers/${server.id}/sites/create`,
                                     )}
                                 >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    <PlusIcon className="h-4 w-4" />
                                     Add site
                                 </Link>
                             </Button>
                         </div>
                     )}
-                </div>
+                </PageActions>
 
                 {sites.data.length === 0 ? (
                     <EmptyState
@@ -150,7 +147,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                             `/servers/${server.id}/sites/create`,
                                         )}
                                     >
-                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        <PlusIcon className="h-4 w-4" />
                                         Add site
                                     </Link>
                                 </Button>
@@ -254,7 +251,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                                         size="icon"
                                                                         className="h-8 w-8"
                                                                     >
-                                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                                        <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                         <span className="sr-only">
                                                                             Actions
                                                                         </span>
@@ -284,7 +281,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                                                 }
                                                                                 className="text-destructive focus:text-destructive"
                                                                             >
-                                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                                <TrashIcon className="h-4 w-4" />
                                                                                 Delete
                                                                             </DropdownMenuItem>
                                                                         )}

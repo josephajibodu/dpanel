@@ -70,14 +70,14 @@ export default function ServerTerminalIndex({
                 </div>
 
                 {unavailableReason ? (
-                    <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="rounded-2xl bg-card p-6 text-sm text-muted-foreground shadow-card">
                         {unavailableReason}
                     </div>
                 ) : (
                     <ServerTerminal serverId={server.id} />
                 )}
 
-                <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                <div className="rounded-2xl bg-card shadow-card">
                     <div className="border-b px-6 py-4">
                         <CardTitle>Recent sessions</CardTitle>
                         <CardDescription className="mt-1">

@@ -1,4 +1,10 @@
-import { ChevronDownIcon, Loader2Icon, RefreshCwIcon, SearchIcon, XIcon } from 'lucide-react';
+import {
+    ArrowsClockwiseIcon,
+    CaretDownIcon,
+    CircleNotchIcon,
+    MagnifyingGlassIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
@@ -90,7 +96,7 @@ export function RepositorySelector({
                     type="button"
                     disabled={disabled}
                     className={cn(
-                        'border-input focus-visible:ring-ring/50 flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+                        'border-input focus-visible:border-ring focus-visible:ring-ring/25 flex h-8 w-full items-center justify-between gap-2 rounded-md border bg-card px-3 py-2 text-sm shadow-[inset_0_1px_0_rgb(0_0_0/0.04)] transition-[color,border-color,box-shadow] hover:border-foreground/40 outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
                         value && 'ring-ring/50 border-primary',
                         className,
                     )}
@@ -98,7 +104,7 @@ export function RepositorySelector({
                     <span className="min-w-0 flex-1 truncate text-left">
                         {loadingRepositories ? (
                             <span className="text-muted-foreground flex items-center gap-2">
-                                <Loader2Icon className="h-4 w-4 shrink-0 animate-spin" />
+                                <CircleNotchIcon className="h-4 w-4 shrink-0 animate-spin" />
                                 Loading repositories...
                             </span>
                         ) : value ? (
@@ -120,7 +126,7 @@ export function RepositorySelector({
                                 <XIcon className="h-4 w-4 text-muted-foreground" />
                             </span>
                         )}
-                        <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-50" />
+                        <CaretDownIcon className="h-4 w-4 shrink-0 opacity-50" />
                     </span>
                 </button>
             </DropdownMenuTrigger>
@@ -132,7 +138,7 @@ export function RepositorySelector({
                 <div className="flex flex-col">
                     <div className="border-b p-2">
                         <div className="relative">
-                            <SearchIcon className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+                            <MagnifyingGlassIcon className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
                             <Input
                                 placeholder="Search repositories"
                                 value={search}
@@ -145,7 +151,7 @@ export function RepositorySelector({
                     <div className="max-h-60 overflow-y-auto p-1">
                         {loadingRepositories ? (
                             <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                                 Loading repositories...
                             </div>
                         ) : filteredRepositories.length > 0 ? (
@@ -180,7 +186,7 @@ export function RepositorySelector({
                             disabled={loadingRepositories}
                             className="hover:bg-accent focus:bg-accent focus:text-accent-foreground flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-primary outline-none disabled:opacity-50"
                         >
-                            <RefreshCwIcon
+                            <ArrowsClockwiseIcon
                                 className={cn('h-4 w-4', loadingRepositories && 'animate-spin')}
                             />
                             Reload repositories

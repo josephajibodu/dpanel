@@ -8,7 +8,7 @@ interface StatProps {
     hint?: string;
     tone?: 'default' | 'warning';
     action?: ReactNode;
-    /** Wraps the cell in its own bordered, shadowed box, for a grid of standalone tiles. */
+    /** A cell of a stat strip: the surrounding grid draws the card and the dividers. */
     bordered?: boolean;
     className?: string;
     /** Override the value's default `text-2xl font-semibold` — e.g. for a longer text value
@@ -30,18 +30,18 @@ export function Stat({
         <div
             className={cn(
                 bordered
-                    ? 'rounded-lg border bg-card p-4 shadow-md shadow-black/5 dark:shadow-black/20'
+                    ? 'bg-card px-5 py-4'
                     : 'px-6 py-4',
                 className,
             )}
         >
             <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className="text-sm font-medium text-muted-foreground">{label}</p>
                 {action}
             </div>
             <p
                 className={cn(
-                    'text-2xl font-semibold',
+                    'mt-1 text-xl font-semibold tracking-tight',
                     tone === 'warning' && 'text-destructive',
                     valueClassName,
                 )}

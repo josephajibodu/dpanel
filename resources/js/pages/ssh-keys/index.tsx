@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { AddKeyDialog } from '@/components/ssh-keys/add-key-dialog';
 import { SshKeyDetailsDialog } from '@/components/ssh-keys/ssh-key-details-dialog';
 import { SshKeyTableRow } from '@/components/ssh-keys/ssh-key-table-row';
@@ -86,17 +87,9 @@ export default function SshKeysIndex({
             <Head title="SSH Keys" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            SSH Keys
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Manage SSH keys that can be synced to your servers.
-                        </p>
-                    </div>
+                <PageActions>
                     <AddKeyDialog />
-                </div>
+                </PageActions>
 
                 {sshKeysData.data.length === 0 ? (
                     <EmptyState

@@ -1,6 +1,15 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import {
+    ArrowClockwiseIcon,
+    CircleNotchIcon,
+    ClockCounterClockwiseIcon,
+    ClockIcon,
+    GitBranchIcon,
+    GlobeIcon,
+    WrenchIcon,
+    XCircleIcon,
+} from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
-import { ClockIcon, GitBranchIcon, HistoryIcon, Loader2Icon, WrenchIcon, GlobeIcon, RotateCwIcon, XCircleIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -75,7 +84,7 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
         const started = flash?.deployment_started;
         if (started) {
             toast.info(`Deploying ${started.commit} on ${started.site}`, {
-                icon: <Loader2Icon className="h-4 w-4 animate-spin" />,
+                icon: <CircleNotchIcon className="h-4 w-4 animate-spin" />,
             });
         }
     }, [flash?.deployment_started]);
@@ -115,7 +124,7 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                                 <span className="inline-flex items-center gap-1.5">
                                     {isDeploying ? (
-                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                     ) : null}
                                     <StatusBadge status={deployment.status} label={deployment.status_label} />
                                 </span>
@@ -149,50 +158,48 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                         );
                                     }}
                                 >
-                                    <button
+                                    <Button
                                         type="submit"
+                                        variant="outline"
                                         disabled={cancelForm.processing}
-                                        className="inline-flex items-center gap-2 rounded-md border border-destructive/40 bg-background px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 disabled:opacity-50"
+                                        className="text-destructive-foreground"
                                     >
                                         <XCircleIcon className="h-4 w-4" />
                                         Cancel deployment
-                                    </button>
+                                    </Button>
                                 </form>
                             )}
                             {!isDeploying && can('deploy') && (
                                 <Button onClick={handleRedeploy} disabled={redeployForm.processing}>
                                     {redeployForm.processing ? (
-                                        <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                     ) : (
-                                        <RotateCwIcon className="h-4 w-4" />
+                                        <ArrowClockwiseIcon className="h-4 w-4" />
                                     )}
                                     Redeploy
                                 </Button>
                             )}
                             {deployment.rollback_available && can('deploy') && (
                                 <Button variant="outline" onClick={() => setRollbackDialogOpen(true)} disabled={rollbackForm.processing}>
-                                    <HistoryIcon className="h-4 w-4" />
+                                    <ClockCounterClockwiseIcon className="h-4 w-4" />
                                     Rollback to this
                                 </Button>
                             )}
-                            <Link
-                                href={siteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                            >
-                                <GlobeIcon className="h-4 w-4" />
-                                Visit
-                            </Link>
+                            <Button variant="outline" asChild>
+                                <a href={siteUrl} target="_blank" rel="noopener noreferrer">
+                                    <GlobeIcon className="h-4 w-4" />
+                                    Visit
+                                </a>
+                            </Button>
                         </div>
                     </div>
 
-                    <div className="rounded-lg border bg-card">
+                    <div className="overflow-hidden rounded-2xl bg-card shadow-card">
                         <div className="flex items-center gap-2 border-b px-4 py-3">
                             {isDeploying ? (
-                                <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                                <CircleNotchIcon className="h-4 w-4 animate-spin text-muted-foreground" />
                             ) : null}
-                            <h2 className="font-medium">Build logs</h2>
+                            <h2 className="text-[15px] font-semibold">Build logs</h2>
                         </div>
                         <DeploymentLog logs={logs} isDeploying={isDeploying} />
                     </div>

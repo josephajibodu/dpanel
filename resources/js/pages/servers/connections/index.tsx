@@ -136,7 +136,7 @@ export default function ServerConnectionsIndex({
                 </div>
 
                 <StatGroup>
-                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="rounded-2xl bg-card shadow-card">
                         <div className="border-b px-6 py-4">
                             <CardTitle>Connected servers</CardTitle>
                             <CardDescription className="mt-1">
@@ -298,7 +298,7 @@ export default function ServerConnectionsIndex({
                     </div>
 
                     {redisPassword && (
-                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                        <div className="rounded-2xl bg-card shadow-card">
                             <div className="border-b px-6 py-4">
                                 <CardTitle>Redis password</CardTitle>
                                 <CardDescription className="mt-1">

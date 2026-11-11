@@ -1,20 +1,20 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { format, formatDistanceToNow } from 'date-fns';
 import {
-    AlertCircleIcon,
-    ExternalLinkIcon,
+    ArrowSquareOutIcon,
+    CircleNotchIcon,
+    DotsThreeVerticalIcon,
     GitBranchIcon,
-    LinkIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    Trash2Icon,
-} from 'lucide-react';
-import { useState } from 'react';
+    TrashIcon,
+    WarningCircleIcon,
+} from '@phosphor-icons/react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { type ReactNode, useState } from 'react';
 
 import { retry } from '@/actions/App/Http/Controllers/SiteController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { cronFrequencyLabel } from '@/components/processes/processes-panel';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
@@ -43,6 +43,7 @@ import { usePermission } from '@/hooks/use-permission';
 import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
 import type { CronJob, DatabaseConnection, Worker } from '@/types/server';
@@ -224,7 +225,7 @@ export default function SitesShow({
                             steps={siteData.provisioning_steps ?? []}
                         />
                         <StatGroup>
-                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                            <div className="rounded-2xl bg-card shadow-card">
                                 <div className="border-b px-6 py-4">
                                     <CardTitle>Details</CardTitle>
                                 </div>
@@ -312,8 +313,8 @@ export default function SitesShow({
                 ) : (
                     <div className="space-y-6">
                         {siteData.status === 'failed' && (
-                            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
-                                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                            <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/[0.06] p-4 text-sm">
+                                <WarningCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                                 <div className="flex-1 space-y-1">
                                     <p className="font-medium text-red-800 dark:text-red-200">
                                         Site creation failed
@@ -332,7 +333,7 @@ export default function SitesShow({
                                             disabled={retryForm.processing}
                                         >
                                             {retryForm.processing && (
-                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                                <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                             )}
                                             Retry
                                         </Button>
@@ -347,162 +348,152 @@ export default function SitesShow({
                                 </div>
                             )}
 
-                        {/* Overview */}
-                        <StatGroup>
-                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
-                                <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-base font-semibold">
-                                            {siteData.domain}
-                                        </span>
-                                        <SiteStatusBadge
-                                            status={siteData.status}
-                                            statusLabel={siteData.status_label}
-                                            statusColor={siteData.status_color}
-                                        />
-                                    </div>
-                                    {can('manage_sites') && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                >
-                                                    <MoreVerticalIcon className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link
-                                                        href={teamPath(
-                                                            `/servers/${serverId}/sites/${siteData.id}/edit`,
-                                                        )}
-                                                    >
-                                                        Edit Site
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onClick={handleDelete}
-                                                    className="text-destructive focus:text-destructive"
-                                                    disabled={
-                                                        siteData.status ===
-                                                        'installing'
-                                                    }
-                                                >
-                                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                                    Delete Site
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                        <PageActions>
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={`https://${siteData.domain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <ArrowSquareOutIcon className="h-4 w-4" />
+                                    Visit
+                                </a>
+                            </Button>
+                            {can('deploy') && (
+                                <Button
+                                    onClick={handleDeploy}
+                                    disabled={
+                                        isDeploying ||
+                                        siteData.status === 'installing'
+                                    }
+                                >
+                                    {isDeploying ? (
+                                        <>
+                                            <CircleNotchIcon className="h-4 w-4 animate-spin" />
+                                            Deploying...
+                                        </>
+                                    ) : (
+                                        'Deploy'
                                     )}
-                                </div>
-
-                                <div className="space-y-5 p-6">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">
-                                            Domains
-                                        </p>
-                                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                            <a
-                                                href={`https://${siteData.domain}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
-                                            >
-                                                {siteData.domain}
-                                                <ExternalLinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                                            </a>
-                                            {(siteData.aliases ?? []).map(
-                                                (alias) => (
-                                                    <a
-                                                        key={alias}
-                                                        href={`https://${alias}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
-                                                    >
-                                                        {alias}
-                                                        <ExternalLinkIcon className="h-3.5 w-3.5" />
-                                                    </a>
-                                                ),
-                                            )}
-                                        </div>
-                                        <Link
-                                            href={teamPath(
-                                                `/servers/${serverId}/sites/${siteData.id}/domains`,
-                                            )}
-                                            className="mt-3 inline-block text-xs font-medium text-muted-foreground hover:text-foreground"
+                                </Button>
+                            )}
+                            {can('manage_sites') && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            aria-label="More actions"
                                         >
-                                            Manage domains →
-                                        </Link>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Status
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium">
-                                                {siteData.status_label}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Created
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium">
-                                                {format(
-                                                    new Date(
-                                                        siteData.created_at,
-                                                    ),
-                                                    'MMM d, yyyy',
+                                            <DotsThreeVerticalIcon
+                                                weight="bold"
+                                                className="h-4 w-4"
+                                            />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                href={teamPath(
+                                                    `/servers/${serverId}/sites/${siteData.id}/edit`,
                                                 )}
-                                            </p>
-                                        </div>
-                                    </div>
+                                            >
+                                                Edit Site
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={handleDelete}
+                                            className="text-destructive focus:text-destructive"
+                                            disabled={
+                                                siteData.status === 'installing'
+                                            }
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                            Delete Site
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </PageActions>
 
-                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Uptime
-                                            </p>
-                                            <div className="mt-2">
-                                                {siteData.uptime_status ? (
-                                                    <StatusBadge
-                                                        status={
-                                                            siteData.uptime_status_label ??
-                                                            ''
-                                                        }
-                                                        color={
-                                                            siteData.uptime_status_color ??
-                                                            'gray'
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Not checked yet
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Last checked
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium">
-                                                {siteData.uptime_checked_at
-                                                    ? formatDistanceToNow(
-                                                          new Date(
-                                                              siteData.uptime_checked_at,
-                                                          ),
-                                                          { addSuffix: true },
-                                                      )
-                                                    : '—'}
-                                            </p>
-                                        </div>
-                                        {siteData.open_incident && (
-                                            <p className="col-span-2 text-sm break-words text-red-700 dark:text-red-300">
+                        <section className="overflow-hidden rounded-2xl bg-card shadow-card">
+                            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                    <h1 className="truncate text-lg font-semibold tracking-tight">
+                                        {siteData.domain}
+                                    </h1>
+                                    <SiteStatusBadge
+                                        status={siteData.status}
+                                        statusLabel={siteData.status_label}
+                                        statusColor={siteData.status_color}
+                                    />
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                                    {[
+                                        siteData.domain,
+                                        ...(siteData.aliases ?? []),
+                                    ].map((hostname) => (
+                                        <a
+                                            key={hostname}
+                                            href={`https://${hostname}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-link hover:underline"
+                                        >
+                                            {hostname}
+                                            <ArrowSquareOutIcon className="size-3.5 shrink-0" />
+                                        </a>
+                                    ))}
+                                    <Link
+                                        href={teamPath(
+                                            `/servers/${serverId}/sites/${siteData.id}/domains`,
+                                        )}
+                                        className="text-muted-foreground hover:text-foreground"
+                                    >
+                                        Manage domains →
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <dl className="grid gap-px border-t bg-border sm:grid-cols-2 lg:grid-cols-4">
+                                <OverviewItem
+                                    label="Source"
+                                    className="sm:col-span-2"
+                                    hint={
+                                        latestDeployment?.commit_hash && (
+                                            <>
+                                                <span className="font-mono">
+                                                    {latestDeployment.commit_hash_short ??
+                                                        latestDeployment.commit_hash.slice(
+                                                            0,
+                                                            7,
+                                                        )}
+                                                </span>
+                                                {latestDeployment.commit_message &&
+                                                    ` · ${latestDeployment.commit_message}`}
+                                            </>
+                                        )
+                                    }
+                                >
+                                    {siteData.repository ? (
+                                        <span className="flex items-center gap-1.5">
+                                            <GitBranchIcon className="size-4 shrink-0 text-muted-foreground" />
+                                            <span className="truncate font-mono">
+                                                {siteData.short_repository}:
+                                                {siteData.branch}
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        'No repository connected'
+                                    )}
+                                </OverviewItem>
+
+                                <OverviewItem
+                                    label="Uptime"
+                                    hint={
+                                        siteData.open_incident ? (
+                                            <span className="text-destructive-foreground">
                                                 Down since{' '}
                                                 {format(
                                                     new Date(
@@ -513,431 +504,410 @@ export default function SitesShow({
                                                 )}
                                                 :{' '}
                                                 {siteData.open_incident.reason}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="border-t pt-5">
-                                        <p className="text-sm text-muted-foreground">
-                                            Source
-                                        </p>
-                                        {siteData.repository ? (
-                                            <>
-                                                <div className="mt-2 flex items-center gap-1.5 text-sm">
-                                                    <GitBranchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                                    <span className="truncate font-mono">
-                                                        {
-                                                            siteData.short_repository
-                                                        }
-                                                        :{siteData.branch}
-                                                    </span>
-                                                </div>
-                                                {latestDeployment?.commit_hash && (
-                                                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                                                        <span className="font-mono">
-                                                            {latestDeployment.commit_hash_short ??
-                                                                latestDeployment.commit_hash.slice(
-                                                                    0,
-                                                                    7,
-                                                                )}
-                                                        </span>
-                                                        {latestDeployment.commit_message && (
-                                                            <>
-                                                                {' '}
-                                                                ·{' '}
-                                                                {
-                                                                    latestDeployment.commit_message
-                                                                }
-                                                            </>
-                                                        )}
-                                                    </p>
-                                                )}
-                                            </>
+                                            </span>
                                         ) : (
-                                            <p className="mt-2 text-sm text-muted-foreground">
-                                                No repository connected.
-                                            </p>
-                                        )}
-                                    </div>
+                                            siteData.uptime_checked_at &&
+                                            `Checked ${formatDistanceToNow(
+                                                new Date(
+                                                    siteData.uptime_checked_at,
+                                                ),
+                                                { addSuffix: true },
+                                            )}`
+                                        )
+                                    }
+                                >
+                                    {siteData.uptime_status ? (
+                                        <StatusBadge
+                                            status={
+                                                siteData.uptime_status_label ??
+                                                ''
+                                            }
+                                            color={
+                                                siteData.uptime_status_color ??
+                                                'gray'
+                                            }
+                                        />
+                                    ) : (
+                                        'Not checked yet'
+                                    )}
+                                </OverviewItem>
 
-                                    <div className="grid grid-cols-2 gap-4 border-t pt-5">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Framework
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium">
-                                                {siteData.project_type_label ??
-                                                    '—'}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                PHP version
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium">
-                                                PHP {siteData.php_version}
-                                            </p>
-                                        </div>
-                                    </div>
+                                <OverviewItem
+                                    label="Framework"
+                                    hint={`PHP ${siteData.php_version}`}
+                                >
+                                    {siteData.project_type_label ?? '—'}
+                                </OverviewItem>
 
-                                    <div
-                                        className={`grid gap-4 border-t pt-5 ${siteData.repository ? 'grid-cols-2' : 'grid-cols-1'}`}
+                                <OverviewItem
+                                    label="Server"
+                                    hint={
+                                        siteData.server?.ip_address && (
+                                            <span className="font-mono">
+                                                {siteData.server.ip_address}
+                                            </span>
+                                        )
+                                    }
+                                >
+                                    <Link
+                                        href={teamPath(`/servers/${serverId}`)}
+                                        className="text-link hover:underline"
                                     >
-                                        {siteData.repository && (
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Auto deploy
-                                                </p>
-                                                <p className="mt-2 text-sm font-medium">
-                                                    {siteData.auto_deploy
-                                                        ? 'Enabled'
-                                                        : 'Disabled'}
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Server
-                                            </p>
-                                            <div className="mt-2 flex items-center justify-between gap-2">
-                                                <span className="text-sm font-medium">
-                                                    {siteData.server?.name ??
-                                                        server?.name ??
-                                                        '—'}
-                                                </span>
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${serverId}`,
-                                                    )}
-                                                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                                >
-                                                    View →
-                                                </Link>
-                                            </div>
-                                            {siteData.server?.ip_address && (
-                                                <p className="mt-1 font-mono text-xs text-muted-foreground">
-                                                    {siteData.server.ip_address}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                                        {siteData.server?.name ??
+                                            server?.name ??
+                                            '—'}
+                                    </Link>
+                                </OverviewItem>
 
-                                    {databaseConnection && (
-                                        <div className="border-t pt-5">
-                                            <p className="text-sm text-muted-foreground">
-                                                Database
-                                            </p>
-                                            <div className="mt-2 flex items-center justify-between gap-2">
-                                                <span className="truncate font-mono text-sm font-medium">
-                                                    {
-                                                        databaseConnection
-                                                            .database.name
-                                                    }
-                                                </span>
+                                <OverviewItem
+                                    label="Database"
+                                    hint={
+                                        databaseConnection ? (
+                                            <>
+                                                On{' '}
+                                                {databaseConnection.server.name}
                                                 {databaseConnection.database
                                                     .status === 'ready' && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            setConnectOpen(true)
-                                                        }
-                                                    >
-                                                        <LinkIcon className="mr-2 h-4 w-4" />
-                                                        Connect
-                                                    </Button>
+                                                    <>
+                                                        {' · '}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setConnectOpen(
+                                                                    true,
+                                                                )
+                                                            }
+                                                            className="text-link hover:underline"
+                                                        >
+                                                            Connection details
+                                                        </button>
+                                                    </>
                                                 )}
-                                            </div>
-                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                On{' '}
-                                                {databaseConnection.server.name}{' '}
-                                                ·{' '}
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${serverId}/sites/${siteData.id}/database`,
-                                                    )}
-                                                    className="font-medium hover:text-foreground"
-                                                >
-                                                    Manage →
-                                                </Link>
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </StatGroup>
-
-                        {/* Deployments */}
-                        <div id="deployments" className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <CardTitle>Deployments</CardTitle>
-                                    <CardDescription>
-                                        Recent deployments for this site.
-                                    </CardDescription>
-                                </div>
-                                {can('deploy') && (
-                                    <Button
-                                        size="sm"
-                                        onClick={handleDeploy}
-                                        disabled={
-                                            isDeploying ||
-                                            siteData.status === 'installing'
-                                        }
-                                    >
-                                        {isDeploying ? (
-                                            <>
-                                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                                Deploying...
                                             </>
                                         ) : (
-                                            'Deploy'
-                                        )}
-                                    </Button>
-                                )}
-                            </div>
-                            {deployments.length === 0 ? (
-                                <EmptyState
-                                    title="No deployments yet"
-                                    description={
-                                        can('deploy')
-                                            ? 'Deployments will appear here once you trigger your first deployment.'
-                                            : 'Deployments will appear here once the site is deployed.'
-                                    }
-                                    action={
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                        >
                                             <Link
                                                 href={teamPath(
-                                                    `/servers/${serverId}/sites/${siteData.id}/deployments`,
+                                                    `/servers/${serverId}/sites/${siteData.id}/database`,
                                                 )}
+                                                className="text-link hover:underline"
                                             >
-                                                Go to Deployments
+                                                Set up a database →
                                             </Link>
-                                        </Button>
+                                        )
                                     }
-                                />
-                            ) : (
+                                >
+                                    {databaseConnection ? (
+                                        <Link
+                                            href={teamPath(
+                                                `/servers/${serverId}/sites/${siteData.id}/database`,
+                                            )}
+                                            className="font-mono text-link hover:underline"
+                                        >
+                                            {databaseConnection.database.name}
+                                        </Link>
+                                    ) : (
+                                        'Not connected'
+                                    )}
+                                </OverviewItem>
+
+                                <OverviewItem
+                                    label="Auto deploy"
+                                    hint={
+                                        !siteData.repository
+                                            ? 'Needs a repository'
+                                            : siteData.auto_deploy
+                                              ? `On push to ${siteData.branch}`
+                                              : 'Deploys are started by hand'
+                                    }
+                                >
+                                    {siteData.repository && siteData.auto_deploy
+                                        ? 'Enabled'
+                                        : 'Disabled'}
+                                </OverviewItem>
+
+                                <OverviewItem
+                                    label="Created"
+                                    hint={formatDistanceToNow(
+                                        new Date(siteData.created_at),
+                                        { addSuffix: true },
+                                    )}
+                                >
+                                    {format(
+                                        new Date(siteData.created_at),
+                                        'MMM d, yyyy',
+                                    )}
+                                </OverviewItem>
+                            </dl>
+                        </section>
+
+                        <div className="flex min-w-0 flex-col gap-8">
+                            {/* Deployments */}
+                            <div id="deployments" className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <CardTitle>Deployments</CardTitle>
+                                        <CardDescription>
+                                            Recent deployments for this site.
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                {deployments.length === 0 ? (
+                                    <EmptyState
+                                        title="No deployments yet"
+                                        description={
+                                            can('deploy')
+                                                ? 'Deployments will appear here once you trigger your first deployment.'
+                                                : 'Deployments will appear here once the site is deployed.'
+                                        }
+                                        action={
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={teamPath(
+                                                        `/servers/${serverId}/sites/${siteData.id}/deployments`,
+                                                    )}
+                                                >
+                                                    Go to Deployments
+                                                </Link>
+                                            </Button>
+                                        }
+                                    />
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Commit
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Message
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Deployed
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {deployments.map((d) => (
+                                                    <TableRow key={d.id}>
+                                                        <TableCell>
+                                                            <StatusBadge
+                                                                status={
+                                                                    d.status_label
+                                                                }
+                                                                color={
+                                                                    d.status_color
+                                                                }
+                                                                pulse={
+                                                                    d.status ===
+                                                                    'running'
+                                                                }
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="font-mono">
+                                                            <Link
+                                                                href={teamPath(
+                                                                    `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
+                                                                )}
+                                                                className="hover:underline"
+                                                            >
+                                                                {d.commit_hash
+                                                                    ? d.commit_hash.slice(
+                                                                          0,
+                                                                          7,
+                                                                      )
+                                                                    : '—'}
+                                                            </Link>
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                                            {d.commit_message ??
+                                                                '—'}
+                                                        </TableCell>
+                                                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                                                            {d.finished_at
+                                                                ? format(
+                                                                      new Date(
+                                                                          d.finished_at,
+                                                                      ),
+                                                                      'MMM d, HH:mm',
+                                                                  )
+                                                                : d.started_at
+                                                                  ? 'Running...'
+                                                                  : '—'}
+                                                            {d.user?.name && (
+                                                                <span className="ml-1">
+                                                                    by{' '}
+                                                                    {
+                                                                        d.user
+                                                                            .name
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Workers */}
+                            <div id="workers" className="space-y-4">
+                                <div className="space-y-1">
+                                    <CardTitle>Workers</CardTitle>
+                                    <CardDescription>
+                                        Supervisor-style workers for this site.
+                                    </CardDescription>
+                                </div>
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Command</TableHead>
+                                                <TableHead>User</TableHead>
                                                 <TableHead>Status</TableHead>
-                                                <TableHead>Commit</TableHead>
-                                                <TableHead>Message</TableHead>
-                                                <TableHead>Deployed</TableHead>
+                                                <TableHead className="text-right">
+                                                    Numprocs
+                                                </TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {deployments.map((d) => (
-                                                <TableRow key={d.id}>
-                                                    <TableCell>
-                                                        <StatusBadge
-                                                            status={
-                                                                d.status_label
-                                                            }
-                                                            color={
-                                                                d.status_color
-                                                            }
-                                                            pulse={
-                                                                d.status ===
-                                                                'running'
+                                            {siteWorkers.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell
+                                                        colSpan={5}
+                                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                                    >
+                                                        <EmptyState
+                                                            title="No workers yet"
+                                                            description={
+                                                                can(
+                                                                    'manage_processes',
+                                                                )
+                                                                    ? 'Add workers from the Processes tab.'
+                                                                    : 'Workers for this site will appear here.'
                                                             }
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="font-mono">
-                                                        <Link
-                                                            href={teamPath(
-                                                                `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
-                                                            )}
-                                                            className="hover:underline"
-                                                        >
-                                                            {d.commit_hash
-                                                                ? d.commit_hash.slice(
-                                                                      0,
-                                                                      7,
-                                                                  )
-                                                                : '—'}
-                                                        </Link>
-                                                    </TableCell>
-                                                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                                                        {d.commit_message ??
-                                                            '—'}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                                                        {d.finished_at
-                                                            ? format(
-                                                                  new Date(
-                                                                      d.finished_at,
-                                                                  ),
-                                                                  'MMM d, HH:mm',
-                                                              )
-                                                            : d.started_at
-                                                              ? 'Running...'
-                                                              : '—'}
-                                                        {d.user?.name && (
-                                                            <span className="ml-1">
-                                                                by {d.user.name}
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
                                                 </TableRow>
-                                            ))}
+                                            ) : (
+                                                siteWorkers.map((w) => (
+                                                    <TableRow key={w.id}>
+                                                        <TableCell className="font-medium">
+                                                            {w.name}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[200px] truncate font-mono text-xs">
+                                                            {w.command}
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-xs text-muted-foreground">
+                                                            {w.user}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <AutoStatusBadge
+                                                                status={
+                                                                    w.status
+                                                                }
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                                            {w.numprocs}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Workers */}
-                        <div id="workers" className="space-y-4">
-                            <div className="space-y-1">
-                                <CardTitle>Workers</CardTitle>
-                                <CardDescription>
-                                    Supervisor-style workers for this site.
-                                </CardDescription>
                             </div>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Command</TableHead>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">
-                                                Numprocs
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {siteWorkers.length === 0 ? (
+
+                            {/* Cron jobs */}
+                            <div id="cron-jobs" className="space-y-4">
+                                <div className="space-y-1">
+                                    <CardTitle>Cron jobs</CardTitle>
+                                    <CardDescription>
+                                        Scheduled cron jobs for this site.
+                                    </CardDescription>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell
-                                                    colSpan={5}
-                                                    className="border-0 bg-transparent p-0"
-                                                >
-                                                    <EmptyState
-                                                        title="No workers yet"
-                                                        description={
-                                                            can(
-                                                                'manage_processes',
-                                                            )
-                                                                ? 'Add workers from the Processes tab.'
-                                                                : 'Workers for this site will appear here.'
-                                                        }
-                                                    />
-                                                </TableCell>
+                                                <TableHead>Command</TableHead>
+                                                <TableHead>User</TableHead>
+                                                <TableHead>Frequency</TableHead>
+                                                <TableHead>Enabled</TableHead>
                                             </TableRow>
-                                        ) : (
-                                            siteWorkers.map((w) => (
-                                                <TableRow key={w.id}>
-                                                    <TableCell className="font-medium">
-                                                        {w.name}
-                                                    </TableCell>
-                                                    <TableCell className="max-w-[200px] truncate font-mono text-xs">
-                                                        {w.command}
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                                        {w.user}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <AutoStatusBadge
-                                                            status={w.status}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {siteCronJobs.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell
+                                                        colSpan={4}
+                                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                                    >
+                                                        <EmptyState
+                                                            title="No cron jobs yet"
+                                                            description={
+                                                                can(
+                                                                    'manage_processes',
+                                                                )
+                                                                    ? 'Add cron jobs from the Processes tab.'
+                                                                    : 'Cron jobs for this site will appear here.'
+                                                            }
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                                        {w.numprocs}
-                                                    </TableCell>
                                                 </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </div>
-
-                        {/* Cron jobs */}
-                        <div id="cron-jobs" className="space-y-4">
-                            <div className="space-y-1">
-                                <CardTitle>Cron jobs</CardTitle>
-                                <CardDescription>
-                                    Scheduled cron jobs for this site.
-                                </CardDescription>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Command</TableHead>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Frequency</TableHead>
-                                            <TableHead>Enabled</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {siteCronJobs.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell
-                                                    colSpan={4}
-                                                    className="border-0 bg-transparent p-0"
-                                                >
-                                                    <EmptyState
-                                                        title="No cron jobs yet"
-                                                        description={
-                                                            can(
-                                                                'manage_processes',
-                                                            )
-                                                                ? 'Add cron jobs from the Processes tab.'
-                                                                : 'Cron jobs for this site will appear here.'
-                                                        }
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            siteCronJobs.map((c) => (
-                                                <TableRow key={c.id}>
-                                                    <TableCell className="max-w-[200px] truncate font-mono font-medium">
-                                                        {c.command}
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                                        {c.user}
-                                                    </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">
-                                                        {cronFrequencyLabel(
-                                                            c.frequency,
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {c.status ===
-                                                        'deleting' ? (
-                                                            <AutoStatusBadge
-                                                                status="deleting"
-                                                                label="Deleting..."
-                                                            />
-                                                        ) : (
-                                                            <AutoStatusBadge
-                                                                status={
-                                                                    c.hidden
-                                                                        ? 'disabled'
-                                                                        : 'enabled'
-                                                                }
-                                                                label={
-                                                                    c.hidden
-                                                                        ? 'Disabled'
-                                                                        : 'Enabled'
-                                                                }
-                                                            />
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                            ) : (
+                                                siteCronJobs.map((c) => (
+                                                    <TableRow key={c.id}>
+                                                        <TableCell className="max-w-[200px] truncate font-mono font-medium">
+                                                            {c.command}
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-xs text-muted-foreground">
+                                                            {c.user}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">
+                                                            {cronFrequencyLabel(
+                                                                c.frequency,
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {c.status ===
+                                                            'deleting' ? (
+                                                                <AutoStatusBadge
+                                                                    status="deleting"
+                                                                    label="Deleting..."
+                                                                />
+                                                            ) : (
+                                                                <AutoStatusBadge
+                                                                    status={
+                                                                        c.hidden
+                                                                            ? 'disabled'
+                                                                            : 'enabled'
+                                                                    }
+                                                                    label={
+                                                                        c.hidden
+                                                                            ? 'Disabled'
+                                                                            : 'Enabled'
+                                                                    }
+                                                                />
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -981,17 +951,44 @@ export default function SitesShow({
     );
 }
 
+interface OverviewItemProps {
+    label: string;
+    /** A smaller, muted second line under the value. */
+    hint?: ReactNode;
+    className?: string;
+    children: ReactNode;
+}
+
+/** One labelled fact in the grid of the site's overview card. */
+function OverviewItem({ label, hint, className, children }: OverviewItemProps) {
+    return (
+        <div className={cn('min-w-0 bg-card px-5 py-4', className)}>
+            <dt className="text-sm text-muted-foreground">{label}</dt>
+            <dd className="mt-1 truncate text-sm font-medium">{children}</dd>
+            {hint && (
+                <dd className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {hint}
+                </dd>
+            )}
+        </div>
+    );
+}
+
 interface DetailRowProps {
     label: string;
-    value: string;
+    value: ReactNode;
     valueClassName?: string;
 }
 
 function DetailRow({ label, value, valueClassName }: DetailRowProps) {
     return (
         <div className="flex items-center justify-between gap-4">
-            <span className="text-xs text-muted-foreground">{label}</span>
-            <span className={`text-sm font-medium ${valueClassName ?? ''}`}>
+            <span className="shrink-0 text-sm text-muted-foreground">
+                {label}
+            </span>
+            <span
+                className={`min-w-0 truncate text-sm font-medium ${valueClassName ?? ''}`}
+            >
                 {value}
             </span>
         </div>

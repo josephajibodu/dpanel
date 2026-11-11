@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { Loader2Icon, PlusIcon } from 'lucide-react';
+import { CircleNotchIcon, PlusIcon } from '@phosphor-icons/react';
 import { type ReactNode, useState } from 'react';
 
 import InputError from '@/components/input-error';
@@ -113,7 +113,7 @@ export function ConnectStorageDrawer({
             <SheetTrigger asChild>
                 {trigger ?? (
                     <Button>
-                        <PlusIcon className="mr-2 h-4 w-4" />
+                        <PlusIcon className="h-4 w-4" />
                         Connect Storage
                     </Button>
                 )}
@@ -218,13 +218,7 @@ export function ConnectStorageDrawer({
                         </p>
                     )}
 
-                    <SheetFooter className="mt-auto px-0">
-                        <Button type="submit" disabled={processing}>
-                            {processing && (
-                                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Connect Storage
-                        </Button>
+                    <SheetFooter className="-mx-4 -mb-4">
                         <Button
                             type="button"
                             variant="outline"
@@ -232,6 +226,12 @@ export function ConnectStorageDrawer({
                             disabled={processing}
                         >
                             Cancel
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {processing && (
+                                <CircleNotchIcon className="h-4 w-4 animate-spin" />
+                            )}
+                            Connect Storage
                         </Button>
                     </SheetFooter>
                 </form>

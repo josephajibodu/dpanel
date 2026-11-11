@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -100,13 +100,13 @@ export function Pagination({
                 {prevUrl ? (
                     <Button variant="outline" size="sm" asChild>
                         <Link href={prevUrl}>
-                            <ChevronLeftIcon className="h-4 w-4" />
+                            <CaretLeftIcon className="h-4 w-4" />
                             Previous
                         </Link>
                     </Button>
                 ) : (
                     <Button variant="outline" size="sm" disabled>
-                        <ChevronLeftIcon className="h-4 w-4" />
+                        <CaretLeftIcon className="h-4 w-4" />
                         Previous
                     </Button>
                 )}
@@ -119,13 +119,13 @@ export function Pagination({
                     <Button variant="outline" size="sm" asChild>
                         <Link href={nextUrl}>
                             Next
-                            <ChevronRightIcon className="h-4 w-4" />
+                            <CaretRightIcon className="h-4 w-4" />
                         </Link>
                     </Button>
                 ) : (
                     <Button variant="outline" size="sm" disabled>
                         Next
-                        <ChevronRightIcon className="h-4 w-4" />
+                        <CaretRightIcon className="h-4 w-4" />
                     </Button>
                 )}
             </div>

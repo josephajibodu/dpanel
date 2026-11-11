@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { Users } from 'lucide-react';
+import { UsersIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/auth-layout';
@@ -26,7 +26,7 @@ export default function AcceptInvitation({ invitation, token }: Props) {
 
             <div className="space-y-6 text-center">
                 <div className="bg-muted mx-auto flex size-16 items-center justify-center rounded-full">
-                    <Users className="text-muted-foreground size-8" />
+                    <UsersIcon className="text-muted-foreground size-8" />
                 </div>
 
                 <div className="space-y-1">

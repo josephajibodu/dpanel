@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useConnectionStatus, useEcho } from '@laravel/echo-react';
-import { Loader2Icon } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -170,7 +170,7 @@ export default function RealtimeTest({ channel, user, reverb }: Props) {
                                 />
                             </div>
                             <Button onClick={triggerMessage} disabled={isSending || messageToSend.trim().length === 0}>
-                                {isSending && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                                {isSending && <CircleNotchIcon className="h-4 w-4 animate-spin" />}
                                 Send diagnostic message
                             </Button>
                         </CardContent>

@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeftIcon, Loader2Icon } from 'lucide-react';
+import { ArrowLeftIcon, CircleNotchIcon } from '@phosphor-icons/react';
 
 import { CopyButton } from '@/components/copy-button';
 import InputError from '@/components/input-error';
@@ -335,7 +335,7 @@ export default function ProviderAccountsCreate({ providers }: Props) {
                                     </Button>
                                     <Button type="submit" disabled={processing}>
                                         {processing && (
-                                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                            <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                         )}
                                         Connect Provider
                                     </Button>

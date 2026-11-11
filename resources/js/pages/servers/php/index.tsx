@@ -210,7 +210,7 @@ export default function ServerPhpIndex({
 
                 <div className="grid gap-6 lg:grid-cols-1">
                     <StatGroup>
-                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                        <div className="rounded-2xl bg-card shadow-card">
                             <div className="border-b px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle>PHP settings</CardTitle>
@@ -410,7 +410,7 @@ export default function ServerPhpIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={4}
-                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
                                         >
                                             <EmptyState
                                                 title="No PHP versions detected"
@@ -545,7 +545,7 @@ export default function ServerPhpIndex({
 
                     {canManagePhp && (
                         <StatGroup>
-                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                            <div className="rounded-2xl bg-card shadow-card">
                                 <div className="border-b px-6 py-4">
                                     <CardTitle>Install PHP version</CardTitle>
                                     <CardDescription className="mt-1">

@@ -1,5 +1,10 @@
 import { router, useForm, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, Loader2, Plus } from 'lucide-react';
+import {
+    CaretUpDownIcon,
+    CheckIcon,
+    CircleNotchIcon,
+    PlusIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -59,47 +64,37 @@ export function TeamSwitcher() {
                 <SidebarMenuItem>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <SidebarMenuButton
-                                size="lg"
-                                className="text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
-                            >
-                                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white">
-                                    <AppLogoIcon className="size-4 fill-current" />
+                            <SidebarMenuButton className="h-9 gap-2 px-1.5 text-sidebar-accent-foreground group-data-[collapsible=icon]:p-1! data-[state=open]:bg-sidebar-accent">
+                                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand text-white">
+                                    <AppLogoIcon className="size-3.5 fill-current" />
                                 </div>
                                 <div className="grid flex-1 text-left leading-tight transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
                                     <span className="truncate text-sm font-semibold">
                                         {currentTeam.name}
                                     </span>
-                                    <span className="truncate text-xs text-muted-foreground">
-                                        {currentTeam.personal_team
-                                            ? 'Personal team'
-                                            : 'Team'}
-                                    </span>
                                 </div>
-                                <ChevronsUpDown className="ml-auto size-4 shrink-0 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
+                                <CaretUpDownIcon className="ml-auto size-3.5! shrink-0 text-sidebar-foreground/60 transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
-                            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                            className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
                             align="start"
                             side="bottom"
                             sideOffset={4}
                         >
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                Teams
-                            </DropdownMenuLabel>
+                            <DropdownMenuLabel>Teams</DropdownMenuLabel>
                             {teams.map((team) => (
                                 <DropdownMenuItem
                                     key={team.id}
                                     onClick={() => switchTeam(team)}
                                     className="cursor-pointer gap-2 p-2"
                                 >
-                                    <div className="flex size-6 items-center justify-center rounded-sm border bg-neutral-700 text-[10px] font-semibold text-white dark:bg-neutral-600">
+                                    <div className="flex size-6 items-center justify-center rounded-md bg-neutral-800 text-[10px] font-semibold text-white dark:bg-neutral-600">
                                         {teamInitials(team.name)}
                                     </div>
                                     {team.name}
                                     {team.id === currentTeam.id && (
-                                        <Check className="ml-auto size-4" />
+                                        <CheckIcon className="ml-auto size-4" />
                                     )}
                                 </DropdownMenuItem>
                             ))}
@@ -109,11 +104,9 @@ export function TeamSwitcher() {
                                 onClick={() => setCreateOpen(true)}
                             >
                                 <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                                    <Plus className="size-4" />
+                                    <PlusIcon className="size-4" />
                                 </div>
-                                <div className="font-medium text-muted-foreground">
-                                    Create team
-                                </div>
+                                Create team
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -244,7 +237,7 @@ function CreateTeamDialog({
                             <p className="text-sm text-muted-foreground">
                                 {slugLoading ? (
                                     <span className="inline-flex items-center gap-1">
-                                        <Loader2 className="size-3 animate-spin" />
+                                        <CircleNotchIcon className="size-3 animate-spin" />
                                         Generating handle…
                                     </span>
                                 ) : slugPreview ? (

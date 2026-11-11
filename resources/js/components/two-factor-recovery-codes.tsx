@@ -1,5 +1,9 @@
 import { Form } from '@inertiajs/react';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import {
+    ArrowsClockwiseIcon,
+    EyeIcon,
+    EyeSlashIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SettingsSection } from '@/components/settings-section';
@@ -46,7 +50,7 @@ export default function TwoFactorRecoveryCodes({
         }
     }, [recoveryCodesList.length, fetchRecoveryCodes]);
 
-    const RecoveryCodeIconComponent = codesAreVisible ? EyeOff : Eye;
+    const RecoveryCodeIconComponent = codesAreVisible ? EyeSlashIcon : EyeIcon;
 
     return (
         <SettingsSection
@@ -68,7 +72,7 @@ export default function TwoFactorRecoveryCodes({
                                     disabled={processing}
                                     aria-describedby="regenerate-warning"
                                 >
-                                    <RefreshCw /> Regenerate
+                                    <ArrowsClockwiseIcon /> Regenerate
                                 </Button>
                             )}
                         </Form>

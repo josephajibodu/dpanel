@@ -1,212 +1,342 @@
-import { CheckIcon, GitCommitHorizontalIcon } from 'lucide-react';
+import {
+    ArrowSquareOutIcon,
+    BookOpenIcon,
+    CaretRightIcon,
+    CaretUpDownIcon,
+    CloudIcon,
+    CodeIcon,
+    DotsThreeVerticalIcon,
+    GearIcon,
+    GitBranchIcon,
+    HardDriveIcon,
+    HardDrivesIcon,
+    HouseIcon,
+    KeyIcon,
+    SidebarSimpleIcon,
+} from '@phosphor-icons/react';
+import { type ReactNode } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
+import { StatusBadge, type StatusColor } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
 
-const sidebarItems = [
+const sitePages = [
     'Overview',
     'Deployments',
-    'Domains',
-    'Environment',
+    'Commands',
     'Processes',
+    'Environment',
     'Database',
+    'Deploy Script',
+    'Web Server',
+    'Domains',
     'Logs',
 ];
 
-const deployLines = [
-    { text: 'Cloning acme/storefront@a41f9c2 (main)', tone: 'muted' },
-    { text: 'Creating release 20261107-142231', tone: 'muted' },
-    {
-        text: 'composer install --no-dev --optimize-autoloader',
-        tone: 'command',
-    },
-    { text: 'Installed 112 packages in 6.1s', tone: 'muted' },
-    { text: 'npm ci && npm run build', tone: 'command' },
-    { text: 'Built 48 modules in 3.4s', tone: 'muted' },
-    { text: 'php artisan migrate --force', tone: 'command' },
-    { text: 'Switching current → release 20261107-142231', tone: 'muted' },
-    { text: 'Reloading php8.4-fpm', tone: 'muted' },
-    { text: 'Deployed in 14.2s, zero requests dropped', tone: 'success' },
-] as const;
+const integrations = [
+    { title: 'SSH Keys', icon: KeyIcon },
+    { title: 'Provider Accounts', icon: CloudIcon },
+    { title: 'Storage Providers', icon: HardDriveIcon },
+    { title: 'Source Control', icon: CodeIcon },
+];
 
-const recentDeployments = [
+const deployments: {
+    status: string;
+    color: StatusColor;
+    commit: string;
+    message: string;
+    deployed: string;
+}[] = [
     {
+        status: 'Running',
+        color: 'blue',
         commit: 'a41f9c2',
         message: 'Add order export to CSV',
-        author: 'Ada',
-        time: 'now',
-        live: true,
+        deployed: 'Running...',
     },
     {
+        status: 'Finished',
+        color: 'green',
         commit: '7be03d1',
         message: 'Cache product listing queries',
-        author: 'Kofi',
-        time: '2h',
-        live: false,
+        deployed: 'Nov 11, 12:08 by Kofi Mensah',
     },
     {
+        status: 'Finished',
+        color: 'green',
         commit: 'e19c55a',
         message: 'Upgrade to Laravel 13',
-        author: 'Ada',
-        time: '1d',
-        live: false,
+        deployed: 'Nov 10, 16:41 by Ada Okafor',
+    },
+    {
+        status: 'Finished',
+        color: 'green',
+        commit: '3c0d8f7',
+        message: 'Fix rounding on invoice totals',
+        deployed: 'Nov 9, 09:15 by Ada Okafor',
     },
 ];
 
+function SidebarLink({
+    icon: Icon,
+    children,
+}: {
+    icon: typeof HouseIcon;
+    children: ReactNode;
+}) {
+    return (
+        <li className="flex items-center gap-2.5 rounded-[10px] p-2 font-medium">
+            <Icon className="size-[18px] shrink-0" />
+            {children}
+        </li>
+    );
+}
+
+function OverviewItem({
+    label,
+    hint,
+    className,
+    children,
+}: {
+    label: string;
+    hint: ReactNode;
+    className?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className={cn('min-w-0 bg-card px-5 py-4', className)}>
+            <dt className="text-sm text-muted-foreground">{label}</dt>
+            <dd className="mt-1 truncate text-sm font-medium">{children}</dd>
+            <dd className="mt-0.5 truncate text-xs text-muted-foreground">
+                {hint}
+            </dd>
+        </div>
+    );
+}
+
 /**
- * A crafted, static rendition of the flitops dashboard used in the home page hero.
+ * A static copy of a site's overview page in the flitops dashboard, shown in
+ * the home page hero. It mirrors the real layout: sidebar, top bar, summary
+ * card, and deployments table.
  */
 export default function ProductPreview() {
     return (
-        <div className="relative mx-auto max-w-5xl">
-            <div
-                aria-hidden="true"
-                className="absolute -inset-x-10 -top-10 bottom-0 -z-10 rounded-[40px] bg-gradient-to-b from-brand/20 via-brand/5 to-transparent blur-2xl"
-            />
+        <div
+            role="img"
+            aria-label="The flitops dashboard showing a site's overview while a deployment runs"
+            className="flex overflow-hidden rounded-t-2xl bg-sidebar font-sans text-sm text-foreground shadow-overlay select-none [--text-sm--line-height:calc(20/13)] [--text-sm:0.8125rem] [font-feature-settings:'cv11','ss01']"
+        >
+            <aside className="hidden w-56 shrink-0 flex-col p-2 text-sidebar-foreground lg:flex">
+                <div className="flex h-9 items-center gap-2 px-1.5 text-sidebar-accent-foreground">
+                    <span className="flex size-6 items-center justify-center rounded-md bg-brand text-white">
+                        <AppLogoIcon className="size-3.5 fill-current" />
+                    </span>
+                    <span className="font-semibold">Acme Inc.</span>
+                    <CaretUpDownIcon className="ml-auto size-3.5 text-sidebar-foreground/60" />
+                </div>
 
-            <div
-                role="img"
-                aria-label="The flitops dashboard showing a site mid-deployment"
-                className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_120px_-30px_rgb(0_0_0/0.35)] ring-1 ring-black/5 dark:shadow-[0_40px_120px_-30px_rgb(37_99_235/0.35)] dark:ring-white/5"
-            >
-                <div className="flex h-10 items-center gap-2 border-b border-border bg-muted/40 px-4">
-                    <span className="size-2.5 rounded-full bg-foreground/15" />
-                    <span className="size-2.5 rounded-full bg-foreground/15" />
-                    <span className="size-2.5 rounded-full bg-foreground/15" />
-                    <div className="mx-auto flex h-6 w-64 items-center justify-center rounded-md bg-background/80 text-[11px] text-muted-foreground ring-1 ring-border">
-                        flitops.com/acme/servers/fra-1/sites
+                <ul className="mt-3 space-y-0.5">
+                    <SidebarLink icon={HouseIcon}>Dashboard</SidebarLink>
+                    <li>
+                        <div className="flex items-center gap-2.5 rounded-[10px] p-2 font-medium text-sidebar-accent-foreground">
+                            <HardDrivesIcon
+                                weight="fill"
+                                className="size-[18px] shrink-0"
+                            />
+                            Servers
+                        </div>
+                        <ul className="space-y-0.5 pt-0.5 pb-1">
+                            {sitePages.map((page, index) => (
+                                <li
+                                    key={page}
+                                    className={cn(
+                                        'flex h-[30px] items-center rounded-[10px] pl-[34px]',
+                                        index === 0
+                                            ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                                            : 'text-sidebar-foreground/70',
+                                    )}
+                                >
+                                    {page}
+                                </li>
+                            ))}
+                        </ul>
+                    </li>
+                </ul>
+
+                <p className="mt-2 flex h-8 items-center px-2 text-sidebar-foreground/60">
+                    Integrations
+                </p>
+                <ul className="space-y-0.5">
+                    {integrations.map((item) => (
+                        <SidebarLink key={item.title} icon={item.icon}>
+                            {item.title}
+                        </SidebarLink>
+                    ))}
+                </ul>
+
+                <ul className="mt-auto space-y-0.5 pt-6">
+                    <SidebarLink icon={BookOpenIcon}>Documentation</SidebarLink>
+                    <SidebarLink icon={GearIcon}>Settings</SidebarLink>
+                </ul>
+            </aside>
+
+            <div className="m-2 flex min-w-0 flex-1 flex-col rounded-2xl bg-background lg:ml-0">
+                <div className="flex h-13 shrink-0 items-center gap-2 px-4">
+                    <SidebarSimpleIcon className="size-[18px] shrink-0 text-muted-foreground" />
+                    <HardDrivesIcon className="ml-1 size-[18px] shrink-0 text-muted-foreground" />
+                    <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                        <span className="hidden sm:inline">Servers</span>
+                        <CaretRightIcon className="hidden size-3 sm:inline" />
+                        <span className="hidden sm:inline">fra-1</span>
+                        <CaretRightIcon className="hidden size-3 sm:inline" />
+                        <span className="truncate font-semibold text-foreground">
+                            storefront.acme.com
+                        </span>
+                    </div>
+                    <div className="ml-auto flex shrink-0 items-center gap-2">
+                        <span className="hidden h-8 items-center gap-2 rounded-full bg-card px-3 font-medium shadow-button sm:inline-flex">
+                            <ArrowSquareOutIcon className="size-4" />
+                            Visit
+                        </span>
+                        <span className="inline-flex h-8 items-center rounded-full bg-primary bg-linear-to-b from-white/10 to-transparent px-3.5 font-medium text-primary-foreground shadow-button-primary">
+                            Deploy
+                        </span>
+                        <span className="hidden size-8 items-center justify-center rounded-full bg-card shadow-button sm:inline-flex">
+                            <DotsThreeVerticalIcon
+                                weight="bold"
+                                className="size-4"
+                            />
+                        </span>
                     </div>
                 </div>
 
-                <div className="grid min-h-[420px] grid-cols-1 md:grid-cols-[200px_1fr]">
-                    <aside className="hidden border-r border-border bg-muted/20 p-3 md:block">
-                        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
-                            <span className="flex size-6 items-center justify-center rounded-md bg-brand text-white">
-                                <AppLogoIcon className="size-3.5 fill-current" />
-                            </span>
-                            <span className="text-xs font-semibold">
-                                Acme Inc.
-                            </span>
-                        </div>
-                        <div className="mt-4 px-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-                            storefront.acme.com
-                        </div>
-                        <ul className="mt-2 space-y-0.5 text-xs">
-                            {sidebarItems.map((item, index) => (
-                                <li
-                                    key={item}
-                                    className={cn(
-                                        'rounded-md px-2 py-1.5',
-                                        index === 1
-                                            ? 'bg-background font-medium text-foreground shadow-xs ring-1 ring-border'
-                                            : 'text-muted-foreground',
-                                    )}
-                                >
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </aside>
-
-                    <div className="flex flex-col gap-4 p-4 text-left sm:p-5">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <p className="text-sm font-semibold">
+                <div className="flex flex-col gap-6 p-4">
+                    <section className="overflow-hidden rounded-2xl bg-card shadow-card">
+                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <p className="truncate text-lg font-semibold tracking-tight">
                                     storefront.acme.com
                                 </p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Laravel · PHP 8.4 · fra-1 (Hetzner,
-                                    Falkenstein)
-                                </p>
+                                <StatusBadge
+                                    status="Deploying"
+                                    color="blue"
+                                    pulse
+                                />
                             </div>
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
-                                <span className="relative flex size-1.5">
-                                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-60" />
-                                    <span className="relative inline-flex size-1.5 rounded-full bg-amber-500" />
+                            <div className="hidden items-center gap-x-4 md:flex">
+                                <span className="inline-flex items-center gap-1 text-link">
+                                    storefront.acme.com
+                                    <ArrowSquareOutIcon className="size-3.5" />
                                 </span>
-                                Deploying
-                            </span>
-                        </div>
-
-                        <div className="overflow-hidden rounded-xl bg-neutral-950 ring-1 ring-white/10">
-                            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
-                                <span className="flex items-center gap-2 font-log text-[11px] text-white/60">
-                                    <GitCommitHorizontalIcon className="size-3.5" />
-                                    a41f9c2 · Add order export to CSV
-                                </span>
-                                <span className="font-log text-[11px] text-white/40">
-                                    live
+                                <span className="text-muted-foreground">
+                                    Manage domains →
                                 </span>
                             </div>
-                            <ol className="space-y-1 px-4 py-3.5 font-log text-[11.5px] leading-relaxed">
-                                {deployLines.map((line, index) => (
-                                    <li
-                                        key={line.text}
-                                        style={{
-                                            animationDelay: `${300 + index * 260}ms`,
-                                        }}
-                                        className={cn(
-                                            'flex animate-in gap-3 duration-500 fill-mode-both fade-in slide-in-from-bottom-1 motion-reduce:animate-none',
-                                            line.tone === 'muted' &&
-                                                'text-white/45',
-                                            line.tone === 'command' &&
-                                                'text-white/85',
-                                            line.tone === 'success' &&
-                                                'text-emerald-400',
-                                        )}
-                                    >
-                                        <span className="w-4 shrink-0 text-right text-white/20 select-none">
-                                            {index + 1}
-                                        </span>
-                                        <span className="truncate">
-                                            {line.tone === 'command' && (
-                                                <span className="text-blue-400">
-                                                    ${' '}
-                                                </span>
-                                            )}
-                                            {line.tone === 'success' && '✓ '}
-                                            {line.text}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ol>
                         </div>
 
-                        <ul className="divide-y divide-border rounded-xl ring-1 ring-border">
-                            {recentDeployments.map((deployment) => (
-                                <li
-                                    key={deployment.commit}
-                                    className="flex items-center gap-3 px-4 py-2.5 text-xs"
-                                >
-                                    <span
-                                        className={cn(
-                                            'flex size-4 items-center justify-center rounded-full',
-                                            deployment.live
-                                                ? 'bg-amber-500/15 text-amber-600'
-                                                : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                                        )}
-                                    >
-                                        {deployment.live ? (
-                                            <span className="size-1.5 rounded-full bg-amber-500" />
-                                        ) : (
-                                            <CheckIcon
-                                                className="size-2.5"
-                                                strokeWidth={3}
-                                            />
-                                        )}
+                        <dl className="grid grid-cols-2 gap-px border-t bg-border md:grid-cols-4">
+                            <OverviewItem
+                                label="Source"
+                                className="col-span-2"
+                                hint={
+                                    <>
+                                        <span className="font-mono">
+                                            a41f9c2
+                                        </span>
+                                        {' · Add order export to CSV'}
+                                    </>
+                                }
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <GitBranchIcon className="size-4 shrink-0 text-muted-foreground" />
+                                    <span className="truncate font-mono">
+                                        acme/storefront:main
                                     </span>
-                                    <span className="font-log text-muted-foreground">
+                                </span>
+                            </OverviewItem>
+                            <OverviewItem
+                                label="Uptime"
+                                hint="Checked less than a minute ago"
+                            >
+                                <StatusBadge status="Up" color="green" />
+                            </OverviewItem>
+                            <OverviewItem label="Framework" hint="PHP 8.4">
+                                Laravel
+                            </OverviewItem>
+                            <OverviewItem
+                                label="Server"
+                                hint={
+                                    <span className="font-mono">
+                                        203.0.113.24
+                                    </span>
+                                }
+                            >
+                                <span className="text-link">fra-1</span>
+                            </OverviewItem>
+                            <OverviewItem
+                                label="Database"
+                                hint="On fra-1 · Connection details"
+                            >
+                                <span className="font-mono text-link">
+                                    storefront
+                                </span>
+                            </OverviewItem>
+                            <OverviewItem
+                                label="Auto deploy"
+                                hint="On push to main"
+                            >
+                                Enabled
+                            </OverviewItem>
+                            <OverviewItem label="Created" hint="8 months ago">
+                                Mar 3, 2026
+                            </OverviewItem>
+                        </dl>
+                    </section>
+
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <p className="text-[15px] leading-snug font-semibold">
+                                Deployments
+                            </p>
+                            <p className="text-muted-foreground">
+                                Recent deployments for this site.
+                            </p>
+                        </div>
+                        <div>
+                            <div className="grid h-9 grid-cols-[6.5rem_1fr] items-center rounded-lg bg-muted px-4 font-medium text-muted-foreground sm:grid-cols-[6.5rem_6rem_1fr_15rem]">
+                                <span>Status</span>
+                                <span>Commit</span>
+                                <span className="hidden sm:block">Message</span>
+                                <span className="hidden sm:block">
+                                    Deployed
+                                </span>
+                            </div>
+                            {deployments.map((deployment) => (
+                                <div
+                                    key={deployment.commit}
+                                    className="grid grid-cols-[6.5rem_1fr] items-center border-b border-border px-4 py-2.5 last:border-b-0 sm:grid-cols-[6.5rem_6rem_1fr_15rem]"
+                                >
+                                    <span>
+                                        <StatusBadge
+                                            status={deployment.status}
+                                            color={deployment.color}
+                                            pulse={
+                                                deployment.status === 'Running'
+                                            }
+                                        />
+                                    </span>
+                                    <span className="font-mono">
                                         {deployment.commit}
                                     </span>
-                                    <span className="truncate font-medium">
+                                    <span className="hidden truncate text-muted-foreground sm:block">
                                         {deployment.message}
                                     </span>
-                                    <span className="ml-auto shrink-0 text-muted-foreground">
-                                        {deployment.author} · {deployment.time}
+                                    <span className="hidden truncate text-muted-foreground sm:block">
+                                        {deployment.deployed}
                                     </span>
-                                </li>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     </div>
                 </div>
             </div>

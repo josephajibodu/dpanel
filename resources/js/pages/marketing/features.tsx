@@ -211,13 +211,13 @@ export default function Features() {
             >
                 <nav
                     aria-label="Feature sections"
-                    className="mx-auto mt-10 flex max-w-3xl flex-wrap justify-center gap-2"
+                    className="mt-12 flex flex-wrap gap-x-8 gap-y-3 font-medium"
                 >
                     {featureGroups.map((group) => (
                         <a
                             key={group.id}
                             href={`#${group.id}`}
-                            className="rounded-full border border-border bg-background/70 px-3.5 py-1.5 text-sm text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+                            className="text-muted-foreground transition-colors hover:text-foreground"
                         >
                             {group.title}
                         </a>
@@ -225,32 +225,29 @@ export default function Features() {
                 </nav>
             </PageHero>
 
-            <div className="px-6">
-                <div className="mx-auto max-w-6xl divide-y divide-border border-t border-border">
+            <div className="px-6 lg:px-8">
+                <div className="mx-auto max-w-7xl">
                     {featureGroups.map((group) => (
                         <section
                             key={group.id}
                             id={group.id}
-                            className="grid scroll-mt-20 gap-10 py-16 sm:py-20 lg:grid-cols-[1fr_2.2fr]"
+                            className="grid scroll-mt-18 gap-10 border-t border-border py-16 sm:py-20 lg:grid-cols-[1fr_2fr] lg:gap-20"
                         >
-                            <div className="lg:sticky lg:top-24 lg:self-start">
-                                <h2 className="text-2xl font-semibold tracking-tight">
+                            <div className="lg:sticky lg:top-28 lg:self-start">
+                                <h2 className="text-3xl font-normal tracking-[-0.02em]">
                                     {group.title}
                                 </h2>
-                                <p className="mt-3 max-w-xs leading-relaxed text-muted-foreground">
+                                <p className="mt-4 max-w-sm text-lg leading-relaxed text-muted-foreground">
                                     {group.summary}
                                 </p>
                             </div>
-                            <dl className="grid gap-x-10 gap-y-9 sm:grid-cols-2">
+                            <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
                                 {group.items.map((item) => (
-                                    <div
-                                        key={item.title}
-                                        className="border-l border-border pl-5"
-                                    >
-                                        <dt className="font-medium">
+                                    <div key={item.title}>
+                                        <dt className="text-lg font-medium">
                                             {item.title}
                                         </dt>
-                                        <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                        <dd className="mt-2 leading-relaxed text-muted-foreground">
                                             {item.description}
                                         </dd>
                                     </div>

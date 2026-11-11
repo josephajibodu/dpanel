@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { CaretUpDownIcon, CheckIcon } from '@phosphor-icons/react';
 
 import { SwitcherIcon } from '@/components/switcher-icon';
 import {
@@ -50,7 +50,7 @@ function SwitcherLabel({
 
     if (isLast) {
         return (
-            <span className="text-foreground inline-flex min-w-0 items-center gap-2 px-2 py-1">
+            <span className="text-foreground inline-flex min-w-0 items-center gap-2 py-1 pr-2 pl-2.5">
                 {content}
             </span>
         );
@@ -59,7 +59,7 @@ function SwitcherLabel({
     return (
         <Link
             href={href}
-            className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-2 px-2 py-1 transition-colors"
+            className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-2 py-1 pr-2 pl-2.5 transition-colors"
         >
             {content}
         </Link>
@@ -79,20 +79,20 @@ export function BreadcrumbSwitcher({
         <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-                <div className="border-border/60 bg-muted/20 inline-flex items-stretch overflow-hidden rounded-md border">
+                <div className="bg-card shadow-button inline-flex items-stretch overflow-hidden rounded-full">
                     <SwitcherLabel label={label} href={href} isLast={isLast} />
                     <DropdownMenu>
                         <DropdownMenuTrigger
                             className={cn(
                                 'text-muted-foreground hover:text-foreground border-border/60 inline-flex w-7 shrink-0 cursor-pointer items-center justify-center border-l outline-none',
-                                'hover:bg-muted/40 focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-1',
+                                'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset',
                             )}
                             aria-label={menuLabel}
                         >
-                            <ChevronsUpDown className="size-3 opacity-60" />
+                            <CaretUpDownIcon className="size-3 opacity-60" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="min-w-52">
-                            <DropdownMenuLabel className="text-muted-foreground text-xs">
+                            <DropdownMenuLabel>
                                 {menuLabel}
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
@@ -105,7 +105,7 @@ export function BreadcrumbSwitcher({
                                     <SwitcherIcon label={item.label} />
                                     <span className="truncate">{item.label}</span>
                                     {item.id === currentId && (
-                                        <Check className="ml-auto size-3.5 shrink-0" />
+                                        <CheckIcon className="ml-auto size-3.5 shrink-0" />
                                     )}
                                 </DropdownMenuItem>
                             ))}

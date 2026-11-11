@@ -34,7 +34,7 @@ export default function MarketingLayout({
                 />
             </Head>
 
-            <div className="relative isolate min-h-screen overflow-x-clip bg-background text-foreground antialiased">
+            <div className="relative isolate min-h-screen overflow-x-clip bg-background font-marketing text-foreground antialiased [--text-sm--line-height:calc(1.25/0.875)] [--text-sm:0.875rem] [font-feature-settings:normal]">
                 <MarketingHeader canRegister={canRegister} />
                 <main>{children}</main>
                 <MarketingFooter />

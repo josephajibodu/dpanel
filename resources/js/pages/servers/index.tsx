@@ -1,17 +1,18 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
     BookOpenIcon,
+    DotsThreeVerticalIcon,
     EyeIcon,
-    MoreVerticalIcon,
     PlusIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddServerOptions } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
@@ -106,33 +107,22 @@ export default function ServersIndex({ servers }: Props) {
             <Head title="Servers" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Servers
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            The servers your team manages, and the sites on
-                            them.
-                        </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                            <a href={DOCS_URL} target="_blank" rel="noreferrer">
-                                <BookOpenIcon className="mr-2 h-4 w-4" />
-                                Docs
-                            </a>
+                <PageActions>
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={DOCS_URL} target="_blank" rel="noreferrer">
+                            <BookOpenIcon className="h-4 w-4" />
+                            Docs
+                        </a>
+                    </Button>
+                    {canManageServers && servers.data.length > 0 && (
+                        <Button asChild>
+                            <Link href={teamPath('/servers/create')}>
+                                <PlusIcon className="h-4 w-4" />
+                                Create server
+                            </Link>
                         </Button>
-                        {canManageServers && servers.data.length > 0 && (
-                            <Button asChild>
-                                <Link href={teamPath('/servers/create')}>
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Create server
-                                </Link>
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                    )}
+                </PageActions>
 
                 {servers.data.length === 0 && canManageServers ? (
                     <AddServerOptions />
@@ -255,7 +245,7 @@ export default function ServersIndex({ servers }: Props) {
                                                                         size="icon"
                                                                         className="h-8 w-8"
                                                                     >
-                                                                        <MoreVerticalIcon className="h-4 w-4" />
+                                                                        <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                         <span className="sr-only">
                                                                             Actions
                                                                         </span>
@@ -284,7 +274,7 @@ export default function ServersIndex({ servers }: Props) {
                                                                                 }
                                                                                 className="text-destructive focus:text-destructive"
                                                                             >
-                                                                                <Trash2Icon className="mr-2 h-4 w-4" />
+                                                                                <TrashIcon className="h-4 w-4" />
                                                                                 Delete
                                                                             </DropdownMenuItem>
                                                                         )}

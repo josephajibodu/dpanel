@@ -1,6 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { Loader2Icon } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 
 import { Button } from '@/components/ui/button';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
@@ -143,7 +143,7 @@ export default function SiteDeployScriptShow({
                         <div className="flex justify-end">
                             <Button type="submit" disabled={form.processing}>
                                 {form.processing && (
-                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                 )}
                                 Save Script
                             </Button>

@@ -1,12 +1,12 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
+    CircleNotchIcon,
+    DotsThreeVerticalIcon,
     FileTextIcon,
-    Loader2Icon,
-    MoreVerticalIcon,
-    PencilIcon,
+    PencilSimpleIcon,
     PlayIcon,
-    TerminalIcon,
-} from 'lucide-react';
+    TerminalWindowIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -210,7 +210,7 @@ export default function SiteCommandsIndex({
                             size="sm"
                             onClick={() => setRunSheetOpen(true)}
                         >
-                            <TerminalIcon className="mr-2 h-4 w-4" />
+                            <TerminalWindowIcon className="h-4 w-4" />
                             Run command
                         </Button>
                     )}
@@ -278,7 +278,7 @@ export default function SiteCommandsIndex({
                                                                 openLogs(run)
                                                             }
                                                         >
-                                                            <FileTextIcon className="mr-2 h-4 w-4" />
+                                                            <FileTextIcon className="h-4 w-4" />
                                                             View logs
                                                         </Button>
                                                     )}
@@ -293,7 +293,7 @@ export default function SiteCommandsIndex({
                                                                     className="h-8 w-8"
                                                                     aria-label="Actions"
                                                                 >
-                                                                    <MoreVerticalIcon className="h-4 w-4" />
+                                                                    <DotsThreeVerticalIcon className="h-4 w-4" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
@@ -304,7 +304,7 @@ export default function SiteCommandsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PlayIcon className="mr-2 h-4 w-4" />
+                                                                    <PlayIcon className="h-4 w-4" />
                                                                     Run again
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
@@ -314,7 +314,7 @@ export default function SiteCommandsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PencilIcon className="mr-2 h-4 w-4" />
+                                                                    <PencilSimpleIcon className="h-4 w-4" />
                                                                     Edit and run
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
@@ -377,12 +377,12 @@ export default function SiteCommandsIndex({
                             >
                                 {isSubmitting ? (
                                     <>
-                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                         Running…
                                     </>
                                 ) : (
                                     <>
-                                        <PlayIcon className="mr-2 h-4 w-4" />
+                                        <PlayIcon className="h-4 w-4" />
                                         Run
                                     </>
                                 )}
@@ -414,7 +414,7 @@ export default function SiteCommandsIndex({
                         )}
                         {logsLoading ? (
                             <p className="mt-1 flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                                <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                 Loading…
                             </p>
                         ) : (

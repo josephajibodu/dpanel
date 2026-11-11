@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { KeyIcon, PlusIcon } from 'lucide-react';
+import { PlusIcon } from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 
 import InputError from '@/components/input-error';
@@ -38,17 +38,14 @@ export function AddKeyDialog({ trigger }: AddKeyDialogProps) {
             <DialogTrigger asChild>
                 {trigger ?? (
                     <Button>
-                        <PlusIcon className="mr-2 h-4 w-4" />
+                        <PlusIcon className="h-4 w-4" />
                         Add SSH Key
                     </Button>
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <KeyIcon className="h-5 w-5" />
-                        Add SSH Key
-                    </DialogTitle>
+                    <DialogTitle>Add SSH Key</DialogTitle>
                     <DialogDescription>Add a public SSH key to sync to your servers for secure access.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">

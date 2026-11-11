@@ -7,13 +7,12 @@ interface StatGroupProps {
     className?: string;
 }
 
-/** A thin, unshadowed outer frame for a grid of bordered `Stat` tiles — the tiles carry
- *  their own shadow, so nesting them in here gives the layered card effect. */
+/** Groups a card, or a strip of `Stat` cells, as one block on the page. */
 export function StatGroup({ children, className }: StatGroupProps) {
     return (
         <div
             className={cn(
-                'rounded-xl border border-border/70 bg-card/50 p-1.5',
+                'rounded-2xl',
                 className,
             )}
         >

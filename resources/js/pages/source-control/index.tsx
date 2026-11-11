@@ -1,15 +1,16 @@
 import { Head, router } from '@inertiajs/react';
-import { format } from 'date-fns';
 import {
-    ExternalLinkIcon,
-    MoreVerticalIcon,
+    ArrowSquareOutIcon,
+    DotsThreeVerticalIcon,
     PlusIcon,
-    Trash2Icon,
-} from 'lucide-react';
+    TrashIcon,
+} from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,7 +110,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button>
-                    <PlusIcon className="mr-2 h-4 w-4" />
+                    <PlusIcon className="h-4 w-4" />
                     Add Provider
                 </Button>
             </DropdownMenuTrigger>
@@ -145,20 +146,9 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
             <Head title="Source Control" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Source Control
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Connecting to your source control providers allows
-                            your deployment platform to access your project's
-                            codebase, making it possible to deploy your
-                            applications.
-                        </p>
-                    </div>
+                <PageActions>
                     {providers.length > 0 && addProviderMenu}
-                </div>
+                </PageActions>
 
                 {accounts.data.length === 0 ? (
                     <EmptyState
@@ -241,7 +231,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             rel="noopener noreferrer"
                                                             aria-label={`Visit ${account.provider_label}`}
                                                         >
-                                                            <ExternalLinkIcon className="h-4 w-4" />
+                                                            <ArrowSquareOutIcon className="h-4 w-4" />
                                                         </a>
                                                     </Button>
                                                 )}
@@ -254,7 +244,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             size="icon"
                                                             className="h-8 w-8"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             <span className="sr-only">
                                                                 Actions
                                                             </span>
@@ -269,7 +259,7 @@ export default function SourceControlIndex({ accounts, providers }: Props) {
                                                             }
                                                             className="text-destructive focus:text-destructive"
                                                         >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="h-4 w-4" />
                                                             Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

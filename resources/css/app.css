@@ -9,20 +9,42 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* The public site's typeface; the dashboard stays on Inter. */
+    --font-marketing:
+        'Host Grotesk', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
     --font-log:
-        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
-        Consolas, 'Liberation Mono', 'Courier New', monospace;
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        'Liberation Mono', 'Courier New', monospace;
+
+    /* Shopify's admin sets body copy at 13px on a 20px line. */
+    --text-sm: 0.8125rem;
+    --text-sm--line-height: calc(20 / 13);
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
     --color-brand: #2563eb;
-    --color-brand-accent: #ff7a59;
+}
+
+/*
+ * Aliases of the theme variables below. They are inlined so a utility such as
+ * `bg-background` reads the variable where it is used, which lets a `dark`
+ * class on any element re-theme everything inside it.
+ */
+@theme inline {
+    --shadow-card: var(--elevation-card);
+    --shadow-button: var(--elevation-button);
+    --shadow-button-primary: var(--elevation-button-primary);
+    --shadow-overlay: var(--elevation-overlay);
+
+    --color-link: var(--link);
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -69,74 +91,94 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
+    /* Neutral scale and tones follow Shopify's Polaris palette. */
+    --background: #ffffff;
+    --foreground: #101010;
+    --card: #ffffff;
+    --card-foreground: #101010;
+    --popover: #ffffff;
+    --popover-foreground: #101010;
+    --primary: #1a1a1a;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f1f1;
+    --secondary-foreground: #101010;
+    --muted: #f7f7f7;
+    --muted-foreground: #616161;
+    --accent: #f1f1f1;
+    --accent-foreground: #101010;
+    --destructive: #c70a24;
+    --destructive-foreground: #8e0b21;
+    --link: #005bd3;
+    --border: #e6e6e6;
+    --input: #cfcfcf;
+    --ring: #005bd3;
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --radius: 0.75rem;
+
+    /* The sidebar is near-black in both themes, like the Shopify admin. */
+    --sidebar: #0a0a0a;
+    --sidebar-foreground: #dcdcdc;
+    --sidebar-primary: #ffffff;
+    --sidebar-primary-foreground: #101010;
+    --sidebar-accent: #2b2b2b;
+    --sidebar-accent-foreground: #fcfcfc;
+    --sidebar-border: #2b2b2b;
+    --sidebar-ring: #6ea8ff;
+
+    --elevation-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 0 0 1px rgb(0 0 0 / 0.08);
+    --elevation-button:
+        0 1px 0 rgb(0 0 0 / 0.06), 0 0 0 1px rgb(0 0 0 / 0.1),
+        inset 0 -1px 0 rgb(0 0 0 / 0.06);
+    --elevation-button-primary:
+        inset 0 1px 0 rgb(255 255 255 / 0.2), inset 0 -1px 0 rgb(0 0 0 / 0.6),
+        0 1px 2px rgb(0 0 0 / 0.2);
+    --elevation-overlay:
+        0 2px 3px -1px rgb(0 0 0 / 0.06), 0 4px 6px -2px rgb(0 0 0 / 0.06),
+        0 8px 12px -4px rgb(0 0 0 / 0.06), 0 16px 24px -6px rgb(0 0 0 / 0.06),
+        0 32px 48px -8px rgb(0 0 0 / 0.06), 0 0 0 1px rgb(0 0 0 / 0.08);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    --background: #161616;
+    --foreground: #f1f1f1;
+    --card: #1e1e1e;
+    --card-foreground: #f1f1f1;
+    --popover: #222222;
+    --popover-foreground: #f1f1f1;
+    --primary: #f1f1f1;
+    --primary-foreground: #101010;
+    --secondary: #2b2b2b;
+    --secondary-foreground: #f1f1f1;
+    --muted: #242424;
+    --muted-foreground: #a6a6a6;
+    --accent: #2b2b2b;
+    --accent-foreground: #f1f1f1;
+    --destructive: #e0283f;
+    --destructive-foreground: #ff8a98;
+    --link: #6ea8ff;
+    --border: #2e2e2e;
+    --input: #444444;
+    --ring: #6ea8ff;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+
+    --elevation-card:
+        0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.08);
+    --elevation-button:
+        0 1px 0 rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.12),
+        inset 0 1px 0 rgb(255 255 255 / 0.04);
+    --elevation-button-primary:
+        inset 0 -1px 0 rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.4);
+    --elevation-overlay:
+        0 8px 12px -4px rgb(0 0 0 / 0.4), 0 16px 24px -6px rgb(0 0 0 / 0.4),
+        0 32px 48px -8px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.1);
 }
 
 @layer base {
@@ -146,5 +188,6 @@
 
     body {
         @apply bg-background text-foreground;
+        font-feature-settings: 'cv11', 'ss01';
     }
 }

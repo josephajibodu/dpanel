@@ -1,5 +1,10 @@
 import { Link } from '@inertiajs/react';
-import { EyeIcon, EyeOffIcon, KeyIcon, Loader2Icon } from 'lucide-react';
+import {
+    CircleNotchIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    KeyIcon,
+} from '@phosphor-icons/react';
 import { type ReactNode, useState } from 'react';
 
 import { CopyButton } from '@/components/copy-button';
@@ -66,7 +71,7 @@ function DetailField({
     return (
         <div className="space-y-1.5">
             <FieldLabel>{label}</FieldLabel>
-            <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+            <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                 <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
                     {value}
                 </code>
@@ -308,7 +313,7 @@ export function ConnectionInfoDialog({
                                             asChild
                                         >
                                             <Link href={teamPath('/ssh-keys')}>
-                                                <KeyIcon className="mr-2 h-4 w-4" />
+                                                <KeyIcon className="h-4 w-4" />
                                                 Add SSH key
                                             </Link>
                                         </Button>
@@ -359,7 +364,7 @@ export function ConnectionInfoDialog({
                                 {canRevealPassword && (
                                     <div className="space-y-1.5">
                                         <FieldLabel>Password</FieldLabel>
-                                        <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                                        <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                                             <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
                                                 {shownPassword ??
                                                     '••••••••••••'}
@@ -381,9 +386,9 @@ export function ConnectionInfoDialog({
                                                 }
                                             >
                                                 {revealing ? (
-                                                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                                 ) : revealed ? (
-                                                    <EyeOffIcon className="h-4 w-4" />
+                                                    <EyeSlashIcon className="h-4 w-4" />
                                                 ) : (
                                                     <EyeIcon className="h-4 w-4" />
                                                 )}

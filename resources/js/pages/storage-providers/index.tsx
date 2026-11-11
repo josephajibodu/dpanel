@@ -1,10 +1,15 @@
 import { Head, router } from '@inertiajs/react';
+import {
+    ArrowsClockwiseIcon,
+    DotsThreeVerticalIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { format } from 'date-fns';
-import { MoreVerticalIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { PageActions } from '@/components/page-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { ConnectStorageDrawer } from '@/components/storage-providers/connect-storage-drawer';
 import { Button } from '@/components/ui/button';
@@ -85,20 +90,11 @@ export default function StorageProvidersIndex({
             <Head title="Storage Providers" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Storage Providers
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Connect your own object storage for backups and
-                            other file storage.
-                        </p>
-                    </div>
+                <PageActions>
                     {canManageProviders && (
                         <ConnectStorageDrawer types={types} />
                     )}
-                </div>
+                </PageActions>
 
                 {storageProviders.data.length === 0 ? (
                     <EmptyState
@@ -183,7 +179,7 @@ export default function StorageProvidersIndex({
                                                             size="icon"
                                                             className="h-8 w-8"
                                                         >
-                                                            <MoreVerticalIcon className="h-4 w-4" />
+                                                            <DotsThreeVerticalIcon className="h-4 w-4" />
                                                             <span className="sr-only">
                                                                 Actions
                                                             </span>
@@ -197,7 +193,7 @@ export default function StorageProvidersIndex({
                                                                 )
                                                             }
                                                         >
-                                                            <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                                            <ArrowsClockwiseIcon className="h-4 w-4" />
                                                             Re-validate
                                                             Credentials
                                                         </DropdownMenuItem>
@@ -209,7 +205,7 @@ export default function StorageProvidersIndex({
                                                             }
                                                             className="text-destructive focus:text-destructive"
                                                         >
-                                                            <Trash2Icon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="h-4 w-4" />
                                                             Disconnect
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>

@@ -1,5 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import {
+    BookOpenIcon,
+    FolderIcon,
+    HouseIcon,
+    ListIcon,
+    MagnifyingGlassIcon,
+} from '@phosphor-icons/react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
@@ -43,12 +49,12 @@ const rightNavItems: NavItem[] = [
     {
         title: 'Repository',
         href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
+        icon: FolderIcon,
     },
     {
         title: 'Documentation',
         href: 'https://docs.flitops.com',
-        icon: BookOpen,
+        icon: BookOpenIcon,
     },
 ];
 
@@ -69,7 +75,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         {
             title: 'Dashboard',
             href: teamPath('/dashboard'),
-            icon: LayoutGrid,
+            icon: HouseIcon,
         },
     ];
     return (
@@ -85,7 +91,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     size="icon"
                                     className="mr-2 h-[34px] w-[34px]"
                                 >
-                                    <Menu className="h-5 w-5" />
+                                    <ListIcon className="h-5 w-5" />
                                 </Button>
                             </SheetTrigger>
                             <SheetContent
@@ -193,7 +199,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 size="icon"
                                 className="group h-9 w-9 cursor-pointer"
                             >
-                                <Search className="!size-5 opacity-80 group-hover:opacity-100" />
+                                <MagnifyingGlassIcon className="!size-5 opacity-80 group-hover:opacity-100" />
                             </Button>
                             <div className="hidden lg:flex">
                                 {rightNavItems.map((item) => (

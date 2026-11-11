@@ -29,7 +29,7 @@ export function NavFooter({
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                                tooltip={{ children: item.title }}
                             >
                                 <a
                                     href={toUrl(item.href)}
@@ -39,7 +39,7 @@ export function NavFooter({
                                     {item.icon && (
                                         <Icon
                                             iconNode={item.icon}
-                                            className="h-5 w-5"
+                                            className="size-4"
                                         />
                                     )}
                                     <span>{item.title}</span>
