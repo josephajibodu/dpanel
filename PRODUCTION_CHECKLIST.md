@@ -17,38 +17,7 @@ Flitops itself currently runs as a foreground dev process on the operator's lapt
 - [x] Heartbeat so a dead scheduler or queue is noticed (2026-10-13) — `SendSchedulerHeartbeatJob` runs via the scheduler on the queue every 5 minutes and pings `SCHEDULER_HEARTBEAT_URL` (Healthchecks.io, Better Stack, …). The external monitor alerts when pings stop. **Set `SCHEDULER_HEARTBEAT_URL` on the real install** (period 5 min, grace 5–10 min) or nothing is watched.
 
 ### Cutover steps (laptop → server)
-Verified against the code on 2026-11-07. `flitops.example.com` and PHP 8.4 are placeholders.
-
-**Who runs what.** New sites are isolated by default: FlitOps creates a Linux user for the site (shown on the site's page, e.g. `flitops_example_com`), and the site's files (`/home/<site user>/flitops.example.com`), PHP, deploys, workers and cron all run as that user. `<site user>` below means that user. You SSH in as `artisan` (the server user, with `sudo`), so run the site's own commands as `sudo -u <site user> -H bash -c '…'`, or open a shell with `sudo -iu <site user>`. If you untick isolation instead, `<site user>` is `artisan` and commands run directly.
-
-1. **Provision** (from the laptop Flitops): a dedicated Ubuntu 24.04 server (≥ 2 vCPU / 4 GB) with **Nginx** (step 5 is an Nginx snippet), PostgreSQL and Redis; database + user `flitops`. Lower the DNS TTL in advance.
-2. **Site**: Laravel site for `flitops.example.com` on the Flitops repo, branch `main`, isolation left on. Point DNS, issue SSL. Don't deploy yet.
-3. **Environment** (before the first deploy — the build bakes in `VITE_*`):
-   - `APP_KEY` = **the laptop's key exactly** (otherwise copied SSH keys/tokens can't be decrypted); `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://flitops.example.com`, `SESSION_SECURE_COOKIE=true`, `LOG_STACK=daily`
-   - `DB_CONNECTION=pgsql` + server DB credentials; `QUEUE_CONNECTION=redis`, `REDIS_HOST=127.0.0.1`, `BROADCAST_CONNECTION=reverb`, `CACHE_STORE=database`, `SESSION_DRIVER=database`
-   - Reverb: `REVERB_SERVER_HOST=127.0.0.1`, `REVERB_SERVER_PORT=8080`, `REVERB_HOST=127.0.0.1`, `REVERB_PORT=8080`, `REVERB_SCHEME=http`, `VITE_REVERB_HOST=flitops.example.com`, `VITE_REVERB_PORT=443`, `VITE_REVERB_SCHEME=https`, `REVERB_ALLOWED_ORIGINS=flitops.example.com`, fresh app id/key/secret, `VITE_REALTIME_DEBUG=false`
-   - `HORIZON_ADMINS=<you>` (else `/horizon` is 403), real SMTP, `ALERT_EMAIL=<you>`, `SCHEDULER_HEARTBEAT_URL=<monitor ping url>`
-   - `FREE_DOMAIN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `ACME_BINARY=/home/<site user>/.acme.sh/acme.sh`
-   - GitHub/GitLab/Bitbucket client id/secret; leave `*_REDIRECT_URI` unset or point at the new host. Leave `SERVER_USER` unset (must match the laptop) and `SERVER_ALLOW_PRIVATE_ADDRESSES` unset.
-   - Leave `TERMINAL_GATEWAY_URL` and `TERMINAL_GATEWAY_SECRET` empty to launch with the browser terminal off (see step 8b to turn it on).
-4. **Deploy** from the laptop; `https://flitops.example.com/up` returns 200.
-5. **Reverb proxy**: add a Locations nginx file for the domain:
-   `location ^~ /app/ { proxy_http_version 1.1; proxy_set_header Host $http_host; proxy_set_header Scheme $scheme; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "Upgrade"; proxy_pass http://127.0.0.1:8080; }`
-6. **Workers**, tied to the site (so they run in its `current` folder, as `<site user>`), 1 process, auto start and auto restart on, **restart on deploy off** (every deploy already runs `horizon:terminate` and `reverb:restart`): `php8.4 artisan horizon` and `php8.4 artisan reverb:start --host=127.0.0.1 --port=8080`. FlitOps keeps their logs in `/var/log/supervisor`.
-7. **Cron**, tied to the site (runs in `current`, as `<site user>`), every minute: `php8.4 artisan schedule:run`.
-8. **acme.sh** as `<site user>`: `sudo -u <site user> -H bash -c 'curl https://get.acme.sh | sh -s email=<you>'`.
-   - 8b. *(Optional)* **Browser terminal**: follow README → "Browser terminal" → "Production" (a Go binary run as a third worker, plus an nginx `/terminal` proxy), then set `TERMINAL_GATEWAY_URL` and `TERMINAL_GATEWAY_SECRET` and redeploy. Can be done any time after the cutover.
-9. **Cutover window**:
-   1. Laptop: wait until `/horizon` shows nothing pending/running (the laptop Redis isn't migrated), then `php artisan down`, stop the dev stack, and confirm `pgrep -fl "artisan (horizon|queue|schedule|reverb)"` prints nothing.
-   2. Server, as `<site user>` in `current`: `php8.4 artisan down` (pauses its Horizon/scheduler).
-   3. Laptop: `pg_dump --no-owner --no-acl -Fp -f flitops-cutover.sql <db>` (laptop `pg_dump` major ≤ server `psql`) and `tar czf certs.tgz -C storage/app certificates`; `scp` both to the server (they land in `artisan`'s home).
-   4. Server: as `artisan`, `dropdb`/`createdb -O flitops flitops` and load the dump with `psql`; then `sudo tar xzf certs.tgz -C /home/<site user>/flitops.example.com/shared/storage/app && sudo chown -R <site user>: /home/<site user>/flitops.example.com/shared/storage/app/certificates && sudo chmod -R go-rwx /home/<site user>/flitops.example.com/shared/storage/app/certificates`; then, as `<site user>` in `current`, `php8.4 artisan migrate --force`.
-   5. Repoint the copied wildcard `Certificate` rows at server paths (`WildcardCertificateIssuer::pathsFor()`), or delete the row and let `IssueWildcardCertificateJob` reissue — which also proves acme.sh works.
-   6. Server, as `<site user>` in `current`: `php8.4 artisan up && php8.4 artisan horizon:terminate`.
-   7. Laptop: rename the old database (e.g. `flitops_pre_cutover`) and point the laptop `.env` at a fresh dev DB, so a stray `composer run dev` can't run a second scheduler/queue against real servers. Delete both dump files, on the laptop and in `artisan`'s home on the server, once confident (they hold encrypted secrets).
-   8. Update each OAuth app's callback to `https://flitops.example.com/auth/{provider}/callback` and any repo webhooks pointing at the old URL.
-10. **Verify**: `/up` 200 and login works; `horizon:status` running and both workers RUNNING in `supervisorctl status`; exactly one `schedule:run` cron; heartbeat monitor goes green; websocket to `wss://…/app/` returns 101; server "Test connection" updates live; an on-demand backup completes; a throwaway free-domain site gets the wildcard cert; a self-deploy ends with the three restart lines; a team invite email arrives.
-11. **If a self-deploy breaks Flitops**: open the last good deployment and "Rollback to this" — it swaps `current` and restarts queue workers, Horizon and Reverb from that release. If Flitops is too broken to run the rollback (web UI or Horizon down), do the same by hand as `artisan`: `sudo -u <site user> -H bash -c 'cd ~/flitops.example.com && ln -sfn releases/<previous> current && cd current && php8.4 artisan horizon:terminate && php8.4 artisan reverb:restart'` (with isolation off, run it directly and add `sudo service php8.4-fpm reload` after the swap).
+The full, step-by-step guide is in [GO_LIVE.md](GO_LIVE.md) (rewritten and rehearsed 2026-11-12). It replaces the steps that were here: it copies data only into a database built by the first deploy (so FlitOps-made database grants and the new migration names survive), handles the laptop's PostgreSQL 17 vs the server's 16, and repoints the wildcard certificate record.
 
 ---
 
