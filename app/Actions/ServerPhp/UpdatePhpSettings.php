@@ -58,8 +58,10 @@ class UpdatePhpSettings
             $connection->sudo("systemctl restart php{$version}-fpm", 30);
 
             if (isset($settings['post_max_size']) && $server->web_server === 'nginx') {
-                $this->installAsRoot($connection, NginxService::uploadLimitConfig($settings['post_max_size']), NginxService::UPLOAD_LIMIT_CONFIG, timeout: 10);
-                $server->webServer()->validateAndReload($connection);
+                $server->webServer()->withConfigLock($server, function () use ($server, $connection, $settings): void {
+                    $this->installAsRoot($connection, NginxService::uploadLimitConfig($settings['post_max_size']), NginxService::UPLOAD_LIMIT_CONFIG, timeout: 10);
+                    $server->webServer()->validateAndReload($connection);
+                });
             }
         } finally {
             $connection->disconnect();

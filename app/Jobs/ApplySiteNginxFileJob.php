@@ -44,51 +44,53 @@ class ApplySiteNginxFileJob implements ShouldQueue
             $webServer = $site->server->webServer();
 
             try {
-                $newAbsPath = $this->nginxFile->absolutePath();
-                $newDir = dirname($newAbsPath);
-                $content = $this->nginxFile->content ?? '';
-                $escapedContent = str_replace("'", "'\\''", $content);
+                $webServer->withConfigLock($site->server, function () use ($connection, $webServer): void {
+                    $newAbsPath = $this->nginxFile->absolutePath();
+                    $newDir = dirname($newAbsPath);
+                    $content = $this->nginxFile->content ?? '';
+                    $escapedContent = str_replace("'", "'\\''", $content);
 
-                $connection->exec("sudo mkdir -p {$newDir}");
+                    $connection->exec("sudo mkdir -p {$newDir}");
 
-                if ($this->historyEvent === NginxHistoryEvent::Updated) {
-                    $backupPath = $newAbsPath.'.flitops-bak';
-                    $connection->exec("sudo cp -f {$newAbsPath} {$backupPath} 2>/dev/null || true");
+                    if ($this->historyEvent === NginxHistoryEvent::Updated) {
+                        $backupPath = $newAbsPath.'.flitops-bak';
+                        $connection->exec("sudo cp -f {$newAbsPath} {$backupPath} 2>/dev/null || true");
 
-                    $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
+                        $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
 
-                    try {
-                        $webServer->validate($connection);
-                    } catch (\RuntimeException $validationException) {
-                        $connection->exec("sudo mv -f {$backupPath} {$newAbsPath} 2>/dev/null || true");
-                        throw $validationException;
+                        try {
+                            $webServer->validate($connection);
+                        } catch (\RuntimeException $validationException) {
+                            $connection->exec("sudo mv -f {$backupPath} {$newAbsPath} 2>/dev/null || true");
+                            throw $validationException;
+                        }
+
+                        $connection->exec("sudo rm -f {$backupPath}");
+                    } elseif ($this->historyEvent === NginxHistoryEvent::Renamed && $this->oldPath) {
+                        $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
+
+                        try {
+                            $webServer->validate($connection);
+                        } catch (\RuntimeException $validationException) {
+                            $connection->exec("sudo rm -f {$newAbsPath}");
+                            throw $validationException;
+                        }
+
+                        $oldAbsPath = $this->nginxFile->absolutePathFor($this->oldPath);
+                        $connection->exec("sudo rm -f {$oldAbsPath}");
+                    } else {
+                        $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
+
+                        try {
+                            $webServer->validate($connection);
+                        } catch (\RuntimeException $validationException) {
+                            $connection->exec("sudo rm -f {$newAbsPath}");
+                            throw $validationException;
+                        }
                     }
 
-                    $connection->exec("sudo rm -f {$backupPath}");
-                } elseif ($this->historyEvent === NginxHistoryEvent::Renamed && $this->oldPath) {
-                    $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
-
-                    try {
-                        $webServer->validate($connection);
-                    } catch (\RuntimeException $validationException) {
-                        $connection->exec("sudo rm -f {$newAbsPath}");
-                        throw $validationException;
-                    }
-
-                    $oldAbsPath = $this->nginxFile->absolutePathFor($this->oldPath);
-                    $connection->exec("sudo rm -f {$oldAbsPath}");
-                } else {
-                    $connection->exec("echo '{$escapedContent}' | sudo tee {$newAbsPath} > /dev/null");
-
-                    try {
-                        $webServer->validate($connection);
-                    } catch (\RuntimeException $validationException) {
-                        $connection->exec("sudo rm -f {$newAbsPath}");
-                        throw $validationException;
-                    }
-                }
-
-                $webServer->reload($connection);
+                    $webServer->reload($connection);
+                });
             } finally {
                 $connection->disconnect();
             }

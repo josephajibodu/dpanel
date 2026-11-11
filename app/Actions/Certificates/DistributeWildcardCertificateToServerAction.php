@@ -52,13 +52,15 @@ class DistributeWildcardCertificateToServerAction
         $changedAny = false;
 
         try {
-            foreach ($domains as $domain) {
-                $changedAny = $this->sync->execute($connection, $domain->site_id, $domain->id, $server->webServer()) || $changedAny;
-            }
+            $server->webServer()->withConfigLock($server, function () use ($server, $connection, $domains, &$changedAny): void {
+                foreach ($domains as $domain) {
+                    $changedAny = $this->sync->execute($connection, $domain->site_id, $domain->id, $server->webServer()) || $changedAny;
+                }
 
-            if ($changedAny) {
-                $server->webServer()->validateAndReload($connection);
-            }
+                if ($changedAny) {
+                    $server->webServer()->validateAndReload($connection);
+                }
+            });
         } finally {
             if ($ownsConnection) {
                 $connection->disconnect();

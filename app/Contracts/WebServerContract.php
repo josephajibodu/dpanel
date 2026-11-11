@@ -3,8 +3,10 @@
 namespace App\Contracts;
 
 use App\Enums\ServiceType;
+use App\Models\Server;
 use App\Models\Site;
 use App\Services\Ssh\SshConnection;
+use Closure;
 
 /**
  * The web server a server runs (Nginx or Caddy). Everything that writes site
@@ -24,6 +26,21 @@ interface WebServerContract
      * @param  SshConnection|null  $connection  When null, a connection is opened and closed. When provided, it is not closed.
      */
     public function syncSite(Site $site, ?SshConnection $connection = null): void;
+
+    /**
+     * Run a change to the server's web server config while no other change
+     * to it is running. Every change writes files and then checks the whole
+     * config, so two at once could each fail on the other's half-written
+     * file. Waits a short while for a change already running, then throws a
+     * RuntimeException. syncSite() takes this lock itself, so never call it
+     * from inside the callback.
+     *
+     * @template TReturn
+     *
+     * @param  Closure(): TReturn  $callback
+     * @return TReturn
+     */
+    public function withConfigLock(Server $server, Closure $callback): mixed;
 
     /**
      * Check the whole config. Throws a RuntimeException naming the problem when it's invalid.

@@ -35,22 +35,26 @@ class SyncNginxCatchallVhostAction
         $noSitePageRoot = NginxService::NO_SITE_PAGE_ROOT;
         $connection->exec("sudo mkdir -p {$noSitePageRoot}");
 
-        if ($server->web_server === 'caddy') {
-            $this->write($connection, NginxService::NO_SITE_PAGE, CaddyService::noSitePage());
-            $this->write($connection, CaddyService::CADDYFILE, CaddyService::buildCaddyfile());
-        } else {
+        if ($server->web_server !== 'caddy') {
             $installed = $connection->exec('dpkg -s ssl-cert >/dev/null 2>&1 && echo INSTALLED || true');
             if (! str_contains($installed, 'INSTALLED')) {
                 $connection->exec('sudo apt-get -o DPkg::Lock::Timeout=60 install -y ssl-cert', 900);
             }
-
-            $this->write($connection, NginxService::NO_SITE_PAGE, NginxService::noSitePage());
-            $this->write($connection, '/etc/nginx/sites-available/app.conf', NginxService::buildServerConfig());
-            $connection->exec('sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf');
         }
 
-        $server->webServer()->validate($connection);
-        $server->webServer()->reload($connection);
+        $server->webServer()->withConfigLock($server, function () use ($server, $connection): void {
+            if ($server->web_server === 'caddy') {
+                $this->write($connection, NginxService::NO_SITE_PAGE, CaddyService::noSitePage());
+                $this->write($connection, CaddyService::CADDYFILE, CaddyService::buildCaddyfile());
+            } else {
+                $this->write($connection, NginxService::NO_SITE_PAGE, NginxService::noSitePage());
+                $this->write($connection, '/etc/nginx/sites-available/app.conf', NginxService::buildServerConfig());
+                $connection->exec('sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf');
+            }
+
+            $server->webServer()->validate($connection);
+            $server->webServer()->reload($connection);
+        });
     }
 
     private function write(SshConnection $connection, string $path, string $content): void

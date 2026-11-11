@@ -77,27 +77,29 @@ class DeleteSiteDomainJob implements ShouldQueue
             $connection = $sshService->connect($server);
             $webServer = $server->webServer();
 
-            foreach (array_reverse($webServer->siteConfigPaths($this->configFileName)) as $configPath) {
-                $connection->exec("sudo rm -f {$configPath}");
-            }
-            $connection->exec('sudo rm -rf '.escapeshellarg($this->snippetsBasePath));
+            $webServer->withConfigLock($server, function () use ($connection, $webServer): void {
+                foreach (array_reverse($webServer->siteConfigPaths($this->configFileName)) as $configPath) {
+                    $connection->exec("sudo rm -f {$configPath}");
+                }
+                $connection->exec('sudo rm -rf '.escapeshellarg($this->snippetsBasePath));
 
-            if ($this->hasSsl) {
-                $certDir = $webServer->certificateDirectory($this->siteId, $this->domainId);
-                $connection->exec("sudo rm -rf {$certDir}");
-            }
+                if ($this->hasSsl) {
+                    $certDir = $webServer->certificateDirectory($this->siteId, $this->domainId);
+                    $connection->exec("sudo rm -rf {$certDir}");
+                }
 
-            $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($this->domainId));
+                $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($this->domainId));
 
-            if ($this->isCustom) {
-                $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($this->hostname).' 2>&1 || true');
-            }
+                if ($this->isCustom) {
+                    $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($this->hostname).' 2>&1 || true');
+                }
 
-            try {
-                $webServer->validateAndReload($connection);
-            } catch (\RuntimeException $exception) {
-                Log::error("Web server config invalid after domain deletion ({$this->hostname}): {$exception->getMessage()}");
-            }
+                try {
+                    $webServer->validateAndReload($connection);
+                } catch (\RuntimeException $exception) {
+                    Log::error("Web server config invalid after domain deletion ({$this->hostname}): {$exception->getMessage()}");
+                }
+            });
 
             $connection->disconnect();
         } catch (\Throwable $e) {

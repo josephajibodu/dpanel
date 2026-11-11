@@ -25,27 +25,29 @@ class RemoveSiteFromServerAction
     {
         $webServer = $server->webServer();
 
-        foreach ($footprint->webServerConfigBasenames as $basename) {
-            foreach (array_reverse($webServer->siteConfigPaths($basename)) as $configPath) {
-                $connection->exec("sudo rm -f {$configPath}");
+        $webServer->withConfigLock($server, function () use ($connection, $webServer, $footprint): void {
+            foreach ($footprint->webServerConfigBasenames as $basename) {
+                foreach (array_reverse($webServer->siteConfigPaths($basename)) as $configPath) {
+                    $connection->exec("sudo rm -f {$configPath}");
+                }
             }
-        }
 
-        foreach ($footprint->snippetBasePaths as $snippetsBasePath) {
-            $connection->exec('sudo rm -rf '.escapeshellarg($snippetsBasePath));
-        }
+            foreach ($footprint->snippetBasePaths as $snippetsBasePath) {
+                $connection->exec('sudo rm -rf '.escapeshellarg($snippetsBasePath));
+            }
 
-        foreach ($footprint->domainIds as $domainId) {
-            $certDir = $webServer->certificateDirectory($footprint->siteId, $domainId);
-            $connection->exec("sudo rm -rf {$certDir}");
-            $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
-        }
+            foreach ($footprint->domainIds as $domainId) {
+                $certDir = $webServer->certificateDirectory($footprint->siteId, $domainId);
+                $connection->exec("sudo rm -rf {$certDir}");
+                $connection->exec('sudo rm -f '.IssueSslForDomainJob::deployHookPath($domainId));
+            }
 
-        foreach ($footprint->customHostnames as $hostname) {
-            $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($hostname).' 2>&1 || true');
-        }
+            foreach ($footprint->customHostnames as $hostname) {
+                $connection->exec('sudo certbot delete --non-interactive --cert-name '.escapeshellarg($hostname).' 2>&1 || true');
+            }
 
-        $webServer->reload($connection);
+            $webServer->reload($connection);
+        });
 
         // After the reload, so the web server has stopped writing to it.
         // Rotated copies (.1, .2.gz, …) go too.

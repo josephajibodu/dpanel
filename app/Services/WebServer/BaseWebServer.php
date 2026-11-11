@@ -4,11 +4,15 @@ namespace App\Services\WebServer;
 
 use App\Contracts\WebServerContract;
 use App\Enums\NginxFileSection;
+use App\Models\Server;
 use App\Models\Site;
 use App\Models\SiteDomain;
 use App\Services\Nginx\NginxConfigService;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
+use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 /**
@@ -20,6 +24,17 @@ use RuntimeException;
  */
 abstract class BaseWebServer implements WebServerContract
 {
+    /**
+     * How long a change may hold a server's config lock before it's released
+     * anyway, so a change that died can't block the server for good.
+     */
+    private const CONFIG_LOCK_SECONDS = 120;
+
+    /**
+     * How long a change waits for one that's already running.
+     */
+    private const CONFIG_LOCK_WAIT_SECONDS = 20;
+
     public function __construct(
         protected NginxConfigService $siteConfig,
         protected SshService $sshService,
@@ -30,6 +45,16 @@ abstract class BaseWebServer implements WebServerContract
      */
     abstract protected function generateDomainConfig(Site $site, SiteDomain $domain): string;
 
+    public function withConfigLock(Server $server, Closure $callback): mixed
+    {
+        try {
+            return Cache::lock("web-server-config:{$server->id}", self::CONFIG_LOCK_SECONDS)
+                ->block(self::CONFIG_LOCK_WAIT_SECONDS, $callback);
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Another change to the web server config on {$server->name} is still running. Try again in a moment.");
+        }
+    }
+
     public function syncSite(Site $site, ?SshConnection $connection = null): void
     {
         $site->loadMissing('server', 'domains');
@@ -38,47 +63,52 @@ abstract class BaseWebServer implements WebServerContract
         $connection ??= $this->sshService->connect($site->server);
 
         try {
-            $domains = [];
-            $configs = [];
-
-            foreach ($site->domains()->where('is_enabled', true)->get() as $domain) {
-                $basename = NginxConfigService::configFileName($site, $domain);
-                $domains[$basename] = $domain;
-                $configs[$basename] = $this->generateDomainConfig($site, $domain);
-            }
-
-            /** @var array<string, string> $previous What the last sync wrote, by file name. */
-            $previous = $site->nginxFiles()
-                ->where('section', NginxFileSection::Main->value)
-                ->pluck('content', 'path')
-                ->map(fn (?string $content): string => (string) $content)
-                ->all();
-
-            foreach ($configs as $basename => $config) {
-                $this->prepareDomain($connection, $site, $domains[$basename]);
-                $this->writeSiteConfig($connection, $basename, $config);
-            }
-
-            foreach (array_diff_key($previous, $configs) as $basename => $content) {
-                $this->removeSiteConfig($connection, $basename);
-            }
-
-            try {
-                $this->validate($connection);
-            } catch (RuntimeException $exception) {
-                $this->restoreSiteConfigs($connection, $previous, $configs);
-
-                throw $exception;
-            }
-
-            $this->reload($connection);
-            $this->recordSiteConfigs($site, $domains, $configs);
-            $this->synchronizeAppUrl($connection, $site);
+            $this->withConfigLock($site->server, fn () => $this->writeSiteConfigs($site, $connection));
         } finally {
             if ($shouldDisconnect) {
                 $connection->disconnect();
             }
         }
+    }
+
+    private function writeSiteConfigs(Site $site, SshConnection $connection): void
+    {
+        $domains = [];
+        $configs = [];
+
+        foreach ($site->domains()->where('is_enabled', true)->get() as $domain) {
+            $basename = NginxConfigService::configFileName($site, $domain);
+            $domains[$basename] = $domain;
+            $configs[$basename] = $this->generateDomainConfig($site, $domain);
+        }
+
+        /** @var array<string, string> $previous What the last sync wrote, by file name. */
+        $previous = $site->nginxFiles()
+            ->where('section', NginxFileSection::Main->value)
+            ->pluck('content', 'path')
+            ->map(fn (?string $content): string => (string) $content)
+            ->all();
+
+        foreach ($configs as $basename => $config) {
+            $this->prepareDomain($connection, $site, $domains[$basename]);
+            $this->writeSiteConfig($connection, $basename, $config);
+        }
+
+        foreach (array_diff_key($previous, $configs) as $basename => $content) {
+            $this->removeSiteConfig($connection, $basename);
+        }
+
+        try {
+            $this->validate($connection);
+        } catch (RuntimeException $exception) {
+            $this->restoreSiteConfigs($connection, $previous, $configs);
+
+            throw $exception;
+        }
+
+        $this->reload($connection);
+        $this->recordSiteConfigs($site, $domains, $configs);
+        $this->synchronizeAppUrl($connection, $site);
     }
 
     public function validateAndReload(SshConnection $connection): void

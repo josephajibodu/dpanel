@@ -46,18 +46,20 @@ class DeleteSiteNginxFileJob implements ShouldQueue
             $webServer = $site->server->webServer();
 
             try {
-                $connection->exec("sudo mv -f {$absolutePath} {$backupPath} 2>/dev/null || true");
+                $webServer->withConfigLock($site->server, function () use ($connection, $webServer, $absolutePath, $backupPath): void {
+                    $connection->exec("sudo mv -f {$absolutePath} {$backupPath} 2>/dev/null || true");
 
-                try {
-                    $webServer->validate($connection);
-                } catch (\RuntimeException $validationException) {
-                    $connection->exec("sudo mv -f {$backupPath} {$absolutePath} 2>/dev/null || true");
+                    try {
+                        $webServer->validate($connection);
+                    } catch (\RuntimeException $validationException) {
+                        $connection->exec("sudo mv -f {$backupPath} {$absolutePath} 2>/dev/null || true");
 
-                    throw $validationException;
-                }
+                        throw $validationException;
+                    }
 
-                $connection->exec("sudo rm -f {$backupPath}");
-                $webServer->reload($connection);
+                    $connection->exec("sudo rm -f {$backupPath}");
+                    $webServer->reload($connection);
+                });
             } finally {
                 $connection->disconnect();
             }
