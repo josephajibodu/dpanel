@@ -3,7 +3,7 @@
 
 This checklist covers what a deployment platform needs beyond basic provisioning, so that Flitops does not become the weak link under a billing system that depends on it running correctly every hour of every day.
 
-Last reviewed: 2026-11-07 (cutover steps re-checked for isolated sites, lower-priority items). Before that: 2026-10-13 (heartbeat, uptime alerts, SSL expiry alerts, self-hosting readiness). Originally ordered on 2026-09-14, after a real incident (an expired wildcard certificate broke a live site's HTTPS because Flitops's own scheduler had never actually run). Ordered by priority based on what that incident revealed, not the original draft order.
+Last reviewed: 2026-11-11 (full audit, see "Full audit" near the end). Before that: 2026-11-07 (cutover steps re-checked for isolated sites, lower-priority items). Before that: 2026-10-13 (heartbeat, uptime alerts, SSL expiry alerts, self-hosting readiness). Originally ordered on 2026-09-14, after a real incident (an expired wildcard certificate broke a live site's HTTPS because Flitops's own scheduler had never actually run). Ordered by priority based on what that incident revealed, not the original draft order.
 
 ---
 
@@ -190,6 +190,55 @@ There's an unfinished `ServerLog` model/migration (`type`, `disk`, `is_remote` c
 
 ## Security hardening: what has run on real servers (checked 2026-11-07)
 From the FlitOps database: 4 isolated sites (Bouclay included) with 30 successful deploys, 29 completed backups since the secrets-off-the-command-line change, and 1 SSH key synced to a site user. Not yet seen for real: a restore. Converting an existing site with "Isolate this site" was tested by the user and works (confirmed 2026-11-08).
+
+## Full audit (2026-11-11)
+A read of the whole backend before opening FlitOps to other teams. Not covered in depth: the React frontend, the four cloud provider clients, the internals of converting a site to isolation, PHP and Node version management, and the source-control login flow. Every test fakes the SSH connection, so none of the fixes below has run on a real server.
+
+### Fixed (branch `worktree-full-audit`, not yet merged to `main`)
+- [x] A remote command that ran out of time counted as a success (de7e847). The SSH library keeps the previous command's exit code when the current one reports none, so this affected every command, not only provisioning. A timed-out command now fails with "timed out", and its channel is closed so later commands can run.
+- [x] Provisioning always opened port 22 in the firewall, locking out a custom server that takes SSH on another port (8b5a28d). It now opens the port FlitOps connects on.
+- [x] A Developer could reach root (e732100). The server user can sudo, and a site that isn't isolated runs as that user. Choosing what runs as the server user now needs `AccessServersAsAdmin`: the deploy script, environment file, commands, repository, branch and auto-deploy on a site that isn't isolated; creating a site without isolation; and workers and cron jobs that aren't tied to an isolated site. Developers can still deploy, cancel and roll back those sites.
+- [x] Custom web server config was another way to root for Developers, on isolated sites too, because a config file can hand a request to the shared PHP process that runs as the server user (cf838e5). Writing these files now needs `AccessServersAsAdmin`. Reading them is unchanged.
+- [x] Two changes to one server's web server config could run at once, each failing on the other's half-written file (742515f). Nine places that write config now take a lock per server (`withConfigLock`); a change waits 20 seconds for one already running, then fails saying so.
+- [x] A web server sync that failed told nobody (521abff). `SyncSiteNginxJob` now marks the site's main configs as failed with the error, which the config page shows, and emails the server's owner.
+- [x] Backups shared two production queue workers with the provisioning queue (9d9c2ff). They have their own supervisor now.
+
+### Follow-ups to those fixes
+- [ ] Hide the buttons Developers can no longer use (deploy script, environment, commands, repository, config editor, server-level workers and cron). They are refused on the server but still shown. Waits for the dashboard redesign to merge, since it touches `resources/`.
+- [ ] Show "config not applied" on the domain page and site overview, not only on the web server config page and by email.
+- [ ] `MoveSitePhpPoolJob` (PHP version change on an isolated site) still fails silently.
+- [ ] A command the server kills (for example for using too much memory) reports no exit code, so after an earlier success on the same connection it can still look successful. The SSH library gives no way to clear the old code.
+- [ ] A timed-out command may keep running on the server after FlitOps gives up on it.
+- [ ] Wildcard certificate distribution takes the config lock but has no lock test.
+
+### Open, each needs a decision first
+The open items below come from reading the code. The first four in this list were re-read on 2026-11-11 while fixing the items above; re-check the rest against the code before fixing them.
+
+- [ ] **Sharing Redis breaks the host server's own sites.** The first connection from another server puts a password on Redis and restarts it (`AllowServerConnection`), but the host's own sites have no `REDIS_PASSWORD`. Decide: warn and list the affected sites before connecting, or write the password into their environment files. No server connections exist today.
+- [ ] **New servers are not hardened for SSH.** Provisioning leaves password login and root login on, installs nothing to block repeated login attempts, and gives the server user a password. Decide how far to go, since turning off password login can lock out someone who relies on it.
+- [ ] **Anyone can claim a domain they don't own.** Hostnames are unique across all teams and adding one needs no proof (`SiteDomainController::store`), and no free subdomain names are reserved (`www`, `login`). Decide how a hostname is held before it is verified, and which names to reserve.
+- [ ] **Two domains can share one config file name.** Dots become dashes, so `a-b.com` and `a.b.com` both become `a-b-com.conf` and the second replaces the first on the same server. Renaming the files touches every live site's config, so plan it with a resync.
+- [ ] **Outdated packages with published advisories.** 12 PHP advisories across 7 Symfony packages; several high and critical JavaScript ones (`socket.io-parser`, `ws`, `dompurify`, `vite`). `composer update` and `npm audit fix` change dependencies, and `package.json` is also changed by the redesign branch.
+- [ ] **Nothing has been proven on a real server.** A repeatable check on a throwaway server: create a site, add a domain, turn on HTTPS, change the www redirect, switch PHP version, isolate, delete, on both web servers. Still the biggest gap.
+
+### Open, smaller
+- [ ] Before running the web server resync with `--all`: the database showed 15 main configs across 9 sites and no "Before", "Locations" or other custom files, so it has nothing to delete. Hand edits made directly on a server would not show in the database.
+- [ ] If a rejected sync touches a config file FlitOps has no saved copy of, the rollback deletes that file instead of restoring it (`BaseWebServer::restoreSiteConfigs`).
+- [ ] `APP_URL` is always written as `https://`, even for a domain with no certificate yet.
+- [ ] A wildcard custom domain's certificate covers only the domain and `www`, so its subdomains get no valid HTTPS.
+- [ ] A history entry for a main config can still be restored, although main configs are read-only (`SiteNginxController::restore`).
+- [ ] Team invitations never expire, and the email match is case-sensitive.
+- [ ] An open browser terminal stays open for up to 2 hours after the person is removed from the team.
+- [ ] Deploys are capped at 10 minutes with no setting to raise it.
+- [ ] No rate limits on the webhook or on expensive actions such as creating servers.
+- [ ] Database and Redis traffic between connected servers is unencrypted when it crosses the public internet.
+- [ ] When the shared wildcard certificate first becomes available, existing free-domain sites stay on HTTP until something else triggers a sync.
+- [ ] About 15 places write files to servers through the shell's `echo`. The server user's shell is bash, whose `echo` leaves backslashes alone, so this is tidiness, not urgent; the database and backup code already upload to a private folder and install from there.
+- [ ] Tables, routes and classes say "nginx" for things that now serve both web servers.
+- [ ] The local database still lists the migration names from before the consolidation, so `php artisan migrate:status` shows 41 as pending although every table exists. Mark them as run before running any new migration there.
+
+### Checked and sound
+Every route has a permission check and IDs sent in forms are limited to the team. Backups and restores keep secrets off the command line, and foreign dumps load with client commands switched off. Browser terminal tokens are single-use and expire in 60 seconds, the host key is pinned, and the private key never reaches the browser. Webhook signatures are checked, two deployments of one site cannot run at once, and stored secrets are encrypted in the database.
 
 ## How to use this
 Work top to bottom — item 0 (Control Plane Resilience) undermines everything below it, so it's the actual current bottleneck regardless of what looks more urgent by itself. As of 2026-11-07 the code side of item 0 is ready; what's left is carrying out the cutover steps (re-checked that day for isolated sites). The custom-domain renewal gap (item 8) and broken rollback (item 3) were fixed the same day; existing custom domains still need "Renew SSL" clicked once to get the renewal hook. After that, items 5 and 9 (audit trail, log access) are the largest remaining gaps. Item 12 stays last; it's the most deferrable by a wide margin.
