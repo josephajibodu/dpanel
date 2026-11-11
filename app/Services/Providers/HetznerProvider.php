@@ -56,6 +56,12 @@ class HetznerProvider implements ProviderContract
     ];
 
     /**
+     * The most items Hetzner returns per page. It sends 25 by default, which
+     * is fewer than the server types it sells.
+     */
+    private const int MAX_PER_PAGE = 50;
+
+    /**
      * Hetzner's price list, fetched once per instance: it holds the account's
      * currency and the per-location price of a public IPv4 address.
      *
@@ -97,7 +103,7 @@ class HetznerProvider implements ProviderContract
      */
     public function getSizes(): Collection
     {
-        $response = $this->http->get('server_types');
+        $response = $this->http->get('server_types', ['per_page' => self::MAX_PER_PAGE]);
 
         if (! $response->successful()) {
             throw new ProviderApiException(

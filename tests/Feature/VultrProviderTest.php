@@ -17,3 +17,14 @@ it('creates instances on Ubuntu 24.04', function () {
     Http::assertSent(fn (Request $request) => $request->url() === 'https://api.vultr.com/v2/instances'
         && $request['os_id'] === 2284);
 });
+
+it('asks for every plan, not just the first page', function () {
+    Http::preventStrayRequests();
+    Http::fake(['api.vultr.com/v2/plans*' => Http::response(['plans' => []])]);
+    $provider = new VultrProvider;
+    $provider->setCredentials(['api_token' => 'test-token']);
+
+    $provider->getSizes();
+
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/plans') && $request['per_page'] === 500);
+});

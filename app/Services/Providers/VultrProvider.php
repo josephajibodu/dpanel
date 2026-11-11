@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Http;
 
 class VultrProvider implements ProviderContract
 {
+    /**
+     * The most plans Vultr returns per page. It sends 100 by default, which
+     * is fewer than the plans it sells.
+     */
+    private const int MAX_PER_PAGE = 500;
+
     private string $apiToken = '';
 
     private PendingRequest $http;
@@ -67,7 +73,7 @@ class VultrProvider implements ProviderContract
 
     public function getSizes(): Collection
     {
-        $response = $this->http->get('plans');
+        $response = $this->http->get('plans', ['per_page' => self::MAX_PER_PAGE]);
 
         if (! $response->successful()) {
             throw new ProviderApiException(

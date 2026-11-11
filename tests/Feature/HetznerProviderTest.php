@@ -31,7 +31,7 @@ it('lists sizes without the retired ones, now that Hetzner no longer sends a dep
     ];
     Http::fake([
         'api.hetzner.cloud/v1/pricing' => Http::response(['pricing' => ['currency' => 'EUR']]),
-        'api.hetzner.cloud/v1/server_types' => Http::response(['server_types' => [
+        'api.hetzner.cloud/v1/server_types*' => Http::response(['server_types' => [
             $serverType('cx23', null),
             $serverType('cx11', ['announced' => '2024-01-01T00:00:00+00:00', 'unavailable_after' => '2024-04-01T00:00:00+00:00']),
         ]]),
@@ -49,7 +49,7 @@ it('prices each size per location before tax, only where it can be created', fun
     Http::preventStrayRequests();
     Http::fake([
         'api.hetzner.cloud/v1/pricing' => Http::response(['pricing' => ['currency' => 'USD']]),
-        'api.hetzner.cloud/v1/server_types' => Http::response(['server_types' => [[
+        'api.hetzner.cloud/v1/server_types*' => Http::response(['server_types' => [[
             'name' => 'cax11',
             'description' => 'CAX 11',
             'category' => 'cost_optimized',
@@ -105,4 +105,18 @@ it('gives each location the price of its public IPv4 address', function () {
 
     expect($regions['fsn1']->ipv4PriceMonthly)->toBe(0.6)
         ->and($regions['ash']->ipv4PriceMonthly)->toBeNull();
+});
+
+it('asks for every server type, not just the first page', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.hetzner.cloud/v1/pricing' => Http::response(['pricing' => ['currency' => 'EUR']]),
+        'api.hetzner.cloud/v1/server_types*' => Http::response(['server_types' => []]),
+    ]);
+    $provider = new HetznerProvider;
+    $provider->setCredentials(['api_token' => 'test-token']);
+
+    $provider->getSizes();
+
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/server_types') && $request['per_page'] === 50);
 });

@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Http;
 
 class DigitalOceanProvider implements ProviderContract
 {
+    /**
+     * The most items DigitalOcean returns per page. It sends 20 by default,
+     * which is fewer than the sizes it sells.
+     */
+    private const int MAX_PER_PAGE = 200;
+
     private string $apiToken = '';
 
     private PendingRequest $http;
@@ -68,7 +74,7 @@ class DigitalOceanProvider implements ProviderContract
 
     public function getSizes(): Collection
     {
-        $response = $this->http->get('sizes');
+        $response = $this->http->get('sizes', ['per_page' => self::MAX_PER_PAGE]);
 
         if (! $response->successful()) {
             throw new ProviderApiException(
