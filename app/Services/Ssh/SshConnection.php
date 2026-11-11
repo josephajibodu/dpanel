@@ -41,10 +41,12 @@ class SshConnection
             throw $e;
         }
 
-        if ($this->ssh->getExitStatus() !== 0) {
+        $this->throwIfTimedOut($command, $timeout);
+
+        if ($this->exitStatus() !== 0) {
             throw new SshCommandException(
                 command: $command,
-                exitCode: $this->ssh->getExitStatus() ?? -1,
+                exitCode: $this->exitStatus(),
                 output: $output,
                 stderr: $this->ssh->getStdError(),
                 secrets: $this->server->secretValues(),
@@ -95,7 +97,39 @@ class SshConnection
             $onOutput($buffer);
         }
 
-        return $this->ssh->getExitStatus() ?? 0;
+        $this->throwIfTimedOut($command, $timeout);
+
+        return $this->exitStatus();
+    }
+
+    /**
+     * Fail a command that ran out of time instead of reading an exit code for
+     * it. phpseclib keeps the previous command's exit code when the current
+     * one reports none, so a timed-out command would otherwise look like it
+     * succeeded. The timed-out command's channel is closed so the next
+     * command on this connection can run.
+     */
+    private function throwIfTimedOut(string $command, int $timeout): void
+    {
+        if (! $this->ssh->isTimeout()) {
+            return;
+        }
+
+        $this->ssh->reset();
+
+        throw new \RuntimeException(
+            "SSH command timed out after {$timeout} seconds: ".SshCommandException::redact($command, $this->server->secretValues()),
+        );
+    }
+
+    /**
+     * The exit code of the last command, or -1 when the server reported none.
+     */
+    private function exitStatus(): int
+    {
+        $exitStatus = $this->ssh->getExitStatus();
+
+        return is_int($exitStatus) ? $exitStatus : -1;
     }
 
     /**

@@ -17,7 +17,7 @@ class FakeStreamingSSH2 extends SSH2
     /** @param array<int, string> $chunks */
     public function __construct(
         private array $chunks = [],
-        private int $exitStatus = 0,
+        private int|false $exitStatus = 0,
     ) {
         // Intentionally skip parent::__construct() — no network setup needed.
     }
@@ -58,7 +58,7 @@ class FakeStreamingSSH2 extends SSH2
  *
  * @param  array<int, string>  $chunks
  */
-function fakeSshConnection(array $chunks, int $exitStatus = 0): SshConnection
+function fakeSshConnection(array $chunks, int|false $exitStatus = 0): SshConnection
 {
     $ssh = new FakeStreamingSSH2($chunks, $exitStatus);
     $server = new Server;
@@ -173,5 +173,13 @@ describe('SshConnection::execWithOutput', function () {
         $exitCode = $connection->execWithOutput('false', fn () => null);
 
         expect($exitCode)->toBe(7);
+    });
+
+    it('returns -1 when the server reports no exit status', function () {
+        $connection = fakeSshConnection(["killed\n"], exitStatus: false);
+
+        $exitCode = $connection->execWithOutput('php artisan migrate', fn () => null);
+
+        expect($exitCode)->toBe(-1);
     });
 });
