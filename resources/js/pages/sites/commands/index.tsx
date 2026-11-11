@@ -210,7 +210,7 @@ export default function SiteCommandsIndex({
                             size="sm"
                             onClick={() => setRunSheetOpen(true)}
                         >
-                            <TerminalWindowIcon className="mr-2 h-4 w-4" />
+                            <TerminalWindowIcon className="h-4 w-4" />
                             Run command
                         </Button>
                     )}
@@ -278,7 +278,7 @@ export default function SiteCommandsIndex({
                                                                 openLogs(run)
                                                             }
                                                         >
-                                                            <FileTextIcon className="mr-2 h-4 w-4" />
+                                                            <FileTextIcon className="h-4 w-4" />
                                                             View logs
                                                         </Button>
                                                     )}
@@ -304,7 +304,7 @@ export default function SiteCommandsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PlayIcon className="mr-2 h-4 w-4" />
+                                                                    <PlayIcon className="h-4 w-4" />
                                                                     Run again
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
@@ -314,7 +314,7 @@ export default function SiteCommandsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <PencilSimpleIcon className="mr-2 h-4 w-4" />
+                                                                    <PencilSimpleIcon className="h-4 w-4" />
                                                                     Edit and run
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
@@ -377,12 +377,12 @@ export default function SiteCommandsIndex({
                             >
                                 {isSubmitting ? (
                                     <>
-                                        <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                         Running…
                                     </>
                                 ) : (
                                     <>
-                                        <PlayIcon className="mr-2 h-4 w-4" />
+                                        <PlayIcon className="h-4 w-4" />
                                         Run
                                     </>
                                 )}

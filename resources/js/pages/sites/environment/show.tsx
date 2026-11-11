@@ -204,7 +204,7 @@ export default function SiteEnvironmentShow({
                                         size="sm"
                                         onClick={() => setRevealed(true)}
                                     >
-                                        <EyeIcon className="mr-2 h-4 w-4" />
+                                        <EyeIcon className="h-4 w-4" />
                                         Reveal secrets
                                     </Button>
                                 </div>
@@ -269,7 +269,7 @@ export default function SiteEnvironmentShow({
                                     }
                                 >
                                     {form.processing && (
-                                        <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                                        <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                     )}
                                     Save & Sync
                                 </Button>

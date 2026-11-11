@@ -73,12 +73,12 @@ export function SshKeyTableRow({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onOpenDetails()}>
-                            <InfoIcon className="mr-2 h-4 w-4" />
+                            <InfoIcon className="h-4 w-4" />
                             View details
                         </DropdownMenuItem>
                         {onSync && (
                             <DropdownMenuItem onClick={onSync}>
-                                <UploadSimpleIcon className="mr-2 h-4 w-4" />
+                                <UploadSimpleIcon className="h-4 w-4" />
                                 Sync to Servers
                             </DropdownMenuItem>
                         )}
@@ -86,7 +86,7 @@ export function SshKeyTableRow({
                             onClick={onDelete}
                             className="text-destructive"
                         >
-                            <TrashIcon className="mr-2 h-4 w-4" />
+                            <TrashIcon className="h-4 w-4" />
                             Delete Key
                         </DropdownMenuItem>
                     </DropdownMenuContent>

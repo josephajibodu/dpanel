@@ -166,7 +166,7 @@ export default function ServersShow({
                         />
 
                         <StatGroup>
-                            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                            <div className="rounded-2xl bg-card shadow-card">
                                 <div className="flex items-center justify-between gap-4 px-5 py-3">
                                     <div className="min-w-0">
                                         <h2 className="text-sm font-medium">
@@ -201,7 +201,7 @@ export default function ServersShow({
                     <>
                         {data.status === 'error' && (
                             <div className="space-y-4">
-                                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
+                                <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/[0.06] p-4 text-sm">
                                     <WarningCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                                     <div className="flex-1 space-y-1">
                                         <p className="font-medium text-red-800 dark:text-red-200">
@@ -220,7 +220,7 @@ export default function ServersShow({
                                             disabled={retryForm.processing}
                                         >
                                             {retryForm.processing && (
-                                                <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                                                <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                             )}
                                             Retry provisioning
                                         </Button>
@@ -229,7 +229,7 @@ export default function ServersShow({
 
                                 {logs.length > 0 && (
                                     <StatGroup>
-                                        <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                        <div className="rounded-2xl bg-card shadow-card">
                                             <div className="border-b px-4 py-3">
                                                 <h2 className="font-medium">
                                                     Provisioning log
@@ -277,7 +277,7 @@ export default function ServersShow({
                                                             `/servers/${data.id}/sites/create`,
                                                         )}
                                                     >
-                                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                                        <PlusIcon className="h-4 w-4" />
                                                         New site
                                                     </Link>
                                                 </Button>
@@ -303,7 +303,7 @@ export default function ServersShow({
                                                                     `/servers/${data.id}/sites/create`,
                                                                 )}
                                                             >
-                                                                <PlusIcon className="mr-2 h-4 w-4" />
+                                                                <PlusIcon className="h-4 w-4" />
                                                                 New site
                                                             </Link>
                                                         </Button>
@@ -456,7 +456,7 @@ export default function ServersShow({
                             {/* Right column: unified sidebar */}
                             <div>
                                 <StatGroup>
-                                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                                    <div className="rounded-2xl bg-card shadow-card">
                                         <div className="border-b px-6 py-4">
                                             <CardTitle>
                                                 Server details
@@ -622,12 +622,12 @@ function ServerMetricsOverviewSkeleton() {
                 </p>
             </div>
             <StatGroup>
-                <div className="grid gap-2 md:grid-cols-3">
+                <div className="grid md:grid-cols-3 gap-px overflow-hidden rounded-2xl bg-border shadow-card">
                     {(['CPU load', 'Memory usage', 'Disk usage'] as const).map(
                         (label) => (
                             <div
                                 key={label}
-                                className="rounded-lg border bg-card p-4 shadow-md shadow-black/5 dark:shadow-black/20"
+                                className="bg-card px-5 py-4"
                             >
                                 <p className="text-sm text-muted-foreground">
                                     {label}
@@ -855,7 +855,7 @@ function ServerMetricsOverview({
                 </div>
             </div>
             <StatGroup>
-                <div className="grid gap-2 md:grid-cols-3">
+                <div className="grid md:grid-cols-3 gap-px overflow-hidden rounded-2xl bg-border shadow-card">
                     {stats.map((stat) => (
                         <Stat
                             key={stat.label}

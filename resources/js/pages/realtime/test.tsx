@@ -170,7 +170,7 @@ export default function RealtimeTest({ channel, user, reverb }: Props) {
                                 />
                             </div>
                             <Button onClick={triggerMessage} disabled={isSending || messageToSend.trim().length === 0}>
-                                {isSending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
+                                {isSending && <CircleNotchIcon className="h-4 w-4 animate-spin" />}
                                 Send diagnostic message
                             </Button>
                         </CardContent>

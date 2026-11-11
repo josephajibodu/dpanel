@@ -350,7 +350,7 @@ export default function ServerDatabasesIndex({
                                     size="sm"
                                     onClick={() => setCreateDbOpen(true)}
                                 >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    <PlusIcon className="h-4 w-4" />
                                     New database
                                 </Button>
                             )}
@@ -370,7 +370,7 @@ export default function ServerDatabasesIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={5}
-                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
                                         >
                                             <EmptyState title="No databases yet" />
                                         </TableCell>
@@ -423,7 +423,7 @@ export default function ServerDatabasesIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <LinkIcon className="mr-2 h-4 w-4" />
+                                                                    <LinkIcon className="h-4 w-4" />
                                                                     Connect
                                                                 </Button>
                                                             )}
@@ -454,7 +454,7 @@ export default function ServerDatabasesIndex({
                                                                             `/servers/${server.id}/databases/${db.id}/backups`,
                                                                         )}
                                                                     >
-                                                                        <DatabaseIcon className="mr-2 h-4 w-4" />
+                                                                        <DatabaseIcon className="h-4 w-4" />
                                                                         Backups
                                                                     </Link>
                                                                 </DropdownMenuItem>
@@ -470,7 +470,7 @@ export default function ServerDatabasesIndex({
                                                                             );
                                                                         }}
                                                                     >
-                                                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                                                        <TrashIcon className="h-4 w-4" />
                                                                         Delete
                                                                     </DropdownMenuItem>
                                                                 )}
@@ -502,7 +502,7 @@ export default function ServerDatabasesIndex({
                                         size="sm"
                                         onClick={() => setCreateUserOpen(true)}
                                     >
-                                        <PlusIcon className="mr-2 h-4 w-4" />
+                                        <PlusIcon className="h-4 w-4" />
                                         New user
                                     </Button>
                                 )}
@@ -523,7 +523,7 @@ export default function ServerDatabasesIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={6}
-                                            className="border-y-0 bg-transparent first:border-l-0 last:border-r-0"
+                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
                                         >
                                             <EmptyState title="No database users yet" />
                                         </TableCell>
@@ -608,7 +608,7 @@ export default function ServerDatabasesIndex({
                                                                     )
                                                                 }
                                                             >
-                                                                <LinkIcon className="mr-2 h-4 w-4" />
+                                                                <LinkIcon className="h-4 w-4" />
                                                                 Connect
                                                             </DropdownMenuItem>
                                                             {canManageDatabases && (
@@ -620,7 +620,7 @@ export default function ServerDatabasesIndex({
                                                                             )
                                                                         }
                                                                     >
-                                                                        <PencilSimpleIcon className="mr-2 h-4 w-4" />
+                                                                        <PencilSimpleIcon className="h-4 w-4" />
                                                                         Edit
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem
@@ -630,7 +630,7 @@ export default function ServerDatabasesIndex({
                                                                             )
                                                                         }
                                                                     >
-                                                                        <ArrowsClockwiseIcon className="mr-2 h-4 w-4" />
+                                                                        <ArrowsClockwiseIcon className="h-4 w-4" />
                                                                         Reset
                                                                         password
                                                                     </DropdownMenuItem>
@@ -645,7 +645,7 @@ export default function ServerDatabasesIndex({
                                                                             );
                                                                         }}
                                                                     >
-                                                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                                                        <TrashIcon className="h-4 w-4" />
                                                                         Delete
                                                                     </DropdownMenuItem>
                                                                 </>
@@ -1145,7 +1145,7 @@ export default function ServerDatabasesIndex({
                             available later from the "Connect" action.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                    <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                         <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
                             {newPassword}
                         </code>

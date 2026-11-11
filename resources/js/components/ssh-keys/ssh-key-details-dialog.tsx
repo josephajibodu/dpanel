@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { HardDrivesIcon, KeyIcon } from '@phosphor-icons/react';
+import { HardDrivesIcon } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import { useState } from 'react';
 
@@ -53,7 +53,7 @@ function DetailField({
             <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {label}
             </div>
-            <div className="flex min-w-0 items-start gap-1 rounded-md border bg-muted/80 p-2.5">
+            <div className="flex min-w-0 items-start gap-1 rounded-lg border bg-muted p-2.5">
                 <code className="min-w-0 flex-1 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-foreground">
                     {value}
                 </code>
@@ -96,10 +96,7 @@ export function SshKeyDetailsDialog({
         <Dialog open onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 pr-6">
-                        <KeyIcon className="h-5 w-5 shrink-0 text-primary" />
-                        {sshKey.name}
-                    </DialogTitle>
+                    <DialogTitle>{sshKey.name}</DialogTitle>
                     <DialogDescription>
                         Fingerprint and public key for this SSH key.
                     </DialogDescription>

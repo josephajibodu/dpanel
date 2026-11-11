@@ -143,7 +143,7 @@ export default function SiteDeployScriptShow({
                         <div className="flex justify-end">
                             <Button type="submit" disabled={form.processing}>
                                 {form.processing && (
-                                    <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                 )}
                                 Save Script
                             </Button>

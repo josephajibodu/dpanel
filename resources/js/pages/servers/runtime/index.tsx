@@ -130,7 +130,7 @@ export default function ServerRuntimeIndex({
                 </div>
 
                 <StatGroup>
-                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="rounded-2xl bg-card shadow-card">
                         <div className="border-b px-6 py-4">
                             <div className="flex items-center justify-between gap-4">
                                 <CardTitle>Node.js</CardTitle>

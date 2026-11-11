@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowClockwiseIcon,
     CircleNotchIcon,
@@ -158,14 +158,15 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                         );
                                     }}
                                 >
-                                    <button
+                                    <Button
                                         type="submit"
+                                        variant="outline"
                                         disabled={cancelForm.processing}
-                                        className="inline-flex items-center gap-2 rounded-md border border-destructive/40 bg-background px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 disabled:opacity-50"
+                                        className="text-destructive-foreground"
                                     >
                                         <XCircleIcon className="h-4 w-4" />
                                         Cancel deployment
-                                    </button>
+                                    </Button>
                                 </form>
                             )}
                             {!isDeploying && can('deploy') && (
@@ -184,24 +185,21 @@ export default function DeploymentsShow({ deployment: deploymentProp, server: se
                                     Rollback to this
                                 </Button>
                             )}
-                            <Link
-                                href={siteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                            >
-                                <GlobeIcon className="h-4 w-4" />
-                                Visit
-                            </Link>
+                            <Button variant="outline" asChild>
+                                <a href={siteUrl} target="_blank" rel="noopener noreferrer">
+                                    <GlobeIcon className="h-4 w-4" />
+                                    Visit
+                                </a>
+                            </Button>
                         </div>
                     </div>
 
-                    <div className="rounded-lg border bg-card">
+                    <div className="overflow-hidden rounded-2xl bg-card shadow-card">
                         <div className="flex items-center gap-2 border-b px-4 py-3">
                             {isDeploying ? (
                                 <CircleNotchIcon className="h-4 w-4 animate-spin text-muted-foreground" />
                             ) : null}
-                            <h2 className="font-medium">Build logs</h2>
+                            <h2 className="text-[15px] font-semibold">Build logs</h2>
                         </div>
                         <DeploymentLog logs={logs} isDeploying={isDeploying} />
                     </div>

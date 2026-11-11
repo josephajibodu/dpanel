@@ -15,7 +15,7 @@ export function CreateDatabaseDrawer({ serverId }: CreateDatabaseDrawerProps) {
     return (
         <Button variant="outline" size="sm" asChild>
             <Link href={`/${slug}/servers/${serverId}/databases`}>
-                <PlusIcon className="mr-2 h-4 w-4" />
+                <PlusIcon className="h-4 w-4" />
                 New database
             </Link>
         </Button>

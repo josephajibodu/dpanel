@@ -39,7 +39,7 @@ export function ProvisioningStepTimeline({
 
     return (
         <StatGroup className={className}>
-            <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+            <div className="rounded-2xl bg-card shadow-card">
                 <div className="space-y-3 border-b p-5">
                     <div className="flex items-baseline justify-between gap-4">
                         <h2 className="text-sm font-medium">{heading}</h2>

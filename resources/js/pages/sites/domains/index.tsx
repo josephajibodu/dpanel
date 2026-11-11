@@ -310,7 +310,7 @@ export default function SiteDomainsIndex({ server: serverProp, site: siteProp, d
                         </div>
                     </div>
 
-                    <SheetFooter className="border-t p-4">
+                    <SheetFooter>
                         <Button
                             type="button"
                             className="w-full"
@@ -510,13 +510,13 @@ function DomainRow({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onVisit(domain.hostname)}>
-                            <ArrowSquareOutIcon className="mr-2 size-4" /> Visit
+                            <ArrowSquareOutIcon className="size-4" /> Visit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onCopy(`https://${domain.hostname}`)}>
-                            <CopyIcon className="mr-2 size-4" /> Copy URL
+                            <CopyIcon className="size-4" /> Copy URL
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onCopy(domain.ulid)}>
-                            <CopyIcon className="mr-2 size-4" /> Copy ID
+                            <CopyIcon className="size-4" /> Copy ID
                         </DropdownMenuItem>
                         {canManage && domain.type === 'custom' && domain.is_verified && (
                             <DropdownMenuItem
@@ -524,7 +524,7 @@ function DomainRow({
                                     router.post(teamPath(`/servers/${serverId}/sites/${siteId}/domains/${domain.ulid}/ssl/renew`))
                                 }
                             >
-                                <LockIcon className="mr-2 size-4" /> Renew SSL
+                                <LockIcon className="size-4" /> Renew SSL
                             </DropdownMenuItem>
                         )}
                         {canManage && !domain.is_primary && domain.is_enabled && (

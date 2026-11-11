@@ -137,7 +137,7 @@ export default function SiteDatabaseShow({
                                 variant="outline"
                                 onClick={() => setIsImportOpen(true)}
                             >
-                                <UploadSimpleIcon className="mr-2 h-4 w-4" />
+                                <UploadSimpleIcon className="h-4 w-4" />
                                 Import dump
                             </Button>
                         )}
@@ -146,7 +146,7 @@ export default function SiteDatabaseShow({
                                 onClick={handleBackupNow}
                                 disabled={!schedule || isBackingUp}
                             >
-                                <PlusIcon className="mr-2 h-4 w-4" />
+                                <PlusIcon className="h-4 w-4" />
                                 {isBackingUp ? 'Starting…' : 'Backup now'}
                             </Button>
                         )}
@@ -154,7 +154,7 @@ export default function SiteDatabaseShow({
                 </div>
 
                 {databaseConnection && database ? (
-                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="rounded-2xl bg-card shadow-card">
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <span className="font-mono text-base font-semibold">
@@ -168,7 +168,7 @@ export default function SiteDatabaseShow({
                                     size="sm"
                                     onClick={() => setConnectOpen(true)}
                                 >
-                                    <LinkIcon className="mr-2 h-4 w-4" />
+                                    <LinkIcon className="h-4 w-4" />
                                     Connect
                                 </Button>
                             )}
@@ -208,7 +208,7 @@ export default function SiteDatabaseShow({
                         </div>
                     </div>
                 ) : usesSqlite ? (
-                    <div className="rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="rounded-2xl bg-card shadow-card">
                         <div className="border-b px-6 py-4">
                             <span className="text-base font-semibold">
                                 SQLite
@@ -221,7 +221,7 @@ export default function SiteDatabaseShow({
                                 deployments.
                             </p>
                             {sqlitePath && (
-                                <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                                <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                                     <code className="min-w-0 flex-1 truncate font-mono text-xs">
                                         {sqlitePath}
                                     </code>

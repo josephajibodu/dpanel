@@ -71,7 +71,7 @@ function DetailField({
     return (
         <div className="space-y-1.5">
             <FieldLabel>{label}</FieldLabel>
-            <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+            <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                 <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
                     {value}
                 </code>
@@ -313,7 +313,7 @@ export function ConnectionInfoDialog({
                                             asChild
                                         >
                                             <Link href={teamPath('/ssh-keys')}>
-                                                <KeyIcon className="mr-2 h-4 w-4" />
+                                                <KeyIcon className="h-4 w-4" />
                                                 Add SSH key
                                             </Link>
                                         </Button>
@@ -364,7 +364,7 @@ export function ConnectionInfoDialog({
                                 {canRevealPassword && (
                                     <div className="space-y-1.5">
                                         <FieldLabel>Password</FieldLabel>
-                                        <div className="flex min-w-0 items-center gap-1 rounded-md border bg-muted/80 p-2.5">
+                                        <div className="flex min-w-0 items-center gap-1 rounded-lg border bg-muted p-2.5">
                                             <code className="min-w-0 flex-1 truncate font-mono text-xs leading-relaxed text-foreground">
                                                 {shownPassword ??
                                                     '••••••••••••'}

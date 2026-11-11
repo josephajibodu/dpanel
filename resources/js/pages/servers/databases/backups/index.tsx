@@ -104,7 +104,7 @@ export default function ServerDatabaseBackupsIndex({
                                 variant="outline"
                                 onClick={() => setIsImportOpen(true)}
                             >
-                                <UploadSimpleIcon className="mr-2 h-4 w-4" />
+                                <UploadSimpleIcon className="h-4 w-4" />
                                 Import dump
                             </Button>
                         )}
@@ -113,7 +113,7 @@ export default function ServerDatabaseBackupsIndex({
                                 onClick={handleBackupNow}
                                 disabled={!schedule || isBackingUp}
                             >
-                                <PlusIcon className="mr-2 h-4 w-4" />
+                                <PlusIcon className="h-4 w-4" />
                                 {isBackingUp ? 'Starting…' : 'Backup now'}
                             </Button>
                         )}

@@ -188,7 +188,7 @@ export function BackupHistory({
                                                                 <a
                                                                     href={`${backupsUrl}/${backup.id}/download`}
                                                                 >
-                                                                    <DownloadSimpleIcon className="mr-2 h-4 w-4" />
+                                                                    <DownloadSimpleIcon className="h-4 w-4" />
                                                                     Download
                                                                 </a>
                                                             </DropdownMenuItem>
@@ -203,7 +203,7 @@ export function BackupHistory({
                                                                     )
                                                                 }
                                                             >
-                                                                <ArrowCounterClockwiseIcon className="mr-2 h-4 w-4" />
+                                                                <ArrowCounterClockwiseIcon className="h-4 w-4" />
                                                                 Restore
                                                             </DropdownMenuItem>
                                                         )}
@@ -216,7 +216,7 @@ export function BackupHistory({
                                                                 )
                                                             }
                                                         >
-                                                            <TrashIcon className="mr-2 h-4 w-4" />
+                                                            <TrashIcon className="h-4 w-4" />
                                                             Delete
                                                         </DropdownMenuItem>
                                                     )}

@@ -25,15 +25,15 @@ export function AlertBanner() {
     };
 
     return (
-        <div className="flex flex-col gap-2 px-4 pt-4">
+        <div className="flex flex-col gap-2 px-4 pt-2">
             {alerts.map((alert) => (
                 <div
                     key={alert.id}
                     role="alert"
-                    className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm dark:border-destructive/40 dark:bg-destructive/15"
+                    className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-[#fed1d7]/60 px-4 py-3 text-sm dark:border-destructive/40 dark:bg-destructive/15"
                 >
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <p className="font-medium text-destructive">
+                        <p className="font-semibold text-destructive-foreground">
                             {alert.title}
                         </p>
                         {alert.message && (
@@ -44,7 +44,7 @@ export function AlertBanner() {
                         {alert.url && (
                             <Link
                                 href={alert.url}
-                                className="w-fit font-medium text-destructive underline underline-offset-4"
+                                className="w-fit font-medium text-destructive-foreground underline underline-offset-4"
                             >
                                 View details
                             </Link>
@@ -53,7 +53,7 @@ export function AlertBanner() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7 shrink-0 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                        className="size-7 shrink-0 text-destructive-foreground hover:bg-destructive/15 hover:text-destructive-foreground"
                         onClick={() => handleDismiss(alert.id)}
                         aria-label="Dismiss alert"
                     >

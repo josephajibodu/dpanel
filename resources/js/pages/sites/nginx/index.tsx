@@ -373,7 +373,7 @@ export default function SiteNginxIndex({
 
                 <StatGroup className="flex flex-1 gap-4 overflow-hidden">
                     {/* File explorer — domain → section → files */}
-                    <div className="w-64 shrink-0 overflow-y-auto rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="w-64 shrink-0 overflow-y-auto rounded-2xl bg-card shadow-card">
                         {domains.length === 0 && (
                             <p className="px-4 py-3 text-xs text-muted-foreground italic">
                                 No domains configured yet.
@@ -568,7 +568,7 @@ export default function SiteNginxIndex({
                     </div>
 
                     {/* Editor pane */}
-                    <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-card shadow-card">
                         {selectedFile ? (
                             <>
                                 <div className="flex items-center justify-between border-b px-4 py-2.5">
@@ -674,7 +674,7 @@ export default function SiteNginxIndex({
 
                     {/* History panel */}
                     {showHistoryPanel && (
-                        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border bg-card shadow-md shadow-black/5 dark:shadow-black/20">
+                        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-card">
                             <div className="flex items-center justify-between border-b px-3 py-2.5">
                                 <span className="text-sm font-medium">
                                     History

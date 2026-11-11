@@ -96,7 +96,7 @@ export function RepositorySelector({
                     type="button"
                     disabled={disabled}
                     className={cn(
-                        'border-input focus-visible:ring-ring/50 flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+                        'border-input focus-visible:border-ring focus-visible:ring-ring/25 flex h-8 w-full items-center justify-between gap-2 rounded-md border bg-card px-3 py-2 text-sm shadow-[inset_0_1px_0_rgb(0_0_0/0.04)] transition-[color,border-color,box-shadow] hover:border-foreground/40 outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
                         value && 'ring-ring/50 border-primary',
                         className,
                     )}

@@ -149,12 +149,12 @@ export default function SiteDeploymentsIndex({
                         >
                             {isDeploying ? (
                                 <>
-                                    <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                                    <CircleNotchIcon className="h-4 w-4 animate-spin" />
                                     Deploying...
                                 </>
                             ) : (
                                 <>
-                                    <RocketLaunchIcon className="mr-2 h-4 w-4" />
+                                    <RocketLaunchIcon className="h-4 w-4" />
                                     Deploy Now
                                 </>
                             )}
@@ -282,7 +282,7 @@ export default function SiteDeploymentsIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <ClockCounterClockwiseIcon className="mr-2 h-4 w-4" />
+                                                                    <ClockCounterClockwiseIcon className="h-4 w-4" />
                                                                     Rollback
                                                                 </DropdownMenuItem>
                                                             )}

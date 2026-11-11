@@ -1,9 +1,5 @@
 import { router } from '@inertiajs/react';
-import {
-    GlobeIcon,
-    HardDrivesIcon,
-    UploadSimpleIcon,
-} from '@phosphor-icons/react';
+import { GlobeIcon, HardDrivesIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -69,10 +65,7 @@ export function SyncServersDialog({ sshKey, servers, isolatedSites, open, onOpen
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <UploadSimpleIcon className="h-5 w-5" />
-                        Sync SSH Key
-                    </DialogTitle>
+                    <DialogTitle>Sync SSH Key</DialogTitle>
                     <DialogDescription>
                         Choose where "{sshKey.name}" can log in. A server gives full access to that server; an isolated site gives
                         SSH and SFTP access to that site only.

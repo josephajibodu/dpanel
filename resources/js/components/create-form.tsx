@@ -28,7 +28,7 @@ export function SegmentedControl<T extends string>({
         <div
             role="radiogroup"
             aria-label={label}
-            className="inline-flex gap-1 rounded-lg bg-muted p-1"
+            className="inline-flex gap-0.5 rounded-full bg-secondary p-0.5"
         >
             {options.map((option) => (
                 <button
@@ -38,9 +38,9 @@ export function SegmentedControl<T extends string>({
                     aria-checked={value === option.value}
                     onClick={() => onChange(option.value)}
                     className={cn(
-                        'rounded-md px-3 py-1 text-sm transition-colors',
+                        'rounded-full px-3 py-1 text-[13px] font-medium transition-colors',
                         value === option.value
-                            ? 'bg-background text-foreground shadow-xs'
+                            ? 'bg-card text-foreground shadow-button'
                             : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
@@ -70,7 +70,7 @@ export function FormSection({
         <section className="space-y-4 p-5">
             <div className="flex items-start justify-between gap-4">
                 <div className="space-y-0.5">
-                    <h2 className="text-sm font-medium">{title}</h2>
+                    <h2 className="text-[15px] font-semibold">{title}</h2>
                     {description && (
                         <p className="text-sm text-muted-foreground">
                             {description}
@@ -90,11 +90,13 @@ export function RadioDot({ selected }: { selected: boolean }) {
         <span
             aria-hidden
             className={cn(
-                'flex size-4 shrink-0 items-center justify-center rounded-full border',
-                selected && 'border-primary',
+                'flex size-4 shrink-0 items-center justify-center rounded-full border border-foreground/40 bg-card',
+                selected && 'border-primary bg-primary',
             )}
         >
-            {selected && <span className="size-2 rounded-full bg-primary" />}
+            {selected && (
+                <span className="size-1.5 rounded-full bg-primary-foreground" />
+            )}
         </span>
     );
 }
@@ -120,8 +122,10 @@ export function RadioOption({
             aria-checked={selected}
             onClick={onSelect}
             className={cn(
-                'flex items-start gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                selected ? 'border-primary bg-muted/50' : 'hover:bg-muted/40',
+                'flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                selected
+                    ? 'border-foreground bg-muted'
+                    : 'hover:border-foreground/30 hover:bg-muted/60',
             )}
         >
             <span className="mt-0.5">
