@@ -65,6 +65,7 @@ class SiteResource extends JsonResource
             ] : null,
             'provisioning_steps' => SiteProvisioningStep::stepsForProjectType($this->project_type ?? ProjectType::Laravel),
             'auto_deploy' => $this->auto_deploy,
+            'single_page_app' => $this->single_page_app,
             'server' => new ServerResource($this->whenLoaded('server')),
             'latest_deployment' => new DeploymentResource($this->whenLoaded('latestDeployment')),
             'deployments' => DeploymentResource::collection($this->whenLoaded('deployments')),

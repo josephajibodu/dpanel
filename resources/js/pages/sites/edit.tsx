@@ -100,6 +100,7 @@ export default function SitesEdit({
         directory: siteData.directory || '/',
         php_version: siteData.php_version,
         auto_deploy: siteData.auto_deploy,
+        single_page_app: siteData.single_page_app,
     });
 
     const accountId = form.data.source_control_account_id;
@@ -427,6 +428,31 @@ export default function SitesEdit({
                                 )}
                             </div>
                         </FormSection>
+
+                        {siteData.project_type === 'html' && (
+                            <FormSection
+                                title="Single-page app"
+                                description="For React, Vue, Angular and similar apps. Any URL that isn't a file loads index.html, so opening or refreshing a page inside the app works. Leave it off for sites with a file for each page."
+                                action={
+                                    <Switch
+                                        aria-label="Single-page app"
+                                        checked={form.data.single_page_app}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'single_page_app',
+                                                checked,
+                                            )
+                                        }
+                                    />
+                                }
+                            >
+                                {form.errors.single_page_app && (
+                                    <InputError
+                                        message={form.errors.single_page_app}
+                                    />
+                                )}
+                            </FormSection>
+                        )}
 
                         {canDeploy && (
                             <FormSection

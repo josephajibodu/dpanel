@@ -25,6 +25,7 @@ readonly class SiteData
         public ?int $serverDatabaseId = null,
         public ?string $packageManager = null,
         public ?string $buildCommand = null,
+        public bool $singlePageApp = false,
         public bool $autoDeploy = false,
         public bool $isolated = true,
     ) {}
@@ -53,6 +54,7 @@ readonly class SiteData
             serverDatabaseId: $data['server_database_id'] ?? null,
             packageManager: $data['package_manager'] ?? null,
             buildCommand: $data['build_command'] ?? null,
+            singlePageApp: $data['single_page_app'] ?? false,
             autoDeploy: $data['auto_deploy'] ?? false,
             isolated: $data['isolated'] ?? true,
         );
@@ -78,6 +80,7 @@ readonly class SiteData
             'server_database_id' => $this->serverDatabaseId,
             'package_manager' => $this->packageManager,
             'build_command' => $this->buildCommand,
+            'single_page_app' => $this->singlePageApp,
             'auto_deploy' => $this->autoDeploy,
             'isolated' => $this->isolated,
         ];

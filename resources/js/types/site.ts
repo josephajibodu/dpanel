@@ -35,6 +35,7 @@ export interface Site {
     provisioning_step?: { value: number; label: string; description: string } | null;
     provisioning_steps?: Array<{ value: number; label: string; description: string }>;
     auto_deploy: boolean;
+    single_page_app: boolean;
     server?: Server;
     latest_deployment?: Deployment;
     deployments?: Deployment[];

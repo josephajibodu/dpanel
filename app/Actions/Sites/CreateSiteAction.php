@@ -52,6 +52,7 @@ class CreateSiteAction
             'php_version' => $data->phpVersion,
             'package_manager' => $data->packageManager,
             'build_command' => $data->buildCommand,
+            'single_page_app' => $data->singlePageApp,
             'status' => SiteStatus::Pending,
             'webhook_secret' => Str::random(32),
             'auto_deploy' => $data->autoDeploy,

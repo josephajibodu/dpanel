@@ -6,6 +6,7 @@ use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
+use App\Jobs\CreateSiteJob;
 use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\SyncSiteNginxJob;
 use App\Models\Server;
@@ -182,6 +183,38 @@ it('regenerates the main nginx config when the web directory changes', function 
     expect($site->fresh()->directory)->toBe('/web')
         ->and(SiteNginxFile::find($snippet->id))->not->toBeNull();
     Queue::assertPushed(SyncSiteNginxJob::class);
+});
+
+it('regenerates the main config when the single-page app setting changes', function () {
+    Queue::fake();
+
+    $this->server->update(['connection_status' => ConnectionStatus::Successful]);
+    $site = Site::factory()->forServer($this->server)->create(['project_type' => ProjectType::StaticHtml, 'directory' => '/']);
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", ['single_page_app' => true])
+        ->assertRedirect();
+
+    expect($site->fresh()->single_page_app)->toBeTrue();
+    Queue::assertPushed(SyncSiteNginxJob::class, fn ($job) => $job->site->is($site));
+});
+
+it('creates a static site served as a single-page app', function () {
+    Queue::fake();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'app.example.com',
+            'directory' => '/',
+            'project_type' => ProjectType::StaticHtml->value,
+            'single_page_app' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('sites', ['domain' => 'app.example.com', 'single_page_app' => true]);
+    Queue::assertPushed(CreateSiteJob::class);
 });
 
 it('moves an isolated site to its new PHP pool with a regenerated config', function () {

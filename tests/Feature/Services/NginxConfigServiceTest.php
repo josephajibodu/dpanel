@@ -236,9 +236,49 @@ describe('NginxConfigService', function () {
             expect($config)
                 ->toContain('index index.html index.htm')
                 ->toContain('try_files $uri $uri/ =404')
+                ->not->toContain('/index.html =404')
                 ->not->toContain('fastcgi_pass')
                 ->not->toContain('index.php')
                 ->not->toContain('\.php$');
+        });
+
+        it('gives a single-page app index.html for URLs that match no file, but keeps missing assets a 404', function () {
+            $site = Site::factory()->create([
+                'domain' => 'app.test',
+                'project_type' => ProjectType::StaticHtml,
+                'directory' => '/',
+                'single_page_app' => true,
+            ]);
+
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+            expect($config)
+                ->toContain('try_files $uri $uri/ /index.html =404;')
+                ->toContain('location ~* \.(?:js|mjs|css|')
+                ->not->toContain('fastcgi_pass');
+
+            // Nginx uses the first regex location that matches, so the asset
+            // rule must come after the one that denies hidden files like .env.
+            expect(strpos($config, 'location ~ /\.(?!well-known)'))
+                ->toBeLessThan(strpos($config, 'location ~* \.(?:js|'));
+        });
+
+        it('ignores the single-page app setting on a site that runs PHP', function () {
+            $site = Site::factory()->create([
+                'domain' => 'laravel-spa.test',
+                'project_type' => ProjectType::Laravel,
+                'single_page_app' => true,
+            ]);
+
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+            expect($config)
+                ->toContain('try_files $uri $uri/ /index.php?$query_string')
+                ->not->toContain('/index.html =404');
         });
 
         it('generates WordPress config with WordPress-specific rules', function () {

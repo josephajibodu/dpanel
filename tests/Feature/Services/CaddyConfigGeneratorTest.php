@@ -76,6 +76,24 @@ it('serves a static site without PHP', function () {
 
     expect($config)
         ->toContain("\tfile_server")
+        ->not->toContain('rewrite')
+        ->not->toContain('php_fastcgi');
+});
+
+it('sends URLs that match no file to index.html for a single-page app, except missing assets', function () {
+    $site = Site::factory()->forServer($this->server)->create([
+        'domain' => 'app.com',
+        'project_type' => ProjectType::StaticHtml,
+        'single_page_app' => true,
+    ]);
+
+    $config = app(CaddyConfigGenerator::class)->generate($site, caddySiteDomain($site), ssl: true);
+
+    expect($config)
+        ->toContain("\t\tnot file {path} {path}/\n")
+        ->toContain("\t\tnot path *.js *.mjs *.css ")
+        ->toContain("\trewrite @singlePageApp /index.html\n\tfile_server")
+        ->toContain('respond @hidden 403')
         ->not->toContain('php_fastcgi');
 });
 

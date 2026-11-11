@@ -93,6 +93,10 @@ CADDY;
     {
         $projectType = $site->project_type ?? ProjectType::Laravel;
 
+        if ($site->servesAsSinglePageApp()) {
+            return $this->singlePageAppHandlers();
+        }
+
         if ($projectType === ProjectType::StaticHtml) {
             return "\tfile_server";
         }
@@ -113,6 +117,30 @@ CADDY;
         }
 
         return $php;
+    }
+
+    /**
+     * URLs that match no file or folder get the app's index.html, except
+     * missing assets (see Site::SINGLE_PAGE_APP_ASSET_EXTENSIONS), which
+     * stay a 404. Caddy rewrites before it applies the hidden files rule,
+     * and the rewrite only touches paths with no file behind them.
+     */
+    private function singlePageAppHandlers(): string
+    {
+        $assetPaths = implode(' ', array_map(
+            fn (string $extension): string => "*.{$extension}",
+            Site::SINGLE_PAGE_APP_ASSET_EXTENSIONS,
+        ));
+
+        return <<<CADDY
+	# Single-page app: URLs that match no file get index.html, and the app shows the page
+	@singlePageApp {
+		not file {path} {path}/
+		not path {$assetPaths}
+	}
+	rewrite @singlePageApp /index.html
+	file_server
+CADDY;
     }
 
     private function wwwRedirectBlock(SiteDomain $domain, bool $ssl, string $tls): string

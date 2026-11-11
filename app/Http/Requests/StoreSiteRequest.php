@@ -81,6 +81,7 @@ class StoreSiteRequest extends FormRequest
             'php_version' => ['sometimes', 'string', Rule::in($this->getServerInstalledPhpVersions())],
             'package_manager' => ['nullable', 'string', Rule::in(['none', 'npm', 'pnpm', 'yarn', 'bun'])],
             'build_command' => ['nullable', 'string', 'max:500'],
+            'single_page_app' => ['sometimes', 'boolean'],
             'auto_deploy' => ['sometimes', 'boolean'],
             'isolated' => ['sometimes', 'boolean'],
         ];

@@ -42,6 +42,7 @@ class Site extends Model
         'php_version',
         'package_manager',
         'build_command',
+        'single_page_app',
         'status',
         'error_message',
         'uptime_status',
@@ -79,12 +80,39 @@ class Site extends Model
             'repository_provider' => RepositoryProvider::class,
             'aliases' => 'array',
             'auto_deploy' => 'boolean',
+            'single_page_app' => 'boolean',
             'deployment_started_at' => 'datetime',
             'deployment_finished_at' => 'datetime',
             'env_content' => 'encrypted',
             'uptime_status' => UptimeStatus::class,
             'uptime_checked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * File types a single-page app's build produces. A request for one that
+     * doesn't exist gets a 404 rather than the app's index.html: the browser
+     * then reports a missing file, instead of failing to read the HTML page
+     * as a script or stylesheet.
+     *
+     * @var list<string>
+     */
+    public const SINGLE_PAGE_APP_ASSET_EXTENSIONS = [
+        'js', 'mjs', 'css', 'map', 'json', 'wasm',
+        'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'ico',
+        'woff', 'woff2', 'ttf', 'otf', 'eot',
+        'mp4', 'webm', 'mp3', 'pdf', 'txt', 'xml',
+    ];
+
+    /**
+     * Whether the web server answers URLs that match no file with the
+     * site's index.html, so a single-page app (React, Vue, ...) can show the
+     * page itself when a visitor opens or refreshes one of its URLs. Only
+     * static HTML sites can be served this way.
+     */
+    public function servesAsSinglePageApp(): bool
+    {
+        return $this->project_type === ProjectType::StaticHtml && $this->single_page_app;
     }
 
     /**

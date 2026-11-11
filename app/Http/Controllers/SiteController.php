@@ -247,7 +247,7 @@ class SiteController extends Controller
 
         $phpVersionChanged = $site->wasChanged('php_version');
 
-        if (($phpVersionChanged || $site->wasChanged('directory')) && $server->isReady()) {
+        if (($phpVersionChanged || $site->wasChanged(['directory', 'single_page_app'])) && $server->isReady()) {
             if ($phpVersionChanged && $site->isIsolated()) {
                 MoveSitePhpPoolJob::dispatch($site, $previousPhpVersion)->onQueue('provisioning');
             } else {

@@ -241,6 +241,7 @@ export default function SitesCreate({
         package_manager: 'npm',
         build_command: 'npm run build',
         auto_deploy: false,
+        single_page_app: false,
         isolated: true,
         source_control_account_id: sourceControlAccounts[0]?.id as
             | number
@@ -513,6 +514,7 @@ export default function SitesCreate({
             ...current,
             project_type: projectType.value,
             directory: projectType.defaultDirectory || '/public',
+            single_page_app: false,
         }));
     }
 
@@ -941,6 +943,31 @@ export default function SitesCreate({
                                 </div>
                             </div>
                         </FormSection>
+
+                        {form.data.project_type === 'html' && (
+                            <FormSection
+                                title="Single-page app"
+                                description="For React, Vue, Angular and similar apps. Any URL that isn't a file loads index.html, so opening or refreshing a page inside the app works. Leave it off for sites with a file for each page."
+                                action={
+                                    <Switch
+                                        aria-label="Single-page app"
+                                        checked={form.data.single_page_app}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'single_page_app',
+                                                checked,
+                                            )
+                                        }
+                                    />
+                                }
+                            >
+                                {form.errors.single_page_app && (
+                                    <InputError
+                                        message={form.errors.single_page_app}
+                                    />
+                                )}
+                            </FormSection>
+                        )}
 
                         <FormSection
                             title="Frontend build"

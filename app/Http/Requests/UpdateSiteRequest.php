@@ -42,6 +42,7 @@ class UpdateSiteRequest extends FormRequest
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'php_version' => ['sometimes', 'string', Rule::in($this->getInstalledPhpVersions())],
             'auto_deploy' => ['sometimes', 'boolean'],
+            'single_page_app' => ['sometimes', 'boolean'],
         ];
     }
 
