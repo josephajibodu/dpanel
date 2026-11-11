@@ -11,7 +11,7 @@ class StoreNginxFileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('site'));
+        return $this->user()->can('editWebServerConfig', $this->route('site'));
     }
 
     /**

@@ -377,3 +377,57 @@ it('refuses a section that does not exist', function () {
     $response->assertSessionHasErrors('section');
     Queue::assertNothingPushed();
 });
+
+it('refuses a Developer who writes web server config, even on an isolated site', function (Closure $write) {
+    Queue::fake();
+
+    $developer = User::factory()->developerOf($this->team)->create();
+    $site = Site::factory()->forServer($this->server)->isolated()->create();
+    $file = SiteNginxFile::factory()->forDomain($site->domains()->firstOrFail())->inSection(NginxFileSection::Server, 'security.conf')->create([
+        'content' => "# safe\n",
+    ]);
+    $history = SiteNginxHistory::factory()->forSite($site)->create([
+        'site_nginx_file_id' => $file->id,
+        'event' => NginxHistoryEvent::Updated,
+        'path' => 'server/security.conf',
+        'new_content' => "fastcgi_pass unix:/run/php/php8.4-fpm-artisan.sock;\n",
+    ]);
+
+    $response = $write($this->actingAs($developer), "/{$this->team->slug}/servers/{$this->server->id}/sites/{$site->id}", $file, $history);
+
+    $response->assertForbidden();
+    expect($site->nginxFiles()->pluck('content', 'path')->all())->toBe(['server/security.conf' => "# safe\n"]);
+    Queue::assertNothingPushed();
+})->with([
+    'creating a file' => [fn ($as, string $sitePath) => $as->post("{$sitePath}/nginx", [
+        'domain_id' => SiteNginxFile::firstOrFail()->site_domain_id,
+        'section' => 'server',
+        'name' => 'php.conf',
+        'content' => "fastcgi_pass unix:/run/php/php8.4-fpm-artisan.sock;\n",
+    ])],
+    'changing a file' => [fn ($as, string $sitePath, SiteNginxFile $file) => $as->put("{$sitePath}/nginx/{$file->id}", [
+        'content' => "fastcgi_pass unix:/run/php/php8.4-fpm-artisan.sock;\n",
+    ])],
+    'renaming a file' => [fn ($as, string $sitePath, SiteNginxFile $file) => $as->patch("{$sitePath}/nginx/{$file->id}/rename", [
+        'name' => 'headers.conf',
+    ])],
+    'deleting a file' => [fn ($as, string $sitePath, SiteNginxFile $file) => $as->delete("{$sitePath}/nginx/{$file->id}")],
+    'restoring an old version' => [fn ($as, string $sitePath, SiteNginxFile $file, SiteNginxHistory $history) => $as->post("{$sitePath}/nginx-history/{$history->id}/restore")],
+]);
+
+it('lets an Admin write web server config', function () {
+    Queue::fake();
+
+    $admin = User::factory()->adminOf($this->team)->create();
+
+    $response = $this->actingAs($admin)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites/{$this->site->id}/nginx", [
+            'domain_id' => $this->domain->id,
+            'section' => 'server',
+            'name' => 'security.conf',
+            'content' => "add_header X-Frame-Options SAMEORIGIN;\n",
+        ]);
+
+    $response->assertRedirect()->assertSessionHas('success');
+    Queue::assertPushed(ApplySiteNginxFileJob::class);
+});

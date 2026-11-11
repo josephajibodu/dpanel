@@ -195,7 +195,7 @@ class SiteNginxController extends Controller
 
     public function destroy(Request $request, Team $team, Server $server, Site $site, SiteNginxFile $nginxFile): RedirectResponse
     {
-        $this->authorize('update', $site);
+        $this->authorize('editWebServerConfig', $site);
 
         if ($nginxFile->section === NginxFileSection::Main) {
             return redirect()->back()->with('error', 'Main configuration files are managed automatically and cannot be deleted.');
@@ -226,7 +226,7 @@ class SiteNginxController extends Controller
 
     public function restore(Request $request, Team $team, Server $server, Site $site, int $historyId): RedirectResponse
     {
-        $this->authorize('update', $site);
+        $this->authorize('editWebServerConfig', $site);
 
         if (! $server->isReady()) {
             return redirect()->back()->with('error', 'Server must be active and connected.');

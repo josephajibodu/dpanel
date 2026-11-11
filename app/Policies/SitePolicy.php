@@ -45,11 +45,23 @@ class SitePolicy
     }
 
     /**
-     * Determine whether the user can change the site, its domains and its nginx files.
+     * Determine whether the user can change the site and its domains.
      */
     public function update(User $user, Site $site): bool
     {
         return $user->hasTeamPermission($site->server->team, TeamPermission::ManageSites);
+    }
+
+    /**
+     * Determine whether the user can write the site's own web server config
+     * files. Such a file can hand a request to the server's shared PHP
+     * process, which runs as the server user, who can sudo. So this needs the
+     * same permission as a shell as that user, on isolated sites too.
+     */
+    public function editWebServerConfig(User $user, Site $site): bool
+    {
+        return $this->update($user, $site)
+            && $user->hasTeamPermission($site->server->team, TeamPermission::AccessServersAsAdmin);
     }
 
     /**
