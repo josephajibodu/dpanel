@@ -8,7 +8,12 @@ import {
     SettingsSection,
 } from '@/components/settings-section';
 import { Button } from '@/components/ui/button';
-import { formatPrice, plans, type PlanDetails } from '@/config/plans';
+import {
+    formatPrice,
+    freeForNowNote,
+    plans,
+    type PlanDetails,
+} from '@/config/plans';
 import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -171,7 +176,9 @@ function PlanPrice({
     return (
         <div className={className}>
             <p className="text-2xl font-semibold tracking-tight tabular-nums">
-                {usd.monthly === 0 ? 'Free' : formatPrice(usd.monthly, 'usd')}
+                {usd.monthly === 0
+                    ? 'Free for now'
+                    : formatPrice(usd.monthly, 'usd')}
                 {usd.monthly > 0 && (
                     <span className="ml-1 text-sm font-normal tracking-normal text-muted-foreground">
                         / month
@@ -180,7 +187,7 @@ function PlanPrice({
             </p>
             <p className="text-xs text-muted-foreground">
                 {ngn.monthly === 0
-                    ? 'No card needed'
+                    ? freeForNowNote('usd', 'ngn')
                     : `or ${formatPrice(ngn.monthly, 'ngn')} a month`}
             </p>
         </div>

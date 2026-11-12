@@ -7,7 +7,12 @@ import FaqList, { type FaqItem } from '@/components/marketing/faq-list';
 import PageHero from '@/components/marketing/page-hero';
 import SectionHeading from '@/components/marketing/section-heading';
 import { Button } from '@/components/ui/button';
-import { formatPrice, plans, type Currency } from '@/config/plans';
+import {
+    formatPrice,
+    freeForNowNote,
+    plans,
+    type Currency,
+} from '@/config/plans';
 import MarketingLayout from '@/layouts/marketing-layout';
 import { cn } from '@/lib/utils';
 import { contact, register } from '@/routes';
@@ -52,7 +57,11 @@ const faqs: FaqItem[] = [
     },
     {
         question: 'Do I need a card to start?',
-        answer: 'No. The Hobby plan is free and never asks for a card.',
+        answer: 'No. The Hobby plan is free for now and does not ask for a card.',
+    },
+    {
+        question: 'Will the Hobby plan stay free?',
+        answer: `No. Hobby is free for now. ${freeForNowNote('usd', 'ngn')}.`,
     },
     {
         question: 'Can I change plans later?',
@@ -98,7 +107,7 @@ export default function Pricing() {
     return (
         <MarketingLayout
             title="Pricing"
-            description="Simple, flat pricing for flitops. Unlimited servers on paid plans, and a free plan for your first server."
+            description="Simple, flat pricing for flitops. Unlimited servers on paid plans, and your first server free for now."
         >
             <PageHero
                 eyebrow="Pricing"
@@ -193,10 +202,11 @@ export default function Pricing() {
                                         {formatPrice(price, currency)}
                                     </span>
                                     <span className="text-muted-foreground">
-                                        {price === 0 ? 'forever' : '/ month'}
+                                        {price === 0 ? 'for now' : '/ month'}
                                     </span>
                                 </p>
                                 <p className="mt-2 h-5 text-sm text-muted-foreground">
+                                    {price === 0 && freeForNowNote(currency)}
                                     {price > 0 &&
                                         billingPeriod === 'yearly' &&
                                         `Billed ${formatPrice(price * 12, currency)} yearly`}

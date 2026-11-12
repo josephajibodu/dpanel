@@ -67,6 +67,22 @@ export const plans: PlanDetails[] = [
     },
 ];
 
+/** What Hobby will cost a month once payments are live. */
+const hobbyLaterPrice: Record<Currency, number> = { usd: 2, ngn: 2000 };
+
+/**
+ * Shown beside Hobby while it costs nothing. It is free only until payments
+ * are live, so nothing should call it free forever. Names the later monthly
+ * price in each currency given.
+ */
+export function freeForNowNote(...currencies: Currency[]): string {
+    const prices = currencies.map((currency) =>
+        formatPrice(hobbyLaterPrice[currency], currency),
+    );
+
+    return `Will be ${prices.join(' or ')} a month later`;
+}
+
 export function formatPrice(amount: number, currency: Currency): string {
     return new Intl.NumberFormat(currency === 'ngn' ? 'en-NG' : 'en-US', {
         style: 'currency',
