@@ -8,6 +8,7 @@ use App\Http\Resources\SourceControlAccountResource;
 use App\Models\SourceControlAccount;
 use App\Models\SourceControlRepository;
 use App\Models\Team;
+use App\Services\SourceControl\FrameworkDetector;
 use App\Services\SourceControlService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -223,7 +224,7 @@ HTML;
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, SourceControlRepository>|\Illuminate\Database\Eloquent\Collection<int, SourceControlRepository>  $repositories
+     * @param  Collection<int, SourceControlRepository>|\Illuminate\Database\Eloquent\Collection<int, SourceControlRepository>  $repositories
      * @return array<int, array<string, mixed>>
      */
     private function transformRepositories(Collection|\Illuminate\Database\Eloquent\Collection $repositories): array
@@ -257,6 +258,32 @@ HTML;
                 'name' => $branch['name'],
                 'protected' => $branch['protected'],
             ]),
+        ]);
+    }
+
+    /**
+     * Look at a repository's files and say what it is built with, so the
+     * create-site page can fill in the framework, web directory and build.
+     */
+    public function framework(
+        Request $request,
+        Team $team,
+        SourceControlAccount $sourceControlAccount,
+        string $repository,
+        FrameworkDetector $detector,
+    ): JsonResponse {
+        $this->authorize('view', $sourceControlAccount);
+
+        $repository = urldecode($repository);
+
+        abort_unless(preg_match('/^[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)+$/', $repository) === 1, 404);
+
+        $validated = $request->validate([
+            'branch' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
+        ]);
+
+        return response()->json([
+            'detected' => $detector->detect($sourceControlAccount, $repository, $validated['branch'])?->toArray(),
         ]);
     }
 }

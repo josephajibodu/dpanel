@@ -130,6 +130,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('source-control/{sourceControlAccount}/repositories/{repository}/branches', [SourceControlAccountController::class, 'branches'])
                 ->where('repository', '.*')
                 ->name('source-control.branches');
+            Route::get('source-control/{sourceControlAccount}/repositories/{repository}/framework', [SourceControlAccountController::class, 'framework'])
+                ->where('repository', '.*')
+                ->name('source-control.framework');
 
             // Redirect /{team}/sites → /{team}/servers
             Route::get('sites', fn ($team) => redirect()->route('servers.index', $team))

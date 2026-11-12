@@ -99,6 +99,107 @@ it('denies access to repositories for another users source control account', fun
     $response->assertForbidden();
 });
 
+it('says what a repository is built with, read from its files', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.github.com/repos/acme/shop/contents?ref=main' => Http::response([['name' => 'package.json'], ['name' => 'yarn.lock']]),
+        'api.github.com/repos/acme/shop/contents/package.json?ref=main' => Http::response(json_encode([
+            'scripts' => ['build' => 'react-scripts build'],
+            'dependencies' => ['react' => '^18.0.0', 'react-scripts' => '5.0.1'],
+        ])),
+    ]);
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        'branch' => 'main',
+    ]));
+
+    $response->assertOk()->assertExactJson(['detected' => [
+        'framework' => 'react',
+        'directory' => '/build',
+        'package_manager' => 'yarn',
+        'build_command' => 'yarn build',
+        'single_page_app' => true,
+    ]]);
+});
+
+it('answers with nothing detected for a repository it does not recognise', function () {
+    Http::preventStrayRequests();
+    Http::fake(['api.github.com/repos/acme/notes/contents?ref=main' => Http::response([['name' => 'README.md']])]);
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/notes',
+        'branch' => 'main',
+    ]));
+
+    $response->assertOk()->assertExactJson(['detected' => null]);
+});
+
+it('denies guest access to framework detection', function () {
+    $account = SourceControlAccount::factory()->forUser($this->user)->create();
+
+    $response = $this->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        'branch' => 'main',
+    ]));
+
+    $response->assertUnauthorized();
+});
+
+it('denies framework detection through another users source control account', function () {
+    $account = SourceControlAccount::factory()->forUser($this->user)->create();
+
+    $otherUser = User::factory()->create();
+    $otherTeam = Team::factory()->forUser($otherUser)->create();
+    $otherUser->switchTeam($otherTeam);
+
+    $response = $this->actingAs($otherUser)->getJson(route('source-control.framework', [
+        'team' => $otherTeam,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        'branch' => 'main',
+    ]));
+
+    $response->assertForbidden();
+});
+
+it('needs a valid branch to detect a framework', function (array $query) {
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        ...$query,
+    ]));
+
+    $response->assertJsonValidationErrorFor('branch');
+})->with([
+    'no branch' => [[]],
+    'a branch with characters git does not allow here' => [['branch' => 'main;rm -rf']],
+]);
+
+it('returns 404 for a repository name that is not owner/name', function () {
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme',
+        'branch' => 'main',
+    ]));
+
+    $response->assertNotFound();
+});
+
 // ---------------------------------------------------------------------------
 // OAuth popup mode
 // ---------------------------------------------------------------------------
