@@ -72,6 +72,7 @@ class TeamController extends Controller
                 ->filter(fn (TeamRoleKey $roleKey): bool => $user->can('inviteMember', [$team, TeamRole::builtIn($roleKey)]))
                 ->map(fn (TeamRoleKey $roleKey): array => ['key' => $roleKey->value, 'label' => $roleKey->label()])
                 ->values(),
+            'planLimits' => $user->is($team->owner) ? $team->plan()->limits() : null,
             'can' => [
                 'updateTeam' => $user->can('update', $team),
                 'deleteTeam' => $user->can('delete', $team),

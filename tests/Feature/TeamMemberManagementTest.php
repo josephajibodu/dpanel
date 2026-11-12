@@ -440,4 +440,22 @@ describe('settings page', function () {
                 ->where('assignableRoles', [])
                 ->where('can', ['updateTeam' => false, 'deleteTeam' => false, 'leaveTeam' => true, 'inviteMembers' => false]));
     });
+
+    it('lists what the owner\'s plan holds back, to the owner only', function () {
+        $this->team->owner->forceFill(['plan' => Plan::Hobby])->save();
+
+        $this->actingAs($this->team->owner)
+            ->get(route('teams.show', $this->team))
+            ->assertInertia(fn ($page) => $page->where('planLimits', [
+                ['message' => 'The Hobby plan includes 1 server. Upgrade to Pro to add more.', 'plan' => 'Pro'],
+                ['message' => 'Inviting team members needs the Team plan.', 'plan' => 'Team'],
+                ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'],
+                ['message' => 'Backing up databases needs the Pro or Team plan.', 'plan' => 'Pro'],
+                ['message' => 'Uptime and certificate monitoring needs the Pro or Team plan.', 'plan' => 'Pro'],
+            ]));
+
+        $this->actingAs(teamActor($this->team, 'admin'))
+            ->get(route('teams.show', $this->team))
+            ->assertInertia(fn ($page) => $page->where('planLimits', null));
+    });
 });

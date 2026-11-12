@@ -88,6 +88,25 @@ enum Plan: string
     }
 
     /**
+     * Everything this plan holds back, each with why and the cheapest plan
+     * that lifts it: the server limit first, then each feature it leaves out.
+     *
+     * @return list<array{message: string, plan: string}>
+     */
+    public function limits(): array
+    {
+        $limits = $this->serverLimit() === null ? [] : [$this->serverLimitLock()];
+
+        foreach (PlanFeature::cases() as $feature) {
+            if (! $this->includes($feature)) {
+                $limits[] = $feature->lock();
+            }
+        }
+
+        return $limits;
+    }
+
+    /**
      * The cheapest plan that allows more servers than this one.
      */
     private function serverUpgrade(): self

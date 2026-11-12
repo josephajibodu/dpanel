@@ -1,4 +1,4 @@
-import { Link, router, useForm, usePage } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import {
     CaretUpDownIcon,
     CheckIcon,
@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -34,7 +33,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { pricing } from '@/routes';
 import { type SharedData, type Team } from '@/types';
 
 function teamInitials(name: string): string {
@@ -100,40 +98,20 @@ export function TeamSwitcher() {
                                     )}
                                 </DropdownMenuItem>
                             ))}
-                            <DropdownMenuSeparator />
-                            {auth.teamLimit ? (
-                                <DropdownMenuItem
-                                    asChild
-                                    className="cursor-pointer gap-2 p-2 text-muted-foreground"
-                                >
-                                    <Link href={pricing()}>
-                                        <div className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-background">
+                            {/* Without the plan for it, the team settings page says so instead. */}
+                            {!auth.teamLimit && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="cursor-pointer gap-2 p-2"
+                                        onClick={() => setCreateOpen(true)}
+                                    >
+                                        <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                                             <PlusIcon className="size-4" />
                                         </div>
-                                        <div className="flex min-w-0 flex-col">
-                                            <span>Create team</span>
-                                            <span className="text-xs">
-                                                {auth.teamLimit.message}
-                                            </span>
-                                        </div>
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-auto"
-                                        >
-                                            {auth.teamLimit.plan}
-                                        </Badge>
-                                    </Link>
-                                </DropdownMenuItem>
-                            ) : (
-                                <DropdownMenuItem
-                                    className="cursor-pointer gap-2 p-2"
-                                    onClick={() => setCreateOpen(true)}
-                                >
-                                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                                        <PlusIcon className="size-4" />
-                                    </div>
-                                    Create team
-                                </DropdownMenuItem>
+                                        Create team
+                                    </DropdownMenuItem>
+                                </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>

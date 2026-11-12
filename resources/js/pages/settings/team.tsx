@@ -1,4 +1,4 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     CircleNotchIcon,
     EnvelopeSimpleIcon,
@@ -29,6 +29,7 @@ import {
     SettingsSection,
 } from '@/components/settings-section';
 import { StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -61,8 +62,10 @@ import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { pricing } from '@/routes';
 import {
     type BreadcrumbItem,
+    type PlanLock,
     type SharedData,
     type Team,
     type TeamInvitation,
@@ -87,6 +90,8 @@ interface Props {
     members: ManagedMember[];
     invitations: ManagedInvitation[];
     assignableRoles: AssignableRole[];
+    /** What the owner's plan holds back. Only the owner gets it, since it's their plan. */
+    planLimits: PlanLock[] | null;
     can: {
         updateTeam: boolean;
         deleteTeam: boolean;
@@ -108,6 +113,7 @@ export default function TeamSettings({
     members,
     invitations,
     assignableRoles,
+    planLimits,
     can,
 }: Props) {
     const getInitials = useInitials();
@@ -144,6 +150,10 @@ export default function TeamSettings({
                     assignableRoles={assignableRoles}
                     canInvite={can.inviteMembers}
                 />
+
+                {planLimits && planLimits.length > 0 && (
+                    <PlanLimits limits={planLimits} />
+                )}
 
                 {(can.leaveTeam || can.deleteTeam) && (
                     <SettingsSection
@@ -402,6 +412,35 @@ function MembersCard({
                 loading={removing}
                 onConfirm={remove}
             />
+        </SettingsSection>
+    );
+}
+
+/**
+ * What the owner's plan leaves out, such as creating more teams, each with
+ * the plan that adds it.
+ */
+function PlanLimits({ limits }: { limits: PlanLock[] }) {
+    const { plan } = usePage<SharedData>().props;
+
+    return (
+        <SettingsSection
+            title="Plan"
+            description={`You’re on the ${plan?.label} plan. It covers every team you own.`}
+            footerAction={
+                <Button variant="outline" asChild>
+                    <Link href={pricing()}>See plans</Link>
+                </Button>
+            }
+            flush
+        >
+            <SettingsRows>
+                {limits.map((limit) => (
+                    <SettingsRow key={limit.message} label={limit.message}>
+                        <Badge variant="secondary">{limit.plan}</Badge>
+                    </SettingsRow>
+                ))}
+            </SettingsRows>
         </SettingsSection>
     );
 }
