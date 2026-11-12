@@ -29,4 +29,15 @@ enum PlanFeature: string
 
         return "{$feature} needs the {$plans} plan.";
     }
+
+    /**
+     * What a control for this feature shows while it's locked: why, and the
+     * cheapest plan that unlocks it.
+     *
+     * @return array{message: string, plan: string}
+     */
+    public function lock(): array
+    {
+        return ['message' => $this->upgradeMessage(), 'plan' => Plan::including($this)[0]->label()];
+    }
 }

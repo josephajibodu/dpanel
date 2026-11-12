@@ -6,6 +6,7 @@ import { BackupHistory } from '@/components/backups/backup-history';
 import { BackupScheduleCard } from '@/components/backups/backup-schedule-card';
 import { ImportDumpDialog } from '@/components/backups/import-dump-dialog';
 import { RestoreBackupDialog } from '@/components/backups/restore-backup-dialog';
+import PlanLockedButton from '@/components/plan-locked-button';
 import { Button } from '@/components/ui/button';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
@@ -42,7 +43,7 @@ export default function ServerDatabaseBackupsIndex({
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const can = usePermission();
-    const plan = usePlan();
+    const backupsLock = usePlan()?.notIncluded.database_backups ?? null;
     const server = 'data' in serverProp ? serverProp.data : serverProp;
     const serverDatabase =
         'data' in serverDatabaseProp
@@ -110,19 +111,21 @@ export default function ServerDatabaseBackupsIndex({
                                 Import dump
                             </Button>
                         )}
-                        {can('run_backups') && (
-                            <Button
-                                onClick={handleBackupNow}
-                                disabled={
-                                    !schedule ||
-                                    isBackingUp ||
-                                    Boolean(plan?.notIncluded.database_backups)
-                                }
-                            >
-                                <PlusIcon className="h-4 w-4" />
-                                {isBackingUp ? 'Starting…' : 'Backup now'}
-                            </Button>
-                        )}
+                        {can('run_backups') &&
+                            (backupsLock ? (
+                                <PlanLockedButton lock={backupsLock}>
+                                    <PlusIcon className="h-4 w-4" />
+                                    Backup now
+                                </PlanLockedButton>
+                            ) : (
+                                <Button
+                                    onClick={handleBackupNow}
+                                    disabled={!schedule || isBackingUp}
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                    {isBackingUp ? 'Starting…' : 'Backup now'}
+                                </Button>
+                            ))}
                     </div>
                 </div>
 

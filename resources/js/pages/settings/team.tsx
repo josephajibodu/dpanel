@@ -20,6 +20,7 @@ import {
 } from '@/actions/App/Http/Controllers/TeamMemberController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
+import PlanLockedButton from '@/components/plan-locked-button';
 import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import {
     SavedNote,
@@ -176,7 +177,7 @@ function MembersCard({
     canInvite: boolean;
 }) {
     const { auth, plan } = usePage<SharedData>().props;
-    const membersUpgradeMessage = plan?.notIncluded.team_members ?? null;
+    const membersLock = plan?.notIncluded.team_members ?? null;
     const getInitials = useInitials();
     const [memberToRemove, setMemberToRemove] = useState<ManagedMember | null>(
         null,
@@ -219,17 +220,21 @@ function MembersCard({
             description="People who can access this team’s servers and sites."
             headerAction={
                 canInvite &&
-                !membersUpgradeMessage && (
+                (membersLock ? (
+                    <PlanLockedButton lock={membersLock} variant="outline">
+                        Invite member
+                    </PlanLockedButton>
+                ) : (
                     <InviteMemberDialog
                         team={team}
                         assignableRoles={assignableRoles}
                     />
-                )
+                ))
             }
             bare
         >
-            {canInvite && membersUpgradeMessage && (
-                <PlanUpgradeNotice message={membersUpgradeMessage} />
+            {canInvite && membersLock && (
+                <PlanUpgradeNotice message={membersLock.message} />
             )}
             <Table>
                 <TableHeader>

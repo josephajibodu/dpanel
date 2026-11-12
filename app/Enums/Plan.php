@@ -72,11 +72,30 @@ enum Plan: string
     {
         $limit = $this->serverLimit();
 
-        $upgrade = collect(self::cases())->first(
+        return "The {$this->label()} plan includes {$limit} ".Str::plural('server', $limit)
+            .". Upgrade to {$this->serverUpgrade()->label()} to add more.";
+    }
+
+    /**
+     * What a server button shows while this plan has no room for another
+     * server: why, and the plan that lifts the limit.
+     *
+     * @return array{message: string, plan: string}
+     */
+    public function serverLimitLock(): array
+    {
+        return ['message' => $this->serverLimitMessage(), 'plan' => $this->serverUpgrade()->label()];
+    }
+
+    /**
+     * The cheapest plan that allows more servers than this one.
+     */
+    private function serverUpgrade(): self
+    {
+        $limit = $this->serverLimit();
+
+        return collect(self::cases())->first(
             fn (self $plan): bool => $plan->serverLimit() === null || $plan->serverLimit() > $limit,
         );
-
-        return "The {$this->label()} plan includes {$limit} ".Str::plural('server', $limit)
-            .". Upgrade to {$upgrade->label()} to add more.";
     }
 }

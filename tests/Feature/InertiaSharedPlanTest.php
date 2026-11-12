@@ -6,7 +6,7 @@ use App\Models\Team;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 
-it('shares what a Hobby team leaves out once its one server is used', function () {
+it('shares what a Hobby team leaves out once its one server is used, with the plan that unlocks each', function () {
     $user = User::factory()->onPlan(Plan::Hobby)->create();
     $team = Team::factory()->forUser($user)->create();
     $user->switchTeam($team);
@@ -16,14 +16,14 @@ it('shares what a Hobby team leaves out once its one server is used', function (
         ->get("/{$team->slug}/servers")
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('plan.label', 'Hobby')
-            ->where('plan.serverLimitMessage', 'The Hobby plan includes 1 server. Upgrade to Pro to add more.')
+            ->where('plan.serverLimit', ['message' => 'The Hobby plan includes 1 server. Upgrade to Pro to add more.', 'plan' => 'Pro'])
             ->where('plan.notIncluded', [
-                'team_members' => 'Inviting team members needs the Team plan.',
-                'extra_teams' => 'Creating more teams needs the Team plan.',
-                'database_backups' => 'Backing up databases needs the Pro or Team plan.',
-                'monitoring' => 'Uptime and certificate monitoring needs the Pro or Team plan.',
+                'team_members' => ['message' => 'Inviting team members needs the Team plan.', 'plan' => 'Team'],
+                'extra_teams' => ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'],
+                'database_backups' => ['message' => 'Backing up databases needs the Pro or Team plan.', 'plan' => 'Pro'],
+                'monitoring' => ['message' => 'Uptime and certificate monitoring needs the Pro or Team plan.', 'plan' => 'Pro'],
             ])
-            ->where('auth.teamLimitMessage', 'Creating more teams needs the Team plan.')
+            ->where('auth.teamLimit', ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'])
         );
 });
 
@@ -37,9 +37,9 @@ it('shares no limits on the Team plan', function () {
         ->get("/{$team->slug}/servers")
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('plan.label', 'Team')
-            ->where('plan.serverLimitMessage', null)
+            ->where('plan.serverLimit', null)
             ->where('plan.notIncluded', [])
-            ->where('auth.teamLimitMessage', null)
+            ->where('auth.teamLimit', null)
         );
 });
 
@@ -54,6 +54,6 @@ it('shares the team owner\'s plan for the team and the user\'s own plan for crea
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('plan.label', 'Team')
             ->where('plan.notIncluded', [])
-            ->where('auth.teamLimitMessage', 'Creating more teams needs the Team plan.')
+            ->where('auth.teamLimit.plan', 'Team')
         );
 });

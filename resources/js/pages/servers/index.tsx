@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddServerOptions } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
 import { PageActions } from '@/components/page-actions';
+import PlanLockedButton from '@/components/plan-locked-button';
 import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
@@ -56,8 +57,8 @@ const DOCS_URL = 'https://docs.flitops.com/servers/creating-servers';
 export default function ServersIndex({ servers }: Props) {
     const teamPath = useTeamPath();
     const canManageServers = usePermission()('manage_servers');
-    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
-    const canAddServer = canManageServers && serverLimitMessage === null;
+    const serverLimit = usePlan()?.serverLimit ?? null;
+    const canAddServer = canManageServers && serverLimit === null;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -118,18 +119,25 @@ export default function ServersIndex({ servers }: Props) {
                             Docs
                         </a>
                     </Button>
-                    {canAddServer && servers.data.length > 0 && (
-                        <Button asChild>
-                            <Link href={teamPath('/servers/create')}>
+                    {canManageServers &&
+                        servers.data.length > 0 &&
+                        (serverLimit ? (
+                            <PlanLockedButton lock={serverLimit}>
                                 <PlusIcon className="h-4 w-4" />
                                 Create server
-                            </Link>
-                        </Button>
-                    )}
+                            </PlanLockedButton>
+                        ) : (
+                            <Button asChild>
+                                <Link href={teamPath('/servers/create')}>
+                                    <PlusIcon className="h-4 w-4" />
+                                    Create server
+                                </Link>
+                            </Button>
+                        ))}
                 </PageActions>
 
-                {canManageServers && serverLimitMessage && (
-                    <PlanUpgradeNotice message={serverLimitMessage} />
+                {canManageServers && serverLimit && (
+                    <PlanUpgradeNotice message={serverLimit.message} />
                 )}
 
                 {servers.data.length === 0 && canAddServer ? (

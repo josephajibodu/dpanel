@@ -1,4 +1,4 @@
-import { router, useForm, usePage } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     CaretUpDownIcon,
     CheckIcon,
@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
-import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -34,6 +34,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { pricing } from '@/routes';
 import { type SharedData, type Team } from '@/types';
 
 function teamInitials(name: string): string {
@@ -45,7 +46,7 @@ function teamInitials(name: string): string {
 }
 
 export function TeamSwitcher() {
-    const { currentTeam, teams } = usePage<SharedData>().props;
+    const { currentTeam, teams, auth } = usePage<SharedData>().props;
     const [createOpen, setCreateOpen] = useState(false);
 
     if (!currentTeam) {
@@ -100,15 +101,40 @@ export function TeamSwitcher() {
                                 </DropdownMenuItem>
                             ))}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="cursor-pointer gap-2 p-2"
-                                onClick={() => setCreateOpen(true)}
-                            >
-                                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                                    <PlusIcon className="size-4" />
-                                </div>
-                                Create team
-                            </DropdownMenuItem>
+                            {auth.teamLimit ? (
+                                <DropdownMenuItem
+                                    asChild
+                                    className="cursor-pointer gap-2 p-2 text-muted-foreground"
+                                >
+                                    <Link href={pricing()}>
+                                        <div className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-background">
+                                            <PlusIcon className="size-4" />
+                                        </div>
+                                        <div className="flex min-w-0 flex-col">
+                                            <span>Create team</span>
+                                            <span className="text-xs">
+                                                {auth.teamLimit.message}
+                                            </span>
+                                        </div>
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-auto"
+                                        >
+                                            {auth.teamLimit.plan}
+                                        </Badge>
+                                    </Link>
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem
+                                    className="cursor-pointer gap-2 p-2"
+                                    onClick={() => setCreateOpen(true)}
+                                >
+                                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                                        <PlusIcon className="size-4" />
+                                    </div>
+                                    Create team
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </SidebarMenuItem>
@@ -126,7 +152,6 @@ function CreateTeamDialog({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { teamLimitMessage } = usePage<SharedData>().props.auth;
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         slug: '',
@@ -207,28 +232,6 @@ function CreateTeamDialog({
             onSuccess: () => onOpenChange(false),
         });
     };
-
-    if (teamLimitMessage) {
-        return (
-            <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>New team</DialogTitle>
-                    </DialogHeader>
-                    <PlanUpgradeNotice message={teamLimitMessage} />
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            Close
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        );
-    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

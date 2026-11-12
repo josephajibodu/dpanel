@@ -7,6 +7,7 @@ import { store as transferServer } from '@/actions/App/Http/Controllers/ServerTr
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import { SettingsSection } from '@/components/settings-section';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -20,7 +21,7 @@ import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type BreadcrumbItem, type PlanLock, type SharedData } from '@/types';
 import { type Server } from '@/types/server';
 
 interface Props {
@@ -35,6 +36,8 @@ interface Props {
               name: string;
               /** Cloud accounts the server could be linked to in that team. */
               provider_accounts: { ulid: string; name: string }[];
+              /** Set when that team's plan has no room for another server. */
+              server_limit: PlanLock | null;
           }[]
         | null;
 }
@@ -273,8 +276,27 @@ export default function ServerSettings({
                                                 <SelectItem
                                                     key={team.slug}
                                                     value={team.slug}
+                                                    disabled={
+                                                        team.server_limit !==
+                                                        null
+                                                    }
                                                 >
                                                     {team.name}
+                                                    {team.server_limit && (
+                                                        <>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                No room on its
+                                                                plan
+                                                            </span>
+                                                            <Badge variant="secondary">
+                                                                {
+                                                                    team
+                                                                        .server_limit
+                                                                        .plan
+                                                                }
+                                                            </Badge>
+                                                        </>
+                                                    )}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

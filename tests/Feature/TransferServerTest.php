@@ -241,7 +241,25 @@ it('offers only the other teams the user can manage servers in on the settings p
     $this->actingAs($this->user)
         ->get("/{$this->team->slug}/servers/{$this->server->id}/settings")
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('transfer_teams', [['slug' => $this->destination->slug, 'name' => 'Destination', 'provider_accounts' => []]]));
+            ->where('transfer_teams', [['slug' => $this->destination->slug, 'name' => 'Destination', 'provider_accounts' => [], 'server_limit' => null]]));
+});
+
+it('marks a team whose owner\'s plan is full on the settings page, before any transfer is tried', function () {
+    $hobbyOwner = User::factory()->onPlan(Plan::Hobby)->create();
+    $hobbyTeam = Team::factory()->forUser($hobbyOwner)->create(['name' => 'Acme']);
+    Server::factory()->forTeam($hobbyTeam)->create();
+    $hobbyTeam->users()->attach($this->user, ['team_role_id' => TeamRole::builtIn(TeamRoleKey::Admin)->id]);
+
+    $this->actingAs($this->user)
+        ->get("/{$this->team->slug}/servers/{$this->server->id}/settings")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('transfer_teams.0.name', 'Acme')
+            ->where('transfer_teams.0.server_limit', [
+                'message' => 'The Hobby plan includes 1 server. Upgrade to Pro to add more.',
+                'plan' => 'Pro',
+            ])
+            ->where('transfer_teams.1.name', 'Destination')
+            ->where('transfer_teams.1.server_limit', null));
 });
 
 describe('cloud servers', function () {
@@ -330,6 +348,7 @@ describe('cloud servers', function () {
                 'slug' => $this->destination->slug,
                 'name' => 'Destination',
                 'provider_accounts' => [['ulid' => $this->destinationAccount->ulid, 'name' => 'Hetzner main']],
+                'server_limit' => null,
             ]]));
     });
 });

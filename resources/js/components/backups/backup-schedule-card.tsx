@@ -35,7 +35,7 @@ export function BackupScheduleCard({
     description,
 }: Props) {
     const canManageSchedule = usePermission()('run_backups');
-    const upgradeMessage = usePlan()?.notIncluded.database_backups ?? null;
+    const backupsLock = usePlan()?.notIncluded.database_backups ?? null;
     const scheduleForm = useForm({
         storage_provider_id: schedule?.storage_provider_id ?? '',
         frequency: schedule?.frequency ?? 'daily',
@@ -60,8 +60,8 @@ export function BackupScheduleCard({
                     </CardDescription>
                 </div>
                 <div className="p-6">
-                    {upgradeMessage ? (
-                        <PlanUpgradeNotice message={upgradeMessage} />
+                    {backupsLock ? (
+                        <PlanUpgradeNotice message={backupsLock.message} />
                     ) : storageProviders.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             {canManageSchedule

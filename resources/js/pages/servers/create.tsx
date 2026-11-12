@@ -290,7 +290,7 @@ export default function ServersCreate({
     serverTypes,
 }: Props) {
     const teamPath = useTeamPath();
-    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
+    const serverLimit = usePlan()?.serverLimit ?? null;
     const accounts = providerAccounts.data;
     const { url } = usePage();
     const requestedMode = new URLSearchParams(url.split('?')[1] ?? '').get(
@@ -416,7 +416,7 @@ export default function ServersCreate({
         (option) => option.value === activeForm.data.type,
     );
 
-    if (serverLimitMessage) {
+    if (serverLimit) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Create Server" />
@@ -425,7 +425,7 @@ export default function ServersCreate({
                     <h1 className="text-xl font-semibold tracking-tight">
                         Create Server
                     </h1>
-                    <PlanUpgradeNotice message={serverLimitMessage} />
+                    <PlanUpgradeNotice message={serverLimit.message} />
                 </div>
             </AppLayout>
         );

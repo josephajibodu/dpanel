@@ -255,9 +255,11 @@ class ServerController extends Controller
 
     /**
      * The user's other teams they may add servers to, each with the cloud
-     * accounts the server could be linked to there (none for a custom server).
+     * accounts the server could be linked to there (none for a custom server),
+     * and the plan limit that stops it taking the server, if any. A team with
+     * the same owner always has room, since the owner's count doesn't change.
      *
-     * @return list<array{slug: string, name: string, provider_accounts: list<array{ulid: string, name: string}>}>
+     * @return list<array{slug: string, name: string, provider_accounts: list<array{ulid: string, name: string}>, server_limit: ?array{message: string, plan: string}}>
      */
     private function teamsServerCanMoveTo(Team $currentTeam, Server $server): array
     {
@@ -268,7 +270,7 @@ class ServerController extends Controller
             ->where(fn ($query) => $query
                 ->where('user_id', $user->id)
                 ->orWhereHas('users', fn ($members) => $members->whereKey($user->id)))
-            ->with(['providerAccounts' => fn ($accounts) => $accounts
+            ->with(['owner', 'providerAccounts' => fn ($accounts) => $accounts
                 ->where('provider', $server->provider)
                 ->where('is_valid', true)
                 ->orderBy('name')])
@@ -281,6 +283,9 @@ class ServerController extends Controller
                 'provider_accounts' => $team->providerAccounts
                     ->map(fn (ProviderAccount $account): array => ['ulid' => $account->ulid, 'name' => $account->name])
                     ->all(),
+                'server_limit' => $team->user_id === $currentTeam->user_id || $team->hasRoomForAnotherServer()
+                    ? null
+                    : $team->plan()->serverLimitLock(),
             ])
             ->values()
             ->all();

@@ -20,6 +20,7 @@ import { ProvisioningStepTimeline } from '@/components/provisioning-step-timelin
 import { FrameworkLabel } from '@/components/sites/framework-icon';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import {
@@ -45,6 +46,7 @@ import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
+import { pricing } from '@/routes';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
 import type { CronJob, DatabaseConnection, Worker } from '@/types/server';
@@ -75,7 +77,7 @@ export default function SitesShow({
     const { currentTeam, errors, plan } = usePage<
         SharedData & { errors?: Record<string, string> }
     >().props;
-    const monitoringUpgradeMessage = plan?.notIncluded.monitoring ?? null;
+    const monitoringLock = plan?.notIncluded.monitoring ?? null;
     const teamPath = useTeamPath();
     const can = usePermission();
     const server = serverProp?.data ?? serverProp;
@@ -499,12 +501,12 @@ export default function SitesShow({
                                 <OverviewItem
                                     label="Uptime"
                                     wrapHint={Boolean(
-                                        monitoringUpgradeMessage ||
+                                        monitoringLock ||
                                         siteData.open_incident,
                                     )}
                                     hint={
-                                        monitoringUpgradeMessage ? (
-                                            monitoringUpgradeMessage
+                                        monitoringLock ? (
+                                            monitoringLock.message
                                         ) : siteData.open_incident ? (
                                             <span className="text-destructive-foreground">
                                                 Down since{' '}
@@ -529,8 +531,15 @@ export default function SitesShow({
                                         )
                                     }
                                 >
-                                    {monitoringUpgradeMessage ? (
-                                        'Not monitored'
+                                    {monitoringLock ? (
+                                        <span className="inline-flex items-center gap-2">
+                                            Not monitored
+                                            <Badge variant="secondary" asChild>
+                                                <Link href={pricing()}>
+                                                    {monitoringLock.plan}
+                                                </Link>
+                                            </Badge>
+                                        </span>
                                     ) : siteData.uptime_status ? (
                                         <StatusBadge
                                             status={

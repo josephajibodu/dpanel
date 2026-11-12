@@ -8,6 +8,7 @@ import {
 } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
 import { PageActions } from '@/components/page-actions';
+import PlanLockedButton from '@/components/plan-locked-button';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -86,8 +87,7 @@ export default function Dashboard({
 }: Props) {
     const teamPath = useTeamPath();
     const canManageServers = usePermission()('manage_servers');
-    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
-    const canAddServer = canManageServers && serverLimitMessage === null;
+    const serverLimit = usePlan()?.serverLimit ?? null;
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',
@@ -125,14 +125,21 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {canAddServer && !isWelcome && (
+                {canManageServers && !isWelcome && (
                     <PageActions>
-                        <Button asChild>
-                            <Link href={teamPath('/servers/create')}>
+                        {serverLimit ? (
+                            <PlanLockedButton lock={serverLimit}>
                                 <PlusIcon className="h-4 w-4" />
                                 Create server
-                            </Link>
-                        </Button>
+                            </PlanLockedButton>
+                        ) : (
+                            <Button asChild>
+                                <Link href={teamPath('/servers/create')}>
+                                    <PlusIcon className="h-4 w-4" />
+                                    Create server
+                                </Link>
+                            </Button>
+                        )}
                     </PageActions>
                 )}
 
