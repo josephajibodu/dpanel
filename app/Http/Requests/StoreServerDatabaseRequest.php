@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +20,7 @@ class StoreServerDatabaseRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -37,7 +38,14 @@ class StoreServerDatabaseRequest extends FormRequest
             'collation' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9_]+$/'],
             'charset' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9_]+$/'],
             'db_user' => ['nullable', 'string', 'max:32', 'regex:/^[a-zA-Z0-9_]+$/'],
-            'db_password' => ['nullable', 'string', 'min:8', 'max:255', 'required_with:db_user'],
+            'db_password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'max:255',
+                Rule::requiredIf(fn (): bool => $this->filled('db_user')
+                    && ! $server->databaseUsers()->where('username', $this->input('db_user'))->exists()),
+            ],
         ];
     }
 
@@ -53,7 +61,7 @@ class StoreServerDatabaseRequest extends FormRequest
             'collation.regex' => 'Collation may only contain letters, numbers, and underscores.',
             'charset.regex' => 'Character set may only contain letters, numbers, and underscores.',
             'db_user.regex' => 'Username can only contain letters, numbers, and underscores.',
-            'db_password.required_with' => 'A password is required when specifying a database user.',
+            'db_password.required' => 'A password is required for a new database user.',
             'db_password.min' => 'Password must be at least 8 characters.',
         ];
     }

@@ -212,6 +212,21 @@ describe('SiteController::create', function () {
                 ->has('databases.data', 2)
             );
     });
+
+    it('passes the server database usernames and the default user', function () {
+        DatabaseUser::factory()->create([
+            'server_id' => $this->server->id,
+            'username' => 'app_user',
+        ]);
+
+        $this->actingAs($this->user)
+            ->get("/{$this->team->slug}/servers/{$this->server->id}/sites/create")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('databaseUsernames', ['app_user'])
+                ->where('defaultDatabaseUser', config('server.user'))
+            );
+    });
 });
 
 // --------------------------------------------------------------------------

@@ -3,8 +3,6 @@ import {
     ArrowsClockwiseIcon,
     DatabaseIcon,
     DotsThreeVerticalIcon,
-    EyeIcon,
-    EyeSlashIcon,
     LinkIcon,
     PencilSimpleIcon,
     PlusIcon,
@@ -15,6 +13,7 @@ import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import { ConnectionInfoDialog } from '@/components/databases/connection-info-dialog';
+import { NewDatabaseFields } from '@/components/databases/new-database-fields';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,6 +61,7 @@ import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
+import { generatePassword } from '@/lib/generate-password';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import type { DatabaseUser, Server, ServerDatabase } from '@/types/server';
 
@@ -118,7 +118,6 @@ export default function ServerDatabasesIndex({
         db_user: '',
         db_password: '',
     });
-    const [showDbPassword, setShowDbPassword] = useState(false);
     const [userForm, setUserForm] = useState({
         username: '',
         password: '',
@@ -144,18 +143,6 @@ export default function ServerDatabasesIndex({
 
     const isServerReady = serverIsReady;
 
-    const generatePassword = () => {
-        const chars =
-            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        let password = '';
-        const array = new Uint32Array(24);
-        crypto.getRandomValues(array);
-        for (let i = 0; i < 24; i++) {
-            password += chars[array[i] % chars.length];
-        }
-        return password;
-    };
-
     const handleCreateDatabase = (e: React.FormEvent) => {
         e.preventDefault();
         if (!server?.id) return;
@@ -180,7 +167,6 @@ export default function ServerDatabasesIndex({
                         db_user: '',
                         db_password: '',
                     });
-                    setShowDbPassword(false);
                 },
                 onFinish: () => setIsSubmitting(false),
             },
@@ -699,115 +685,19 @@ export default function ServerDatabasesIndex({
                                 </p>
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="db-charset">
-                                Charset (optional)
-                            </Label>
-                            <Input
-                                id="db-charset"
-                                value={dbForm.charset}
-                                onChange={(e) =>
-                                    setDbForm((p) => ({
-                                        ...p,
-                                        charset: e.target.value,
-                                    }))
-                                }
-                                placeholder="utf8mb4"
-                                className="font-mono"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="db-collation">
-                                Collation (optional)
-                            </Label>
-                            <Input
-                                id="db-collation"
-                                value={dbForm.collation}
-                                onChange={(e) =>
-                                    setDbForm((p) => ({
-                                        ...p,
-                                        collation: e.target.value,
-                                    }))
-                                }
-                                placeholder="utf8mb4_unicode_ci"
-                                className="font-mono"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="db-user">
-                                Database user (optional)
-                            </Label>
-                            <Input
-                                id="db-user"
-                                value={dbForm.db_user}
-                                onChange={(e) =>
-                                    setDbForm((p) => ({
-                                        ...p,
-                                        db_user: e.target.value,
-                                    }))
-                                }
-                                placeholder="Leave blank for default user"
-                                className="font-mono"
-                                autoComplete="off"
-                            />
-                            {errors?.db_user && (
-                                <p className="text-sm text-destructive">
-                                    {errors.db_user}
-                                </p>
+                        <NewDatabaseFields
+                            idPrefix="db"
+                            values={dbForm}
+                            onChange={(changes) =>
+                                setDbForm((p) => ({ ...p, ...changes }))
+                            }
+                            databaseType={server.database_type}
+                            defaultUsername={sshUser}
+                            existingUsernames={userList.map(
+                                (user) => user.username,
                             )}
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="db-password">Password</Label>
-                                <button
-                                    type="button"
-                                    className="text-sm font-medium text-primary hover:underline"
-                                    onClick={() => {
-                                        const pw = generatePassword();
-                                        setDbForm((p) => ({
-                                            ...p,
-                                            db_password: pw,
-                                        }));
-                                        setShowDbPassword(true);
-                                    }}
-                                >
-                                    Generate password
-                                </button>
-                            </div>
-                            <div className="relative">
-                                <Input
-                                    id="db-password"
-                                    type={showDbPassword ? 'text' : 'password'}
-                                    value={dbForm.db_password}
-                                    onChange={(e) =>
-                                        setDbForm((p) => ({
-                                            ...p,
-                                            db_password: e.target.value,
-                                        }))
-                                    }
-                                    placeholder="••••••••"
-                                    autoComplete="new-password"
-                                    className="pr-10"
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                    onClick={() => setShowDbPassword((v) => !v)}
-                                    tabIndex={-1}
-                                >
-                                    {showDbPassword ? (
-                                        <EyeSlashIcon className="h-4 w-4" />
-                                    ) : (
-                                        <EyeIcon className="h-4 w-4" />
-                                    )}
-                                </button>
-                            </div>
-                            {errors?.db_password && (
-                                <p className="text-sm text-destructive">
-                                    {errors.db_password}
-                                </p>
-                            )}
-                        </div>
+                            errors={errors}
+                        />
                         <SheetFooter>
                             <Button
                                 type="button"

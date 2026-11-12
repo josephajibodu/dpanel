@@ -29,10 +29,12 @@ class CreateServerDatabase
             throw new RuntimeException("Server {$server->id} is not ready.");
         }
 
+        $usesCharsets = in_array($server->database_type, ['mysql', 'mariadb'], true);
+
         $serverDatabase = $server->databases()->create([
             'name' => $input['name'],
-            'collation' => $input['collation'] ?? null,
-            'charset' => $input['charset'] ?? null,
+            'collation' => $usesCharsets ? ($input['collation'] ?? null) : null,
+            'charset' => $usesCharsets ? ($input['charset'] ?? null) : null,
             'status' => 'pending',
         ]);
 

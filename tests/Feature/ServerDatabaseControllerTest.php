@@ -154,7 +154,7 @@ it('reuses existing database user when creating a second database', function () 
         ->toContain('second_db');
 });
 
-it('requires db_password when db_user is provided', function () {
+it('requires db_password when db_user is a new user', function () {
     Queue::fake();
 
     $response = $this->actingAs($this->user)
@@ -164,6 +164,49 @@ it('requires db_password when db_user is provided', function () {
         ]);
 
     $response->assertSessionHasErrors('db_password');
+});
+
+it('accepts an existing db_user without a password and keeps its password', function () {
+    Queue::fake();
+
+    $existingUser = DatabaseUser::factory()->create([
+        'server_id' => $this->server->id,
+        'username' => 'app_user',
+        'password' => 'original_password',
+        'databases' => ['first_db'],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
+            'name' => 'second_db',
+            'db_user' => 'app_user',
+        ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect();
+
+    $existingUser->refresh();
+    expect($existingUser->password)->toBe('original_password')
+        ->and($existingUser->databases)->toContain('second_db');
+});
+
+it('ignores charset and collation on a PostgreSQL server', function () {
+    Queue::fake();
+    $this->server->update(['database_type' => 'postgresql']);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/databases", [
+            'name' => 'pg_db',
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('server_databases', [
+        'server_id' => $this->server->id,
+        'name' => 'pg_db',
+        'charset' => null,
+        'collation' => null,
+    ]);
 });
 
 it('validates database name is unique per server', function () {

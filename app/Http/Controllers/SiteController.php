@@ -111,6 +111,8 @@ class SiteController extends Controller
                     ->orderBy('name')
                     ->get()
             ), on: new ServerDatabasesUpdated($server)),
+            'databaseUsernames' => $server->databaseUsers()->pluck('username'),
+            'defaultDatabaseUser' => config('server.user'),
             'sourceControl' => [
                 'accounts' => SourceControlAccountResource::collection($sourceControlAccounts),
             ],

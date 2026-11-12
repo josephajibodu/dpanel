@@ -4,8 +4,6 @@ import {
     ArrowsClockwiseIcon,
     CheckIcon,
     CircleNotchIcon,
-    EyeIcon,
-    EyeSlashIcon,
     PlusIcon,
     XCircleIcon,
 } from '@phosphor-icons/react';
@@ -17,6 +15,7 @@ import {
     SegmentedControl,
     SummaryCard,
 } from '@/components/create-form';
+import { NewDatabaseFields } from '@/components/databases/new-database-fields';
 import InputError from '@/components/input-error';
 import { FrameworkIcon } from '@/components/sites/framework-icon';
 import {
@@ -77,6 +76,8 @@ interface Props {
     frameworks: Framework[];
     phpVersions: PhpVersion[];
     databases: { data: ServerDatabase[] };
+    databaseUsernames: string[];
+    defaultDatabaseUser: string;
     sourceControl?: SourceControlData;
 }
 
@@ -149,15 +150,6 @@ function slugifyProjectName(name: string): string {
         .slice(0, 63);
 }
 
-function generatePassword(): string {
-    const chars =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    const array = new Uint32Array(24);
-    crypto.getRandomValues(array);
-
-    return Array.from(array, (value) => chars[value % chars.length]).join('');
-}
-
 /**
  * Call one of FlitOps' JSON endpoints, sending the CSRF token for writes.
  * Never throws: a network failure comes back as `ok: false`.
@@ -208,6 +200,8 @@ export default function SitesCreate({
     frameworks,
     phpVersions,
     databases,
+    databaseUsernames,
+    defaultDatabaseUser,
     sourceControl,
 }: Props) {
     const teamPath = useTeamPath();
@@ -224,7 +218,6 @@ export default function SitesCreate({
     const [connectDatabase, setConnectDatabase] = useState(false);
     const [createDbOpen, setCreateDbOpen] = useState(false);
     const [isCreatingDb, setIsCreatingDb] = useState(false);
-    const [showDbPassword, setShowDbPassword] = useState(false);
     const [dbForm, setDbForm] = useState(emptyDbForm);
     const [providerPickerOpen, setProviderPickerOpen] = useState(false);
     const pendingDbNameRef = useRef<string | null>(null);
@@ -688,7 +681,6 @@ export default function SitesCreate({
                 onSuccess: () => {
                     setCreateDbOpen(false);
                     setDbForm(emptyDbForm);
-                    setShowDbPassword(false);
                 },
                 onFinish: () => setIsCreatingDb(false),
             },
@@ -1313,115 +1305,16 @@ export default function SitesCreate({
                                     autoComplete="off"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-db-charset">
-                                    Charset (optional)
-                                </Label>
-                                <Input
-                                    id="new-db-charset"
-                                    value={dbForm.charset}
-                                    onChange={(e) =>
-                                        setDbForm((p) => ({
-                                            ...p,
-                                            charset: e.target.value,
-                                        }))
-                                    }
-                                    placeholder="utf8mb4"
-                                    className="font-mono"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-db-collation">
-                                    Collation (optional)
-                                </Label>
-                                <Input
-                                    id="new-db-collation"
-                                    value={dbForm.collation}
-                                    onChange={(e) =>
-                                        setDbForm((p) => ({
-                                            ...p,
-                                            collation: e.target.value,
-                                        }))
-                                    }
-                                    placeholder="utf8mb4_unicode_ci"
-                                    className="font-mono"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-db-user">
-                                    Database user (optional)
-                                </Label>
-                                <Input
-                                    id="new-db-user"
-                                    value={dbForm.db_user}
-                                    onChange={(e) =>
-                                        setDbForm((p) => ({
-                                            ...p,
-                                            db_user: e.target.value,
-                                        }))
-                                    }
-                                    placeholder="Leave blank for default user"
-                                    className="font-mono"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="new-db-password">
-                                        Password
-                                    </Label>
-                                    <button
-                                        type="button"
-                                        className="text-sm font-medium text-primary hover:underline"
-                                        onClick={() => {
-                                            setDbForm((p) => ({
-                                                ...p,
-                                                db_password: generatePassword(),
-                                            }));
-                                            setShowDbPassword(true);
-                                        }}
-                                    >
-                                        Generate password
-                                    </button>
-                                </div>
-                                <div className="relative">
-                                    <Input
-                                        id="new-db-password"
-                                        type={
-                                            showDbPassword ? 'text' : 'password'
-                                        }
-                                        value={dbForm.db_password}
-                                        onChange={(e) =>
-                                            setDbForm((p) => ({
-                                                ...p,
-                                                db_password: e.target.value,
-                                            }))
-                                        }
-                                        placeholder="••••••••"
-                                        autoComplete="new-password"
-                                        className="pr-10"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                        onClick={() =>
-                                            setShowDbPassword((v) => !v)
-                                        }
-                                        tabIndex={-1}
-                                        aria-label={
-                                            showDbPassword
-                                                ? 'Hide password'
-                                                : 'Show password'
-                                        }
-                                    >
-                                        {showDbPassword ? (
-                                            <EyeSlashIcon className="h-4 w-4" />
-                                        ) : (
-                                            <EyeIcon className="h-4 w-4" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
+                            <NewDatabaseFields
+                                idPrefix="new-db"
+                                values={dbForm}
+                                onChange={(changes) =>
+                                    setDbForm((p) => ({ ...p, ...changes }))
+                                }
+                                databaseType={serverData.database_type}
+                                defaultUsername={defaultDatabaseUser}
+                                existingUsernames={databaseUsernames}
+                            />
                             <SheetFooter>
                                 <Button
                                     type="button"
