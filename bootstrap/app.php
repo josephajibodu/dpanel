@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'team.slug' => EnsureTeamSlugAccess::class,
         ]);
 
+        // The named dashboard route needs a team, so signed-in users who open
+        // a guest page such as /login go to /dashboard, which finds their team.
+        $middleware->redirectUsersTo('/dashboard');
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
