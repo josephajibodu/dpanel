@@ -34,9 +34,11 @@ class WildcardCertificateExpiring extends Notification
 
         $message = $this->expiresAt->isPast()
             ? (new MailMessage)
+                ->error()
                 ->subject("Wildcard certificate expired: {$this->domain}")
                 ->line("The wildcard certificate `{$this->domain}` expired on {$expiryDate}. Free-domain sites get a security warning until it's replaced.")
             : (new MailMessage)
+                ->level('warning')
                 ->subject("Wildcard certificate expiring soon: {$this->domain}")
                 ->line("The wildcard certificate `{$this->domain}` expires in {$this->daysLeft()}, on {$expiryDate}. It should have been renewed by now.");
 

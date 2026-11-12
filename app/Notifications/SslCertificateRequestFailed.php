@@ -29,6 +29,7 @@ class SslCertificateRequestFailed extends Notification
         $server = $site->server;
 
         return (new MailMessage)
+            ->error()
             ->subject("SSL certificate request failed: {$hostname}")
             ->line("Flitops couldn't issue or renew the SSL certificate for **{$hostname}** on **{$server->name}**.")
             ->line("**Error:** {$this->errorMessage}")

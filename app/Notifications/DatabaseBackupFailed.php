@@ -27,6 +27,7 @@ class DatabaseBackupFailed extends Notification
         $targetName = $this->backup->targetName();
 
         return (new MailMessage)
+            ->error()
             ->subject("Database backup failed: {$targetName}")
             ->line("A backup of **{$targetName}** on **{$server->name}** failed.")
             ->line("**Error:** {$this->backup->error_message}")

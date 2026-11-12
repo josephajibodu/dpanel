@@ -32,9 +32,11 @@ class SslCertificateExpiring extends Notification
 
         $message = $expiresAt->isPast()
             ? (new MailMessage)
+                ->error()
                 ->subject("SSL certificate expired: {$hostname}")
                 ->line("The SSL certificate for **{$hostname}** on **{$server->name}** expired on {$expiryDate}. Visitors get a security warning, and HTTPS requests to it, such as webhooks, are failing.")
             : (new MailMessage)
+                ->level('warning')
                 ->subject("SSL certificate expiring soon: {$hostname}")
                 ->line("The SSL certificate for **{$hostname}** on **{$server->name}** expires in {$this->daysLeft()}, on {$expiryDate}. It should have been renewed by now.");
 

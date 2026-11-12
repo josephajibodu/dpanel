@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Team;
 use App\Models\User;
+use App\Notifications\Welcome;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Event;
@@ -112,4 +114,46 @@ test('already verified user visiting verification link is redirected without fir
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
     Event::assertNotDispatched(Verified::class);
+});
+
+test('confirming an email address sends the welcome email', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create();
+
+    $this->actingAs($user)->get(URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    ));
+
+    Notification::assertSentTo($user, Welcome::class);
+    expect($user->fresh()->welcomed_at)->not->toBeNull();
+});
+
+test('confirming a changed email address does not send the welcome email again', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create(['welcomed_at' => now()->subMonth()]);
+
+    $this->actingAs($user)->get(URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    ));
+
+    expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+    Notification::assertNotSentTo($user, Welcome::class);
+});
+
+test('the welcome email links a new account to creating its first server', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $user->setRelation('currentTeam', $team);
+
+    $html = (string) (new Welcome)->toMail($user)->render();
+
+    expect($html)
+        ->toContain('Welcome to Flitops')
+        ->toContain(route('servers.create', $team));
 });

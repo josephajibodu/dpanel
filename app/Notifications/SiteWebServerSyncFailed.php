@@ -28,6 +28,7 @@ class SiteWebServerSyncFailed extends Notification
         $webServer = $server->webServer()->label();
 
         return (new MailMessage)
+            ->error()
             ->subject("Web server config not applied: {$this->site->domain}")
             ->line("Flitops couldn't apply a change to the {$webServer} config for **{$this->site->domain}** on **{$server->name}**, so the change is not live.")
             ->line("**Error:** {$this->errorMessage}")

@@ -28,6 +28,7 @@ class SiteRecovered extends Notification
         $downtime = $this->incident->started_at->diffForHumans($this->incident->resolved_at, true);
 
         return (new MailMessage)
+            ->success()
             ->subject("Site recovered: {$site->domain}")
             ->line("**{$site->domain}** on **{$server->name}** is responding again.")
             ->line("It was down for {$downtime}.")

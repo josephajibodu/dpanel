@@ -27,6 +27,7 @@ class ServerProvisioningFailed extends Notification
         $serverUrl = route('servers.show', [$this->server->team, $this->server]);
 
         return (new MailMessage)
+            ->error()
             ->subject("Server provisioning failed: {$this->server->name}")
             ->line("Your server **{$this->server->name}** failed to provision.")
             ->line("**Error:** {$this->errorMessage}")

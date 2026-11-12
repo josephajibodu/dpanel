@@ -4,11 +4,14 @@ namespace App\Providers;
 
 use App\Models\Site;
 use App\Models\SiteDomain;
+use App\Models\User;
+use App\Notifications\Welcome;
 use App\Services\Deployment\DeploymentStrategy;
 use App\Services\Deployment\ZeroDowntimeDeploymentStrategy;
 use App\Services\Providers\ProviderManager;
 use App\Services\Storage\StorageProviderManager;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
@@ -40,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureDevCommands();
         $this->configureHttpClientLogging();
+        $this->configureWelcomeEmail();
 
         Route::bind('site_domain', function (string $value, \Illuminate\Routing\Route $route) {
             $site = $route->parameter('site');
@@ -83,6 +87,24 @@ class AppServiceProvider extends ServiceProvider
     {
         DevCommands::artisan('schedule:work', 'schedule');
         DevCommands::artisan('flitops:terminal-gateway', 'terminal');
+    }
+
+    /**
+     * Send the welcome email the first time an account confirms its email
+     * address. Confirming a changed address later doesn't send it again.
+     */
+    protected function configureWelcomeEmail(): void
+    {
+        Event::listen(Verified::class, function (Verified $event): void {
+            $user = $event->user;
+
+            if (! $user instanceof User || $user->welcomed_at !== null) {
+                return;
+            }
+
+            $user->forceFill(['welcomed_at' => now()])->save();
+            $user->notify(new Welcome);
+        });
     }
 
     protected function configureHttpClientLogging(): void

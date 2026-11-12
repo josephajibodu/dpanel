@@ -32,6 +32,7 @@ class SiteWentDown extends Notification
         $server = $site->server;
 
         $message = (new MailMessage)
+            ->error()
             ->subject("Site down: {$site->domain}")
             ->line("**{$site->domain}** on **{$server->name}** is not responding.")
             ->line("**Reason:** {$this->incident->reason}");
@@ -41,9 +42,7 @@ class SiteWentDown extends Notification
             // escaped and kept in a <pre> block that Markdown leaves alone.
             $message->line("**Recent {$server->webServer()->label()} errors:**")
                 ->line(new HtmlString(
-                    '<pre style="white-space: pre-wrap; word-break: break-all; font-family: Menlo, Monaco, monospace; font-size: 12px;">'
-                    .e(implode("\n", $this->errorLogLines))
-                    .'</pre>'
+                    '<pre>'.e(implode("\n", $this->errorLogLines)).'</pre>'
                 ));
         }
 

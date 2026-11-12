@@ -24,6 +24,7 @@ class WildcardCertificateRenewalFailed extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->error()
             ->subject("Wildcard certificate renewal failed: {$this->domain}")
             ->line("Flitops couldn't issue or renew the wildcard certificate `{$this->domain}`.")
             ->line("**Error:** {$this->errorMessage}")

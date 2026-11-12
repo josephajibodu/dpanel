@@ -10,6 +10,7 @@ use App\Http\Controllers\DatabaseUserController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DeploymentWebhookController;
 use App\Http\Controllers\DeployScriptController;
+use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProviderAccountController;
@@ -406,5 +407,11 @@ Route::get('invitations/{token}/accept', [TeamInvitationController::class, 'acce
 Route::post('invitations/{token}/confirm', [TeamInvitationController::class, 'confirm'])
     ->middleware(['auth', 'verified'])
     ->name('team-invitations.confirm');
+
+// Email previews: a developer tool, so it only exists on a local machine
+if (app()->isLocal()) {
+    Route::get('dev/emails', [EmailPreviewController::class, 'index'])->name('dev.emails.index');
+    Route::get('dev/emails/{email}', [EmailPreviewController::class, 'show'])->name('dev.emails.show');
+}
 
 require __DIR__.'/settings.php';
