@@ -44,20 +44,34 @@ class SourceControlService
     }
 
     /**
-     * Names of the files and folders at the top of a repository, on one
-     * branch. Empty when the repository or branch can't be read.
+     * The files and folders directly inside one folder of a repository, on
+     * one branch; the top of the repository when no folder is given. Empty
+     * when the repository, branch or folder can't be read.
      *
-     * @return array<int, string>
+     * @return array<int, array{name: string, directory: bool}>
      */
-    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    public function listEntries(SourceControlAccount $account, string $repositoryFullName, string $branch, string $folder = ''): array
     {
         if ($account->provider !== RepositoryProvider::Github) {
-            return $this->client($account->provider)?->listRootEntries($account, $repositoryFullName, $branch) ?? [];
+            return $this->client($account->provider)?->listEntries($account, $repositoryFullName, $branch, $folder) ?? [];
         }
 
-        $response = $this->github($account)->get("https://api.github.com/repos/{$repositoryFullName}/contents", ['ref' => $branch]);
+        $response = $this->github($account)->get(
+            "https://api.github.com/repos/{$repositoryFullName}/contents".($folder === '' ? '' : "/{$folder}"),
+            ['ref' => $branch],
+        );
 
-        return $response->successful() ? $response->collect()->pluck('name')->all() : [];
+        // A path that is a file answers with one object rather than a list.
+        if (! $response->successful() || ! array_is_list($response->json() ?? [])) {
+            return [];
+        }
+
+        return $response->collect()
+            ->map(fn (array $entry): array => [
+                'name' => (string) $entry['name'],
+                'directory' => ($entry['type'] ?? null) === 'dir',
+            ])
+            ->all();
     }
 
     /**

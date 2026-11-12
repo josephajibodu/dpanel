@@ -102,7 +102,12 @@ it('denies access to repositories for another users source control account', fun
 it('says what a repository is built with, read from its files', function () {
     Http::preventStrayRequests();
     Http::fake([
-        'api.github.com/repos/acme/shop/contents?ref=main' => Http::response([['name' => 'package.json'], ['name' => 'yarn.lock']]),
+        'api.github.com/repos/acme/shop/contents?ref=main' => Http::response([
+            ['name' => '.github', 'type' => 'dir'],
+            ['name' => 'api', 'type' => 'dir'],
+            ['name' => 'package.json', 'type' => 'file'],
+            ['name' => 'yarn.lock', 'type' => 'file'],
+        ]),
         'api.github.com/repos/acme/shop/contents/package.json?ref=main' => Http::response(json_encode([
             'scripts' => ['build' => 'react-scripts build'],
             'dependencies' => ['react' => '^18.0.0', 'react-scripts' => '5.0.1'],
@@ -117,18 +122,57 @@ it('says what a repository is built with, read from its files', function () {
         'branch' => 'main',
     ]));
 
-    $response->assertOk()->assertExactJson(['detected' => [
-        'framework' => 'react',
-        'directory' => '/build',
-        'package_manager' => 'yarn',
-        'build_command' => 'yarn build',
-        'single_page_app' => true,
-    ]]);
+    $response->assertOk()->assertExactJson([
+        'detected' => [
+            'framework' => 'react',
+            'directory' => '/build',
+            'package_manager' => 'yarn',
+            'build_command' => 'yarn build',
+            'single_page_app' => true,
+        ],
+        'folders' => ['api'],
+    ]);
 });
+
+it('says what the app in one folder of a repository is built with', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.github.com/repos/acme/shop/contents?ref=main' => Http::response([['name' => 'api', 'type' => 'dir'], ['name' => 'web', 'type' => 'dir']]),
+        'api.github.com/repos/acme/shop/contents/api?ref=main' => Http::response([['name' => 'composer.json', 'type' => 'file']]),
+        'api.github.com/repos/acme/shop/contents/api/composer.json?ref=main' => Http::response(json_encode(['require' => ['laravel/framework' => '^13.0']])),
+    ]);
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        'branch' => 'main',
+        'folder' => 'api',
+    ]));
+
+    $response->assertOk()
+        ->assertJsonPath('detected.framework', 'laravel')
+        ->assertJsonPath('folders', ['api', 'web']);
+});
+
+it('only looks one folder deep for an app', function (string $folder) {
+    $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
+
+    $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
+        'team' => $this->team,
+        'sourceControlAccount' => $account,
+        'repository' => 'acme/shop',
+        'branch' => 'main',
+        'folder' => $folder,
+    ]));
+
+    $response->assertJsonValidationErrorFor('folder');
+})->with(['apps/web', '..', '../other']);
 
 it('answers with nothing detected for a repository it does not recognise', function () {
     Http::preventStrayRequests();
-    Http::fake(['api.github.com/repos/acme/notes/contents?ref=main' => Http::response([['name' => 'README.md']])]);
+    Http::fake(['api.github.com/repos/acme/notes/contents?ref=main' => Http::response([['name' => 'README.md', 'type' => 'file']])]);
     $account = SourceControlAccount::factory()->forUser($this->user)->github()->create();
 
     $response = $this->actingAs($this->user)->getJson(route('source-control.framework', [
@@ -138,7 +182,7 @@ it('answers with nothing detected for a repository it does not recognise', funct
         'branch' => 'main',
     ]));
 
-    $response->assertOk()->assertExactJson(['detected' => null]);
+    $response->assertOk()->assertExactJson(['detected' => null, 'folders' => []]);
 });
 
 it('denies guest access to framework detection', function () {

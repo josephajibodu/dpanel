@@ -26,12 +26,13 @@ interface SourceControlClientContract
     public function listBranches(SourceControlAccount $account, string $repositoryFullName): Collection;
 
     /**
-     * Names of the files and folders at the top of a repository, on one
-     * branch. Empty when the repository or branch can't be read.
+     * The files and folders directly inside one folder of a repository, on
+     * one branch; the top of the repository when no folder is given. Empty
+     * when the repository, branch or folder can't be read.
      *
-     * @return array<int, string>
+     * @return array<int, array{name: string, directory: bool}>
      */
-    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array;
+    public function listEntries(SourceControlAccount $account, string $repositoryFullName, string $branch, string $folder = ''): array;
 
     /**
      * What one file in a repository holds on one branch, or null when the

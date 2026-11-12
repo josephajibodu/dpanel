@@ -48,10 +48,15 @@ class GitlabClient implements SourceControlClientContract
             ]);
     }
 
-    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    public function listEntries(SourceControlAccount $account, string $repositoryFullName, string $branch, string $folder = ''): array
     {
-        return $this->paginate($account, "/projects/{$this->projectId($repositoryFullName)}/repository/tree", ['ref' => $branch])
-            ->map(fn (array $entry): string => (string) $entry['name'])
+        $query = $folder === '' ? ['ref' => $branch] : ['ref' => $branch, 'path' => $folder];
+
+        return $this->paginate($account, "/projects/{$this->projectId($repositoryFullName)}/repository/tree", $query)
+            ->map(fn (array $entry): array => [
+                'name' => (string) $entry['name'],
+                'directory' => ($entry['type'] ?? null) === 'tree',
+            ])
             ->all();
     }
 

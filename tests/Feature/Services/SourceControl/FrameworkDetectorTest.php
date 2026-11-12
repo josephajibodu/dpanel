@@ -5,28 +5,42 @@ use App\Services\SourceControl\FrameworkDetector;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Look at a GitHub repository (acme/app, branch main) holding the given
- * top-level files and say what was detected. A file's value is its
- * contents; an array is stored as JSON. Any file the fake repository
- * doesn't hold, and any other request, fails the test.
+ * Fake one folder of a GitHub repository (acme/app, branch main): its
+ * listing and the files in it. A name ending in a slash is a folder; any
+ * other value is the file's contents, with an array stored as JSON.
  *
- * @param  array<string, array<mixed>|string>  $files
+ * @param  array<string, array<mixed>|string>  $entries
+ * @return array<string, mixed>
+ */
+function fakeGithubFolder(array $entries, string $folder = ''): array
+{
+    $path = 'api.github.com/repos/acme/app/contents'.($folder === '' ? '' : "/{$folder}");
+
+    return [
+        "{$path}?ref=main" => Http::response(collect($entries)->keys()->map(fn (string $name): array => [
+            'name' => rtrim($name, '/'),
+            'type' => str_ends_with($name, '/') ? 'dir' : 'file',
+        ])->all()),
+        ...collect($entries)
+            ->reject(fn (array|string $contents, string $name): bool => str_ends_with($name, '/'))
+            ->mapWithKeys(fn (array|string $contents, string $name): array => [
+                "{$path}/{$name}?ref=main" => Http::response(is_array($contents) ? json_encode($contents) : $contents),
+            ])->all(),
+    ];
+}
+
+/**
+ * Say what was detected at the top of a repository holding the given
+ * entries. Any request for something the fake repository doesn't hold
+ * fails the test.
+ *
+ * @param  array<string, array<mixed>|string>  $entries
  * @return array<string, mixed>|null
  */
-function detectFrameworkOf(array $files): ?array
+function detectFrameworkOf(array $entries): ?array
 {
     Http::preventStrayRequests();
-
-    Http::fake([
-        'api.github.com/repos/acme/app/contents?ref=main' => Http::response(
-            collect($files)->keys()->map(fn (string $name): array => ['name' => $name])->all(),
-        ),
-        ...collect($files)->mapWithKeys(fn (array|string $contents, string $name): array => [
-            "api.github.com/repos/acme/app/contents/{$name}?ref=main" => Http::response(
-                is_array($contents) ? json_encode($contents) : $contents,
-            ),
-        ])->all(),
-    ]);
+    Http::fake(fakeGithubFolder($entries));
 
     return app(FrameworkDetector::class)
         ->detect(SourceControlAccount::factory()->github()->create(), 'acme/app', 'main')
@@ -111,6 +125,47 @@ it('runs Eleventy directly when the project has no build script', function () {
     expect($detected['framework'])->toBe('eleventy')
         ->and($detected['directory'])->toBe('/_site')
         ->and($detected['build_command'])->toBe('npx @11ty/eleventy');
+});
+
+it('detects the app in a chosen folder, using the lockfile at the top of the repository', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        ...fakeGithubFolder(['backend/' => '', 'frontend/' => '', 'pnpm-lock.yaml' => '', 'README.md' => '']),
+        ...fakeGithubFolder([
+            'package.json' => ['scripts' => ['build' => 'vite build'], 'dependencies' => ['react' => '^19.0.0']],
+            'index.html' => '',
+        ], 'frontend'),
+    ]);
+
+    $detected = app(FrameworkDetector::class)
+        ->detect(SourceControlAccount::factory()->github()->create(), 'acme/app', 'main', 'frontend')
+        ->toArray();
+
+    expect($detected['framework'])->toBe('react')
+        ->and($detected['directory'])->toBe('/dist')
+        ->and($detected['package_manager'])->toBe('pnpm')
+        ->and($detected['build_command'])->toBe('pnpm run build');
+});
+
+it('detects a PHP app in a chosen folder', function () {
+    Http::preventStrayRequests();
+    Http::fake(fakeGithubFolder(['artisan' => '', 'composer.json' => ['require' => ['laravel/framework' => '^13.0']]], 'backend'));
+
+    $detected = app(FrameworkDetector::class)
+        ->detect(SourceControlAccount::factory()->github()->create(), 'acme/app', 'main', 'backend')
+        ->toArray();
+
+    expect($detected['framework'])->toBe('laravel')
+        ->and($detected['directory'])->toBe('/public');
+});
+
+it('lists the folders an app could be in, leaving out files, hidden folders and names a site cannot use', function () {
+    Http::preventStrayRequests();
+    Http::fake(fakeGithubFolder(['.github/' => '', 'backend/' => '', 'frontend/' => '', 'old site/' => '', 'README.md' => '']));
+
+    $folders = app(FrameworkDetector::class)->folders(SourceControlAccount::factory()->github()->create(), 'acme/app', 'main');
+
+    expect($folders)->toBe(['backend', 'frontend']);
 });
 
 it('reads where an Angular app is built from angular.json', function (array $build, string $directory) {

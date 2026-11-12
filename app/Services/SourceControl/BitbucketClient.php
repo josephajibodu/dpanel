@@ -52,7 +52,7 @@ class BitbucketClient implements SourceControlClientContract
             ]);
     }
 
-    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    public function listEntries(SourceControlAccount $account, string $repositoryFullName, string $branch, string $folder = ''): array
     {
         $commit = $this->commitFor($account, $repositoryFullName, $branch);
 
@@ -60,8 +60,12 @@ class BitbucketClient implements SourceControlClientContract
             return [];
         }
 
-        return $this->paginate($account, "/repositories/{$repositoryFullName}/src/{$commit}/")
-            ->map(fn (array $entry): string => (string) $entry['path'])
+        // The trailing slash asks for a folder's contents; each entry's path is from the top of the repository.
+        return $this->paginate($account, "/repositories/{$repositoryFullName}/src/{$commit}/".($folder === '' ? '' : "{$folder}/"))
+            ->map(fn (array $entry): array => [
+                'name' => basename((string) $entry['path']),
+                'directory' => ($entry['type'] ?? null) === 'commit_directory',
+            ])
             ->all();
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\SourceControl\SyncRepositoriesAction;
 use App\Enums\RepositoryProvider;
 use App\Http\Resources\SourceControlAccountResource;
+use App\Models\Site;
 use App\Models\SourceControlAccount;
 use App\Models\SourceControlRepository;
 use App\Models\Team;
@@ -264,6 +265,8 @@ HTML;
     /**
      * Look at a repository's files and say what it is built with, so the
      * create-site page can fill in the framework, web directory and build.
+     * `folder` looks at an app kept in one of the repository's top-level
+     * folders, which are listed in the answer.
      */
     public function framework(
         Request $request,
@@ -280,10 +283,12 @@ HTML;
 
         $validated = $request->validate([
             'branch' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
+            'folder' => ['nullable', 'string', 'max:100', 'regex:'.Site::APP_DIRECTORY_PATTERN],
         ]);
 
         return response()->json([
-            'detected' => $detector->detect($sourceControlAccount, $repository, $validated['branch'])?->toArray(),
+            'detected' => $detector->detect($sourceControlAccount, $repository, $validated['branch'], $validated['folder'] ?? '')?->toArray(),
+            'folders' => $detector->folders($sourceControlAccount, $repository, $validated['branch']),
         ]);
     }
 }

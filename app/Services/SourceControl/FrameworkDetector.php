@@ -9,11 +9,12 @@ use App\Models\SourceControlAccount;
 use App\Services\SourceControlService;
 
 /**
- * Works out what a repository is built with from the files at its top
- * level: which framework, which folder to serve, and how to build it.
+ * Works out what an app in a repository is built with from the files in
+ * its folder: which framework, which folder to serve, and how to build it.
+ * The app is at the top of the repository unless a folder is given.
  *
- * It reads the list of top-level files, then only the one or two files that
- * settle the answer (composer.json, package.json, angular.json).
+ * It reads the list of files in the app's folder, then only the one or two
+ * files that settle the answer (composer.json, package.json, angular.json).
  */
 class FrameworkDetector
 {
@@ -33,44 +34,85 @@ class FrameworkDetector
         'bun.lock' => 'bun',
     ];
 
+    /**
+     * Folder listings already fetched for this request, by repository,
+     * branch and folder.
+     *
+     * @var array<string, array<int, array{name: string, directory: bool}>>
+     */
+    private array $listings = [];
+
     public function __construct(
         private SourceControlService $sourceControl,
     ) {}
 
     /**
-     * Null when the repository can't be read or nothing in it is recognised.
+     * The folders at the top of a repository that could hold an app, for
+     * repositories that keep more than one. Hidden folders such as .github
+     * are left out, and so are names a site can't have as its app directory.
+     *
+     * @return array<int, string>
      */
-    public function detect(SourceControlAccount $account, string $repository, string $branch): ?DetectedFramework
+    public function folders(SourceControlAccount $account, string $repository, string $branch): array
     {
-        $entries = $this->sourceControl->listRootEntries($account, $repository, $branch);
+        return collect($this->entries($account, $repository, $branch))
+            ->filter(fn (array $entry): bool => $entry['directory']
+                && ! str_starts_with($entry['name'], '.')
+                && preg_match(Site::APP_DIRECTORY_PATTERN, $entry['name']) === 1)
+            ->pluck('name')
+            ->values()
+            ->all();
+    }
 
-        $readJson = fn (string $path): array => in_array($path, $entries, true)
-            ? $this->decodeJson($this->sourceControl->readFile($account, $repository, $branch, $path))
-            : [];
+    /**
+     * What the app in one folder of a repository is built with; the top of
+     * the repository when no folder is given. Null when the folder can't be
+     * read or nothing in it is recognised.
+     */
+    public function detect(SourceControlAccount $account, string $repository, string $branch, string $folder = ''): ?DetectedFramework
+    {
+        $files = array_column($this->entries($account, $repository, $branch, $folder), 'name');
 
-        if (array_intersect(self::WORDPRESS_FILES, $entries) !== []) {
+        $read = fn (string $file): ?string => in_array($file, $files, true)
+            ? $this->sourceControl->readFile($account, $repository, $branch, ltrim("{$folder}/{$file}", '/'))
+            : null;
+
+        if (array_intersect(self::WORDPRESS_FILES, $files) !== []) {
             return $this->withoutBuild(Framework::WordPress);
         }
 
-        if (in_array('composer.json', $entries, true)) {
-            return $this->withoutBuild($this->phpFramework($readJson('composer.json')));
+        if (in_array('composer.json', $files, true)) {
+            return $this->withoutBuild($this->phpFramework($this->decodeJson($read('composer.json'))));
         }
 
-        if (in_array('index.php', $entries, true)) {
+        if (in_array('index.php', $files, true)) {
             return $this->withoutBuild(Framework::Php);
         }
 
-        $detected = $this->detectFromPackageJson($readJson('package.json'), $entries, $readJson);
+        // A workspace keeps one lockfile at the top of the repository for
+        // every app in it, so that is looked at too.
+        $lockfileCandidates = $folder === '' ? $files : [...$files, ...array_column($this->entries($account, $repository, $branch), 'name')];
+
+        $detected = $this->detectFromPackageJson($this->decodeJson($read('package.json')), $files, $lockfileCandidates, $read);
 
         if ($detected !== null) {
             return $detected;
         }
 
-        if (in_array('index.html', $entries, true)) {
+        if (in_array('index.html', $files, true)) {
             return new DetectedFramework(Framework::StaticHtml, Framework::StaticHtml->defaultDirectory(), packageManager: 'none');
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, array{name: string, directory: bool}>
+     */
+    private function entries(SourceControlAccount $account, string $repository, string $branch, string $folder = ''): array
+    {
+        return $this->listings["{$repository}@{$branch}:{$folder}"]
+            ??= $this->sourceControl->listEntries($account, $repository, $branch, $folder);
     }
 
     private function withoutBuild(Framework $framework): DetectedFramework
@@ -94,10 +136,11 @@ class FrameworkDetector
 
     /**
      * @param  array<string, mixed>  $package
-     * @param  array<int, string>  $entries
-     * @param  callable(string): array<string, mixed>  $readJson
+     * @param  array<int, string>  $files  Names in the app's folder.
+     * @param  array<int, string>  $lockfileCandidates  Names to look for a lockfile among.
+     * @param  callable(string): ?string  $read  Reads a file in the app's folder.
      */
-    private function detectFromPackageJson(array $package, array $entries, callable $readJson): ?DetectedFramework
+    private function detectFromPackageJson(array $package, array $files, array $lockfileCandidates, callable $read): ?DetectedFramework
     {
         $dependencies = [
             ...(is_array($package['dependencies'] ?? null) ? $package['dependencies'] : []),
@@ -111,8 +154,8 @@ class FrameworkDetector
             return null;
         }
 
-        // Site generators come first: they are built on React or Vue, so
-        // those packages are in their projects too.
+        // Frameworks built on React or Vue come first, because those
+        // packages are in their projects too.
         $framework = match (true) {
             $uses('@docusaurus/core') => Framework::Docusaurus,
             $uses('vitepress') => Framework::VitePress,
@@ -137,18 +180,21 @@ class FrameworkDetector
             // Create React App and SvelteKit build to /build; Vite builds to /dist.
             $framework === Framework::React && $uses('react-scripts'),
             $framework === Framework::Svelte && $uses('@sveltejs/kit') => '/build',
-            $framework === Framework::Angular => $this->angularDirectory($readJson('angular.json')),
+            $framework === Framework::Angular => $this->angularDirectory($this->decodeJson($read('angular.json'))),
             $vitePressBuild !== null => '/'.ltrim($vitePressBuild['root'].'/.vitepress/dist', '/'),
             default => $framework->defaultDirectory(),
         };
 
-        $packageManager = collect(self::LOCKFILES)->first(fn (string $manager, string $lockfile): bool => in_array($lockfile, $entries, true)) ?? 'npm';
+        $packageManager = collect(self::LOCKFILES)->first(fn (string $manager, string $lockfile): bool => in_array($lockfile, $lockfileCandidates, true)) ?? 'npm';
 
-        $buildScript = $vitePressBuild['script'] ?? (array_key_exists('build', $scripts) ? 'build' : null);
+        $buildScript = match (true) {
+            $vitePressBuild !== null => $vitePressBuild['script'],
+            default => array_key_exists('build', $scripts) ? 'build' : null,
+        };
 
         $buildCommand = match (true) {
             $buildScript !== null => $this->runScript($packageManager, $buildScript),
-            // Eleventy projects often have no build script and run its command directly.
+            // Projects without the script run the framework's own command.
             $framework === Framework::Eleventy => 'npx @11ty/eleventy',
             default => $this->runScript($packageManager, 'build'),
         };

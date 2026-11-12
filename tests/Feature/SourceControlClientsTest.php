@@ -58,8 +58,20 @@ it('reads the top-level files and one file of a gitlab project on a branch', fun
 
     $service = app(SourceControlService::class);
 
-    expect($service->listRootEntries($account, 'acme/web/app', 'release/2.0'))->toBe(['src', 'package.json'])
-        ->and($service->readFile($account, 'acme/web/app', 'release/2.0', 'docs/package.json'))->toBe('{"name":"app"}');
+    expect($service->listEntries($account, 'acme/web/app', 'release/2.0'))->toBe([
+        ['name' => 'src', 'directory' => true],
+        ['name' => 'package.json', 'directory' => false],
+    ])->and($service->readFile($account, 'acme/web/app', 'release/2.0', 'docs/package.json'))->toBe('{"name":"app"}');
+});
+
+it('lists the files inside one folder of a gitlab project', function () {
+    Http::fake(['gitlab.com/api/v4/projects/acme%2Fapp/repository/tree?ref=main&path=frontend*' => Http::response([
+        ['name' => 'package.json', 'path' => 'frontend/package.json', 'type' => 'blob'],
+    ])]);
+
+    $entries = app(SourceControlService::class)->listEntries(SourceControlAccount::factory()->gitlab()->create(), 'acme/app', 'main', 'frontend');
+
+    expect($entries)->toBe([['name' => 'package.json', 'directory' => false]]);
 });
 
 it('reads a missing gitlab file as null', function () {
@@ -174,8 +186,24 @@ it('reads the top-level files and one file of a bitbucket repository on a branch
 
     $service = app(SourceControlService::class);
 
-    expect($service->listRootEntries($account, 'acme/app', 'main'))->toBe(['src', 'package.json'])
-        ->and($service->readFile($account, 'acme/app', 'main', 'package.json'))->toBe('{"name":"app"}');
+    expect($service->listEntries($account, 'acme/app', 'main'))->toBe([
+        ['name' => 'src', 'directory' => true],
+        ['name' => 'package.json', 'directory' => false],
+    ])->and($service->readFile($account, 'acme/app', 'main', 'package.json'))->toBe('{"name":"app"}');
+});
+
+it('lists the files inside one folder of a bitbucket repository by their own names', function () {
+    Http::fake(['api.bitbucket.org/2.0/repositories/acme/app/src/main/frontend/?*' => Http::response(['values' => [
+        ['path' => 'frontend/package.json', 'type' => 'commit_file'],
+        ['path' => 'frontend/src', 'type' => 'commit_directory'],
+    ]])]);
+
+    $entries = app(SourceControlService::class)->listEntries(SourceControlAccount::factory()->bitbucket()->create(), 'acme/app', 'main', 'frontend');
+
+    expect($entries)->toBe([
+        ['name' => 'package.json', 'directory' => false],
+        ['name' => 'src', 'directory' => true],
+    ]);
 });
 
 it('reads a bitbucket branch with a slash in its name by its latest commit', function () {
@@ -195,7 +223,7 @@ it('reads nothing from a bitbucket branch that does not exist', function () {
 
     $service = app(SourceControlService::class);
 
-    expect($service->listRootEntries($account, 'acme/app', 'gone/away'))->toBe([])
+    expect($service->listEntries($account, 'acme/app', 'gone/away'))->toBe([])
         ->and($service->readFile($account, 'acme/app', 'gone/away', 'package.json'))->toBeNull();
 });
 
