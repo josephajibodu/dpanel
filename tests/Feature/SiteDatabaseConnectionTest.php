@@ -450,6 +450,54 @@ describe('LaravelSiteProvisioner env injection', function () {
         expect($appUrlCall)->toContain('APP_URL=https://app.flitops.xyz');
         expect($appUrlCall)->not->toContain('\\/');
     });
+
+    it('quotes a database password containing # so Laravel reads all of it', function () {
+        Event::fake([ServerSitesUpdated::class]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $this->server->id,
+            'name' => 'myapp_db',
+            'status' => 'ready',
+        ]);
+
+        DatabaseUser::factory()->create([
+            'server_id' => $this->server->id,
+            'username' => 'artisan',
+            'password' => 'Ab3#xy$z',
+            'databases' => ['myapp_db'],
+        ]);
+
+        $site = Site::factory()->forServer($this->server)->pending()->create([
+            'repository' => null,
+            'source_control_account_id' => null,
+            'project_type' => ProjectType::Laravel,
+            'server_database_id' => $database->id,
+            'domain' => 'myapp.example.com',
+        ]);
+        $site->deployScript()->create(['script' => 'echo "test"']);
+
+        $execCalls = [];
+        $mockConnection = Mockery::mock(SshConnection::class)->makePartial();
+        $mockConnection->shouldReceive('exec')
+            ->andReturnUsing(function (string $cmd) use (&$execCalls) {
+                $execCalls[] = $cmd;
+
+                return str_contains($cmd, 'nginx -t') ? 'syntax is ok' : '';
+            });
+        $mockConnection->shouldReceive('disconnect')->andReturn(null);
+
+        $sshService = Mockery::mock(SshService::class);
+        $sshService->shouldReceive('connect')->once()->andReturn($mockConnection);
+        $this->app->instance(SshService::class, $sshService);
+
+        app(ProvisionSiteAction::class)->execute($site);
+
+        $passwordCall = collect($execCalls)->first(fn ($c) => str_contains($c, 'DB_PASSWORD'));
+
+        expect($passwordCall)
+            ->toContain('s#^DB_PASSWORD=.*#DB_PASSWORD="Ab3\\#xy\\\\$z"#')
+            ->toContain('DB_PASSWORD="Ab3#xy\\$z"');
+    });
 });
 
 // --------------------------------------------------------------------------

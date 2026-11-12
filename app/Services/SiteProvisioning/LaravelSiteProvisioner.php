@@ -2,11 +2,14 @@
 
 namespace App\Services\SiteProvisioning;
 
+use App\Actions\Database\EscapesShell;
 use App\Enums\SiteProvisioningStep;
 use App\Models\DatabaseUser;
 
 class LaravelSiteProvisioner extends BaseSiteProvisioner
 {
+    use EscapesShell;
+
     public function steps(): array
     {
         return SiteProvisioningStep::enumCasesForProjectType($this->site->project_type);
@@ -131,14 +134,32 @@ class LaravelSiteProvisioner extends BaseSiteProvisioner
      */
     private function sedEnv(string $envPath, string $key, string $value): void
     {
-        $escapedValue = str_replace(['\\', '#', '&'], ['\\\\', '\\#', '\\&'], $value);
+        $line = $this->envLine($key, $value);
+        $sedReplacement = str_replace(['\\', '&', '#'], ['\\\\', '\\&', '\\#'], $line);
+        $sedScript = $this->escapeForShell("s#^{$key}=.*#{$sedReplacement}#");
 
         $this->runAsOwner(
             "if [ -f {$envPath} ] && grep -q '^{$key}=' {$envPath}; then "
-            ."sed -i 's#^{$key}=.*#{$key}={$escapedValue}#' {$envPath}; "
+            ."sed -i {$sedScript} {$envPath}; "
             ."elif [ -f {$envPath} ]; then "
-            ."echo '{$key}={$value}' >> {$envPath}; fi"
+            ."printf '%s\\n' {$this->escapeForShell($line)} >> {$envPath}; fi"
         );
+    }
+
+    /**
+     * A `KEY=value` line Laravel reads back exactly. Plain values stay bare;
+     * anything else is double-quoted, since an unquoted `#` starts a comment
+     * and would cut a generated password short.
+     */
+    private function envLine(string $key, string $value): string
+    {
+        if (preg_match('/^[A-Za-z0-9_.:\/@+=,-]*$/', $value) === 1) {
+            return "{$key}={$value}";
+        }
+
+        $quotedValue = str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\\$'], $value);
+
+        return "{$key}=\"{$quotedValue}\"";
     }
 
     protected function setPermissions(): void
