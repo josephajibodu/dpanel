@@ -331,7 +331,7 @@ acme.sh is the tool that requests the shared `*.flitops.xyz` certificate. It has
 **[Server, as `artisan`]** Replace `<your email>` with your address (certificate expiry warnings go there):
 
 ```bash
-sudo -u flitops_com -H bash -c 'curl https://get.acme.sh | sh -s email=<your email>'
+sudo -u flitops_com -H bash -c 'cd ~ && curl https://get.acme.sh | sh -s email=<your email>'
 ```
 
 **[Server, as `artisan`]** Check it installed. This must print the path back, not "No such file". It is the same path as `ACME_BINARY` in B4:
