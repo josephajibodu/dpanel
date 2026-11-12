@@ -45,8 +45,6 @@ export const plans: PlanDetails[] = [
         highlights: [
             'Unlimited servers',
             'Scheduled database backups',
-            'Queue workers and cron jobs',
-            'Wildcard certificates',
             'Uptime monitoring',
             'Email support',
         ],

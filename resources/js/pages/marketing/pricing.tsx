@@ -18,8 +18,8 @@ type BillingPeriod = 'monthly' | 'yearly';
 /** The sign-up button on each plan's card. */
 const ctas: Record<PlanKey, string> = {
     hobby: 'Start for free',
-    pro: 'Start 14-day trial',
-    team: 'Start 14-day trial',
+    pro: 'Get started',
+    team: 'Get started',
 };
 
 /** The plan the page points most visitors to. */
@@ -37,7 +37,6 @@ const comparisonRows: {
     { label: 'Team members', values: ['1', '1', 'Unlimited'] },
     { label: 'Zero-downtime deploys and rollback', values: [true, true, true] },
     { label: "Let's Encrypt SSL", values: [true, true, true] },
-    { label: 'Wildcard certificates', values: [false, true, true] },
     { label: 'Database backups to S3 or R2', values: [false, true, true] },
     { label: 'Queue workers and cron jobs', values: [true, true, true] },
     { label: 'Uptime and certificate monitoring', values: [false, true, true] },
@@ -53,7 +52,7 @@ const faqs: FaqItem[] = [
     },
     {
         question: 'Do I need a card to start?',
-        answer: 'No. The Hobby plan is free with no card, and the trials on Pro and Team do not ask for payment details until you decide to continue.',
+        answer: 'No. The Hobby plan is free and never asks for a card.',
     },
     {
         question: 'Can I change plans later?',

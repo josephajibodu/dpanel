@@ -91,11 +91,6 @@ const featureGroups = [
                     "Free Let's Encrypt certificates for every domain, issued once DNS is verified.",
             },
             {
-                title: 'Wildcard domains',
-                description:
-                    'Issue wildcard certificates and distribute them to every site that needs them.',
-            },
-            {
                 title: 'Renewal you can trust',
                 description:
                     'Renewals run well ahead of expiry, and you are alerted if a certificate ever needs attention.',
