@@ -2,6 +2,7 @@
 
 namespace App\Data;
 
+use App\Enums\Framework;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 
@@ -21,6 +22,7 @@ readonly class SiteData
         public RepositoryProvider $repositoryProvider = RepositoryProvider::Github,
         public string $branch = 'main',
         public ProjectType $projectType = ProjectType::Laravel,
+        public Framework $framework = Framework::Laravel,
         public string $phpVersion = '8.3',
         public ?int $serverDatabaseId = null,
         public ?string $packageManager = null,
@@ -35,6 +37,13 @@ readonly class SiteData
      */
     public static function from(array $data): self
     {
+        $framework = isset($data['framework']) ? Framework::from($data['framework']) : null;
+
+        // A framework decides its own project type; without one the site is
+        // described by the project type alone.
+        $projectType = $framework?->projectType()
+            ?? (isset($data['project_type']) ? ProjectType::from($data['project_type']) : ProjectType::Laravel);
+
         return new self(
             serverId: $data['server_id'],
             domain: $data['domain'] ?? null,
@@ -47,9 +56,8 @@ readonly class SiteData
                 ? RepositoryProvider::from($data['repository_provider'])
                 : RepositoryProvider::Github,
             branch: $data['branch'] ?? 'main',
-            projectType: isset($data['project_type'])
-                ? ProjectType::from($data['project_type'])
-                : ProjectType::Laravel,
+            projectType: $projectType,
+            framework: $framework ?? Framework::fromProjectType($projectType),
             phpVersion: $data['php_version'] ?? '8.3',
             serverDatabaseId: $data['server_database_id'] ?? null,
             packageManager: $data['package_manager'] ?? null,
@@ -76,6 +84,7 @@ readonly class SiteData
             'repository_provider' => $this->repositoryProvider->value,
             'branch' => $this->branch,
             'project_type' => $this->projectType->value,
+            'framework' => $this->framework->value,
             'php_version' => $this->phpVersion,
             'server_database_id' => $this->serverDatabaseId,
             'package_manager' => $this->packageManager,

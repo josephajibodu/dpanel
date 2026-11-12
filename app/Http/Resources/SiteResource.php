@@ -41,6 +41,8 @@ class SiteResource extends JsonResource
             'branch' => $this->branch,
             'project_type' => $this->project_type?->value,
             'project_type_label' => $this->project_type?->label(),
+            'framework' => $this->resolvedFramework()?->value,
+            'framework_label' => $this->resolvedFramework()?->label(),
             'php_version' => $this->php_version,
             'php_binary' => $this->php_version ? "php{$this->php_version}" : null,
             'fpm_socket' => $this->php_version ? $this->phpFpmSocket($this->php_version) : null,

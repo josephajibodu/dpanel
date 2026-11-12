@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
+use App\Enums\Framework;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
@@ -38,6 +39,7 @@ class Site extends Model
         'repository_provider',
         'branch',
         'project_type',
+        'framework',
         'server_database_id',
         'php_version',
         'package_manager',
@@ -77,6 +79,7 @@ class Site extends Model
             'status' => SiteStatus::class,
             'provisioning_step' => SiteProvisioningStep::class,
             'project_type' => ProjectType::class,
+            'framework' => Framework::class,
             'repository_provider' => RepositoryProvider::class,
             'aliases' => 'array',
             'auto_deploy' => 'boolean',
@@ -88,6 +91,13 @@ class Site extends Model
             'uptime_checked_at' => 'datetime',
         ];
     }
+
+    /**
+     * What a web directory may look like: a path from the repository's top
+     * folder. Dots are allowed for folders such as `.vitepress/dist`, but
+     * never `..`, which would climb out of the release.
+     */
+    public const DIRECTORY_PATTERN = '/^\/(?!.*\.\.)[a-zA-Z0-9\/_.-]*$/';
 
     /**
      * File types a single-page app's build produces. A request for one that
@@ -123,6 +133,19 @@ class Site extends Model
     public function creationFailed(): bool
     {
         return $this->status === SiteStatus::Failed && $this->error_message !== null;
+    }
+
+    /**
+     * What the site is built with. Sites created before frameworks existed
+     * have none stored and are described by their project type.
+     */
+    public function resolvedFramework(): ?Framework
+    {
+        if ($this->framework !== null) {
+            return $this->framework;
+        }
+
+        return $this->project_type ? Framework::fromProjectType($this->project_type) : null;
     }
 
     /**

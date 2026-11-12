@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Framework;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Models\Server;
@@ -58,7 +59,7 @@ class StoreSiteRequest extends FormRequest
                 'max:255',
                 'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/',
             ],
-            'directory' => ['sometimes', 'string', 'max:255', 'regex:/^\/[a-zA-Z0-9\/_-]*$/'],
+            'directory' => ['sometimes', 'string', 'max:255', 'regex:'.Site::DIRECTORY_PATTERN],
             'repository' => [
                 'nullable',
                 'string',
@@ -73,6 +74,7 @@ class StoreSiteRequest extends FormRequest
             'repository_provider' => ['sometimes', 'string', Rule::enum(RepositoryProvider::class)],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'project_type' => ['sometimes', 'string', Rule::enum(ProjectType::class)],
+            'framework' => ['sometimes', 'string', Rule::enum(Framework::class)],
             'server_database_id' => [
                 'nullable',
                 'integer',
@@ -127,7 +129,7 @@ class StoreSiteRequest extends FormRequest
             'site_name.regex' => 'Site name can only contain letters, numbers, and hyphens.',
             'package_manager.in' => 'Package manager must be one of: none, npm, pnpm, yarn, bun.',
             'aliases.*.regex' => 'Please enter valid domain aliases.',
-            'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
+            'directory.regex' => 'Directory must start with / and contain only letters, numbers, dots, underscores, and hyphens, without "..".',
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
             'server_database_id.exists' => 'The selected database is not on this server or a server connected to it.',

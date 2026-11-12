@@ -48,6 +48,7 @@ class CreateSiteAction
             'repository_provider' => $data->repositoryProvider->value,
             'branch' => $data->branch,
             'project_type' => $data->projectType->value,
+            'framework' => $data->framework->value,
             'server_database_id' => $data->serverDatabaseId,
             'php_version' => $data->phpVersion,
             'package_manager' => $data->packageManager,
@@ -91,7 +92,7 @@ class CreateSiteAction
         }
 
         $site->deployScript()->create([
-            'script' => $data->projectType->defaultDeployScript(),
+            'script' => $data->framework->defaultDeployScript($data->packageManager, $data->buildCommand),
         ]);
 
         CreateSiteJob::dispatch($site);

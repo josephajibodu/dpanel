@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\ConnectionStatus;
+use App\Enums\Framework;
 use App\Enums\NginxFileSection;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\ServerStatus;
 use App\Enums\ServiceType;
+use App\Http\Resources\SiteResource;
 use App\Jobs\CreateSiteJob;
 use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\SyncSiteNginxJob;
@@ -215,6 +217,110 @@ it('creates a static site served as a single-page app', function () {
 
     $this->assertDatabaseHas('sites', ['domain' => 'app.example.com', 'single_page_app' => true]);
     Queue::assertPushed(CreateSiteJob::class);
+});
+
+it('creates a React site as a static site that builds on every deploy', function () {
+    Queue::fake([CreateSiteJob::class]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'react.example.com',
+            'directory' => '/dist',
+            'framework' => Framework::React->value,
+            'package_manager' => 'npm',
+            'build_command' => 'npm run build',
+            'single_page_app' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $site = Site::query()->where('domain', 'react.example.com')->sole();
+
+    expect($site->framework)->toBe(Framework::React)
+        ->and($site->project_type)->toBe(ProjectType::StaticHtml)
+        ->and($site->directory)->toBe('/dist')
+        ->and($site->deployScript->script)->toBe("if [ -f package-lock.json ]; then npm ci; else npm install; fi\n\nnpm run build");
+    Queue::assertPushed(CreateSiteJob::class);
+});
+
+it('remembers a site created by project type alone as that project type\'s framework', function () {
+    Queue::fake([CreateSiteJob::class]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'blog.example.com',
+            'project_type' => ProjectType::WordPress->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('sites', ['domain' => 'blog.example.com', 'project_type' => 'wordpress', 'framework' => 'wordpress']);
+    Queue::assertPushed(CreateSiteJob::class);
+});
+
+it('rejects a framework it does not know', function () {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'next.example.com',
+            'framework' => 'nextjs',
+        ])
+        ->assertSessionHasErrors('framework');
+
+    $this->assertDatabaseMissing('sites', ['domain' => 'next.example.com']);
+});
+
+it('accepts a web directory inside a dot folder', function () {
+    Queue::fake([CreateSiteJob::class]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'docs.example.com',
+            'directory' => '/docs/.vitepress/dist',
+            'framework' => Framework::VitePress->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('sites', ['domain' => 'docs.example.com', 'directory' => '/docs/.vitepress/dist']);
+    Queue::assertPushed(CreateSiteJob::class);
+});
+
+it('rejects a web directory that climbs out of the site with ..', function (string $method, string $directory) {
+    $site = Site::factory()->forServer($this->server)->create(['directory' => '/public']);
+    $sites = "/{$this->team->slug}/servers/{$this->server->id}/sites";
+
+    $response = $method === 'post'
+        ? $this->actingAs($this->user)->post($sites, ['server_id' => $this->server->id, 'domain' => 'climb.example.com', 'directory' => $directory])
+        : $this->actingAs($this->user)->put("{$sites}/{$site->id}", ['directory' => $directory]);
+
+    $response->assertSessionHasErrors([
+        'directory' => 'Directory must start with / and contain only letters, numbers, dots, underscores, and hyphens, without "..".',
+    ]);
+    $this->assertDatabaseMissing('sites', ['domain' => 'climb.example.com']);
+    expect($site->fresh()->directory)->toBe('/public');
+})->with([
+    'when creating a site' => ['post', '/../../etc'],
+    'when updating a site' => ['put', '/dist/..'],
+]);
+
+it('describes a site from before frameworks existed by its project type', function () {
+    $site = Site::factory()->forServer($this->server)->create(['project_type' => ProjectType::Symfony, 'framework' => null]);
+
+    $resource = (new SiteResource($site))->resolve();
+
+    expect($resource['framework'])->toBe('symfony')
+        ->and($resource['framework_label'])->toBe('Symfony');
+});
+
+it('describes a site by the framework it was created as', function () {
+    $site = Site::factory()->forServer($this->server)->create(['project_type' => ProjectType::StaticHtml, 'framework' => Framework::Astro]);
+
+    $resource = (new SiteResource($site))->resolve();
+
+    expect($resource['framework'])->toBe('astro')
+        ->and($resource['framework_label'])->toBe('Astro');
 });
 
 it('moves an isolated site to its new PHP pool with a regenerated config', function () {

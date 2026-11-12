@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Server;
+use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,7 +39,7 @@ class UpdateSiteRequest extends FormRequest
                     ->orWhere('id', $this->route('site')->source_control_account_id)),
             ],
             'repository' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)+$/'],
-            'directory' => ['sometimes', 'string', 'max:255', 'regex:/^\/[a-zA-Z0-9\/_-]*$/'],
+            'directory' => ['sometimes', 'string', 'max:255', 'regex:'.Site::DIRECTORY_PATTERN],
             'branch' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9_\.\/-]+$/'],
             'php_version' => ['sometimes', 'string', Rule::in($this->getInstalledPhpVersions())],
             'auto_deploy' => ['sometimes', 'boolean'],
@@ -55,7 +56,7 @@ class UpdateSiteRequest extends FormRequest
     {
         return [
             'repository.regex' => 'Repository should be in format: owner/repository.',
-            'directory.regex' => 'Directory must start with / and contain only letters, numbers, underscores, and hyphens.',
+            'directory.regex' => 'Directory must start with / and contain only letters, numbers, dots, underscores, and hyphens, without "..".',
             'branch.regex' => 'Branch name contains invalid characters.',
             'php_version.in' => 'The selected PHP version is not installed on this server.',
         ];
