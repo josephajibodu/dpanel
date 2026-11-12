@@ -22,6 +22,7 @@ use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProcessController;
 use App\Http\Controllers\ServerRuntimeController;
 use App\Http\Controllers\ServerTerminalController;
+use App\Http\Controllers\ServerTransferController;
 use App\Http\Controllers\SiteBackupController;
 use App\Http\Controllers\SiteBackupScheduleController;
 use App\Http\Controllers\SiteCommandRunController;
@@ -377,6 +378,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('servers.settings');
                 Route::delete('servers/{server}/host-key', [ServerHostKeyController::class, 'destroy'])
                     ->name('servers.host-key.destroy');
+                Route::post('servers/{server}/transfer', [ServerTransferController::class, 'store'])
+                    ->name('servers.transfer.store');
 
                 // Terminal (refuses users who can't open it before asking for the password again if it was last confirmed over 15 minutes ago)
                 Route::middleware(['can:openTerminal,server', 'password.confirm:,900'])->group(function () {

@@ -9,11 +9,13 @@ namespace App\Enums;
 enum ActivityEvent: string
 {
     case SiteEnvironmentUpdated = 'site.environment.updated';
+    case ServerTransferred = 'server.transferred';
 
     public function label(): string
     {
         return match ($this) {
             self::SiteEnvironmentUpdated => 'Environment updated',
+            self::ServerTransferred => 'Server transferred',
         };
     }
 }

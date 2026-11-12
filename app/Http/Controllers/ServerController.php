@@ -25,6 +25,7 @@ use App\Jobs\CollectServerMetricsJob;
 use App\Jobs\InstallStackJob;
 use App\Jobs\RestartServiceJob;
 use App\Jobs\TestServerConnectionJob;
+use App\Models\ProviderAccount;
 use App\Models\Server;
 use App\Models\Team;
 use App\Services\ServerNameGenerator;
@@ -238,11 +239,47 @@ class ServerController extends Controller
             'server' => new ServerResource($server),
             'ssh_command' => $sshCommand,
             'has_ssh_key' => $hasSshKey,
+            'transfer_teams' => auth()->user()->can('transfer', $server)
+                ? $this->teamsServerCanMoveTo($team, $server)
+                : null,
             'host_key' => $server->hasPinnedHostKey() ? [
                 'type' => $server->host_key_type,
                 'fingerprint' => $server->host_key_fingerprint,
             ] : null,
         ]);
+    }
+
+    /**
+     * The user's other teams they may add servers to, each with the cloud
+     * accounts the server could be linked to there (none for a custom server).
+     *
+     * @return list<array{slug: string, name: string, provider_accounts: list<array{ulid: string, name: string}>}>
+     */
+    private function teamsServerCanMoveTo(Team $currentTeam, Server $server): array
+    {
+        $user = auth()->user();
+
+        return Team::query()
+            ->whereKeyNot($currentTeam->id)
+            ->where(fn ($query) => $query
+                ->where('user_id', $user->id)
+                ->orWhereHas('users', fn ($members) => $members->whereKey($user->id)))
+            ->with(['providerAccounts' => fn ($accounts) => $accounts
+                ->where('provider', $server->provider)
+                ->where('is_valid', true)
+                ->orderBy('name')])
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Team $team): bool => $user->can('create', [Server::class, $team]))
+            ->map(fn (Team $team): array => [
+                'slug' => $team->slug,
+                'name' => $team->name,
+                'provider_accounts' => $team->providerAccounts
+                    ->map(fn (ProviderAccount $account): array => ['ulid' => $account->ulid, 'name' => $account->name])
+                    ->all(),
+            ])
+            ->values()
+            ->all();
     }
 
     public function destroy(Team $team, Server $server, DeleteServerAction $action): RedirectResponse

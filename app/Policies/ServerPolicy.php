@@ -61,6 +61,15 @@ class ServerPolicy
     }
 
     /**
+     * Determine whether the user can move the server to another team. The
+     * destination team is checked with `create`.
+     */
+    public function transfer(User $user, Server $server): bool
+    {
+        return $user->hasTeamPermission($server->team, TeamPermission::ManageServers);
+    }
+
+    /**
      * Determine whether the user can forget the server's recorded SSH host
      * key, so the next connection trusts whatever key the server presents.
      */

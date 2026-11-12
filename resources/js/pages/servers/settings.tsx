@@ -3,10 +3,18 @@ import { useState } from 'react';
 
 import { destroy as destroyServer } from '@/actions/App/Http/Controllers/ServerController';
 import { destroy as resetHostKey } from '@/actions/App/Http/Controllers/ServerHostKeyController';
+import { store as transferServer } from '@/actions/App/Http/Controllers/ServerTransferController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CopyButton } from '@/components/copy-button';
 import { SettingsSection } from '@/components/settings-section';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
 import { useTeamPath } from '@/hooks/use-team-path';
@@ -20,6 +28,15 @@ interface Props {
     ssh_command: string | null;
     has_ssh_key: boolean;
     host_key: { type: string; fingerprint: string } | null;
+    /** Teams this server can move to. Null when the user can't transfer it. */
+    transfer_teams:
+        | {
+              slug: string;
+              name: string;
+              /** Cloud accounts the server could be linked to in that team. */
+              provider_accounts: { ulid: string; name: string }[];
+          }[]
+        | null;
 }
 
 export default function ServerSettings({
@@ -27,8 +44,9 @@ export default function ServerSettings({
     ssh_command,
     has_ssh_key,
     host_key,
+    transfer_teams,
 }: Props) {
-    const { currentTeam } = usePage<SharedData>().props;
+    const { currentTeam, errors } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const can = usePermission();
     const server =
@@ -40,6 +58,13 @@ export default function ServerSettings({
     const [isRemoving, setIsRemoving] = useState(false);
     const [resetHostKeyDialogOpen, setResetHostKeyDialogOpen] = useState(false);
     const [isResettingHostKey, setIsResettingHostKey] = useState(false);
+    const [transferTeamSlug, setTransferTeamSlug] = useState('');
+    const [transferAccountUlid, setTransferAccountUlid] = useState('');
+    const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+    const [isTransferring, setIsTransferring] = useState(false);
+    const transferTeam = transfer_teams?.find(
+        (team) => team.slug === transferTeamSlug,
+    );
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -55,6 +80,24 @@ export default function ServerSettings({
                 onFinish: () => {
                     setIsRemoving(false);
                     setRemoveDialogOpen(false);
+                },
+            },
+        );
+    };
+
+    const handleTransfer = () => {
+        setIsTransferring(true);
+        router.post(
+            transferServer.url({ team: teamSlug, server: server.id }),
+            {
+                team: transferTeamSlug,
+                provider_account: isCustom ? null : transferAccountUlid,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsTransferring(false);
+                    setTransferDialogOpen(false);
                 },
             },
         );
@@ -179,6 +222,134 @@ export default function ServerSettings({
                     )}
                 </SettingsSection>
 
+                {transfer_teams && (
+                    <SettingsSection
+                        title="Transfer server"
+                        description="Move this server, with its sites, databases and everything else on it, to another team."
+                    >
+                        {transfer_teams.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                You don&apos;t manage servers in any other team.
+                            </p>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                                    <li>
+                                        Members of this team lose access, and
+                                        their SSH keys are removed unless they
+                                        have server access in the new team.
+                                    </li>
+                                    {!isCustom && (
+                                        <li>
+                                            The new team needs its own{' '}
+                                            {server.provider_label} account for
+                                            the cloud account this server lives
+                                            in. This team&apos;s API key stays
+                                            here.
+                                        </li>
+                                    )}
+                                    <li>
+                                        Backup schedules and backup history are
+                                        removed. Backup files already uploaded
+                                        stay in this team&apos;s storage.
+                                    </li>
+                                </ul>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <Select
+                                        value={transferTeamSlug}
+                                        onValueChange={(slug) => {
+                                            setTransferTeamSlug(slug);
+                                            setTransferAccountUlid('');
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className="sm:w-64"
+                                            aria-label="Team to transfer to"
+                                        >
+                                            <SelectValue placeholder="Choose a team" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {transfer_teams.map((team) => (
+                                                <SelectItem
+                                                    key={team.slug}
+                                                    value={team.slug}
+                                                >
+                                                    {team.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {!isCustom &&
+                                        transferTeam &&
+                                        transferTeam.provider_accounts.length >
+                                            0 && (
+                                            <Select
+                                                value={transferAccountUlid}
+                                                onValueChange={
+                                                    setTransferAccountUlid
+                                                }
+                                            >
+                                                <SelectTrigger
+                                                    className="sm:w-64"
+                                                    aria-label={`${server.provider_label} account in the new team`}
+                                                >
+                                                    <SelectValue
+                                                        placeholder={`Choose a ${server.provider_label} account`}
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {transferTeam.provider_accounts.map(
+                                                        (account) => (
+                                                            <SelectItem
+                                                                key={
+                                                                    account.ulid
+                                                                }
+                                                                value={
+                                                                    account.ulid
+                                                                }
+                                                            >
+                                                                {account.name}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="shrink-0"
+                                        disabled={
+                                            !transferTeam ||
+                                            (!isCustom && !transferAccountUlid)
+                                        }
+                                        onClick={() =>
+                                            setTransferDialogOpen(true)
+                                        }
+                                    >
+                                        Transfer server
+                                    </Button>
+                                </div>
+                                {!isCustom &&
+                                    transferTeam?.provider_accounts.length ===
+                                        0 && (
+                                        <p className="text-sm text-muted-foreground">
+                                            {transferTeam.name} has no{' '}
+                                            {server.provider_label} account. Add
+                                            the account this server was created
+                                            with to that team first.
+                                        </p>
+                                    )}
+                                {(errors?.team ?? errors?.provider_account) && (
+                                    <p className="text-sm text-destructive">
+                                        {errors.team ?? errors.provider_account}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </SettingsSection>
+                )}
+
                 {can('manage_servers') &&
                     (isCustom ? (
                         <SettingsSection
@@ -232,6 +403,16 @@ export default function ServerSettings({
                             </div>
                         </SettingsSection>
                     ))}
+
+                <ConfirmDialog
+                    open={transferDialogOpen}
+                    onOpenChange={setTransferDialogOpen}
+                    title={`Transfer ${server.name} to ${transferTeam?.name}?`}
+                    description={`The server and everything on it moves to ${transferTeam?.name} straight away. Its backup schedules and backup history are removed, and people without server access in ${transferTeam?.name} lose their SSH keys on it.`}
+                    confirmLabel="Transfer server"
+                    loading={isTransferring}
+                    onConfirm={handleTransfer}
+                />
 
                 <ConfirmDialog
                     open={resetHostKeyDialogOpen}
