@@ -42,11 +42,11 @@ import {
 } from '@/components/ui/table';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlansHref } from '@/hooks/use-plan';
 import { useRealtimeFallback } from '@/hooks/use-realtime-fallback';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import { pricing } from '@/routes';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { type Deployment } from '@/types/deployment';
 import type { CronJob, DatabaseConnection, Worker } from '@/types/server';
@@ -78,6 +78,7 @@ export default function SitesShow({
         SharedData & { errors?: Record<string, string> }
     >().props;
     const monitoringLock = plan?.notIncluded.monitoring ?? null;
+    const plansHref = usePlansHref();
     const teamPath = useTeamPath();
     const can = usePermission();
     const server = serverProp?.data ?? serverProp;
@@ -535,7 +536,7 @@ export default function SitesShow({
                                         <span className="inline-flex items-center gap-2">
                                             Not monitored
                                             <Badge variant="secondary" asChild>
-                                                <Link href={pricing()}>
+                                                <Link href={plansHref}>
                                                     {monitoringLock.plan}
                                                 </Link>
                                             </Badge>

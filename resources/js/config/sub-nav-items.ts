@@ -1,4 +1,5 @@
 import { edit as editAppearance } from '@/routes/appearance';
+import { show as showBilling } from '@/routes/billing';
 import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
@@ -85,5 +86,6 @@ export function getSettingsSubNavItems(): SubNavItem[] {
         { title: 'Two-factor auth', href: show.url() },
         { title: 'Appearance', href: editAppearance().url },
         { title: 'Team', href: '/settings/team' },
+        { title: 'Billing', href: showBilling.url() },
     ];
 }

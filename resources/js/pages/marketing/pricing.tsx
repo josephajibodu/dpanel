@@ -7,78 +7,23 @@ import FaqList, { type FaqItem } from '@/components/marketing/faq-list';
 import PageHero from '@/components/marketing/page-hero';
 import SectionHeading from '@/components/marketing/section-heading';
 import { Button } from '@/components/ui/button';
+import { formatPrice, plans, type Currency } from '@/config/plans';
 import MarketingLayout from '@/layouts/marketing-layout';
 import { cn } from '@/lib/utils';
 import { contact, register } from '@/routes';
+import type { PlanKey } from '@/types';
 
 type BillingPeriod = 'monthly' | 'yearly';
 
-type Currency = 'usd' | 'ngn';
-
-/** Monthly price in each currency, with the yearly figure as a per-month rate. */
-type PlanPrice = { monthly: number; yearly: number };
-
-type Plan = {
-    name: string;
-    description: string;
-    prices: Record<Currency, PlanPrice>;
-    cta: string;
-    isFeatured?: boolean;
-    highlights: string[];
+/** The sign-up button on each plan's card. */
+const ctas: Record<PlanKey, string> = {
+    hobby: 'Start for free',
+    pro: 'Start 14-day trial',
+    team: 'Start 14-day trial',
 };
 
-const plans: Plan[] = [
-    {
-        name: 'Hobby',
-        description: 'For side projects and trying flitops on a real server.',
-        prices: {
-            usd: { monthly: 0, yearly: 0 },
-            ngn: { monthly: 0, yearly: 0 },
-        },
-        cta: 'Start for free',
-        highlights: [
-            '1 server',
-            'Unlimited sites and deployments',
-            "Let's Encrypt SSL",
-            'Browser terminal',
-            'Community support',
-        ],
-    },
-    {
-        name: 'Pro',
-        description: 'For developers and freelancers running production apps.',
-        prices: {
-            usd: { monthly: 5, yearly: 4 },
-            ngn: { monthly: 5000, yearly: 4000 },
-        },
-        cta: 'Start 14-day trial',
-        isFeatured: true,
-        highlights: [
-            'Unlimited servers',
-            'Scheduled database backups',
-            'Queue workers and cron jobs',
-            'Wildcard certificates',
-            'Uptime monitoring',
-            'Email support',
-        ],
-    },
-    {
-        name: 'Team',
-        description: 'For agencies and teams sharing a fleet.',
-        prices: {
-            usd: { monthly: 15, yearly: 12 },
-            ngn: { monthly: 15000, yearly: 12000 },
-        },
-        cta: 'Start 14-day trial',
-        highlights: [
-            'Everything in Pro',
-            'Unlimited team members',
-            'Owner, admin, developer, and viewer roles',
-            'Multiple teams for clients',
-            'Priority support',
-        ],
-    },
-];
+/** The plan the page points most visitors to. */
+const featuredPlan: PlanKey = 'pro';
 
 const comparisonRows: {
     label: string;
@@ -124,14 +69,6 @@ const currencyLabels: Record<Currency, string> = {
     usd: 'USD $',
     ngn: 'NGN ₦',
 };
-
-function formatPrice(amount: number, currency: Currency): string {
-    return new Intl.NumberFormat(currency === 'ngn' ? 'en-NG' : 'en-US', {
-        style: 'currency',
-        currency: currency.toUpperCase(),
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
 
 function PlanValue({ value }: { value: string | boolean }) {
     if (value === true) {
@@ -228,20 +165,21 @@ export default function Pricing() {
                 <div className="mx-auto grid max-w-7xl overflow-hidden rounded-2xl border border-border lg:grid-cols-3">
                     {plans.map((plan) => {
                         const price = plan.prices[currency][billingPeriod];
+                        const isFeatured = plan.key === featuredPlan;
 
                         return (
                             <div
                                 key={plan.name}
                                 className={cn(
                                     'flex flex-col border-border p-8 not-last:border-b sm:p-10 lg:not-last:border-r lg:not-last:border-b-0',
-                                    plan.isFeatured && 'bg-muted',
+                                    isFeatured && 'bg-muted',
                                 )}
                             >
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-medium tracking-tight">
                                         {plan.name}
                                     </h2>
-                                    {plan.isFeatured && (
+                                    {isFeatured && (
                                         <span className="rounded-full bg-foreground px-2.5 py-0.5 text-xs font-medium text-background">
                                             Most popular
                                         </span>
@@ -268,12 +206,12 @@ export default function Pricing() {
                                 <Button
                                     asChild
                                     size="lg"
-                                    variant={
-                                        plan.isFeatured ? 'default' : 'outline'
-                                    }
+                                    variant={isFeatured ? 'default' : 'outline'}
                                     className="mt-8 h-12 text-base"
                                 >
-                                    <Link href={register()}>{plan.cta}</Link>
+                                    <Link href={register()}>
+                                        {ctas[plan.key]}
+                                    </Link>
                                 </Button>
 
                                 <ul className="mt-10 space-y-3.5 border-t border-border pt-8">

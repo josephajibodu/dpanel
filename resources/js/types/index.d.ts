@@ -4,7 +4,7 @@ import { type Icon } from '@phosphor-icons/react';
 import { Plan, PlanLock } from './plan';
 import { Team, TeamPermission } from './team';
 
-export type { Plan, PlanFeature, PlanLock } from './plan';
+export type { Plan, PlanFeature, PlanKey, PlanLock } from './plan';
 
 export type {
     Team,

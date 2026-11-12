@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
@@ -32,4 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/team', [TeamController::class, 'showCurrent'])
         ->name('team.settings');
+
+    Route::get('settings/billing', [BillingController::class, 'show'])
+        ->name('billing.show');
 });

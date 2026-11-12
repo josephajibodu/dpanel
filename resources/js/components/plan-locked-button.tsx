@@ -8,7 +8,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { pricing } from '@/routes';
+import { usePlansHref } from '@/hooks/use-plan';
 import { type PlanLock } from '@/types';
 
 /**
@@ -27,6 +27,8 @@ export default function PlanLockedButton({
     size?: ComponentProps<typeof Button>['size'];
     children: ReactNode;
 }) {
+    const plansHref = usePlansHref();
+
     return (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -40,7 +42,7 @@ export default function PlanLockedButton({
             </TooltipTrigger>
             <TooltipContent>
                 {lock.message}{' '}
-                <Link href={pricing()} className="underline underline-offset-2">
+                <Link href={plansHref} className="underline underline-offset-2">
                     See plans
                 </Link>
             </TooltipContent>

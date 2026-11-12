@@ -62,7 +62,7 @@ import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { pricing } from '@/routes';
+import { show as showBilling } from '@/routes/billing';
 import {
     type BreadcrumbItem,
     type PlanLock,
@@ -429,7 +429,7 @@ function PlanLimits({ limits }: { limits: PlanLock[] }) {
             description={`You’re on the ${plan?.label} plan. It covers every team you own.`}
             footerAction={
                 <Button variant="outline" asChild>
-                    <Link href={pricing()}>See plans</Link>
+                    <Link href={showBilling()}>See plans</Link>
                 </Button>
             }
             flush

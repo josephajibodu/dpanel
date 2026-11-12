@@ -1,3 +1,6 @@
+/** Mirrors App\Enums\Plan; PlanFeatureTypesTest fails if they drift apart. */
+export type PlanKey = 'hobby' | 'pro' | 'team';
+
 /** Mirrors App\Enums\PlanFeature; PlanFeatureTypesTest fails if they drift apart. */
 export type PlanFeature =
     | 'team_members'

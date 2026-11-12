@@ -20,7 +20,7 @@ export default function SettingsLayout({
     }
 
     return (
-        <div className="mx-auto w-full max-w-3xl px-4 pt-8 pb-12">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-12">
             <header className="mb-8 flex items-center gap-3">
                 {avatar && (
                     <span

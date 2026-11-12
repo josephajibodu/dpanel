@@ -149,8 +149,16 @@ class User extends Authenticatable
     {
         $limit = $this->plan->serverLimit();
 
-        return $limit === null
-            || Server::query()->whereIn('team_id', $this->ownedTeams()->select('id'))->count() < $limit;
+        return $limit === null || $this->ownedServerCount() < $limit;
+    }
+
+    /**
+     * How many servers this user has across every team they own, which is
+     * what their plan's server limit counts.
+     */
+    public function ownedServerCount(): int
+    {
+        return Server::query()->whereIn('team_id', $this->ownedTeams()->select('id'))->count();
     }
 
     public function switchTeam(Team $team): void
