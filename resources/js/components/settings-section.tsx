@@ -16,6 +16,8 @@ interface SettingsSectionProps {
     variant?: 'default' | 'danger';
     /** Drops the body's padding, for a list of rows that brings its own. */
     flush?: boolean;
+    /** Leaves off the card, for content that is a card already, such as a table. */
+    bare?: boolean;
     children?: ReactNode;
     className?: string;
 }
@@ -33,6 +35,7 @@ export function SettingsSection({
     footerAction,
     variant = 'default',
     flush = false,
+    bare = false,
     children,
     className,
 }: SettingsSectionProps) {
@@ -60,7 +63,9 @@ export function SettingsSection({
                 </div>
             )}
 
-            {(children || hasFooter) && (
+            {bare && children}
+
+            {!bare && (children || hasFooter) && (
                 <div
                     className={cn(
                         'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-card',

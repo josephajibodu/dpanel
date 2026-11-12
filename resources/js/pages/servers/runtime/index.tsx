@@ -171,7 +171,7 @@ export default function ServerRuntimeIndex({
                                 </p>
                             )}
 
-                            <Table>
+                            <Table plain>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Version</TableHead>

@@ -312,63 +312,59 @@ export default function ServersShow({
                                                 }
                                             />
                                         ) : (
-                                            <div className="overflow-x-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>
-                                                                Domain
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Type
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Status
-                                                            </TableHead>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Domain
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Type
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Status
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sites.map((site) => (
+                                                        <TableRow
+                                                            key={site.id}
+                                                        >
+                                                            <TableCell>
+                                                                <Link
+                                                                    href={teamPath(
+                                                                        `/servers/${data.id}/sites/${site.id}`,
+                                                                    )}
+                                                                    className="font-medium hover:underline"
+                                                                >
+                                                                    {
+                                                                        site.domain
+                                                                    }
+                                                                </Link>
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground">
+                                                                <FrameworkLabel
+                                                                    site={site}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <SiteStatusBadge
+                                                                    status={
+                                                                        site.status
+                                                                    }
+                                                                    statusLabel={
+                                                                        site.status_label
+                                                                    }
+                                                                    statusColor={
+                                                                        site.status_color
+                                                                    }
+                                                                />
+                                                            </TableCell>
                                                         </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {sites.map((site) => (
-                                                            <TableRow
-                                                                key={site.id}
-                                                            >
-                                                                <TableCell>
-                                                                    <Link
-                                                                        href={teamPath(
-                                                                            `/servers/${data.id}/sites/${site.id}`,
-                                                                        )}
-                                                                        className="font-medium hover:underline"
-                                                                    >
-                                                                        {
-                                                                            site.domain
-                                                                        }
-                                                                    </Link>
-                                                                </TableCell>
-                                                                <TableCell className="text-xs text-muted-foreground">
-                                                                    <FrameworkLabel
-                                                                        site={
-                                                                            site
-                                                                        }
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <SiteStatusBadge
-                                                                        status={
-                                                                            site.status
-                                                                        }
-                                                                        statusLabel={
-                                                                            site.status_label
-                                                                        }
-                                                                        statusColor={
-                                                                            site.status_color
-                                                                        }
-                                                                    />
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
                                         )}
                                     </div>
                                 )}
@@ -402,45 +398,43 @@ export default function ServersShow({
                                         {databases.length === 0 ? (
                                             <EmptyState title="No databases on this server yet" />
                                         ) : (
-                                            <div className="overflow-x-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>
-                                                                Name
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Charset
-                                                            </TableHead>
-                                                            <TableHead>
-                                                                Status
-                                                            </TableHead>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Name
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Charset
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Status
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {databases.map((db) => (
+                                                        <TableRow
+                                                            key={db.id}
+                                                        >
+                                                            <TableCell className="font-mono font-medium">
+                                                                {db.name}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground">
+                                                                {db.charset ??
+                                                                    '—'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <AutoStatusBadge
+                                                                    status={
+                                                                        db.status
+                                                                    }
+                                                                />
+                                                            </TableCell>
                                                         </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {databases.map((db) => (
-                                                            <TableRow
-                                                                key={db.id}
-                                                            >
-                                                                <TableCell className="font-mono font-medium">
-                                                                    {db.name}
-                                                                </TableCell>
-                                                                <TableCell className="text-xs text-muted-foreground">
-                                                                    {db.charset ??
-                                                                        '—'}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <AutoStatusBadge
-                                                                        status={
-                                                                            db.status
-                                                                        }
-                                                                    />
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
                                         )}
                                     </div>
                                 )}

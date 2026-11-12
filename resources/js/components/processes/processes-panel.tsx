@@ -453,9 +453,12 @@ export function ProcessesPanel({
                                 <TableRow>
                                     <TableCell
                                         colSpan={showSiteColumn ? 7 : 6}
-                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                        className="p-0 group-hover:bg-transparent"
                                     >
-                                        <EmptyState title="No workers yet" />
+                                        <EmptyState
+                                            title="No workers yet"
+                                            className="rounded-none border-0 bg-transparent"
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -650,9 +653,12 @@ export function ProcessesPanel({
                                 <TableRow>
                                     <TableCell
                                         colSpan={showSiteColumn ? 6 : 5}
-                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                        className="p-0 group-hover:bg-transparent"
                                     >
-                                        <EmptyState title="No cron jobs yet" />
+                                        <EmptyState
+                                            title="No cron jobs yet"
+                                            className="rounded-none border-0 bg-transparent"
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ) : (

@@ -26,6 +26,7 @@ import {
     SettingsRows,
     SettingsSection,
 } from '@/components/settings-section';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -46,6 +47,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { getSettingsSubNavItems } from '@/config/sub-nav-items';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
@@ -180,6 +189,10 @@ function MembersCard({
         );
     };
 
+    const hasActions =
+        members.some((member) => member.can_remove) ||
+        invitations.some((invitation) => invitation.can_cancel);
+
     const remove = () => {
         if (!memberToRemove) {
             return;
@@ -210,128 +223,163 @@ function MembersCard({
                     />
                 )
             }
-            flush
+            bare
         >
-            <ul className="divide-y px-5">
-                {members.map((member) => (
-                    <li
-                        key={member.id}
-                        className="flex items-center gap-3 py-3"
-                    >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium dark:bg-neutral-700">
-                            {getInitials(member.name)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                                {member.name}
-                                {member.id === auth.user.id && (
-                                    <span className="ml-1.5 font-normal text-muted-foreground">
-                                        (you)
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Role</TableHead>
+                        {hasActions && (
+                            <TableHead className="w-12">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        )}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {members.map((member) => (
+                        <TableRow key={member.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium dark:bg-neutral-700">
+                                        {getInitials(member.name)}
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="truncate font-medium">
+                                            {member.name}
+                                            {member.id === auth.user.id && (
+                                                <span className="ml-1.5 font-normal text-muted-foreground">
+                                                    (you)
+                                                </span>
+                                            )}
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {member.email}
+                                        </p>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <StatusBadge status="Active" color="green" />
+                            </TableCell>
+                            <TableCell>
+                                {member.can_change_role ? (
+                                    <Select
+                                        value={member.role}
+                                        onValueChange={(role) =>
+                                            changeRole(
+                                                member.id,
+                                                role as TeamRoleKey,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            className="h-8 w-32"
+                                            aria-label={`Role for ${member.name}`}
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {assignableRoles.map((role) => (
+                                                <SelectItem
+                                                    key={role.key}
+                                                    value={role.key}
+                                                >
+                                                    {role.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <span className="capitalize">
+                                        {member.role}
                                     </span>
                                 )}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                                {member.email}
-                            </p>
-                        </div>
-                        {member.can_change_role ? (
-                            <Select
-                                value={member.role}
-                                onValueChange={(role) =>
-                                    changeRole(member.id, role as TeamRoleKey)
-                                }
-                            >
-                                <SelectTrigger
-                                    className="h-8 w-32"
-                                    aria-label={`Role for ${member.name}`}
-                                >
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {assignableRoles.map((role) => (
-                                        <SelectItem
-                                            key={role.key}
-                                            value={role.key}
+                            </TableCell>
+                            {hasActions && (
+                                <TableCell>
+                                    {member.can_remove && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() =>
+                                                setMemberToRemove(member)
+                                            }
+                                            className="size-8 p-0 text-muted-foreground hover:text-destructive"
                                         >
-                                            {role.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        ) : (
-                            <RoleBadge role={member.role} />
-                        )}
-                        {member.can_remove ? (
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setMemberToRemove(member)}
-                                className="size-8 p-0 text-muted-foreground hover:text-destructive"
-                            >
-                                <UserMinusIcon className="size-4" />
-                                <span className="sr-only">
-                                    Remove {member.name}
-                                </span>
-                            </Button>
-                        ) : (
-                            canInvite && (
-                                <span className="size-8 shrink-0" aria-hidden />
-                            )
-                        )}
-                    </li>
-                ))}
+                                            <UserMinusIcon className="size-4" />
+                                            <span className="sr-only">
+                                                Remove {member.name}
+                                            </span>
+                                        </Button>
+                                    )}
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    ))}
 
-                {invitations.map((invitation) => (
-                    <li
-                        key={`invite-${invitation.id}`}
-                        className="flex items-center gap-3 py-3"
-                    >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
-                            <EnvelopeSimpleIcon className="size-3.5" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm">
-                                {invitation.email}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Invited{' '}
-                                {formatDistanceToNow(
-                                    new Date(invitation.created_at),
-                                    { addSuffix: true },
-                                )}
-                            </p>
-                        </div>
-                        <span className="rounded-md border border-dashed px-2 py-0.5 text-xs text-muted-foreground capitalize">
-                            Pending · {invitation.role}
-                        </span>
-                        {invitation.can_cancel ? (
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                    router.delete(
-                                        cancelInvitation.url({
-                                            team: team.slug,
-                                            invitation: invitation.id,
-                                        }),
-                                        {
-                                            preserveScroll: true,
-                                        },
-                                    )
-                                }
-                                className="size-8 p-0 text-muted-foreground"
-                            >
-                                <XIcon className="size-4" />
-                                <span className="sr-only">
-                                    Cancel invitation for {invitation.email}
-                                </span>
-                            </Button>
-                        ) : (
-                            <span className="size-8 shrink-0" aria-hidden />
-                        )}
-                    </li>
-                ))}
-            </ul>
+                    {invitations.map((invitation) => (
+                        <TableRow key={`invite-${invitation.id}`}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
+                                        <EnvelopeSimpleIcon className="size-3.5" />
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="truncate font-medium">
+                                            {invitation.email}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Invited{' '}
+                                            {formatDistanceToNow(
+                                                new Date(invitation.created_at),
+                                                { addSuffix: true },
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <StatusBadge status="Pending" color="yellow" />
+                            </TableCell>
+                            <TableCell className="capitalize">
+                                {invitation.role}
+                            </TableCell>
+                            {hasActions && (
+                                <TableCell>
+                                    {invitation.can_cancel && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() =>
+                                                router.delete(
+                                                    cancelInvitation.url({
+                                                        team: team.slug,
+                                                        invitation:
+                                                            invitation.id,
+                                                    }),
+                                                    {
+                                                        preserveScroll: true,
+                                                    },
+                                                )
+                                            }
+                                            className="size-8 p-0 text-muted-foreground"
+                                        >
+                                            <XIcon className="size-4" />
+                                            <span className="sr-only">
+                                                Cancel invitation for{' '}
+                                                {invitation.email}
+                                            </span>
+                                        </Button>
+                                    )}
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
 
             <ConfirmDialog
                 open={memberToRemove !== null}
@@ -344,14 +392,6 @@ function MembersCard({
                 onConfirm={remove}
             />
         </SettingsSection>
-    );
-}
-
-function RoleBadge({ role }: { role: TeamRoleKey }) {
-    return (
-        <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-muted-foreground capitalize dark:bg-neutral-800">
-            {role}
-        </span>
     );
 }
 

@@ -370,9 +370,12 @@ export default function ServerDatabasesIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={5}
-                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                            className="p-0 group-hover:bg-transparent"
                                         >
-                                            <EmptyState title="No databases yet" />
+                                            <EmptyState
+                                                title="No databases yet"
+                                                className="rounded-none border-0 bg-transparent"
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -523,9 +526,12 @@ export default function ServerDatabasesIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={6}
-                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                            className="p-0 group-hover:bg-transparent"
                                         >
-                                            <EmptyState title="No database users yet" />
+                                            <EmptyState
+                                                title="No database users yet"
+                                                className="rounded-none border-0 bg-transparent"
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (

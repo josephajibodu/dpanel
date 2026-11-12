@@ -410,9 +410,10 @@ export default function ServerPhpIndex({
                                     <TableRow>
                                         <TableCell
                                             colSpan={4}
-                                            className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
+                                            className="p-0 group-hover:bg-transparent"
                                         >
                                             <EmptyState
+                                                className="rounded-none border-0 bg-transparent"
                                                 title="No PHP versions detected"
                                                 description={
                                                     canManagePhp

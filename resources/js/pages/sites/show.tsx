@@ -682,86 +682,72 @@ export default function SitesShow({
                                         }
                                     />
                                 ) : (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>
-                                                        Status
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Commit
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Message
-                                                    </TableHead>
-                                                    <TableHead>
-                                                        Deployed
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {deployments.map((d) => (
-                                                    <TableRow key={d.id}>
-                                                        <TableCell>
-                                                            <StatusBadge
-                                                                status={
-                                                                    d.status_label
-                                                                }
-                                                                color={
-                                                                    d.status_color
-                                                                }
-                                                                pulse={
-                                                                    d.status ===
-                                                                    'running'
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="font-mono">
-                                                            <Link
-                                                                href={teamPath(
-                                                                    `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
-                                                                )}
-                                                                className="hover:underline"
-                                                            >
-                                                                {d.commit_hash
-                                                                    ? d.commit_hash.slice(
-                                                                          0,
-                                                                          7,
-                                                                      )
-                                                                    : '—'}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                                                            {d.commit_message ??
-                                                                '—'}
-                                                        </TableCell>
-                                                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                                                            {d.finished_at
-                                                                ? format(
-                                                                      new Date(
-                                                                          d.finished_at,
-                                                                      ),
-                                                                      'MMM d, HH:mm',
-                                                                  )
-                                                                : d.started_at
-                                                                  ? 'Running...'
-                                                                  : '—'}
-                                                            {d.user?.name && (
-                                                                <span className="ml-1">
-                                                                    by{' '}
-                                                                    {
-                                                                        d.user
-                                                                            .name
-                                                                    }
-                                                                </span>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Commit</TableHead>
+                                                <TableHead>Message</TableHead>
+                                                <TableHead>Deployed</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {deployments.map((d) => (
+                                                <TableRow key={d.id}>
+                                                    <TableCell>
+                                                        <StatusBadge
+                                                            status={
+                                                                d.status_label
+                                                            }
+                                                            color={
+                                                                d.status_color
+                                                            }
+                                                            pulse={
+                                                                d.status ===
+                                                                'running'
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="font-mono">
+                                                        <Link
+                                                            href={teamPath(
+                                                                `/servers/${serverId}/sites/${siteData.id}/deployments/${d.id}`,
                                                             )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                                            className="hover:underline"
+                                                        >
+                                                            {d.commit_hash
+                                                                ? d.commit_hash.slice(
+                                                                      0,
+                                                                      7,
+                                                                  )
+                                                                : '—'}
+                                                        </Link>
+                                                    </TableCell>
+                                                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                                        {d.commit_message ??
+                                                            '—'}
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                                                        {d.finished_at
+                                                            ? format(
+                                                                  new Date(
+                                                                      d.finished_at,
+                                                                  ),
+                                                                  'MMM d, HH:mm',
+                                                              )
+                                                            : d.started_at
+                                                              ? 'Running...'
+                                                              : '—'}
+                                                        {d.user?.name && (
+                                                            <span className="ml-1">
+                                                                by {d.user.name}
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 )}
                             </div>
 
@@ -773,66 +759,63 @@ export default function SitesShow({
                                         Supervisor-style workers for this site.
                                     </CardDescription>
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Command</TableHead>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">
+                                                Numprocs
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {siteWorkers.length === 0 ? (
                                             <TableRow>
-                                                <TableHead>Name</TableHead>
-                                                <TableHead>Command</TableHead>
-                                                <TableHead>User</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead className="text-right">
-                                                    Numprocs
-                                                </TableHead>
+                                                <TableCell
+                                                    colSpan={5}
+                                                    className="p-0 group-hover:bg-transparent"
+                                                >
+                                                    <EmptyState
+                                                        className="rounded-none border-0 bg-transparent"
+                                                        title="No workers yet"
+                                                        description={
+                                                            can(
+                                                                'manage_processes',
+                                                            )
+                                                                ? 'Add workers from the Processes tab.'
+                                                                : 'Workers for this site will appear here.'
+                                                        }
+                                                    />
+                                                </TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {siteWorkers.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell
-                                                        colSpan={5}
-                                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
-                                                    >
-                                                        <EmptyState
-                                                            title="No workers yet"
-                                                            description={
-                                                                can(
-                                                                    'manage_processes',
-                                                                )
-                                                                    ? 'Add workers from the Processes tab.'
-                                                                    : 'Workers for this site will appear here.'
-                                                            }
+                                        ) : (
+                                            siteWorkers.map((w) => (
+                                                <TableRow key={w.id}>
+                                                    <TableCell className="font-medium">
+                                                        {w.name}
+                                                    </TableCell>
+                                                    <TableCell className="max-w-[200px] truncate font-mono text-xs">
+                                                        {w.command}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {w.user}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <AutoStatusBadge
+                                                            status={w.status}
                                                         />
                                                     </TableCell>
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                                        {w.numprocs}
+                                                    </TableCell>
                                                 </TableRow>
-                                            ) : (
-                                                siteWorkers.map((w) => (
-                                                    <TableRow key={w.id}>
-                                                        <TableCell className="font-medium">
-                                                            {w.name}
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[200px] truncate font-mono text-xs">
-                                                            {w.command}
-                                                        </TableCell>
-                                                        <TableCell className="font-mono text-xs text-muted-foreground">
-                                                            {w.user}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <AutoStatusBadge
-                                                                status={
-                                                                    w.status
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                                            {w.numprocs}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
 
                             {/* Cron jobs */}
@@ -843,77 +826,76 @@ export default function SitesShow({
                                         Scheduled cron jobs for this site.
                                     </CardDescription>
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Command</TableHead>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Frequency</TableHead>
+                                            <TableHead>Enabled</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {siteCronJobs.length === 0 ? (
                                             <TableRow>
-                                                <TableHead>Command</TableHead>
-                                                <TableHead>User</TableHead>
-                                                <TableHead>Frequency</TableHead>
-                                                <TableHead>Enabled</TableHead>
+                                                <TableCell
+                                                    colSpan={4}
+                                                    className="p-0 group-hover:bg-transparent"
+                                                >
+                                                    <EmptyState
+                                                        className="rounded-none border-0 bg-transparent"
+                                                        title="No cron jobs yet"
+                                                        description={
+                                                            can(
+                                                                'manage_processes',
+                                                            )
+                                                                ? 'Add cron jobs from the Processes tab.'
+                                                                : 'Cron jobs for this site will appear here.'
+                                                        }
+                                                    />
+                                                </TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {siteCronJobs.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell
-                                                        colSpan={4}
-                                                        className="border-0 px-0 pt-2 pb-0 group-hover:bg-transparent"
-                                                    >
-                                                        <EmptyState
-                                                            title="No cron jobs yet"
-                                                            description={
-                                                                can(
-                                                                    'manage_processes',
-                                                                )
-                                                                    ? 'Add cron jobs from the Processes tab.'
-                                                                    : 'Cron jobs for this site will appear here.'
-                                                            }
-                                                        />
+                                        ) : (
+                                            siteCronJobs.map((c) => (
+                                                <TableRow key={c.id}>
+                                                    <TableCell className="max-w-[200px] truncate font-mono font-medium">
+                                                        {c.command}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {c.user}
+                                                    </TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {cronFrequencyLabel(
+                                                            c.frequency,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {c.status ===
+                                                        'deleting' ? (
+                                                            <AutoStatusBadge
+                                                                status="deleting"
+                                                                label="Deleting..."
+                                                            />
+                                                        ) : (
+                                                            <AutoStatusBadge
+                                                                status={
+                                                                    c.hidden
+                                                                        ? 'disabled'
+                                                                        : 'enabled'
+                                                                }
+                                                                label={
+                                                                    c.hidden
+                                                                        ? 'Disabled'
+                                                                        : 'Enabled'
+                                                                }
+                                                            />
+                                                        )}
                                                     </TableCell>
                                                 </TableRow>
-                                            ) : (
-                                                siteCronJobs.map((c) => (
-                                                    <TableRow key={c.id}>
-                                                        <TableCell className="max-w-[200px] truncate font-mono font-medium">
-                                                            {c.command}
-                                                        </TableCell>
-                                                        <TableCell className="font-mono text-xs text-muted-foreground">
-                                                            {c.user}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground">
-                                                            {cronFrequencyLabel(
-                                                                c.frequency,
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {c.status ===
-                                                            'deleting' ? (
-                                                                <AutoStatusBadge
-                                                                    status="deleting"
-                                                                    label="Deleting..."
-                                                                />
-                                                            ) : (
-                                                                <AutoStatusBadge
-                                                                    status={
-                                                                        c.hidden
-                                                                            ? 'disabled'
-                                                                            : 'enabled'
-                                                                    }
-                                                                    label={
-                                                                        c.hidden
-                                                                            ? 'Disabled'
-                                                                            : 'Enabled'
-                                                                    }
-                                                                />
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
                     </div>

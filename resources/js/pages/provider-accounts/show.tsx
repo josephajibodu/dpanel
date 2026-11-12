@@ -121,54 +121,52 @@ export default function ProviderAccountShow({ account }: Props) {
                         </CardDescription>
                     </div>
                     {data.servers && data.servers.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Server</TableHead>
-                                        <TableHead>Region</TableHead>
-                                        <TableHead>Status</TableHead>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Server</TableHead>
+                                    <TableHead>Region</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.servers.map((server) => (
+                                    <TableRow key={server.id}>
+                                        <TableCell>
+                                            <Link
+                                                href={teamPath(
+                                                    `/servers/${server.id}`,
+                                                )}
+                                                className="font-medium hover:underline"
+                                            >
+                                                {server.name}
+                                            </Link>
+                                            <p className="font-mono text-xs text-muted-foreground">
+                                                {server.ip_address ||
+                                                    'No IP yet'}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {server.region}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={server.status_label}
+                                                color={
+                                                    server.status_color as
+                                                        | 'gray'
+                                                        | 'blue'
+                                                        | 'yellow'
+                                                        | 'green'
+                                                        | 'red'
+                                                        | 'orange'
+                                                }
+                                            />
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {data.servers.map((server) => (
-                                        <TableRow key={server.id}>
-                                            <TableCell>
-                                                <Link
-                                                    href={teamPath(
-                                                        `/servers/${server.id}`,
-                                                    )}
-                                                    className="font-medium hover:underline"
-                                                >
-                                                    {server.name}
-                                                </Link>
-                                                <p className="font-mono text-xs text-muted-foreground">
-                                                    {server.ip_address ||
-                                                        'No IP yet'}
-                                                </p>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">
-                                                {server.region}
-                                            </TableCell>
-                                            <TableCell>
-                                                <StatusBadge
-                                                    status={server.status_label}
-                                                    color={
-                                                        server.status_color as
-                                                            | 'gray'
-                                                            | 'blue'
-                                                            | 'yellow'
-                                                            | 'green'
-                                                            | 'red'
-                                                            | 'orange'
-                                                    }
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                ))}
+                            </TableBody>
+                        </Table>
                     ) : (
                         <EmptyState
                             title="No servers yet"

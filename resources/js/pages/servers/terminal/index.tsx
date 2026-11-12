@@ -91,7 +91,7 @@ export default function ServerTerminalIndex({
                         </p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <Table>
+                            <Table plain>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="pl-6">

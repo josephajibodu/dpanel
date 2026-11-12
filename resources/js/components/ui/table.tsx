@@ -2,21 +2,38 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-const Table = React.forwardRef<
-    HTMLTableElement,
-    React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-        <table
-            ref={ref}
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+    /**
+     * Leaves off the card around the table and keeps the rounded header, for
+     * a table that already sits inside a card.
+     */
+    plain?: boolean;
+}
+
+/**
+ * A table drawn as a card: a grey header strip across the top and a line
+ * between rows.
+ */
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+    ({ className, plain = false, ...props }, ref) => (
+        <div
+            data-plain={plain || undefined}
             className={cn(
-                'w-full border-separate border-spacing-0 caption-bottom text-[13px]',
-                className,
+                'group/table relative w-full overflow-auto',
+                !plain && 'rounded-2xl bg-card shadow-card',
             )}
-            {...props}
-        />
-    </div>
-));
+        >
+            <table
+                ref={ref}
+                className={cn(
+                    'w-full border-separate border-spacing-0 caption-bottom text-[13px]',
+                    className,
+                )}
+                {...props}
+            />
+        </div>
+    ),
+);
 Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<
@@ -69,7 +86,7 @@ const TableHead = React.forwardRef<
     <th
         ref={ref}
         className={cn(
-            'bg-muted text-muted-foreground h-9 px-4 text-left align-middle text-[13px] font-medium whitespace-nowrap first:rounded-l-lg last:rounded-r-lg [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[0.125rem]',
+            'bg-muted text-muted-foreground border-border h-9 border-b px-4 text-left align-middle text-xs font-medium whitespace-nowrap group-data-[plain]/table:border-b-0 group-data-[plain]/table:text-[13px] group-data-[plain]/table:first:rounded-l-lg group-data-[plain]/table:last:rounded-r-lg [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[0.125rem]',
             className,
         )}
         {...props}

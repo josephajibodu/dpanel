@@ -584,7 +584,7 @@ function DomainRow({
                                     Add these records at your DNS provider so traffic reaches this server.
                                 </p>
                             )}
-                            <Table>
+                            <Table plain>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Type</TableHead>
