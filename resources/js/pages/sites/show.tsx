@@ -247,6 +247,13 @@ export default function SitesShow({
                                         label="Framework"
                                         value={siteData.framework_label ?? '—'}
                                     />
+                                    {siteData.app_directory && (
+                                        <DetailRow
+                                            label="App folder"
+                                            value={siteData.app_directory}
+                                            valueClassName="font-mono"
+                                        />
+                                    )}
                                     <DetailRow
                                         label="PHP"
                                         value={`PHP ${siteData.php_version}`}

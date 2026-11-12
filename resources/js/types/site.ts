@@ -7,6 +7,8 @@ export interface Site {
     domain: string;
     aliases: string[] | null;
     directory: string;
+    /** The repository folder that holds the app; null for the top of the repository. */
+    app_directory: string | null;
     root_path: string;
     web_root: string;
     system_user: string;

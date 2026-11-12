@@ -122,6 +122,9 @@ const PROVIDER_LABELS: Record<OAuthProvider, string> = {
 /** Select value that opens the "connect a provider" dialog instead of picking an account. */
 const ADD_ACCOUNT = '__add__';
 
+/** Select value for the top of the repository, since a select can't hold an empty value. */
+const REPOSITORY_ROOT = '/';
+
 /** Select value that opens the "create database" sheet instead of picking a database. */
 const CREATE_DATABASE = '__create__';
 
@@ -229,12 +232,14 @@ export default function SitesCreate({
         useState<SiteNameStatus>('idle');
     const [siteNameMessage, setSiteNameMessage] = useState<string | null>(null);
     const [detection, setDetection] = useState<Detection>('idle');
+    const [folders, setFolders] = useState<string[]>([]);
 
     const form = useForm({
         server_id: serverData.id,
         domain: '',
         site_name: '',
         directory: '/public',
+        app_directory: '',
         repository: '',
         repository_provider:
             sourceControlAccounts[0]?.provider ?? ('github' as string),
@@ -255,6 +260,7 @@ export default function SitesCreate({
     const accountId = form.data.source_control_account_id;
     const repository = form.data.repository;
     const branch = form.data.branch;
+    const appDirectory = form.data.app_directory;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -373,10 +379,12 @@ export default function SitesCreate({
         void loadBranches();
     }, [loadBranches]);
 
-    // Look at the chosen repository's files and fill in what it's built with.
+    // Look at the chosen repository's files (in the app folder, when one is
+    // picked) and fill in what the app is built with.
     useEffect(() => {
         if (!repository || !accountId || !branch) {
             setDetection('idle');
+            setFolders([]);
 
             return;
         }
@@ -384,9 +392,18 @@ export default function SitesCreate({
         let cancelled = false;
         setDetection('checking');
 
-        void requestJson<{ detected: DetectedFramework | null }>(
+        const query = new URLSearchParams({ branch });
+
+        if (appDirectory) {
+            query.set('folder', appDirectory);
+        }
+
+        void requestJson<{
+            detected: DetectedFramework | null;
+            folders: string[];
+        }>(
             teamPath(
-                `/source-control/${accountId}/repositories/${encodeURIComponent(repository)}/framework?branch=${encodeURIComponent(branch)}`,
+                `/source-control/${accountId}/repositories/${encodeURIComponent(repository)}/framework?${query}`,
             ),
         ).then(({ ok, data }) => {
             if (cancelled) {
@@ -394,6 +411,8 @@ export default function SitesCreate({
             }
 
             const detected = ok ? data.detected : null;
+
+            setFolders((ok && data.folders) || []);
 
             if (!detected) {
                 setDetection('unknown');
@@ -421,7 +440,7 @@ export default function SitesCreate({
             cancelled = true;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [repository, accountId, branch, teamPath]);
+    }, [repository, accountId, branch, appDirectory, teamPath]);
 
     // Check the free subdomain is still available, a moment after typing stops.
     useEffect(() => {
@@ -533,6 +552,7 @@ export default function SitesCreate({
             source_control_account_id: account.id,
             repository_provider: account.provider,
             repository: '',
+            app_directory: '',
             branch: 'main',
             site_name: '',
         }));
@@ -559,6 +579,7 @@ export default function SitesCreate({
         form.setData((current) => ({
             ...current,
             repository: fullName,
+            app_directory: '',
             branch: repo?.default_branch || current.branch,
             site_name: slugifyProjectName(projectName),
         }));
@@ -881,15 +902,38 @@ export default function SitesCreate({
                                     </div>
 
                                     {repository && (
-                                        <BranchField
-                                            branches={branches}
-                                            value={form.data.branch}
-                                            onChange={(value) =>
-                                                form.setData('branch', value)
-                                            }
-                                            onRetry={() => void loadBranches()}
-                                            error={form.errors.branch}
-                                        />
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <BranchField
+                                                branches={branches}
+                                                value={form.data.branch}
+                                                onChange={(value) =>
+                                                    form.setData(
+                                                        'branch',
+                                                        value,
+                                                    )
+                                                }
+                                                onRetry={() =>
+                                                    void loadBranches()
+                                                }
+                                                error={form.errors.branch}
+                                            />
+                                            <AppFolderField
+                                                folders={folders}
+                                                value={appDirectory}
+                                                onChange={(value) =>
+                                                    form.setData(
+                                                        'app_directory',
+                                                        value,
+                                                    )
+                                                }
+                                                disabled={
+                                                    detection === 'checking'
+                                                }
+                                                error={
+                                                    form.errors.app_directory
+                                                }
+                                            />
+                                        </div>
                                     )}
                                 </>
                             )}
@@ -980,6 +1024,9 @@ export default function SitesCreate({
                                 <FrameworkNote
                                     detection={detection}
                                     description={selectedFramework?.description}
+                                    canPickFolder={
+                                        folders.length > 0 && !appDirectory
+                                    }
                                 />
                                 <InputError message={form.errors.framework} />
                             </div>
@@ -1423,9 +1470,12 @@ interface BranchFieldProps {
 function FrameworkNote({
     detection,
     description,
+    canPickFolder,
 }: {
     detection: Detection;
     description?: string;
+    /** Whether the app might be in a folder the user hasn't picked yet. */
+    canPickFolder: boolean;
 }) {
     if (detection === 'checking') {
         return (
@@ -1440,9 +1490,67 @@ function FrameworkNote({
         <p className="text-xs text-muted-foreground">
             {detection === 'detected' && 'Detected from the repository. '}
             {detection === 'unknown' &&
-                "Couldn't tell what the repository is built with, so pick it here. "}
+                (canPickFolder
+                    ? "Couldn't tell what the repository is built with. If the app is in a folder, choose it under App folder; otherwise pick the framework here. "
+                    : "Couldn't tell what this is built with, so pick the framework here. ")}
             {description}
         </p>
+    );
+}
+
+interface AppFolderFieldProps {
+    /** The folders at the top of the chosen repository. */
+    folders: string[];
+    /** The chosen folder; empty for the top of the repository. */
+    value: string;
+    onChange: (value: string) => void;
+    disabled: boolean;
+    error?: string;
+}
+
+/** Picks the repository folder that holds the app, for a repository with more than one. */
+function AppFolderField({
+    folders,
+    value,
+    onChange,
+    disabled,
+    error,
+}: AppFolderFieldProps) {
+    return (
+        <div className="space-y-2">
+            <Label htmlFor="app_directory">App folder</Label>
+            <Select
+                value={value || REPOSITORY_ROOT}
+                onValueChange={(folder) =>
+                    onChange(folder === REPOSITORY_ROOT ? '' : folder)
+                }
+                disabled={disabled}
+            >
+                <SelectTrigger
+                    id="app_directory"
+                    className="w-full sm:max-w-sm"
+                >
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={REPOSITORY_ROOT}>
+                        Top of the repository
+                    </SelectItem>
+                    {folders.map((folder) => (
+                        <SelectItem key={folder} value={folder}>
+                            {folder}
+                        </SelectItem>
+                    ))}
+                    {value && !folders.includes(value) && (
+                        <SelectItem value={value}>{value}</SelectItem>
+                    )}
+                </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+                Where the app to deploy sits in the repository.
+            </p>
+            <InputError message={error} />
+        </div>
     );
 }
 
