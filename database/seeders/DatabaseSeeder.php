@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
 
-        $this->call(ProvisioningSetupSeeder::class);
+        $this->call([
+            ProvisioningSetupSeeder::class,
+            PlanAccountsSeeder::class,
+        ]);
     }
 }
