@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { PageActions } from '@/components/page-actions';
 import { SearchInput } from '@/components/search-input';
+import { FrameworkLabel } from '@/components/sites/framework-icon';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -66,7 +67,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
         return sites.data.filter(
             (s) =>
                 s.domain.toLowerCase().includes(q) ||
-                (s.project_type_label ?? '').toLowerCase().includes(q),
+                (s.framework_label ?? '').toLowerCase().includes(q),
         );
     }, [sites.data, search]);
 
@@ -210,8 +211,9 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                         </Link>
                                                     </TableCell>
                                                     <TableCell className="text-xs text-muted-foreground">
-                                                        {site.project_type_label ??
-                                                            '—'}
+                                                        <FrameworkLabel
+                                                            site={site}
+                                                        />
                                                     </TableCell>
                                                     <TableCell className="text-xs text-muted-foreground">
                                                         {format(

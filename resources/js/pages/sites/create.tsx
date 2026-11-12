@@ -14,11 +14,11 @@ import { toast } from 'sonner';
 
 import {
     FormSection,
-    RadioOption,
     SegmentedControl,
     SummaryCard,
 } from '@/components/create-form';
 import InputError from '@/components/input-error';
+import { FrameworkIcon } from '@/components/sites/framework-icon';
 import {
     type Repository,
     RepositorySelector,
@@ -55,7 +55,7 @@ import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Server, ServerDatabase } from '@/types/server';
-import { PhpVersion, ProjectType } from '@/types/site';
+import { DetectedFramework, Framework, PhpVersion } from '@/types/site';
 import { SourceControlAccount } from '@/types/source-control';
 
 interface SourceControlData {
@@ -74,7 +74,7 @@ interface Props {
         data: Server;
     };
     freeDomain: string;
-    projectTypes: ProjectType[];
+    frameworks: Framework[];
     phpVersions: PhpVersion[];
     databases: { data: ServerDatabase[] };
     sourceControl?: SourceControlData;
@@ -83,6 +83,9 @@ interface Props {
 type DomainMode = 'free' | 'custom';
 
 type SiteNameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+
+/** Where looking at the chosen repository's files has got to. */
+type Detection = 'idle' | 'checking' | 'detected' | 'unknown';
 
 /** The state of fetching a list from the source control provider. */
 type Remote<T> =
@@ -199,7 +202,7 @@ async function requestJson<T>(
 export default function SitesCreate({
     server,
     freeDomain,
-    projectTypes,
+    frameworks,
     phpVersions,
     databases,
     sourceControl,
@@ -225,6 +228,7 @@ export default function SitesCreate({
     const [siteNameStatus, setSiteNameStatus] =
         useState<SiteNameStatus>('idle');
     const [siteNameMessage, setSiteNameMessage] = useState<string | null>(null);
+    const [detection, setDetection] = useState<Detection>('idle');
 
     const form = useForm({
         server_id: serverData.id,
@@ -235,7 +239,7 @@ export default function SitesCreate({
         repository_provider:
             sourceControlAccounts[0]?.provider ?? ('github' as string),
         branch: 'main',
-        project_type: 'laravel',
+        framework: 'laravel',
         php_version: serverData.php_version || phpVersions[0]?.value || '8.3',
         server_database_id: undefined as number | undefined,
         package_manager: 'npm',
@@ -250,6 +254,7 @@ export default function SitesCreate({
 
     const accountId = form.data.source_control_account_id;
     const repository = form.data.repository;
+    const branch = form.data.branch;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Servers', href: teamPath('/servers') },
@@ -367,6 +372,56 @@ export default function SitesCreate({
     useEffect(() => {
         void loadBranches();
     }, [loadBranches]);
+
+    // Look at the chosen repository's files and fill in what it's built with.
+    useEffect(() => {
+        if (!repository || !accountId || !branch) {
+            setDetection('idle');
+
+            return;
+        }
+
+        let cancelled = false;
+        setDetection('checking');
+
+        void requestJson<{ detected: DetectedFramework | null }>(
+            teamPath(
+                `/source-control/${accountId}/repositories/${encodeURIComponent(repository)}/framework?branch=${encodeURIComponent(branch)}`,
+            ),
+        ).then(({ ok, data }) => {
+            if (cancelled) {
+                return;
+            }
+
+            const detected = ok ? data.detected : null;
+
+            if (!detected) {
+                setDetection('unknown');
+
+                return;
+            }
+
+            setDetection('detected');
+            form.setData((current) => ({
+                ...current,
+                framework: detected.framework,
+                directory: detected.directory,
+                single_page_app: detected.single_page_app,
+                // Frameworks that don't build with Node say nothing about
+                // the build, so what's already chosen stays.
+                package_manager:
+                    detected.package_manager ?? current.package_manager,
+                build_command: detected.package_manager
+                    ? (detected.build_command ?? '')
+                    : current.build_command,
+            }));
+        });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [repository, accountId, branch, teamPath]);
 
     // Check the free subdomain is still available, a moment after typing stops.
     useEffect(() => {
@@ -509,13 +564,40 @@ export default function SitesCreate({
         }));
     }
 
-    function handleProjectTypeChange(projectType: ProjectType) {
-        form.setData((current) => ({
-            ...current,
-            project_type: projectType.value,
-            directory: projectType.defaultDirectory || '/public',
-            single_page_app: false,
-        }));
+    function handleFrameworkChange(value: string) {
+        const framework = frameworks.find((option) => option.value === value);
+
+        if (!framework) {
+            return;
+        }
+
+        setDetection('idle');
+        form.setData((current) => {
+            // A framework that builds needs a package manager; plain static
+            // files have nothing to build. PHP projects keep what's chosen.
+            let packageManager = current.package_manager;
+
+            if (framework.buildsWithNode && packageManager === 'none') {
+                packageManager = 'npm';
+            } else if (
+                !framework.buildsWithNode &&
+                framework.projectType === 'html'
+            ) {
+                packageManager = 'none';
+            }
+
+            return {
+                ...current,
+                framework: framework.value,
+                directory: framework.defaultDirectory,
+                single_page_app: framework.singlePageApp,
+                package_manager: packageManager,
+                build_command:
+                    packageManager === current.package_manager
+                        ? current.build_command
+                        : (DEFAULT_BUILD_COMMANDS[packageManager] ?? ''),
+            };
+        });
     }
 
     function handlePackageManagerChange(value: string) {
@@ -614,8 +696,8 @@ export default function SitesCreate({
         form.post(teamPath(`/servers/${serverData.id}/sites`));
     }
 
-    const selectedProjectType = projectTypes.find(
-        (type) => type.value === form.data.project_type,
+    const selectedFramework = frameworks.find(
+        (framework) => framework.value === form.data.framework,
     );
     const selectedDatabase = readyDatabases.find(
         (db) => db.id === form.data.server_database_id,
@@ -867,31 +949,42 @@ export default function SitesCreate({
 
                         <FormSection
                             title="Project type"
-                            description="Sets the web directory and the starting deploy script."
+                            description="Worked out from the repository when you pick one. Sets the web directory and the starting deploy script."
                         >
-                            <div
-                                role="radiogroup"
-                                aria-label="Project type"
-                                className="grid gap-2 sm:grid-cols-2"
-                            >
-                                {projectTypes.map((type) => (
-                                    <RadioOption
-                                        key={type.value}
-                                        selected={
-                                            form.data.project_type ===
-                                            type.value
-                                        }
-                                        onSelect={() =>
-                                            handleProjectTypeChange(type)
-                                        }
-                                        title={type.label}
-                                        description={type.description}
-                                    />
-                                ))}
+                            <div className="space-y-2">
+                                <Label htmlFor="framework">Framework</Label>
+                                <Select
+                                    value={form.data.framework}
+                                    onValueChange={handleFrameworkChange}
+                                >
+                                    <SelectTrigger
+                                        id="framework"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Select a framework" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {frameworks.map((framework) => (
+                                            <SelectItem
+                                                key={framework.value}
+                                                value={framework.value}
+                                            >
+                                                <FrameworkIcon
+                                                    framework={framework.value}
+                                                />
+                                                {framework.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FrameworkNote
+                                    detection={detection}
+                                    description={selectedFramework?.description}
+                                />
+                                <InputError message={form.errors.framework} />
                             </div>
-                            <InputError message={form.errors.project_type} />
 
-                            <div className="grid gap-4 pt-2 sm:grid-cols-2">
+                            <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="directory">
                                         Web directory
@@ -944,7 +1037,7 @@ export default function SitesCreate({
                             </div>
                         </FormSection>
 
-                        {form.data.project_type === 'html' && (
+                        {selectedFramework?.projectType === 'html' && (
                             <FormSection
                                 title="Single-page app"
                                 description="For React, Vue, Angular and similar apps. Any URL that isn't a file loads index.html, so opening or refreshing a page inside the app works. Leave it off for sites with a file for each page."
@@ -1090,7 +1183,7 @@ export default function SitesCreate({
                             },
                             {
                                 label: 'Type',
-                                value: selectedProjectType?.label ?? null,
+                                value: selectedFramework?.label ?? null,
                             },
                             {
                                 label: 'PHP',
@@ -1324,6 +1417,33 @@ interface BranchFieldProps {
     onChange: (value: string) => void;
     onRetry: () => void;
     error?: string;
+}
+
+/** What the chosen framework does, and whether it was read from the repository. */
+function FrameworkNote({
+    detection,
+    description,
+}: {
+    detection: Detection;
+    description?: string;
+}) {
+    if (detection === 'checking') {
+        return (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CircleNotchIcon className="h-3 w-3 animate-spin" />
+                Checking what the repository is built with…
+            </p>
+        );
+    }
+
+    return (
+        <p className="text-xs text-muted-foreground">
+            {detection === 'detected' && 'Detected from the repository. '}
+            {detection === 'unknown' &&
+                "Couldn't tell what the repository is built with, so pick it here. "}
+            {description}
+        </p>
+    );
 }
 
 /** The branch picker, with loading and error states while branches are fetched. */

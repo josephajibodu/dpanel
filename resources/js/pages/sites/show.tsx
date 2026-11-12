@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/empty-state';
 import { PageActions } from '@/components/page-actions';
 import { cronFrequencyLabel } from '@/components/processes/processes-panel';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
+import { FrameworkLabel } from '@/components/sites/framework-icon';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -244,9 +245,7 @@ export default function SitesShow({
                                     />
                                     <DetailRow
                                         label="Framework"
-                                        value={
-                                            siteData.project_type_label ?? '—'
-                                        }
+                                        value={siteData.framework_label ?? '—'}
                                     />
                                     <DetailRow
                                         label="PHP"
@@ -536,7 +535,7 @@ export default function SitesShow({
                                     label="Framework"
                                     hint={`PHP ${siteData.php_version}`}
                                 >
-                                    {siteData.project_type_label ?? '—'}
+                                    <FrameworkLabel site={siteData} />
                                 </OverviewItem>
 
                                 <OverviewItem

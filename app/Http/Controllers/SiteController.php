@@ -7,7 +7,7 @@ use App\Actions\Sites\CreateSiteAction;
 use App\Actions\Sites\DeleteSiteAction;
 use App\Actions\Sites\SetDeployOnPushAction;
 use App\Data\SiteData;
-use App\Enums\ProjectType;
+use App\Enums\Framework;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentStatusChanged;
@@ -90,11 +90,14 @@ class SiteController extends Controller
         return Inertia::render('sites/create', [
             'server' => new ServerResource($server),
             'freeDomain' => config('server.free_domain'),
-            'projectTypes' => collect(ProjectType::cases())->map(fn ($type) => [
-                'value' => $type->value,
-                'label' => $type->label(),
-                'description' => $type->description(),
-                'defaultDirectory' => $type->defaultDirectory(),
+            'frameworks' => collect(Framework::cases())->map(fn (Framework $framework) => [
+                'value' => $framework->value,
+                'label' => $framework->label(),
+                'description' => $framework->description(),
+                'projectType' => $framework->projectType()->value,
+                'defaultDirectory' => $framework->defaultDirectory(),
+                'buildsWithNode' => $framework->buildsWithNode(),
+                'singlePageApp' => $framework->isSinglePageApp(),
             ]),
             'repositoryProviders' => collect(RepositoryProvider::cases())->map(fn ($provider) => [
                 'value' => $provider->value,

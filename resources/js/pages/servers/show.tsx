@@ -20,6 +20,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DeploymentLog } from '@/components/deployments/deployment-log';
 import { EmptyState } from '@/components/empty-state';
 import { ProvisioningStepTimeline } from '@/components/provisioning-step-timeline';
+import { FrameworkLabel } from '@/components/sites/framework-icon';
 import { SiteStatusBadge } from '@/components/sites/site-status-badge';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
@@ -344,8 +345,11 @@ export default function ServersShow({
                                                                     </Link>
                                                                 </TableCell>
                                                                 <TableCell className="text-xs text-muted-foreground">
-                                                                    {site.project_type_label ??
-                                                                        '—'}
+                                                                    <FrameworkLabel
+                                                                        site={
+                                                                            site
+                                                                        }
+                                                                    />
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <SiteStatusBadge

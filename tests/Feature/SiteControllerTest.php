@@ -125,8 +125,17 @@ it('shows site create page with source control accounts but without prefetched r
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('sites/create')
             ->has('server')
-            ->has('projectTypes')
-            ->where('projectTypes.0.description', ProjectType::Laravel->description())
+            ->has('frameworks', count(Framework::cases()))
+            ->where('frameworks.0.description', ProjectType::Laravel->description())
+            ->where('frameworks.4', [
+                'value' => 'react',
+                'label' => 'React',
+                'description' => Framework::React->description(),
+                'projectType' => 'html',
+                'defaultDirectory' => '/dist',
+                'buildsWithNode' => true,
+                'singlePageApp' => true,
+            ])
             ->has('repositoryProviders')
             ->has('phpVersions')
             ->has('sourceControl')

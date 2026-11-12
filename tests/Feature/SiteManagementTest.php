@@ -47,7 +47,7 @@ describe('site creation', function () {
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('sites/create')
                 ->has('server.data')
-                ->has('projectTypes')
+                ->has('frameworks')
                 ->has('repositoryProviders')
                 ->has('phpVersions')
             );

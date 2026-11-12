@@ -500,7 +500,7 @@ export default function SitesEdit({
                             },
                             {
                                 label: 'Type',
-                                value: siteData.project_type_label,
+                                value: siteData.framework_label,
                             },
                             {
                                 label: 'PHP',

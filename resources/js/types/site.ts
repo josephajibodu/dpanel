@@ -20,6 +20,8 @@ export interface Site {
     branch: string;
     project_type: 'laravel' | 'php' | 'html' | 'symfony' | 'wordpress' | null;
     project_type_label: string | null;
+    framework: string | null;
+    framework_label: string | null;
     php_version: string;
     php_binary: string | null;
     status: 'pending' | 'installing' | 'provisioned' | 'deployed' | 'deploying' | 'failed' | 'deleting' | 'isolating';
@@ -47,11 +49,25 @@ export interface Site {
     updated_at: string;
 }
 
-export interface ProjectType {
+/** What a site can be built with, as offered on the create-site page. */
+export interface Framework {
     value: string;
     label: string;
     description: string;
+    /** How the server serves it, e.g. `html` for every framework that builds to plain files. */
+    projectType: string;
     defaultDirectory: string;
+    buildsWithNode: boolean;
+    singlePageApp: boolean;
+}
+
+/** What FlitOps worked out about a repository from its files. */
+export interface DetectedFramework {
+    framework: string;
+    directory: string;
+    package_manager: string | null;
+    build_command: string | null;
+    single_page_app: boolean;
 }
 
 export interface RepositoryProvider {
