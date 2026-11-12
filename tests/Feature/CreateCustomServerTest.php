@@ -14,6 +14,7 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses(RefreshDatabase::class);
 
@@ -110,6 +111,19 @@ it('refuses an existing server once the Hobby plan\'s one server is used', funct
         ])
         ->assertForbidden()
         ->assertSeeText('The Hobby plan includes 1 server. Upgrade to Pro to add more.');
+
+    expect(Server::where('name', 'test-server')->exists())->toBeFalse();
+});
+
+it('checks the Hobby limit again as it saves the server, in case another took the place since', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+    Server::factory()->forTeam($this->team)->create();
+
+    expect(fn () => app(CreateCustomServerAction::class)->execute(
+        $this->user,
+        $this->team,
+        new CustomServerData(name: 'test-server', ipAddress: '203.0.113.10'),
+    ))->toThrow(HttpException::class, 'The Hobby plan includes 1 server. Upgrade to Pro to add more.');
 
     expect(Server::where('name', 'test-server')->exists())->toBeFalse();
 });

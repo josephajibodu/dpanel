@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Servers\TransferServerAction;
 use App\Contracts\ProviderContract;
 use App\Data\ProviderServerStatus;
 use App\Enums\ActivityEvent;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 beforeEach(function () {
     Queue::fake();
@@ -176,6 +178,17 @@ it('refuses a team whose owner\'s Hobby plan has no room for another server', fu
 
     transferServer($this->server, $this->team, $hobbyTeam->slug)
         ->assertSessionHasErrors(['team' => "Acme can't take another server. The Hobby plan includes 1 server. Upgrade to Pro to add more."]);
+
+    expect($this->server->fresh()->team_id)->toBe($this->team->id);
+});
+
+it('checks the destination owner\'s limit again as it moves the server, in case another took the place since', function () {
+    $hobbyOwner = User::factory()->onPlan(Plan::Hobby)->create();
+    $hobbyTeam = Team::factory()->forUser($hobbyOwner)->create();
+    Server::factory()->forTeam($hobbyTeam)->create();
+
+    expect(fn () => app(TransferServerAction::class)->execute($this->server, $hobbyTeam, $this->user))
+        ->toThrow(HttpException::class, 'The Hobby plan includes 1 server. Upgrade to Pro to add more.');
 
     expect($this->server->fresh()->team_id)->toBe($this->team->id);
 });

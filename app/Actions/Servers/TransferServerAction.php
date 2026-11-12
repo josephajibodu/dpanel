@@ -37,6 +37,10 @@ class TransferServerAction
         $origin = $server->team;
 
         DB::transaction(function () use ($server, $origin, $destination, $transferredBy, $providerAccount): void {
+            if ($destination->user_id !== $origin->user_id) {
+                $destination->ensureRoomForAnotherServer();
+            }
+
             $databaseIds = $server->databases()->select('id');
             $siteIds = $server->sites()->select('id');
 

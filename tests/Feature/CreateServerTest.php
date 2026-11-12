@@ -128,6 +128,28 @@ it('refuses a second server on the Hobby plan', function () {
     $this->provider->shouldNotHaveReceived('createSshKey');
 });
 
+it('refuses the server when another takes the Hobby plan\'s place while it waits on the provider', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+
+    $provider = Mockery::mock(ProviderContract::class);
+    $provider->shouldReceive('validateCredentials')->andReturn(true);
+    $provider->shouldReceive('createSshKey')->andReturnUsing(function () {
+        Server::factory()->forTeam($this->team)->create();
+
+        return 'ssh-key-123';
+    });
+    $provider->shouldReceive('deleteSshKey')->once()->with('ssh-key-123');
+    $this->mock(ProviderManager::class)->shouldReceive('forAccount')->andReturn($provider);
+
+    $this->actingAs($this->user);
+
+    createServerIn($this->team, $this->providerAccount)
+        ->assertForbidden()
+        ->assertSeeText('The Hobby plan includes 1 server. Upgrade to Pro to add more.');
+
+    expect($this->team->servers()->count())->toBe(1);
+});
+
 it('counts the servers in every team the owner owns against the Hobby limit', function () {
     $this->user->forceFill(['plan' => Plan::Hobby])->save();
     $otherTeam = Team::factory()->create(['user_id' => $this->user->id]);

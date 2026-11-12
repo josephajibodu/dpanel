@@ -71,6 +71,8 @@ class CreateServerAction
                 $providerRegion,
                 $providerSize,
             ) {
+                $team->ensureRoomForAnotherServer();
+
                 $server = $team->servers()->create([
                     'user_id' => $user->id,
                     'provider_account_id' => $providerAccount->id,

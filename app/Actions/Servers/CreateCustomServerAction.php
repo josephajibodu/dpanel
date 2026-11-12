@@ -23,6 +23,8 @@ class CreateCustomServerAction
         $keypair = $this->keyGenerator->generate();
 
         return DB::transaction(function () use ($user, $team, $data, $keypair) {
+            $team->ensureRoomForAnotherServer();
+
             $server = $team->servers()->create([
                 'user_id' => $user->id,
                 'provider' => Provider::Custom,

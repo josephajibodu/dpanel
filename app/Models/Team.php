@@ -105,4 +105,19 @@ class Team extends Model
     {
         return $this->owner->hasRoomForAnotherServer();
     }
+
+    /**
+     * Refuse another server once the owner's plan has no room for it.
+     *
+     * Called inside the transaction that saves the server, it also holds the
+     * owner's row until that transaction ends. Two servers added at the same
+     * moment are then counted one after the other, so they can't both take
+     * the plan's last place.
+     */
+    public function ensureRoomForAnotherServer(): void
+    {
+        $owner = User::query()->whereKey($this->user_id)->lockForUpdate()->sole();
+
+        abort_unless($owner->hasRoomForAnotherServer(), 403, $owner->plan->serverLimitMessage());
+    }
 }

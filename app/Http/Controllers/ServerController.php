@@ -86,7 +86,7 @@ class ServerController extends Controller
 
     public function store(Team $team, StoreServerRequest $request, CreateServerAction $action): RedirectResponse
     {
-        $this->ensureRoomForAnotherServer($team);
+        $team->ensureRoomForAnotherServer();
 
         $server = $action->execute(
             user: auth()->user(),
@@ -101,7 +101,7 @@ class ServerController extends Controller
 
     public function storeCustom(Team $team, StoreCustomServerRequest $request, CreateCustomServerAction $action): RedirectResponse
     {
-        $this->ensureRoomForAnotherServer($team);
+        $team->ensureRoomForAnotherServer();
 
         $server = $action->execute(
             user: auth()->user(),
@@ -353,14 +353,5 @@ class ServerController extends Controller
                 ],
             ];
         }, $server->restartableServices());
-    }
-
-    /**
-     * Refuse a new server when the team owner's plan is already at its
-     * server limit.
-     */
-    private function ensureRoomForAnotherServer(Team $team): void
-    {
-        abort_unless($team->hasRoomForAnotherServer(), 403, $team->plan()->serverLimitMessage());
     }
 }
