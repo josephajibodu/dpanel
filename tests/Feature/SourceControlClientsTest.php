@@ -46,6 +46,30 @@ it('lists a gitlab project\'s branches by its encoded path', function () {
     expect($branches->all())->toBe([['name' => 'main', 'protected' => true], ['name' => 'feature', 'protected' => false]]);
 });
 
+it('reads the top-level files and one file of a gitlab project on a branch', function () {
+    Http::fake([
+        'gitlab.com/api/v4/projects/acme%2Fweb%2Fapp/repository/tree?ref=release%2F2.0*' => Http::response([
+            ['name' => 'src', 'type' => 'tree'],
+            ['name' => 'package.json', 'type' => 'blob'],
+        ]),
+        'gitlab.com/api/v4/projects/acme%2Fweb%2Fapp/repository/files/docs%2Fpackage.json/raw?ref=release%2F2.0' => Http::response('{"name":"app"}'),
+    ]);
+    $account = SourceControlAccount::factory()->gitlab()->create();
+
+    $service = app(SourceControlService::class);
+
+    expect($service->listRootEntries($account, 'acme/web/app', 'release/2.0'))->toBe(['src', 'package.json'])
+        ->and($service->readFile($account, 'acme/web/app', 'release/2.0', 'docs/package.json'))->toBe('{"name":"app"}');
+});
+
+it('reads a missing gitlab file as null', function () {
+    Http::fake(['gitlab.com/api/v4/projects/acme%2Fapp/repository/files/package.json/raw*' => Http::response(['message' => '404 File Not Found'], 404)]);
+
+    $contents = app(SourceControlService::class)->readFile(SourceControlAccount::factory()->gitlab()->create(), 'acme/app', 'main', 'package.json');
+
+    expect($contents)->toBeNull();
+});
+
 it('adds a server key to a gitlab account only when it is not there yet', function () {
     Http::fake([
         'gitlab.com/api/v4/user/keys?*' => Http::response([['id' => 7, 'key' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOther']]),
@@ -136,6 +160,43 @@ it('lists every page of bitbucket repositories by following next links', functio
     expect($repositories->pluck('full_name')->all())->toBe(['acme/app', 'acme/site'])
         ->and($repositories->first()['ssh_url'])->toBe('git@bitbucket.org:acme/app.git')
         ->and($repositories->last()['ssh_url'])->toBe('git@bitbucket.org:acme/site.git');
+});
+
+it('reads the top-level files and one file of a bitbucket repository on a branch', function () {
+    Http::fake([
+        'api.bitbucket.org/2.0/repositories/acme/app/src/main/?*' => Http::response(['values' => [
+            ['path' => 'src', 'type' => 'commit_directory'],
+            ['path' => 'package.json', 'type' => 'commit_file'],
+        ]]),
+        'api.bitbucket.org/2.0/repositories/acme/app/src/main/package.json' => Http::response('{"name":"app"}'),
+    ]);
+    $account = SourceControlAccount::factory()->bitbucket()->create();
+
+    $service = app(SourceControlService::class);
+
+    expect($service->listRootEntries($account, 'acme/app', 'main'))->toBe(['src', 'package.json'])
+        ->and($service->readFile($account, 'acme/app', 'main', 'package.json'))->toBe('{"name":"app"}');
+});
+
+it('reads a bitbucket branch with a slash in its name by its latest commit', function () {
+    Http::fake([
+        'api.bitbucket.org/2.0/repositories/acme/app/refs/branches/release/2.0' => Http::response(['name' => 'release/2.0', 'target' => ['hash' => 'abc123']]),
+        'api.bitbucket.org/2.0/repositories/acme/app/src/abc123/package.json' => Http::response('{"name":"app"}'),
+    ]);
+
+    $contents = app(SourceControlService::class)->readFile(SourceControlAccount::factory()->bitbucket()->create(), 'acme/app', 'release/2.0', 'package.json');
+
+    expect($contents)->toBe('{"name":"app"}');
+});
+
+it('reads nothing from a bitbucket branch that does not exist', function () {
+    Http::fake(['api.bitbucket.org/2.0/repositories/acme/app/refs/branches/gone/away' => Http::response(['type' => 'error'], 404)]);
+    $account = SourceControlAccount::factory()->bitbucket()->create();
+
+    $service = app(SourceControlService::class);
+
+    expect($service->listRootEntries($account, 'acme/app', 'gone/away'))->toBe([])
+        ->and($service->readFile($account, 'acme/app', 'gone/away', 'package.json'))->toBeNull();
 });
 
 it('does not follow a bitbucket next link to another host', function () {

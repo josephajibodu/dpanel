@@ -48,6 +48,23 @@ class GitlabClient implements SourceControlClientContract
             ]);
     }
 
+    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    {
+        return $this->paginate($account, "/projects/{$this->projectId($repositoryFullName)}/repository/tree", ['ref' => $branch])
+            ->map(fn (array $entry): string => (string) $entry['name'])
+            ->all();
+    }
+
+    public function readFile(SourceControlAccount $account, string $repositoryFullName, string $branch, string $path): ?string
+    {
+        $response = $this->api($account)->get(
+            "/projects/{$this->projectId($repositoryFullName)}/repository/files/".rawurlencode($path).'/raw',
+            ['ref' => $branch],
+        );
+
+        return $response->successful() ? $response->body() : null;
+    }
+
     public function addSshKey(SourceControlAccount $account, string $publicKey, string $title): void
     {
         if ($this->findSshKeyId($account, $publicKey) !== null) {

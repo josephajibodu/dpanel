@@ -44,6 +44,40 @@ class SourceControlService
     }
 
     /**
+     * Names of the files and folders at the top of a repository, on one
+     * branch. Empty when the repository or branch can't be read.
+     *
+     * @return array<int, string>
+     */
+    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    {
+        if ($account->provider !== RepositoryProvider::Github) {
+            return $this->client($account->provider)?->listRootEntries($account, $repositoryFullName, $branch) ?? [];
+        }
+
+        $response = $this->github($account)->get("https://api.github.com/repos/{$repositoryFullName}/contents", ['ref' => $branch]);
+
+        return $response->successful() ? $response->collect()->pluck('name')->all() : [];
+    }
+
+    /**
+     * What one file in a repository holds on one branch, or null when the
+     * file isn't there or can't be read.
+     */
+    public function readFile(SourceControlAccount $account, string $repositoryFullName, string $branch, string $path): ?string
+    {
+        if ($account->provider !== RepositoryProvider::Github) {
+            return $this->client($account->provider)?->readFile($account, $repositoryFullName, $branch, $path);
+        }
+
+        $response = $this->github($account)
+            ->accept('application/vnd.github.raw+json')
+            ->get("https://api.github.com/repos/{$repositoryFullName}/contents/{$path}", ['ref' => $branch]);
+
+        return $response->successful() ? $response->body() : null;
+    }
+
+    /**
      * Ensure an account-level SSH key exists for the given server and source control account.
      *
      * This uses the server's local public key as an SSH key on the account,

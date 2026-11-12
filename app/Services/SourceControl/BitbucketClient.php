@@ -52,6 +52,32 @@ class BitbucketClient implements SourceControlClientContract
             ]);
     }
 
+    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array
+    {
+        $commit = $this->commitFor($account, $repositoryFullName, $branch);
+
+        if ($commit === null) {
+            return [];
+        }
+
+        return $this->paginate($account, "/repositories/{$repositoryFullName}/src/{$commit}/")
+            ->map(fn (array $entry): string => (string) $entry['path'])
+            ->all();
+    }
+
+    public function readFile(SourceControlAccount $account, string $repositoryFullName, string $branch, string $path): ?string
+    {
+        $commit = $this->commitFor($account, $repositoryFullName, $branch);
+
+        if ($commit === null) {
+            return null;
+        }
+
+        $response = $this->api($account)->get("/repositories/{$repositoryFullName}/src/{$commit}/{$path}");
+
+        return $response->successful() ? $response->body() : null;
+    }
+
     public function addSshKey(SourceControlAccount $account, string $publicKey, string $title): void
     {
         if ($this->findSshKeyId($account, $publicKey) !== null) {
@@ -109,6 +135,25 @@ class BitbucketClient implements SourceControlClientContract
         Log::warning('Failed to delete Bitbucket deploy webhook', ['site_id' => $site->id, 'status' => $response->status(), 'body' => $response->body()]);
 
         throw new RuntimeException('Bitbucket could not remove the webhook. Try again in a moment.');
+    }
+
+    /**
+     * What to put in a file URL to point at a branch. Bitbucket takes the
+     * branch name there, unless it contains a slash: the URL would read the
+     * rest as a file path, so the branch's latest commit is used instead.
+     * Null when that commit can't be found.
+     */
+    private function commitFor(SourceControlAccount $account, string $repositoryFullName, string $branch): ?string
+    {
+        if (! str_contains($branch, '/')) {
+            return $branch;
+        }
+
+        $hash = $this->api($account)
+            ->get("/repositories/{$repositoryFullName}/refs/branches/{$branch}")
+            ->json('target.hash');
+
+        return is_string($hash) ? $hash : null;
     }
 
     protected function requestTokenRefresh(SourceControlAccount $account): Response

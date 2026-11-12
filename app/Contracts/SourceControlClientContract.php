@@ -26,6 +26,20 @@ interface SourceControlClientContract
     public function listBranches(SourceControlAccount $account, string $repositoryFullName): Collection;
 
     /**
+     * Names of the files and folders at the top of a repository, on one
+     * branch. Empty when the repository or branch can't be read.
+     *
+     * @return array<int, string>
+     */
+    public function listRootEntries(SourceControlAccount $account, string $repositoryFullName, string $branch): array;
+
+    /**
+     * What one file in a repository holds on one branch, or null when the
+     * file isn't there or can't be read.
+     */
+    public function readFile(SourceControlAccount $account, string $repositoryFullName, string $branch, string $path): ?string;
+
+    /**
      * Add a server's public key to the account, so the server can clone the
      * account's repositories. Does nothing if the key is already there.
      */
