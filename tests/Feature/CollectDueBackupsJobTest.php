@@ -2,12 +2,15 @@
 
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Actions\Backups\RunSqliteBackup;
+use App\Enums\Plan;
 use App\Jobs\CollectDueBackupsJob;
 use App\Models\BackupSchedule;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Site;
 use App\Models\StorageProvider;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -91,4 +94,22 @@ it('dispatches a sqlite backup for a due site schedule', function () {
         );
 
     app(CollectDueBackupsJob::class)->handle($databaseMock, $sqliteMock);
+});
+
+it('skips due schedules in teams whose owner is on the Hobby plan, keeping them for later', function () {
+    $team = Team::factory()->for(User::factory()->onPlan(Plan::Hobby), 'owner')->create();
+    $server = Server::factory()->forTeam($team)->create();
+    $serverDatabase = ServerDatabase::factory()->create(['server_id' => $server->id]);
+    $schedule = BackupSchedule::factory()->due()->create([
+        'server_database_id' => $serverDatabase->id,
+        'storage_provider_id' => StorageProvider::factory()->create()->id,
+    ]);
+
+    $actionMock = Mockery::mock(RunDatabaseBackup::class);
+    $actionMock->shouldNotReceive('trigger');
+    app()->instance(RunDatabaseBackup::class, $actionMock);
+
+    app(CollectDueBackupsJob::class)->handle(app(RunDatabaseBackup::class), app(RunSqliteBackup::class));
+
+    expect($schedule->fresh())->not->toBeNull();
 });

@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\DeploymentStatus;
+use App\Enums\Plan;
+use App\Enums\PlanFeature;
 use App\Enums\ServerStatus;
 use App\Enums\SiteStatus;
 use App\Models\Site;
@@ -18,6 +20,7 @@ use Illuminate\Foundation\Queue\Queueable;
  * A failed site is still checked when it has a finished deployment: a failed
  * deploy leaves the previous release serving, so it's live and must stay
  * monitored. A site that failed provisioning never went live, so it isn't.
+ * Sites in teams whose owner's plan has no monitoring are not checked.
  */
 class CheckAllSitesUptimeJob implements ShouldQueue
 {
@@ -31,6 +34,7 @@ class CheckAllSitesUptimeJob implements ShouldQueue
     {
         Site::query()
             ->whereHas('server', fn (Builder $query) => $query->where('status', ServerStatus::Active))
+            ->whereHas('server.team.owner', fn (Builder $query) => $query->whereIn('plan', Plan::including(PlanFeature::Monitoring)))
             ->whereHas('primaryDomain')
             ->where(fn (Builder $query) => $query
                 ->whereIn('status', [SiteStatus::Provisioned, SiteStatus::Deployed, SiteStatus::Deploying])

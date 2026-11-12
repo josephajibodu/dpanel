@@ -1,11 +1,14 @@
 <?php
 
+use App\Enums\Plan;
 use App\Enums\ServerStatus;
 use App\Jobs\CheckAllSitesUptimeJob;
 use App\Jobs\CheckSiteUptimeJob;
 use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
@@ -66,3 +69,18 @@ it('has a single try and a 60-second timeout', function () {
     expect($job->tries)->toBe(1)
         ->and($job->timeout)->toBe(60);
 });
+
+it('checks sites only in teams whose owner\'s plan includes monitoring', function (Plan $plan, bool $checked) {
+    Queue::fake();
+    $team = Team::factory()->for(User::factory()->onPlan($plan), 'owner')->create();
+    $server = Server::factory()->forTeam($team)->create(['status' => ServerStatus::Active]);
+    Site::factory()->forServer($server)->deployed()->create();
+
+    (new CheckAllSitesUptimeJob)->handle();
+
+    Queue::assertPushed(CheckSiteUptimeJob::class, $checked ? 1 : 0);
+})->with([
+    'Hobby' => [Plan::Hobby, false],
+    'Pro' => [Plan::Pro, true],
+    'Team' => [Plan::Team, true],
+]);

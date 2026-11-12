@@ -20,6 +20,7 @@ import {
 } from '@/actions/App/Http/Controllers/TeamMemberController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
+import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import {
     SavedNote,
     SettingsRow,
@@ -174,7 +175,8 @@ function MembersCard({
     assignableRoles: AssignableRole[];
     canInvite: boolean;
 }) {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, plan } = usePage<SharedData>().props;
+    const membersUpgradeMessage = plan?.notIncluded.team_members ?? null;
     const getInitials = useInitials();
     const [memberToRemove, setMemberToRemove] = useState<ManagedMember | null>(
         null,
@@ -216,7 +218,8 @@ function MembersCard({
             title="Members"
             description="People who can access this team’s servers and sites."
             headerAction={
-                canInvite && (
+                canInvite &&
+                !membersUpgradeMessage && (
                     <InviteMemberDialog
                         team={team}
                         assignableRoles={assignableRoles}
@@ -225,6 +228,9 @@ function MembersCard({
             }
             bare
         >
+            {canInvite && membersUpgradeMessage && (
+                <PlanUpgradeNotice message={membersUpgradeMessage} />
+            )}
             <Table>
                 <TableHeader>
                     <TableRow>

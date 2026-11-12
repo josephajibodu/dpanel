@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Plan;
 use App\Enums\TeamRoleKey;
 use App\Jobs\RevokeSshKeyJob;
 use App\Models\Server;
@@ -89,6 +90,38 @@ describe('inviting', function () {
         'empty' => '',
         'array' => [['owner']],
     ]);
+});
+
+describe('team plan', function () {
+    it('refuses invitations unless the team owner is on the Team plan', function (Plan $plan, string $route) {
+        $this->team->owner->forceFill(['plan' => $plan])->save();
+
+        $this->actingAs($this->team->owner)
+            ->post(route($route, $this->team), ['email' => 'new@example.com', 'role' => 'developer'])
+            ->assertForbidden()
+            ->assertSeeText('Inviting team members needs the Team plan.');
+
+        expect(TeamInvitation::query()->count())->toBe(0);
+        Notification::assertNothingSent();
+    })->with([Plan::Hobby, Plan::Pro])->with(['team-invitations.store', 'team-members.store']);
+
+    it('keeps an invitee out while the team owner\'s plan has no team members', function () {
+        $this->team->owner->forceFill(['plan' => Plan::Pro])->save();
+        $invitation = $this->team->invitations()->create([
+            'email' => 'invitee@example.com',
+            'team_role_id' => TeamRole::builtIn(TeamRoleKey::Developer)->id,
+            'token' => 'join-token',
+        ]);
+        $invitee = User::factory()->create(['email' => 'invitee@example.com']);
+
+        $this->actingAs($invitee)
+            ->post("/invitations/{$invitation->token}/confirm")
+            ->assertRedirect('/dashboard')
+            ->assertSessionHas('error', "{$this->team->name}'s plan doesn't include team members yet. Ask the team owner to upgrade, then open the invitation again.");
+
+        expect($this->team->hasUser($invitee))->toBeFalse()
+            ->and($invitation->fresh())->not->toBeNull();
+    });
 });
 
 describe('changing a role', function () {

@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\PlanFeature;
 use App\Enums\TeamPermission;
 use App\Models\Server;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -50,7 +52,11 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
                 'permissions' => fn () => $user ? $this->permissionsFor($user) : [],
+                'teamLimitMessage' => fn () => $user === null || $user->plan->includes(PlanFeature::ExtraTeams)
+                    ? null
+                    : PlanFeature::ExtraTeams->upgradeMessage(),
             ],
+            'plan' => fn () => $user?->currentTeam ? $this->planFor($user->currentTeam) : null,
             'currentTeam' => fn () => $user?->currentTeam,
             'servers' => fn () => $user?->currentTeam
                 ? $user->currentTeam->servers()->select(['id', 'name'])->orderBy('name')->get()
@@ -88,6 +94,27 @@ class HandleInertiaRequests extends Middleware
                 $permission->value => $team !== null && $user->hasTeamPermission($team, $permission),
             ])
             ->all();
+    }
+
+    /**
+     * What the current team's plan (its owner's) leaves out, each with the
+     * message shown in place of the control. Only used to swap controls for
+     * an upgrade note; every limit is still enforced on the server.
+     *
+     * @return array{label: string, notIncluded: array<string, string>, serverLimitMessage: ?string}
+     */
+    protected function planFor(Team $team): array
+    {
+        $plan = $team->plan();
+
+        return [
+            'label' => $plan->label(),
+            'notIncluded' => collect(PlanFeature::cases())
+                ->reject(fn (PlanFeature $feature): bool => $plan->includes($feature))
+                ->mapWithKeys(fn (PlanFeature $feature): array => [$feature->value => $feature->upgradeMessage()])
+                ->all(),
+            'serverLimitMessage' => $team->hasRoomForAnotherServer() ? null : $plan->serverLimitMessage(),
+        ];
     }
 
     /**

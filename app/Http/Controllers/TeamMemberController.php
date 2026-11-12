@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Teams\ChangeTeamMemberRole;
 use App\Actions\Teams\InviteTeamMember;
 use App\Actions\Teams\RemoveTeamMember;
+use App\Enums\PlanFeature;
 use App\Http\Requests\InviteTeamMemberRequest;
 use App\Http\Requests\UpdateTeamMemberRoleRequest;
 use App\Models\Team;
@@ -15,6 +16,8 @@ class TeamMemberController extends Controller
 {
     public function store(InviteTeamMemberRequest $request, Team $team, InviteTeamMember $action): RedirectResponse
     {
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::TeamMembers);
+
         $action->execute($team, $request->validated('email'), $request->teamRole());
 
         return redirect()

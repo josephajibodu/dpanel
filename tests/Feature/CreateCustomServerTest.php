@@ -2,6 +2,7 @@
 
 use App\Actions\Servers\CreateCustomServerAction;
 use App\Data\CustomServerData;
+use App\Enums\Plan;
 use App\Enums\Provider;
 use App\Enums\ServerStatus;
 use App\Enums\ServerType;
@@ -95,6 +96,22 @@ it('creates a custom server and redirects to the setup page', function () {
 
     $response->assertRedirect("/{$this->team->slug}/servers/{$server->id}/setup");
     expect($server->status)->toBe(ServerStatus::Pending);
+});
+
+it('refuses an existing server once the Hobby plan\'s one server is used', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+    Server::factory()->forTeam($this->team)->create();
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/custom", [
+            'name' => 'test-server',
+            'ip_address' => '8.8.8.8',
+            'ssh_port' => 22,
+        ])
+        ->assertForbidden()
+        ->assertSeeText('The Hobby plan includes 1 server. Upgrade to Pro to add more.');
+
+    expect(Server::where('name', 'test-server')->exists())->toBeFalse();
 });
 
 it('requires authentication to create a custom server', function () {

@@ -3,6 +3,7 @@
 use App\Contracts\ProviderContract;
 use App\Data\ProviderServerStatus;
 use App\Enums\ActivityEvent;
+use App\Enums\Plan;
 use App\Enums\ServerStatus;
 use App\Enums\TeamRoleKey;
 use App\Events\ServerDeleted;
@@ -164,6 +165,30 @@ it('refuses a team the user cannot manage servers in', function (Closure $destin
     'the team it is already in' => [fn ($test) => $test->team->slug],
     'a team that does not exist' => [fn () => 'no-such-team'],
 ]);
+
+it('refuses a team whose owner\'s Hobby plan has no room for another server', function () {
+    $hobbyOwner = User::factory()->onPlan(Plan::Hobby)->create();
+    $hobbyTeam = Team::factory()->forUser($hobbyOwner)->create(['name' => 'Acme']);
+    Server::factory()->forTeam($hobbyTeam)->create();
+    $hobbyTeam->users()->attach($this->user, ['team_role_id' => TeamRole::builtIn(TeamRoleKey::Admin)->id]);
+
+    $this->actingAs($this->user);
+
+    transferServer($this->server, $this->team, $hobbyTeam->slug)
+        ->assertSessionHasErrors(['team' => "Acme can't take another server. The Hobby plan includes 1 server. Upgrade to Pro to add more."]);
+
+    expect($this->server->fresh()->team_id)->toBe($this->team->id);
+});
+
+it('moves a server between two teams of the same Hobby owner', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+
+    $this->actingAs($this->user);
+
+    transferServer($this->server, $this->team, $this->destination->slug)->assertRedirect();
+
+    expect($this->server->fresh()->team_id)->toBe($this->destination->id);
+});
 
 it('requires a team', function () {
     $this->actingAs($this->user);

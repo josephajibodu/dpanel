@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\PlanFeature;
 use App\Enums\SiteDomainStatus;
 use App\Enums\SiteDomainType;
 use App\Models\Certificate;
@@ -55,7 +56,9 @@ class CheckCertificateExpiryJob implements ShouldQueue
 
     /**
      * Custom domains each have their own Let's Encrypt certificate, so each
-     * is alerted on separately, to the server's owner.
+     * is alerted on separately, to the server's owner. The expiry is still
+     * recorded when the owner's plan has no monitoring; only the email is
+     * skipped.
      */
     private function checkCustomDomains(TlsCertificateProbe $probe): void
     {
@@ -77,8 +80,10 @@ class CheckCertificateExpiryJob implements ShouldQueue
                     'ssl_expiry_alert_threshold' => $threshold,
                 ]);
 
-                if ($shouldAlert) {
-                    ($server->team?->owner ?? $server->user)?->notify(new SslCertificateExpiring($domain));
+                $owner = $server->team?->owner ?? $server->user;
+
+                if ($shouldAlert && $owner?->plan->includes(PlanFeature::Monitoring)) {
+                    $owner->notify(new SslCertificateExpiring($domain));
                 }
 
                 // Saved after notifying, so an alert that fails to send is retried on the next run.

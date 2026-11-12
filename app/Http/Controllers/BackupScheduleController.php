@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PlanFeature;
 use App\Http\Requests\UpdateBackupScheduleRequest;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -16,6 +17,8 @@ class BackupScheduleController extends Controller
         ServerDatabase $server_database,
         UpdateBackupScheduleRequest $request,
     ): RedirectResponse {
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::DatabaseBackups);
+
         $validated = $request->validated();
 
         $schedule = $server_database->backupSchedule()->updateOrCreate([], [

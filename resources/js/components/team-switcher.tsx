@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
+import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -125,6 +126,7 @@ function CreateTeamDialog({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { teamLimitMessage } = usePage<SharedData>().props.auth;
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         slug: '',
@@ -205,6 +207,28 @@ function CreateTeamDialog({
             onSuccess: () => onOpenChange(false),
         });
     };
+
+    if (teamLimitMessage) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>New team</DialogTitle>
+                    </DialogHeader>
+                    <PlanUpgradeNotice message={teamLimitMessage} />
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

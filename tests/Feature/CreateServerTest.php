@@ -2,6 +2,7 @@
 
 use App\Contracts\ProviderContract;
 use App\Data\KeyPair;
+use App\Enums\Plan;
 use App\Enums\Provider;
 use App\Enums\ServerType;
 use App\Enums\ServiceType;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Services\Providers\ProviderManager;
 use App\Services\Ssh\KeyGenerator;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -89,4 +91,59 @@ it('creates an app server with every service when no type is given', function ()
     expect($server->installedServices()->pluck('type')->all())->toEqualCanonicalizing([
         ServiceType::Php, ServiceType::Nginx, ServiceType::Mysql, ServiceType::Redis,
     ]);
+});
+
+function createServerIn(Team $team, ProviderAccount $account): TestResponse
+{
+    return test()->post("/{$team->slug}/servers", [
+        'name' => 'web-2',
+        'provider_account_id' => $account->id,
+        'region' => 'nyc1',
+        'size' => 's-1vcpu-1gb',
+    ]);
+}
+
+it('lets a Hobby owner create their first server', function () {
+    Queue::fake();
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+
+    $this->actingAs($this->user);
+
+    createServerIn($this->team, $this->providerAccount)->assertRedirect();
+
+    expect($this->team->servers()->count())->toBe(1);
+});
+
+it('refuses a second server on the Hobby plan', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+    Server::factory()->forTeam($this->team)->create();
+
+    $this->actingAs($this->user);
+
+    createServerIn($this->team, $this->providerAccount)
+        ->assertForbidden()
+        ->assertSeeText('The Hobby plan includes 1 server. Upgrade to Pro to add more.');
+
+    expect($this->team->servers()->count())->toBe(1);
+    $this->provider->shouldNotHaveReceived('createSshKey');
+});
+
+it('counts the servers in every team the owner owns against the Hobby limit', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+    $otherTeam = Team::factory()->create(['user_id' => $this->user->id]);
+    Server::factory()->forTeam($otherTeam)->create();
+
+    $this->actingAs($this->user);
+
+    createServerIn($this->team, $this->providerAccount)->assertForbidden();
+});
+
+it('holds a member to the team owner\'s plan rather than their own', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+    Server::factory()->forTeam($this->team)->create();
+    $admin = User::factory()->onPlan(Plan::Team)->adminOf($this->team)->create();
+
+    $this->actingAs($admin);
+
+    createServerIn($this->team, $this->providerAccount)->assertForbidden();
 });

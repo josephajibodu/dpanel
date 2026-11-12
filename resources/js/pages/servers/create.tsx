@@ -15,6 +15,7 @@ import {
 } from '@/components/create-form';
 import { EmptyState } from '@/components/empty-state';
 import InputError from '@/components/input-error';
+import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
@@ -288,6 +290,7 @@ export default function ServersCreate({
     serverTypes,
 }: Props) {
     const teamPath = useTeamPath();
+    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
     const accounts = providerAccounts.data;
     const { url } = usePage();
     const requestedMode = new URLSearchParams(url.split('?')[1] ?? '').get(
@@ -412,6 +415,21 @@ export default function ServersCreate({
     const stackType = serverTypes.find(
         (option) => option.value === activeForm.data.type,
     );
+
+    if (serverLimitMessage) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Create Server" />
+
+                <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4">
+                    <h1 className="text-xl font-semibold tracking-tight">
+                        Create Server
+                    </h1>
+                    <PlanUpgradeNotice message={serverLimitMessage} />
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

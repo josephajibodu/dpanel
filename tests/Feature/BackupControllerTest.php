@@ -2,6 +2,7 @@
 
 use App\Actions\Backups\RestoreDatabaseBackup;
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Enums\Plan;
 use App\Enums\ServerStatus;
 use App\Models\Backup;
 use App\Models\BackupSchedule;
@@ -89,6 +90,22 @@ describe('store', function () {
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
+    });
+
+    it('refuses a manual backup when the team owner is on the Hobby plan', function () {
+        $this->user->forceFill(['plan' => Plan::Hobby])->save();
+        BackupSchedule::factory()->create([
+            'server_database_id' => $this->serverDatabase->id,
+            'storage_provider_id' => $this->storageProvider->id,
+        ]);
+
+        $actionMock = Mockery::mock(RunDatabaseBackup::class);
+        $actionMock->shouldNotReceive('trigger');
+        $this->app->instance(RunDatabaseBackup::class, $actionMock);
+
+        $this->actingAs($this->user)->post($this->basePath)
+            ->assertForbidden()
+            ->assertSeeText('Backing up databases needs the Pro or Team plan.');
     });
 });
 

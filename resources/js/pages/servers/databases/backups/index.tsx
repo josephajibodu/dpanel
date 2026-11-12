@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { type PaginationMeta } from '@/components/ui/pagination';
 import { getServerSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -41,6 +42,7 @@ export default function ServerDatabaseBackupsIndex({
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const can = usePermission();
+    const plan = usePlan();
     const server = 'data' in serverProp ? serverProp.data : serverProp;
     const serverDatabase =
         'data' in serverDatabaseProp
@@ -111,7 +113,11 @@ export default function ServerDatabaseBackupsIndex({
                         {can('run_backups') && (
                             <Button
                                 onClick={handleBackupNow}
-                                disabled={!schedule || isBackingUp}
+                                disabled={
+                                    !schedule ||
+                                    isBackingUp ||
+                                    Boolean(plan?.notIncluded.database_backups)
+                                }
                             >
                                 <PlusIcon className="h-4 w-4" />
                                 {isBackingUp ? 'Starting…' : 'Backup now'}

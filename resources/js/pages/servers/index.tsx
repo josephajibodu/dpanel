@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddServerOptions } from '@/components/dashboard/getting-started';
 import { EmptyState } from '@/components/empty-state';
 import { PageActions } from '@/components/page-actions';
+import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import { SearchInput } from '@/components/search-input';
 import { ServerStatusBadge } from '@/components/servers/server-status-badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -54,6 +56,8 @@ const DOCS_URL = 'https://docs.flitops.com/servers/creating-servers';
 export default function ServersIndex({ servers }: Props) {
     const teamPath = useTeamPath();
     const canManageServers = usePermission()('manage_servers');
+    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
+    const canAddServer = canManageServers && serverLimitMessage === null;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -114,7 +118,7 @@ export default function ServersIndex({ servers }: Props) {
                             Docs
                         </a>
                     </Button>
-                    {canManageServers && servers.data.length > 0 && (
+                    {canAddServer && servers.data.length > 0 && (
                         <Button asChild>
                             <Link href={teamPath('/servers/create')}>
                                 <PlusIcon className="h-4 w-4" />
@@ -124,7 +128,11 @@ export default function ServersIndex({ servers }: Props) {
                     )}
                 </PageActions>
 
-                {servers.data.length === 0 && canManageServers ? (
+                {canManageServers && serverLimitMessage && (
+                    <PlanUpgradeNotice message={serverLimitMessage} />
+                )}
+
+                {servers.data.length === 0 && canAddServer ? (
                     <AddServerOptions />
                 ) : servers.data.length === 0 ? (
                     <EmptyState

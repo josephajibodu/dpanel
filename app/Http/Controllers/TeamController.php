@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Teams\CreateTeam;
 use App\Actions\Teams\DeleteTeam;
 use App\Actions\Teams\UpdateTeamName;
+use App\Enums\PlanFeature;
 use App\Enums\TeamRoleKey;
 use App\Http\Requests\DeleteTeamRequest;
 use App\Http\Requests\StoreTeamRequest;
@@ -102,6 +103,8 @@ class TeamController extends Controller
 
     public function store(StoreTeamRequest $request, CreateTeam $action): RedirectResponse
     {
+        $this->ensurePlanIncludes($request->user()->plan, PlanFeature::ExtraTeams);
+
         $team = $action->execute(
             user: $request->user(),
             name: $request->validated('name'),

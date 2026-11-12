@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\Backups\RunDatabaseBackup;
 use App\Actions\Backups\RunSqliteBackup;
+use App\Enums\PlanFeature;
 use App\Models\BackupSchedule;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -20,14 +21,16 @@ class CollectDueBackupsJob implements ShouldQueue
     /**
      * Dispatch one RunBackupJob per due, enabled schedule — each backup runs
      * as its own queued job so one slow or unreachable server can't delay
-     * the rest, matching CollectAllServerMetricsJob's fan-out pattern.
+     * the rest, matching CollectAllServerMetricsJob's fan-out pattern. A
+     * schedule whose team owner's plan has no backups is skipped, not
+     * deleted, so it resumes after an upgrade.
      */
     public function handle(RunDatabaseBackup $databaseBackup, RunSqliteBackup $sqliteBackup): void
     {
         BackupSchedule::query()
             ->where('enabled', true)
             ->where('next_run_at', '<=', now())
-            ->with('serverDatabase.server', 'site.server', 'storageProvider')
+            ->with('serverDatabase.server.team.owner', 'site.server.team.owner', 'storageProvider')
             ->each(function (BackupSchedule $schedule) use ($databaseBackup, $sqliteBackup) {
                 // Advance next_run_at inside a transaction before dispatching
                 // so a slow tick can't dispatch the same schedule twice.
@@ -52,7 +55,7 @@ class CollectDueBackupsJob implements ShouldQueue
                 }
 
                 $server = $schedule->site?->server ?? $schedule->serverDatabase->server;
-                if (! $server->isReady()) {
+                if (! $server->isReady() || ! $server->team?->planIncludes(PlanFeature::DatabaseBackups)) {
                     return;
                 }
 

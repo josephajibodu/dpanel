@@ -1,6 +1,7 @@
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 
+import PlanUpgradeNotice from '@/components/plan-upgrade-notice';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import {
 import { StatGroup } from '@/components/ui/stat-group';
 import { Switch } from '@/components/ui/switch';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { type BackupSchedule } from '@/types/backup';
 import { type StorageProvider } from '@/types/storage-provider';
 
@@ -33,6 +35,7 @@ export function BackupScheduleCard({
     description,
 }: Props) {
     const canManageSchedule = usePermission()('run_backups');
+    const upgradeMessage = usePlan()?.notIncluded.database_backups ?? null;
     const scheduleForm = useForm({
         storage_provider_id: schedule?.storage_provider_id ?? '',
         frequency: schedule?.frequency ?? 'daily',
@@ -57,7 +60,9 @@ export function BackupScheduleCard({
                     </CardDescription>
                 </div>
                 <div className="p-6">
-                    {storageProviders.length === 0 ? (
+                    {upgradeMessage ? (
+                        <PlanUpgradeNotice message={upgradeMessage} />
+                    ) : storageProviders.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             {canManageSchedule
                                 ? 'Connect a storage provider first, then come back to set up a schedule.'

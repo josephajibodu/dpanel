@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Plan;
 use App\Jobs\CheckCertificateExpiryJob;
 use App\Jobs\DistributeWildcardCertificateJob;
 use App\Models\Certificate;
@@ -63,6 +64,17 @@ describe('custom domains', function () {
         });
         expect($this->domain->fresh()->ssl_expires_at->getTimestamp())->toBe($servedExpiry->getTimestamp())
             ->and($this->domain->fresh()->ssl_expiry_alert_threshold)->toBe(14);
+    });
+
+    it('records the expiry but sends no email when the owner is on the Hobby plan', function () {
+        $this->owner->forceFill(['plan' => Plan::Hobby])->save();
+        $servedExpiry = CarbonImmutable::now()->addDays(10);
+        fakeServedCertificateExpiries(['shop.example.com' => $servedExpiry]);
+
+        runCertificateExpiryCheck();
+
+        Notification::assertNotSentTo($this->owner, SslCertificateExpiring::class);
+        expect($this->domain->fresh()->ssl_expires_at->getTimestamp())->toBe($servedExpiry->getTimestamp());
     });
 
     it('does not alert when the served certificate is outside the warning window', function () {

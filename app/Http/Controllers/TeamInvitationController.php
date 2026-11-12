@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Teams\InviteTeamMember;
+use App\Enums\PlanFeature;
 use App\Http\Requests\InviteTeamMemberRequest;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -15,6 +16,8 @@ class TeamInvitationController extends Controller
 {
     public function store(InviteTeamMemberRequest $request, Team $team, InviteTeamMember $action): RedirectResponse
     {
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::TeamMembers);
+
         $action->execute($team, $request->validated('email'), $request->teamRole());
 
         return redirect()
@@ -65,6 +68,11 @@ class TeamInvitationController extends Controller
         }
 
         if (! $team->hasUser($user)) {
+            if (! $team->planIncludes(PlanFeature::TeamMembers)) {
+                return redirect('/dashboard')
+                    ->with('error', "{$team->name}'s plan doesn't include team members yet. Ask the team owner to upgrade, then open the invitation again.");
+            }
+
             $team->users()->attach($user, ['team_role_id' => $invitation->team_role_id]);
         }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Backups\RunSqliteBackup;
+use App\Enums\PlanFeature;
 use App\Models\Backup;
 use App\Models\Server;
 use App\Models\Site;
@@ -24,6 +25,7 @@ class SiteBackupController extends Controller
     public function store(Team $team, Server $server, Site $site, RunSqliteBackup $action): RedirectResponse
     {
         $this->authorize('runBackups', $site);
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::DatabaseBackups);
 
         if (! $site->usesSqlite()) {
             return redirect()

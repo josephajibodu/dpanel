@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Plan;
 use App\Enums\ServerStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -86,4 +87,35 @@ it('requires a storage provider belonging to the team', function () {
         ]);
 
     $response->assertSessionHasErrors('storage_provider_id');
+});
+
+it('refuses a backup schedule when the team owner is on the Hobby plan', function () {
+    $this->user->forceFill(['plan' => Plan::Hobby])->save();
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/databases/{$this->serverDatabase->id}/backup-schedule", [
+            'storage_provider_id' => $this->storageProvider->id,
+            'frequency' => 'daily',
+            'retention_count' => 7,
+            'enabled' => true,
+        ])
+        ->assertForbidden()
+        ->assertSeeText('Backing up databases needs the Pro or Team plan.');
+
+    $this->assertDatabaseCount('backup_schedules', 0);
+});
+
+it('saves a backup schedule on the Pro plan', function () {
+    $this->user->forceFill(['plan' => Plan::Pro])->save();
+
+    $this->actingAs($this->user)
+        ->put("/{$this->team->slug}/servers/{$this->server->id}/databases/{$this->serverDatabase->id}/backup-schedule", [
+            'storage_provider_id' => $this->storageProvider->id,
+            'frequency' => 'daily',
+            'retention_count' => 7,
+            'enabled' => true,
+        ])
+        ->assertSessionHas('success');
+
+    $this->assertDatabaseCount('backup_schedules', 1);
 });

@@ -23,6 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -85,6 +86,8 @@ export default function Dashboard({
 }: Props) {
     const teamPath = useTeamPath();
     const canManageServers = usePermission()('manage_servers');
+    const serverLimitMessage = usePlan()?.serverLimitMessage ?? null;
+    const canAddServer = canManageServers && serverLimitMessage === null;
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',
@@ -122,7 +125,7 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {canManageServers && !isWelcome && (
+                {canAddServer && !isWelcome && (
                     <PageActions>
                         <Button asChild>
                             <Link href={teamPath('/servers/create')}>

@@ -1,7 +1,10 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { type Icon } from '@phosphor-icons/react';
 
+import { Plan } from './plan';
 import { Team, TeamPermission } from './team';
+
+export type { Plan, PlanFeature } from './plan';
 
 export type {
     Team,
@@ -15,6 +18,8 @@ export interface Auth {
     user: User;
     /** What the user may do in their current team. Presentation only; the server re-checks every action. */
     permissions: Record<TeamPermission, boolean>;
+    /** Why the user's own plan doesn't let them create more teams, or null when it does. */
+    teamLimitMessage: string | null;
 }
 
 export interface BreadcrumbItem {
@@ -65,6 +70,7 @@ export interface SharedData {
     name: string;
     auth: Auth;
     currentTeam: Team | null;
+    plan: Plan | null;
     servers: ServerSummary[];
     sites: SiteSummary[];
     teams: Pick<Team, 'id' | 'name' | 'personal_team' | 'slug'>[];

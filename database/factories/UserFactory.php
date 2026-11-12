@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Plan;
 use App\Enums\TeamRoleKey;
 use App\Models\Team;
 use App\Models\TeamRole;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -36,7 +37,19 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            'plan' => Plan::Team,
         ];
+    }
+
+    /**
+     * Put the user on the given plan. Users are on the Team plan unless a
+     * test says otherwise, so only tests about plan limits meet them.
+     */
+    public function onPlan(Plan $plan): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'plan' => $plan,
+        ]);
     }
 
     /**

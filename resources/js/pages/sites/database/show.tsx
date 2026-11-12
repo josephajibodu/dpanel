@@ -14,6 +14,7 @@ import { type PaginationMeta } from '@/components/ui/pagination';
 import { AutoStatusBadge } from '@/components/ui/status-badge';
 import { getSiteSubNavItems } from '@/config/sub-nav-items';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -73,6 +74,7 @@ export default function SiteDatabaseShow({
     const { currentTeam } = usePage<SharedData>().props;
     const teamPath = useTeamPath();
     const can = usePermission();
+    const plan = usePlan();
     const server = serverProp.data;
     const site = siteProp.data;
     const schedule = scheduleProp?.data ?? null;
@@ -144,7 +146,11 @@ export default function SiteDatabaseShow({
                         {hasDatabase && can('run_backups') && (
                             <Button
                                 onClick={handleBackupNow}
-                                disabled={!schedule || isBackingUp}
+                                disabled={
+                                    !schedule ||
+                                    isBackingUp ||
+                                    Boolean(plan?.notIncluded.database_backups)
+                                }
                             >
                                 <PlusIcon className="h-4 w-4" />
                                 {isBackingUp ? 'Starting…' : 'Backup now'}

@@ -3,7 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Plan;
 use App\Enums\TeamPermission;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,7 +16,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
@@ -29,6 +31,15 @@ class User extends Authenticatable
         'git_name',
         'git_email',
         'current_team_id',
+    ];
+
+    /**
+     * New users start on the free plan, matching the column's default.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'plan' => Plan::Hobby->value,
     ];
 
     /**
@@ -61,6 +72,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'plan' => Plan::class,
         ];
     }
 
@@ -127,6 +139,18 @@ class User extends Authenticatable
         }
 
         return $this->resolvedTeamRoles[$team->id];
+    }
+
+    /**
+     * Whether this user's plan leaves room for one more server, counting the
+     * servers in every team they own.
+     */
+    public function hasRoomForAnotherServer(): bool
+    {
+        $limit = $this->plan->serverLimit();
+
+        return $limit === null
+            || Server::query()->whereIn('team_id', $this->ownedTeams()->select('id'))->count() < $limit;
     }
 
     public function switchTeam(Team $team): void

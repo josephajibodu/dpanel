@@ -72,9 +72,10 @@ export default function SitesShow({
     cronJobs,
     databaseConnection,
 }: Props) {
-    const { currentTeam, errors } = usePage<
+    const { currentTeam, errors, plan } = usePage<
         SharedData & { errors?: Record<string, string> }
     >().props;
+    const monitoringUpgradeMessage = plan?.notIncluded.monitoring ?? null;
     const teamPath = useTeamPath();
     const can = usePermission();
     const server = serverProp?.data ?? serverProp;
@@ -497,9 +498,14 @@ export default function SitesShow({
 
                                 <OverviewItem
                                     label="Uptime"
-                                    wrapHint={Boolean(siteData.open_incident)}
+                                    wrapHint={Boolean(
+                                        monitoringUpgradeMessage ||
+                                        siteData.open_incident,
+                                    )}
                                     hint={
-                                        siteData.open_incident ? (
+                                        monitoringUpgradeMessage ? (
+                                            monitoringUpgradeMessage
+                                        ) : siteData.open_incident ? (
                                             <span className="text-destructive-foreground">
                                                 Down since{' '}
                                                 {format(
@@ -523,7 +529,9 @@ export default function SitesShow({
                                         )
                                     }
                                 >
-                                    {siteData.uptime_status ? (
+                                    {monitoringUpgradeMessage ? (
+                                        'Not monitored'
+                                    ) : siteData.uptime_status ? (
                                         <StatusBadge
                                             status={
                                                 siteData.uptime_status_label ??

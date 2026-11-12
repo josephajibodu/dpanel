@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PlanFeature;
 use App\Http\Requests\UpdateBackupScheduleRequest;
 use App\Models\Server;
 use App\Models\Site;
@@ -16,6 +17,8 @@ class SiteBackupScheduleController extends Controller
         Site $site,
         UpdateBackupScheduleRequest $request,
     ): RedirectResponse {
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::DatabaseBackups);
+
         if (! $site->usesSqlite()) {
             return redirect()
                 ->back()

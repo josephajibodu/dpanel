@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Backups\RunSqliteBackup;
+use App\Enums\Plan;
 use App\Enums\ServerStatus;
 use App\Models\Backup;
 use App\Models\BackupSchedule;
@@ -75,6 +76,21 @@ describe('store', function () {
         $response->assertSessionHas('success');
     });
 
+    it('refuses a manual backup when the team owner is on the Hobby plan', function () {
+        $this->user->forceFill(['plan' => Plan::Hobby])->save();
+        BackupSchedule::factory()->forSite($this->site)->create([
+            'storage_provider_id' => $this->storageProvider->id,
+        ]);
+
+        $actionMock = Mockery::mock(RunSqliteBackup::class);
+        $actionMock->shouldNotReceive('trigger');
+        $this->app->instance(RunSqliteBackup::class, $actionMock);
+
+        $this->actingAs($this->user)->post($this->basePath)
+            ->assertForbidden()
+            ->assertSeeText('Backing up databases needs the Pro or Team plan.');
+    });
+
     it('refuses to back up a site that uses a server database', function () {
         $serverDatabase = ServerDatabase::factory()->create(['server_id' => $this->server->id]);
         $this->site->update(['server_database_id' => $serverDatabase->id]);
@@ -111,6 +127,21 @@ describe('schedule', function () {
             ->and($schedule->frequency)->toBe('hourly')
             ->and($schedule->retention_count)->toBe(3)
             ->and($schedule->next_run_at)->not->toBeNull();
+    });
+
+    it('refuses a schedule when the team owner is on the Hobby plan', function () {
+        $this->user->forceFill(['plan' => Plan::Hobby])->save();
+
+        $this->actingAs($this->user)->put("{$this->sitePath}/backup-schedule", [
+            'storage_provider_id' => $this->storageProvider->id,
+            'frequency' => 'daily',
+            'retention_count' => 7,
+            'enabled' => true,
+        ])
+            ->assertForbidden()
+            ->assertSeeText('Backing up databases needs the Pro or Team plan.');
+
+        $this->assertDatabaseCount('backup_schedules', 0);
     });
 
     it('refuses a schedule for a site that uses a server database', function () {

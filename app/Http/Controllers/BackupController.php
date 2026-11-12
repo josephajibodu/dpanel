@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Backups\RestoreDatabaseBackup;
 use App\Actions\Backups\RunDatabaseBackup;
+use App\Enums\PlanFeature;
 use App\Events\BackupStatusChanged;
 use App\Http\Resources\BackupResource;
 use App\Http\Resources\BackupScheduleResource;
@@ -51,6 +52,7 @@ class BackupController extends Controller
     public function store(Team $team, Server $server, ServerDatabase $server_database, RunDatabaseBackup $action): RedirectResponse
     {
         $this->authorize('runBackups', $server);
+        $this->ensurePlanIncludes($team->plan(), PlanFeature::DatabaseBackups);
 
         $schedule = $server_database->backupSchedule;
 

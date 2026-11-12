@@ -52,6 +52,12 @@ class TransferServerRequest extends FormRequest
                         return;
                     }
 
+                    if ($destination->user_id !== $server->team->user_id && ! $destination->hasRoomForAnotherServer()) {
+                        $fail("{$destination->name} can't take another server. {$destination->plan()->serverLimitMessage()}");
+
+                        return;
+                    }
+
                     if ($server->status !== ServerStatus::Active) {
                         $fail('Only an active server can be transferred.');
 

@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Plan;
+use App\Enums\PlanFeature;
+use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Team extends Model
 {
-    /** @use HasFactory<\Database\Factories\TeamFactory> */
+    /** @use HasFactory<TeamFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -80,5 +83,26 @@ class Team extends Model
     public function userIsOwner(User $user): bool
     {
         return $this->user_id === $user->id;
+    }
+
+    /**
+     * The plan this team runs on, which is always its owner's.
+     */
+    public function plan(): Plan
+    {
+        return $this->owner->plan;
+    }
+
+    public function planIncludes(PlanFeature $feature): bool
+    {
+        return $this->plan()->includes($feature);
+    }
+
+    /**
+     * Whether the owner's plan leaves room for one more server in this team.
+     */
+    public function hasRoomForAnotherServer(): bool
+    {
+        return $this->owner->hasRoomForAnotherServer();
     }
 }
