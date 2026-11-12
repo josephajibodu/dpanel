@@ -68,6 +68,19 @@ it('never prunes the release current points at even if it has fallen out of the 
         ->and($deleted[0])->toContain('01CCC');
 });
 
+it('never prunes the live release of an app kept in a subfolder, where current points inside the release', function () {
+    $site = Site::factory()->make(['domain' => 'example.com', 'app_directory' => 'backend']);
+    $deleted = [];
+    $connection = mockReleasesListing(['01AAA', '01BBB', '01CCC', '01DDD', '01EEE'], currentRelease: '01AAA/backend', deletedCommands: $deleted);
+
+    (new ReleaseManager)->pruneOldReleases($connection, $site, keep: 2);
+
+    expect($deleted)->toHaveCount(1)
+        ->and($deleted[0])->not->toContain('01AAA')
+        ->and($deleted[0])->toContain('01BBB')
+        ->and($deleted[0])->toContain('01CCC');
+});
+
 it('does nothing when releases are within the retention window', function () {
     $site = releaseManagerSite();
     $deleted = [];

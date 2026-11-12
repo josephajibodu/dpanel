@@ -214,6 +214,25 @@ function uploadedDeployScriptFor(Site $site): string
     return $uploaded;
 }
 
+it('builds, links shared files and goes live inside the app folder when the app is in a subfolder', function () {
+    Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
+
+    $this->site->update(['app_directory' => 'backend']);
+    DeployScript::create(['site_id' => $this->site->id, 'script' => 'echo "app={{SITE_PATH}} web={{WEB_ROOT}}"']);
+
+    $uploaded = uploadedDeployScriptFor($this->site);
+    $release = $this->site->releasesPath().'/'.$this->site->deployments()->sole()->releaseFolderName();
+    $sharedStorage = $this->site->sharedPath().'/storage';
+
+    expect($uploaded)->toContain('git clone --branch main')
+        ->and($uploaded)->toMatch('/ "\$RELEASE_PATH"\n.*\ncd "\$RELEASE_PATH\/backend"\n/s')
+        ->and($uploaded)->toContain("ln -sfn '{$sharedStorage}' \"\$RELEASE_PATH/backend/storage\"")
+        ->and($uploaded)->toContain("echo \"app={$release}/backend web={$release}/backend/public\"")
+        ->and($uploaded)->toContain('chmod -R 775 "$RELEASE_PATH/backend/storage"')
+        ->and($uploaded)->toContain("ln -sfn \"\$RELEASE_PATH/backend\" {$this->site->currentPath()}")
+        ->and($uploaded)->toContain("cd \"\$RELEASE_PATH/backend\"\n\$PHP artisan queue:restart");
+});
+
 it('stops the deploy before linking when the shared env file is missing', function () {
     Event::fake([DeploymentOutput::class, DeploymentStatusChanged::class]);
 

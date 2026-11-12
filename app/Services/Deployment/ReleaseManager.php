@@ -55,6 +55,12 @@ class ReleaseManager
     {
         $resolved = trim($connection->exec($site->commandAsSystemUser("readlink -f {$site->currentPath()} 2>/dev/null || true")));
 
+        // For an app in a subfolder `current` points inside the release
+        // (see Site::appPathIn), so step back out to the release folder.
+        if ($site->app_directory && str_ends_with($resolved, '/'.$site->app_directory)) {
+            $resolved = substr($resolved, 0, -strlen('/'.$site->app_directory));
+        }
+
         return $resolved !== '' ? basename($resolved) : null;
     }
 }

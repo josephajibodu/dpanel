@@ -60,6 +60,7 @@ class StoreSiteRequest extends FormRequest
                 'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/',
             ],
             'directory' => ['sometimes', 'string', 'max:255', 'regex:'.Site::DIRECTORY_PATTERN],
+            'app_directory' => ['nullable', 'string', 'max:100', 'regex:'.Site::APP_DIRECTORY_PATTERN],
             'repository' => [
                 'nullable',
                 'string',
@@ -130,6 +131,7 @@ class StoreSiteRequest extends FormRequest
             'package_manager.in' => 'Package manager must be one of: none, npm, pnpm, yarn, bun.',
             'aliases.*.regex' => 'Please enter valid domain aliases.',
             'directory.regex' => 'Directory must start with / and contain only letters, numbers, dots, underscores, and hyphens, without "..".',
+            'app_directory.regex' => 'The app folder must be the name of one folder at the top of the repository.',
             'repository.regex' => 'Repository should be in format: username/repository.',
             'branch.regex' => 'Branch name contains invalid characters.',
             'server_database_id.exists' => 'The selected database is not on this server or a server connected to it.',

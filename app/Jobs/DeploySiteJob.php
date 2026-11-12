@@ -299,10 +299,11 @@ class DeploySiteJob implements ShouldQueue
         // (which resolves through `current` — still the OLD release at this point,
         // since the symlink swap only happens after the script succeeds).
         $directory = $site->directory ?: '/';
-        $releaseWebRoot = rtrim($releasePath, '/').'/'.ltrim($directory, '/');
+        $releaseAppPath = $site->appPathIn($releasePath);
+        $releaseWebRoot = rtrim($releaseAppPath, '/').'/'.ltrim($directory, '/');
 
         $replacements = [
-            '{{SITE_PATH}}' => $releasePath,
+            '{{SITE_PATH}}' => $releaseAppPath,
             '{{WEB_ROOT}}' => $releaseWebRoot,
             '{{BRANCH}}' => $site->branch,
             '{{DOMAIN}}' => $site->domain,

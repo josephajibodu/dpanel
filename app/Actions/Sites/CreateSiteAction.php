@@ -43,6 +43,7 @@ class CreateSiteAction
             'site_name' => $data->siteName,
             'aliases' => $data->aliases,
             'directory' => $data->directory,
+            'app_directory' => $data->appDirectory,
             'repository' => $data->repository,
             'source_control_account_id' => $data->sourceControlAccountId,
             'repository_provider' => $data->repositoryProvider->value,

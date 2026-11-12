@@ -35,6 +35,7 @@ class Site extends Model
         'site_name',
         'aliases',
         'directory',
+        'app_directory',
         'repository',
         'repository_provider',
         'branch',
@@ -98,6 +99,12 @@ class Site extends Model
      * never `..`, which would climb out of the release.
      */
     public const DIRECTORY_PATTERN = '/^\/(?!.*\.\.)[a-zA-Z0-9\/_.-]*$/';
+
+    /**
+     * What an app directory may look like: the name of one folder at the
+     * top of the repository, never a path and never `.` or `..`.
+     */
+    public const APP_DIRECTORY_PATTERN = '/^(?!\.+$)[a-zA-Z0-9_.-]+$/';
 
     /**
      * File types a single-page app's build produces. A request for one that
@@ -227,6 +234,18 @@ class Site extends Model
         $directory = $this->directory ?: '/';
 
         return rtrim($this->currentPath(), '/').'/'.ltrim($directory, '/');
+    }
+
+    /**
+     * Where the app sits inside a release: the release folder itself, or
+     * the app directory within it when the repository keeps the app in a
+     * subfolder. `current` points here, so everything that runs from
+     * `current` (the web server, cron jobs, workers, commands) runs in
+     * the app's own folder.
+     */
+    public function appPathIn(string $releasePath): string
+    {
+        return $this->app_directory ? rtrim($releasePath, '/').'/'.$this->app_directory : $releasePath;
     }
 
     /**

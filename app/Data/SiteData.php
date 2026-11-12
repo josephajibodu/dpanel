@@ -17,6 +17,7 @@ readonly class SiteData
         public ?string $siteName = null,
         public ?array $aliases = null,
         public string $directory = '/public',
+        public ?string $appDirectory = null,
         public ?string $repository = null,
         public ?int $sourceControlAccountId = null,
         public RepositoryProvider $repositoryProvider = RepositoryProvider::Github,
@@ -50,6 +51,7 @@ readonly class SiteData
             siteName: $data['site_name'] ?? null,
             aliases: $data['aliases'] ?? null,
             directory: $data['directory'] ?? '/public',
+            appDirectory: $data['app_directory'] ?? null,
             repository: $data['repository'] ?? null,
             sourceControlAccountId: $data['source_control_account_id'] ?? null,
             repositoryProvider: isset($data['repository_provider'])
@@ -79,6 +81,7 @@ readonly class SiteData
             'site_name' => $this->siteName,
             'aliases' => $this->aliases,
             'directory' => $this->directory,
+            'app_directory' => $this->appDirectory,
             'repository' => $this->repository,
             'source_control_account_id' => $this->sourceControlAccountId,
             'repository_provider' => $this->repositoryProvider->value,

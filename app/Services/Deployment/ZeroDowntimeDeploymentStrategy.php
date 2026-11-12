@@ -15,30 +15,29 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
 {
     public function prepend(Site $site): string
     {
+        $enterApp = [$this->appFolderCheck($site), "cd \"{$this->appPath($site)}\"", $this->symlinkSharedPaths($site)];
+
         $lines = $site->isIsolated()
-            ? ['cd "$RELEASE_PATH"', $this->symlinkSharedPaths($site)]
-            : [
-                'mkdir -p "$RELEASE_PATH"',
-                $this->cloneCommand($site),
-                'cd "$RELEASE_PATH"',
-                $this->symlinkSharedPaths($site),
-            ];
+            ? $enterApp
+            : ['mkdir -p "$RELEASE_PATH"', $this->cloneCommand($site), ...$enterApp];
 
         return implode("\n", array_filter($lines, fn (string $line) => $line !== ''))."\n";
     }
 
     public function append(Site $site): string
     {
+        $app = $this->appPath($site);
+
         if ($site->isIsolated()) {
-            $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then chmod -R 775 "$RELEASE_PATH/storage"; fi';
-            $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
+            $storageChmod = "if [ -d \"{$app}/storage\" ]; then chmod -R 775 \"{$app}/storage\"; fi";
+            $cacheChmod = "if [ -d \"{$app}/bootstrap/cache\" ]; then chmod -R 775 \"{$app}/bootstrap/cache\"; fi";
 
             return "\n{$storageChmod}\n{$cacheChmod}\n".$this->activate($site);
         }
 
         $chown = 'sudo chown -R $SERVER_USER:$WEB_USER "$RELEASE_PATH"';
-        $storageChmod = 'if [ -d "$RELEASE_PATH/storage" ]; then sudo chmod -R 775 "$RELEASE_PATH/storage"; fi';
-        $cacheChmod = 'if [ -d "$RELEASE_PATH/bootstrap/cache" ]; then sudo chmod -R 775 "$RELEASE_PATH/bootstrap/cache"; fi';
+        $storageChmod = "if [ -d \"{$app}/storage\" ]; then sudo chmod -R 775 \"{$app}/storage\"; fi";
+        $cacheChmod = "if [ -d \"{$app}/bootstrap/cache\" ]; then sudo chmod -R 775 \"{$app}/bootstrap/cache\"; fi";
 
         return "\n{$chown}\n{$storageChmod}\n{$cacheChmod}\n".$this->activate($site);
     }
@@ -46,18 +45,45 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
     public function activate(Site $site): string
     {
         $currentPath = $site->currentPath();
+        $app = $this->appPath($site);
 
-        $swap = "ln -sfn \"\$RELEASE_PATH\" {$currentPath}";
+        // Checked here as well as before the build, because a rollback only
+        // runs this part and must not point `current` at a missing folder.
+        $swap = ltrim($this->appFolderCheck($site)."\nln -sfn \"{$app}\" {$currentPath}");
 
         $script = $site->isIsolated() ? $swap : "{$swap}\n".$this->reloadPhpFpm($site);
 
         $postActivation = $site->project_type->postActivationScript();
 
         if ($postActivation !== '') {
-            $script .= "\ncd \"\$RELEASE_PATH\"\n{$postActivation}";
+            $script .= "\ncd \"{$app}\"\n{$postActivation}";
         }
 
         return $script;
+    }
+
+    /**
+     * The app's folder inside the release being built, as the deploy
+     * script writes it: the release itself unless the site's app lives in
+     * a subfolder of the repository.
+     */
+    private function appPath(Site $site): string
+    {
+        return $site->appPathIn('$RELEASE_PATH');
+    }
+
+    /**
+     * Stops with a plain message when the repository doesn't have the
+     * site's app directory, instead of a bare "No such file or directory".
+     * Empty for a site whose app is at the top of the repository.
+     */
+    private function appFolderCheck(Site $site): string
+    {
+        if (! $site->app_directory) {
+            return '';
+        }
+
+        return "if [ ! -d \"{$this->appPath($site)}\" ]; then echo \"[ERROR] The app folder '{$site->app_directory}' is not in the repository on branch \$BRANCH.\"; exit 1; fi";
     }
 
     /**
@@ -129,6 +155,7 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
         }
 
         $sharedPath = rtrim($site->sharedPath(), '/');
+        $app = $this->appPath($site);
         $lines = [];
 
         foreach ($symlinks as $releaseRelative => $sharedRelative) {
@@ -136,14 +163,14 @@ class ZeroDowntimeDeploymentStrategy implements DeploymentStrategy
             $releaseDir = dirname($releaseRelative);
 
             if ($releaseDir !== '.') {
-                $lines[] = "mkdir -p \"\$RELEASE_PATH/{$releaseDir}\"";
+                $lines[] = "mkdir -p \"{$app}/{$releaseDir}\"";
             }
 
             if (str_starts_with($releaseRelative, '.env')) {
                 $lines[] = "if [ ! -e '{$sharedAbsolute}' ]; then echo \"[ERROR] {$sharedAbsolute} is missing. Save the site's environment before deploying.\"; exit 1; fi";
             }
 
-            $lines[] = "if [ -e '{$sharedAbsolute}' ]; then rm -rf \"\$RELEASE_PATH/{$releaseRelative}\" && ln -sfn '{$sharedAbsolute}' \"\$RELEASE_PATH/{$releaseRelative}\"; fi";
+            $lines[] = "if [ -e '{$sharedAbsolute}' ]; then rm -rf \"{$app}/{$releaseRelative}\" && ln -sfn '{$sharedAbsolute}' \"{$app}/{$releaseRelative}\"; fi";
         }
 
         return implode("\n", $lines);

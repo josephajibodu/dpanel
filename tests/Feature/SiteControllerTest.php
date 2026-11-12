@@ -280,6 +280,39 @@ it('rejects a framework it does not know', function () {
     $this->assertDatabaseMissing('sites', ['domain' => 'next.example.com']);
 });
 
+it('creates a site for the app in one folder of its repository', function () {
+    Queue::fake([CreateSiteJob::class]);
+
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'api.example.com',
+            'repository' => 'acme/shop',
+            'app_directory' => 'backend',
+            'directory' => '/public',
+            'framework' => Framework::Laravel->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('sites', ['domain' => 'api.example.com', 'app_directory' => 'backend', 'directory' => '/public']);
+    Queue::assertPushed(CreateSiteJob::class);
+});
+
+it('rejects an app folder that is not one folder at the top of the repository', function (string $appDirectory) {
+    $this->actingAs($this->user)
+        ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
+            'server_id' => $this->server->id,
+            'domain' => 'nested.example.com',
+            'app_directory' => $appDirectory,
+        ])
+        ->assertSessionHasErrors([
+            'app_directory' => 'The app folder must be the name of one folder at the top of the repository.',
+        ]);
+
+    $this->assertDatabaseMissing('sites', ['domain' => 'nested.example.com']);
+})->with(['apps/web', '..', '/backend']);
+
 it('accepts a web directory inside a dot folder', function () {
     Queue::fake([CreateSiteJob::class]);
 
