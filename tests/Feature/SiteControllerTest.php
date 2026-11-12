@@ -272,12 +272,12 @@ it('rejects a framework it does not know', function () {
     $this->actingAs($this->user)
         ->post("/{$this->team->slug}/servers/{$this->server->id}/sites", [
             'server_id' => $this->server->id,
-            'domain' => 'next.example.com',
-            'framework' => 'nextjs',
+            'domain' => 'django.example.com',
+            'framework' => 'django',
         ])
         ->assertSessionHasErrors('framework');
 
-    $this->assertDatabaseMissing('sites', ['domain' => 'next.example.com']);
+    $this->assertDatabaseMissing('sites', ['domain' => 'django.example.com']);
 });
 
 it('creates a site for the app in one folder of its repository', function () {

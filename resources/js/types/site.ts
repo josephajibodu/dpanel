@@ -70,6 +70,8 @@ export interface DetectedFramework {
     package_manager: string | null;
     build_command: string | null;
     single_page_app: boolean;
+    /** Something about the project that will stop the site working as it is. */
+    warning: string | null;
 }
 
 export interface RepositoryProvider {

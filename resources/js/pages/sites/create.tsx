@@ -232,6 +232,9 @@ export default function SitesCreate({
         useState<SiteNameStatus>('idle');
     const [siteNameMessage, setSiteNameMessage] = useState<string | null>(null);
     const [detection, setDetection] = useState<Detection>('idle');
+    const [detectionWarning, setDetectionWarning] = useState<string | null>(
+        null,
+    );
     const [folders, setFolders] = useState<string[]>([]);
 
     const form = useForm({
@@ -382,6 +385,8 @@ export default function SitesCreate({
     // Look at the chosen repository's files (in the app folder, when one is
     // picked) and fill in what the app is built with.
     useEffect(() => {
+        setDetectionWarning(null);
+
         if (!repository || !accountId || !branch) {
             setDetection('idle');
             setFolders([]);
@@ -413,6 +418,7 @@ export default function SitesCreate({
             const detected = ok ? data.detected : null;
 
             setFolders((ok && data.folders) || []);
+            setDetectionWarning(detected?.warning ?? null);
 
             if (!detected) {
                 setDetection('unknown');
@@ -593,6 +599,7 @@ export default function SitesCreate({
         }
 
         setDetection('idle');
+        setDetectionWarning(null);
         form.setData((current) => {
             // A framework that builds needs a package manager; plain static
             // files have nothing to build. PHP projects keep what's chosen.
@@ -1024,6 +1031,7 @@ export default function SitesCreate({
                                 <FrameworkNote
                                     detection={detection}
                                     description={selectedFramework?.description}
+                                    warning={detectionWarning}
                                     canPickFolder={
                                         folders.length > 0 && !appDirectory
                                     }
@@ -1470,10 +1478,13 @@ interface BranchFieldProps {
 function FrameworkNote({
     detection,
     description,
+    warning,
     canPickFolder,
 }: {
     detection: Detection;
     description?: string;
+    /** Something about the detected project that will stop the site working. */
+    warning: string | null;
     /** Whether the app might be in a folder the user hasn't picked yet. */
     canPickFolder: boolean;
 }) {
@@ -1487,14 +1498,21 @@ function FrameworkNote({
     }
 
     return (
-        <p className="text-xs text-muted-foreground">
-            {detection === 'detected' && 'Detected from the repository. '}
-            {detection === 'unknown' &&
-                (canPickFolder
-                    ? "Couldn't tell what the repository is built with. If the app is in a folder, choose it under App folder; otherwise pick the framework here. "
-                    : "Couldn't tell what this is built with, so pick the framework here. ")}
-            {description}
-        </p>
+        <>
+            <p className="text-xs text-muted-foreground">
+                {detection === 'detected' && 'Detected from the repository. '}
+                {detection === 'unknown' &&
+                    (canPickFolder
+                        ? "Couldn't tell what the repository is built with. If the app is in a folder, choose it under App folder; otherwise pick the framework here. "
+                        : "Couldn't tell what this is built with, so pick the framework here. ")}
+                {description}
+            </p>
+            {warning && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    {warning}
+                </p>
+            )}
+        </>
     );
 }
 

@@ -129,6 +129,7 @@ it('says what a repository is built with, read from its files', function () {
             'package_manager' => 'yarn',
             'build_command' => 'yarn build',
             'single_page_app' => true,
+            'warning' => null,
         ],
         'folders' => ['api'],
     ]);

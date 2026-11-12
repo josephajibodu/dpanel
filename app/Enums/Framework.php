@@ -23,6 +23,8 @@ enum Framework: string
     case Vue = 'vue';
     case Svelte = 'svelte';
     case Angular = 'angular';
+    case NextJs = 'nextjs';
+    case Nuxt = 'nuxt';
     case Astro = 'astro';
     case Gatsby = 'gatsby';
     case Eleventy = 'eleventy';
@@ -46,6 +48,8 @@ enum Framework: string
             self::Vue => 'Vue',
             self::Svelte => 'Svelte',
             self::Angular => 'Angular',
+            self::NextJs => 'Next.js',
+            self::Nuxt => 'Nuxt',
             self::Astro => 'Astro',
             self::Gatsby => 'Gatsby',
             self::Eleventy => 'Eleventy',
@@ -62,6 +66,7 @@ enum Framework: string
     {
         return match ($this) {
             self::React, self::Vue, self::Svelte, self::Angular => 'Builds the app on each deploy and serves it as a single-page app.',
+            self::NextJs, self::Nuxt => 'Builds a static export on each deploy and serves the generated pages. Apps that need a running Node server are not supported yet.',
             self::Astro, self::Gatsby, self::Eleventy => 'Builds the site on each deploy and serves the generated pages.',
             self::Docusaurus, self::VitePress => 'Builds the docs on each deploy and serves the generated pages.',
             default => $this->projectType()->description(),
@@ -91,6 +96,8 @@ enum Framework: string
     {
         return match ($this) {
             self::React, self::Vue, self::Svelte, self::Angular, self::Astro => '/dist',
+            self::NextJs => '/out',
+            self::Nuxt => '/.output/public',
             self::Gatsby => '/public',
             self::Eleventy => '/_site',
             self::Docusaurus => '/build',

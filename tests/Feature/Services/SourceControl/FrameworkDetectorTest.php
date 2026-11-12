@@ -64,6 +64,7 @@ it('detects a Vite React app as a single-page app built to /dist with npm', func
         'package_manager' => 'npm',
         'build_command' => 'npm run build',
         'single_page_app' => true,
+        'warning' => null,
     ]);
 });
 
@@ -126,6 +127,58 @@ it('runs Eleventy directly when the project has no build script', function () {
         ->and($detected['directory'])->toBe('/_site')
         ->and($detected['build_command'])->toBe('npx @11ty/eleventy');
 });
+
+it('detects a Next.js app that exports plain files, served from /out', function () {
+    $detected = detectFrameworkOf([
+        'next.config.mjs' => "export default { output: 'export', trailingSlash: true };",
+        'package.json' => ['scripts' => ['build' => 'next build'], 'dependencies' => ['next' => '^16.0.0', 'react' => '^19.0.0']],
+    ]);
+
+    expect($detected)->toBe([
+        'framework' => 'nextjs',
+        'directory' => '/out',
+        'package_manager' => 'npm',
+        'build_command' => 'npm run build',
+        'single_page_app' => false,
+        'warning' => null,
+    ]);
+});
+
+it('warns about a Next.js app that will not work as a static site', function (array $files, string $warning) {
+    $detected = detectFrameworkOf([
+        ...$files,
+        'package.json' => ['scripts' => ['build' => 'next build'], 'dependencies' => ['next' => '^16.0.0', 'react' => '^19.0.0']],
+    ]);
+
+    expect($detected['framework'])->toBe('nextjs')
+        ->and($detected['warning'])->toBe($warning);
+})->with([
+    'no static export in its config' => [
+        ['next.config.ts' => 'export default { reactStrictMode: true };'],
+        "This Next.js app isn't set up to export plain files (output: 'export' in its Next.js config). It needs a running Node server, which FlitOps can't provide yet, so the site won't work as it is.",
+    ],
+    'no config file at all' => [
+        [],
+        "This Next.js app isn't set up to export plain files (output: 'export' in its Next.js config). It needs a running Node server, which FlitOps can't provide yet, so the site won't work as it is.",
+    ],
+    'a static export without trailing slashes' => [
+        ['next.config.js' => 'module.exports = { output: "export" };'],
+        "Set trailingSlash: true in the Next.js config. Without it, pages other than the home page won't load when opened directly.",
+    ],
+]);
+
+it('builds a Nuxt app with its generate command, which makes plain files', function (array $package, string $directory, string $buildCommand) {
+    $detected = detectFrameworkOf(['package.json' => $package]);
+
+    expect($detected['framework'])->toBe('nuxt')
+        ->and($detected['directory'])->toBe($directory)
+        ->and($detected['build_command'])->toBe($buildCommand)
+        ->and($detected['warning'])->toBeNull();
+})->with([
+    'with a generate script' => [['scripts' => ['build' => 'nuxt build', 'generate' => 'nuxt generate'], 'dependencies' => ['nuxt' => '^4.0.0', 'vue' => '^3.5.0']], '/.output/public', 'npm run generate'],
+    'without one' => [['scripts' => ['build' => 'nuxt build'], 'devDependencies' => ['nuxt' => '^3.15.0']], '/.output/public', 'npx nuxt generate'],
+    'Nuxt 2, which generates into /dist' => [['scripts' => ['generate' => 'nuxt generate'], 'dependencies' => ['nuxt' => '^2.18.1']], '/dist', 'npm run generate'],
+]);
 
 it('detects the app in a chosen folder, using the lockfile at the top of the repository', function () {
     Http::preventStrayRequests();
@@ -195,6 +248,7 @@ it('detects a PHP project from its composer.json, even when it also has a packag
         'package_manager' => null,
         'build_command' => null,
         'single_page_app' => false,
+        'warning' => null,
     ]);
 })->with([
     'Laravel' => [['php' => '^8.4', 'laravel/framework' => '^13.0'], 'laravel', '/public'],
@@ -217,8 +271,6 @@ it('turns the build off for plain HTML files', function () {
 it('detects nothing in a repository it does not recognise', function (array $files) {
     expect(detectFrameworkOf($files))->toBeNull();
 })->with([
-    'a Next.js app, which needs a Node server' => [['package.json' => ['dependencies' => ['next' => '^16.0.0', 'react' => '^19.0.0']]]],
-    'a Nuxt app, which needs a Node server' => [['package.json' => ['dependencies' => ['nuxt' => '^4.0.0', 'vue' => '^3.5.0']]]],
     'a package.json that is not valid JSON' => [['package.json' => '{ not json']],
     'only a readme' => [['README.md' => '']],
 ]);

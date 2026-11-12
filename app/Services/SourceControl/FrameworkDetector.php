@@ -14,7 +14,8 @@ use App\Services\SourceControlService;
  * The app is at the top of the repository unless a folder is given.
  *
  * It reads the list of files in the app's folder, then only the one or two
- * files that settle the answer (composer.json, package.json, angular.json).
+ * files that settle the answer (composer.json, package.json, angular.json,
+ * the Next.js config).
  */
 class FrameworkDetector
 {
@@ -33,6 +34,11 @@ class FrameworkDetector
         'bun.lockb' => 'bun',
         'bun.lock' => 'bun',
     ];
+
+    /**
+     * The names a Next.js config file can have.
+     */
+    private const NEXT_CONFIG_FILES = ['next.config.js', 'next.config.mjs', 'next.config.ts', 'next.config.cjs'];
 
     /**
      * Folder listings already fetched for this request, by repository,
@@ -148,15 +154,11 @@ class FrameworkDetector
         ];
         $uses = fn (string $name): bool => array_key_exists($name, $dependencies);
 
-        // Next.js and Nuxt apps normally need a running Node server, which
-        // a static site can't give them.
-        if ($uses('next') || $uses('nuxt')) {
-            return null;
-        }
-
         // Frameworks built on React or Vue come first, because those
         // packages are in their projects too.
         $framework = match (true) {
+            $uses('next') => Framework::NextJs,
+            $uses('nuxt') => Framework::Nuxt,
             $uses('@docusaurus/core') => Framework::Docusaurus,
             $uses('vitepress') => Framework::VitePress,
             $uses('astro') => Framework::Astro,
@@ -180,6 +182,8 @@ class FrameworkDetector
             // Create React App and SvelteKit build to /build; Vite builds to /dist.
             $framework === Framework::React && $uses('react-scripts'),
             $framework === Framework::Svelte && $uses('@sveltejs/kit') => '/build',
+            // Nuxt 2 generated into /dist; later versions use /.output/public.
+            $framework === Framework::Nuxt && preg_match('/^\D*2\./', (string) $dependencies['nuxt']) === 1 => '/dist',
             $framework === Framework::Angular => $this->angularDirectory($this->decodeJson($read('angular.json'))),
             $vitePressBuild !== null => '/'.ltrim($vitePressBuild['root'].'/.vitepress/dist', '/'),
             default => $framework->defaultDirectory(),
@@ -189,6 +193,8 @@ class FrameworkDetector
 
         $buildScript = match (true) {
             $vitePressBuild !== null => $vitePressBuild['script'],
+            // Nuxt's build script makes a Node server; its generate script makes plain files.
+            $framework === Framework::Nuxt => array_key_exists('generate', $scripts) ? 'generate' : null,
             default => array_key_exists('build', $scripts) ? 'build' : null,
         };
 
@@ -196,6 +202,7 @@ class FrameworkDetector
             $buildScript !== null => $this->runScript($packageManager, $buildScript),
             // Projects without the script run the framework's own command.
             $framework === Framework::Eleventy => 'npx @11ty/eleventy',
+            $framework === Framework::Nuxt => 'npx nuxt generate',
             default => $this->runScript($packageManager, 'build'),
         };
 
@@ -204,7 +211,40 @@ class FrameworkDetector
             preg_match(Site::DIRECTORY_PATTERN, $directory) === 1 ? $directory : $framework->defaultDirectory(),
             $packageManager,
             $buildCommand,
+            $framework === Framework::NextJs ? $this->nextJsWarning($scripts, $files, $read) : null,
         );
+    }
+
+    /**
+     * What stops a Next.js app working as a static site, if anything.
+     *
+     * Next.js only writes plain files when its config sets
+     * `output: 'export'` (or, before version 14, the build script ran
+     * `next export`). Those files are named `about.html`, which a web
+     * server won't find for `/about` unless the config also sets
+     * `trailingSlash: true`, giving `about/index.html`.
+     *
+     * @param  array<string, string>  $scripts
+     * @param  array<int, string>  $files
+     * @param  callable(string): ?string  $read
+     */
+    private function nextJsWarning(array $scripts, array $files, callable $read): ?string
+    {
+        $configFile = collect(self::NEXT_CONFIG_FILES)->first(fn (string $file): bool => in_array($file, $files, true));
+        $config = $configFile === null ? '' : (string) $read($configFile);
+
+        $exportsPlainFiles = preg_match('/\boutput\s*:\s*[\'"]export[\'"]/', $config) === 1
+            || str_contains($scripts['build'] ?? '', 'next export');
+
+        if (! $exportsPlainFiles) {
+            return "This Next.js app isn't set up to export plain files (output: 'export' in its Next.js config). It needs a running Node server, which FlitOps can't provide yet, so the site won't work as it is.";
+        }
+
+        if (preg_match('/\btrailingSlash\s*:\s*true\b/', $config) !== 1) {
+            return "Set trailingSlash: true in the Next.js config. Without it, pages other than the home page won't load when opened directly.";
+        }
+
+        return null;
     }
 
     /**
