@@ -89,7 +89,7 @@ it('marks a site down after two consecutive failures and alerts the team owner',
     expect($this->site->uptime_status)->toBe(UptimeStatus::Down)
         ->and($this->site->uptime_consecutive_failures)->toBe(2)
         ->and($incident)->not->toBeNull()
-        ->and($incident->reason)->toBe('HTTP 502 response')
+        ->and($incident->reason)->toBe('The site responded with a server error (HTTP 502).')
         ->and($incident->started_at)->not->toBeNull();
 
     Notification::assertSentToTimes($this->user, SiteWentDown::class, 1);
@@ -166,7 +166,7 @@ it('resolves the incident and sends a recovery notice when the site comes back',
     Notification::assertNotSentTo($this->user, SiteWentDown::class);
 });
 
-it('counts connection errors and timeouts as failures', function (string $message) {
+it('counts connection errors and timeouts as failures with a plain reason', function (string $message, string $reason) {
     Http::fake(['*' => Http::failedConnection($message)]);
 
     CheckSiteUptimeJob::dispatchSync($this->site);
@@ -174,10 +174,13 @@ it('counts connection errors and timeouts as failures', function (string $messag
 
     $this->site->refresh();
     expect($this->site->uptime_status)->toBe(UptimeStatus::Down)
-        ->and($this->site->openIncident->reason)->toContain($message);
+        ->and($this->site->openIncident->reason)->toContain($reason);
 })->with([
-    'connection refused' => 'cURL error 7: Failed to connect to the host: Connection refused',
-    'timeout' => 'cURL error 28: Operation timed out after 10001 milliseconds with 0 bytes received',
+    'dns lookup failed' => ['cURL error 6: Could not resolve host: example.com', "The domain name couldn't be looked up."],
+    'connection refused' => ['cURL error 7: Failed to connect to the host: Connection refused', 'The server refused the connection.'],
+    'timeout' => ['cURL error 28: Operation timed out after 10001 milliseconds with 0 bytes received', "The server didn't respond within 10 seconds."],
+    'invalid certificate' => ['cURL error 60: SSL certificate problem: certificate has expired', "The site's SSL certificate isn't valid."],
+    'unrecognised error' => ['cURL error 99: Something unusual', 'cURL error 99: Something unusual'],
 ]);
 
 it('treats non-5xx responses as up', function (int $status) {

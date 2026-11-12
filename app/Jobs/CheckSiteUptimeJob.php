@@ -80,10 +80,34 @@ class CheckSiteUptimeJob implements ShouldBeUnique, ShouldQueue
                 ->withUserAgent('Flitops Uptime Monitor')
                 ->get($url);
         } catch (HttpClientException $e) {
-            return $e->getMessage();
+            return $this->describeConnectionFailure($e->getMessage());
         }
 
-        return $response->serverError() ? "HTTP {$response->status()} response" : null;
+        return $response->serverError()
+            ? "The site responded with a server error (HTTP {$response->status()})."
+            : null;
+    }
+
+    /**
+     * Turn a raw cURL error into a sentence the site owner can act on.
+     * Unrecognised errors are returned as they are.
+     */
+    private function describeConnectionFailure(string $message): string
+    {
+        if (! preg_match('/cURL error (\d+)/', $message, $matches)) {
+            return $message;
+        }
+
+        return match ((int) $matches[1]) {
+            6 => "The domain name couldn't be looked up. Its DNS record may be missing, or may not have spread yet if it was added recently.",
+            7 => 'The server refused the connection. The web server (Nginx) may be stopped, or a firewall may be blocking it.',
+            28 => "The server didn't respond within 10 seconds.",
+            35 => "A secure (HTTPS) connection couldn't be set up with the server.",
+            51, 60 => "The site's SSL certificate isn't valid. It may have expired or may not cover this domain.",
+            52 => 'The server closed the connection without sending a response.',
+            56 => 'The connection to the server was cut off part-way through.',
+            default => $message,
+        };
     }
 
     private function recordSuccess(): void

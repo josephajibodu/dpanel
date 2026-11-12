@@ -497,6 +497,7 @@ export default function SitesShow({
 
                                 <OverviewItem
                                     label="Uptime"
+                                    wrapHint={Boolean(siteData.open_incident)}
                                     hint={
                                         siteData.open_incident ? (
                                             <span className="text-destructive-foreground">
@@ -508,7 +509,7 @@ export default function SitesShow({
                                                     ),
                                                     'MMM d, h:mm a',
                                                 )}
-                                                :{' '}
+                                                .{' '}
                                                 {siteData.open_incident.reason}
                                             </span>
                                         ) : (
@@ -943,18 +944,31 @@ interface OverviewItemProps {
     label: string;
     /** A smaller, muted second line under the value. */
     hint?: ReactNode;
+    /** Let the hint wrap onto several lines instead of cutting it off. */
+    wrapHint?: boolean;
     className?: string;
     children: ReactNode;
 }
 
 /** One labelled fact in the grid of the site's overview card. */
-function OverviewItem({ label, hint, className, children }: OverviewItemProps) {
+function OverviewItem({
+    label,
+    hint,
+    wrapHint = false,
+    className,
+    children,
+}: OverviewItemProps) {
     return (
         <div className={cn('min-w-0 bg-card px-5 py-4', className)}>
             <dt className="text-sm text-muted-foreground">{label}</dt>
             <dd className="mt-1 truncate text-sm font-medium">{children}</dd>
             {hint && (
-                <dd className="mt-0.5 truncate text-xs text-muted-foreground">
+                <dd
+                    className={cn(
+                        'mt-0.5 text-xs text-muted-foreground',
+                        wrapHint ? 'break-words' : 'truncate',
+                    )}
+                >
                     {hint}
                 </dd>
             )}
