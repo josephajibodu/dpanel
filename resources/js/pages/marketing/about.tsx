@@ -73,14 +73,11 @@ export default function About() {
                     <SectionHeading title="The principles behind the product" />
                     <div className="mt-16 grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:gap-x-20">
                         {beliefs.map((belief, index) => (
-                            <div
-                                key={belief.title}
-                                className="border-t border-foreground pt-6"
-                            >
+                            <div key={belief.title}>
                                 <span className="text-sm font-medium text-muted-foreground tabular-nums">
                                     {String(index + 1).padStart(2, '0')}
                                 </span>
-                                <h3 className="mt-10 text-2xl font-medium tracking-tight">
+                                <h3 className="mt-4 text-2xl font-medium tracking-tight">
                                     {belief.title}
                                 </h3>
                                 <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground">
