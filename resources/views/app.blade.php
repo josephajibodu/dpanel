@@ -38,7 +38,7 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         {{-- Start downloading the page's main typeface before the stylesheet asks for it --}}
-        @if ($page['component'] === 'welcome' || str_starts_with($page['component'], 'marketing/'))
+        @if (in_array($page['component'], ['welcome', 'error-page']) || str_starts_with($page['component'], 'marketing/'))
             <link rel="preload" href="{{ Vite::asset('node_modules/@fontsource-variable/host-grotesk/files/host-grotesk-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
         @else
             <link rel="preload" href="{{ Vite::asset('node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
