@@ -45,6 +45,8 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: Icon | null;
     isActive?: boolean;
+    /** Other words people might type in the search box to find this page. */
+    keywords?: string[];
 }
 
 export interface SubNavItem {
@@ -54,6 +56,8 @@ export interface SubNavItem {
     exactMatch?: boolean;
     /** Hide the item from users without this permission in the current team. */
     permission?: TeamPermission;
+    /** Other words people might type in the search box to find this page. */
+    keywords?: string[];
 }
 
 export interface ServerSummary {

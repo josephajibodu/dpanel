@@ -19,19 +19,59 @@ export function getServerSubNavItems(
 ): SubNavItem[] {
     const base = `/${teamSlug}/servers/${server.id}`;
     const items: SubNavItem[] = [
-        { title: 'Overview', href: base, exactMatch: true },
-        { title: 'Sites', href: `${base}/sites` },
-        { title: 'Databases', href: `${base}/databases` },
-        { title: 'Connections', href: `${base}/connections` },
-        { title: 'PHP', href: `${base}/php` },
-        { title: 'Processes', href: `${base}/processes` },
-        { title: 'Runtime', href: `${base}/runtime` },
+        {
+            title: 'Overview',
+            href: base,
+            exactMatch: true,
+            keywords: ['status', 'metrics', 'cpu', 'memory', 'disk'],
+        },
+        {
+            title: 'Sites',
+            href: `${base}/sites`,
+            keywords: ['websites', 'apps', 'new site'],
+        },
+        {
+            title: 'Databases',
+            href: `${base}/databases`,
+            keywords: ['db', 'mysql', 'postgres', 'mariadb', 'database users'],
+        },
+        {
+            title: 'Connections',
+            href: `${base}/connections`,
+            keywords: ['connected servers', 'redis', 'remote access'],
+        },
+        {
+            title: 'PHP',
+            href: `${base}/php`,
+            keywords: ['php version', 'extensions', 'php settings', 'fpm'],
+        },
+        {
+            title: 'Processes',
+            href: `${base}/processes`,
+            keywords: ['workers', 'cron jobs', 'scheduler', 'queues'],
+        },
+        {
+            title: 'Runtime',
+            href: `${base}/runtime`,
+            keywords: ['node', 'nodejs', 'node version'],
+        },
         {
             title: 'Terminal',
             href: `${base}/terminal`,
             permission: 'access_servers_as_admin',
+            keywords: ['ssh', 'shell', 'console', 'command line'],
         },
-        { title: 'Settings', href: `${base}/settings` },
+        {
+            title: 'Settings',
+            href: `${base}/settings`,
+            keywords: [
+                'ssh port',
+                'transfer',
+                'disconnect',
+                'destroy',
+                'delete',
+            ],
+        },
     ];
 
     const hidden = new Set<string>();
@@ -62,30 +102,100 @@ export function getSiteSubNavItems(
 ): SubNavItem[] {
     const base = `/${teamSlug}/servers/${serverId}/sites/${siteId}`;
     return [
-        { title: 'Overview', href: base, exactMatch: true },
-        { title: 'Deployments', href: `${base}/deployments` },
-        { title: 'Commands', href: `${base}/command-runs` },
-        { title: 'Processes', href: `${base}/processes` },
+        {
+            title: 'Overview',
+            href: base,
+            exactMatch: true,
+            keywords: ['status', 'uptime'],
+        },
+        {
+            title: 'Deployments',
+            href: `${base}/deployments`,
+            keywords: ['deploy', 'releases', 'history', 'auto deploy'],
+        },
+        {
+            title: 'Commands',
+            href: `${base}/command-runs`,
+            keywords: ['run command', 'artisan', 'cli'],
+        },
+        {
+            title: 'Processes',
+            href: `${base}/processes`,
+            keywords: ['workers', 'queues', 'cron jobs', 'scheduler'],
+        },
         {
             title: 'Environment',
             href: `${base}/environment`,
             permission: 'view_secrets',
+            keywords: ['.env', 'env', 'variables', 'secrets', 'config'],
         },
-        { title: 'Database', href: `${base}/database` },
-        { title: 'Deploy Script', href: `${base}/deploy-script` },
-        { title: 'Web Server', href: `${base}/nginx` },
-        { title: 'Domains', href: `${base}/domains` },
-        { title: 'Logs', href: `${base}/logs` },
+        { title: 'Database', href: `${base}/database`, keywords: ['db'] },
+        {
+            title: 'Deploy Script',
+            href: `${base}/deploy-script`,
+            keywords: ['build', 'deploy commands'],
+        },
+        {
+            title: 'Web Server',
+            href: `${base}/nginx`,
+            keywords: ['nginx', 'vhost', 'server block', 'config'],
+        },
+        {
+            title: 'Domains',
+            href: `${base}/domains`,
+            keywords: ['ssl', 'https', 'certificates', 'aliases', 'dns'],
+        },
+        {
+            title: 'Logs',
+            href: `${base}/logs`,
+            keywords: ['errors', 'error log'],
+        },
     ];
 }
 
 export function getSettingsSubNavItems(): SubNavItem[] {
     return [
-        { title: 'Profile', href: edit().url },
-        { title: 'Password', href: editPassword().url },
-        { title: 'Two-factor auth', href: show.url() },
-        { title: 'Appearance', href: editAppearance().url },
-        { title: 'Team', href: '/settings/team' },
-        { title: 'Billing', href: showBilling.url() },
+        {
+            title: 'Profile',
+            href: edit().url,
+            keywords: ['name', 'email', 'account', 'git name'],
+        },
+        {
+            title: 'Password',
+            href: editPassword().url,
+            keywords: ['change password', 'security'],
+        },
+        {
+            title: 'Two-factor auth',
+            href: show.url(),
+            keywords: [
+                '2fa',
+                'mfa',
+                'authenticator',
+                'security',
+                'recovery codes',
+            ],
+        },
+        {
+            title: 'Appearance',
+            href: editAppearance().url,
+            keywords: ['theme', 'dark mode', 'light mode'],
+        },
+        {
+            title: 'Team',
+            href: '/settings/team',
+            keywords: ['members', 'invite', 'people', 'roles', 'users'],
+        },
+        {
+            title: 'Billing',
+            href: showBilling.url(),
+            keywords: [
+                'plan',
+                'subscription',
+                'upgrade',
+                'payment',
+                'invoices',
+            ],
+        },
     ];
 }
