@@ -18,6 +18,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Worker;
 use App\Notifications\SiteOctaneFailed;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -126,14 +127,30 @@ describe('switching Octane on and off', function () {
         'never deployed' => [fn ($test) => octaneSite($test->server, ['status' => SiteStatus::Provisioned]), 'Deploy the site once before switching Octane on.'],
     ]);
 
-    it('does nothing when Octane is already set the way the form asks', function () {
+    it('does nothing when Octane is already set the way the form asks', function (array $attributes, ?string $octaneServer) {
         Queue::fake([SyncSiteOctaneJob::class]);
-        $site = octaneSite($this->server, ['octane_server' => OctaneServer::FrankenPhp, 'octane_port' => 8100]);
+        $site = octaneSite($this->server, $attributes);
 
         $this->actingAs($this->user)
-            ->put(route('servers.sites.update', [$this->team, $this->server, $site]), ['octane_server' => 'frankenphp']);
+            ->put(route('servers.sites.update', [$this->team, $this->server, $site]), ['octane_server' => $octaneServer]);
 
         Queue::assertNotPushed(SyncSiteOctaneJob::class);
+    })->with([
+        'already on' => [['octane_server' => OctaneServer::FrankenPhp, 'octane_port' => 8100], 'frankenphp'],
+        'already off, nothing left behind' => [[], null],
+    ]);
+
+    it('removes what an unfinished switch-off left behind when the site is saved with Octane off', function () {
+        Queue::fake([SyncSiteOctaneJob::class]);
+        $site = siteRunningOctane($this->server);
+        $site->update(['octane_server' => null]);
+        $site->octaneWorker()->update(['status' => 'failed']);
+
+        $this->actingAs($this->user)
+            ->put(route('servers.sites.update', [$this->team, $this->server, $site]), ['octane_server' => null])
+            ->assertSessionHasNoErrors();
+
+        Queue::assertPushed(SyncSiteOctaneJob::class, fn (SyncSiteOctaneJob $job) => $job->site->is($site));
     });
 
     it('switches Octane off and asks the server to follow', function () {
@@ -222,6 +239,30 @@ describe('SyncSiteOctaneJob', function () {
             ->and($site->octane_port)->toBeNull()
             ->and($site->octaneWorker()->exists())->toBeFalse();
         Notification::assertSentTo($this->user, SiteOctaneFailed::class);
+    });
+
+    it('still emails the owner, and marks the process failed, when the server stops answering before the undo finishes', function () {
+        Notification::fake();
+        $connection = Mockery::mock(SshConnection::class);
+        $connection->shouldReceive('exec')->andReturn('');
+        $connection->shouldReceive('disconnect');
+        $connections = 0;
+        $sshService = Mockery::mock(SshService::class);
+        $sshService->shouldReceive('connect')->andReturnUsing(function () use ($connection, &$connections) {
+            if (++$connections > 1) {
+                throw new RuntimeException('Connection refused');
+            }
+
+            return $connection;
+        });
+        app()->instance(SshService::class, $sshService);
+        $site = siteRunningOctane($this->server);
+
+        runSyncSiteOctaneJob($site);
+
+        expect($site->fresh()->octane_server)->toBeNull()
+            ->and($site->octaneWorker()->value('status'))->toBe('failed');
+        Notification::assertSentTo($this->user, SiteOctaneFailed::class, fn (SiteOctaneFailed $notification) => ! $notification->cleanupFinished);
     });
 
     it('sends the site back to PHP-FPM and removes the process when Octane is switched off', function () {

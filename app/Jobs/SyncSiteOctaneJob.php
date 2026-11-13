@@ -75,11 +75,11 @@ BASH;
                 $this->turnOn($site, $sshService, $createWorker);
             } catch (Throwable $exception) {
                 Log::error('Octane could not be switched on', ['site_id' => $site->id, 'message' => $exception->getMessage()]);
-                $this->turnOff($site, $destroyWorker);
+                $cleanupFinished = $this->undoTurnOn($site, $destroyWorker);
 
                 $server = $site->server;
                 ($server->team?->owner ?? $server->user)?->notify(
-                    new SiteOctaneFailed($site, $server->redactSecrets($exception->getMessage())),
+                    new SiteOctaneFailed($site, $server->redactSecrets($exception->getMessage()), $cleanupFinished),
                 );
             }
         } finally {
@@ -129,6 +129,31 @@ BASH;
             $site->server->webServer()->syncSite($site, $connection);
         } finally {
             $connection->disconnect();
+        }
+    }
+
+    /**
+     * Switch Octane back off after a switch-on failed. When the server stops
+     * answering partway, the undo can't finish either: the setting is still
+     * switched off and the Octane process is marked failed, so the owner
+     * still hears what happened and the next save of the site's settings
+     * removes what was left behind (see SetOctaneAction).
+     *
+     * @return bool Whether the undo finished.
+     */
+    private function undoTurnOn(Site $site, DestroyWorker $destroyWorker): bool
+    {
+        try {
+            $this->turnOff($site, $destroyWorker);
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::error('Octane could not be switched back off after a failed switch-on', ['site_id' => $site->id, 'message' => $exception->getMessage()]);
+
+            $site->update(['octane_server' => null]);
+            $site->octaneWorker()->update(['status' => 'failed']);
+
+            return false;
         }
     }
 

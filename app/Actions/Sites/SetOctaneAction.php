@@ -25,14 +25,18 @@ class SetOctaneAction
      */
     public function execute(Site $site, ?OctaneServer $octaneServer): void
     {
-        if ($octaneServer === $site->octane_server) {
-            return;
-        }
-
         if ($octaneServer === null) {
+            if ($site->octane_server === null && ! $this->hasLeftovers($site)) {
+                return;
+            }
+
             $site->update(['octane_server' => null]);
             SyncSiteOctaneJob::dispatch($site);
 
+            return;
+        }
+
+        if ($octaneServer === $site->octane_server) {
             return;
         }
 
@@ -80,6 +84,15 @@ class SetOctaneAction
         });
 
         SyncSiteOctaneJob::dispatch($site);
+    }
+
+    /**
+     * Whether Octane is off but its port or process is still there, because
+     * the server stopped answering while Octane was being switched off.
+     */
+    private function hasLeftovers(Site $site): bool
+    {
+        return $site->octane_port !== null || $site->octaneWorker()->exists();
     }
 
     /**
