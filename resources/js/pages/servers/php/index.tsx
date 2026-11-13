@@ -208,7 +208,7 @@ export default function ServerPhpIndex({
                     </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-1">
+                <div className="grid grid-cols-1 gap-6">
                     <StatGroup>
                         <div className="rounded-2xl bg-card shadow-card">
                             <div className="border-b px-6 py-4">

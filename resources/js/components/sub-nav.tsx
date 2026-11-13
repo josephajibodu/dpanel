@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 
 import { useActiveUrl } from '@/hooks/use-active-url';
 import { usePermission } from '@/hooks/use-permission';
@@ -26,10 +27,33 @@ export function SubNav({ items, selectedHref, className }: SubNavProps) {
     const visibleItems = items.filter(
         (item) => !item.permission || can(item.permission),
     );
+    const scrollerRef = useRef<HTMLDivElement>(null);
+
+    // On a phone the row is wider than the screen; bring the current page's
+    // pill into view instead of leaving it cut off at the right.
+    useEffect(() => {
+        const scroller = scrollerRef.current;
+        const current = scroller?.querySelector('[aria-current="page"]');
+
+        if (!scroller || !current) {
+            return;
+        }
+
+        const scrollerBox = scroller.getBoundingClientRect();
+        const currentBox = current.getBoundingClientRect();
+
+        scroller.scrollLeft +=
+            currentBox.left -
+            scrollerBox.left -
+            (scrollerBox.width - currentBox.width) / 2;
+    }, []);
 
     return (
         <nav className={cn('border-b bg-background', className)}>
-            <div className="flex w-full items-center gap-1 overflow-x-auto px-4 pb-3">
+            <div
+                ref={scrollerRef}
+                className="flex w-full items-center gap-1 overflow-x-auto px-4 pb-3"
+            >
                 {visibleItems.map((item) => {
                     const isActive = urlIsActive(item.href, undefined, {
                         exact: item.exactMatch,

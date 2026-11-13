@@ -414,7 +414,7 @@ export function ProcessesPanel({
                 </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-1">
+            <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">

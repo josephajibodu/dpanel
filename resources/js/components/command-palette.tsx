@@ -359,7 +359,8 @@ function CommandPaletteBody({ onClose }: { onClose: () => void }) {
                 )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
+            {/* Keyboard hints; phones have no keys to press. */}
+            <div className="hidden shrink-0 items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground md:flex">
                 <span className="flex items-center gap-1.5">
                     <Key>↑</Key>
                     <Key>↓</Key>
@@ -418,11 +419,19 @@ function ResultRow({
                         <CaretRightIcon className="size-3 shrink-0 text-muted-foreground" />
                     </>
                 )}
-                <span className="truncate font-medium">{item.title}</span>
+                {/* With a parent, the parent gives way first so the page name stays whole. */}
+                <span
+                    className={cn(
+                        'truncate font-medium',
+                        item.parent && 'shrink-0',
+                    )}
+                >
+                    {item.title}
+                </span>
             </span>
 
             {item.detail && (
-                <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">
+                <span className="hidden max-w-[45%] shrink-0 truncate text-xs text-muted-foreground sm:block">
                     {item.detail}
                 </span>
             )}

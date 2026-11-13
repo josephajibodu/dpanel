@@ -37,9 +37,11 @@ export function NavSearch() {
                 >
                     <MagnifyingGlassIcon />
                     <span>Search</span>
-                    <kbd className="ml-auto rounded border border-sidebar-border px-1 font-sans text-[11px] leading-4 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-                        {shortcut}
-                    </kbd>
+                    {!isMobile && (
+                        <kbd className="ml-auto rounded border border-sidebar-border px-1 font-sans text-[11px] leading-4 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+                            {shortcut}
+                        </kbd>
+                    )}
                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>

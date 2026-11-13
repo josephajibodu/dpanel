@@ -168,12 +168,16 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12 text-right">
+                                        <TableHead className="w-12 text-right max-sm:hidden">
                                             ID
                                         </TableHead>
                                         <TableHead>Domain</TableHead>
-                                        <TableHead>Type</TableHead>
-                                        <TableHead>Created at</TableHead>
+                                        <TableHead className="max-sm:hidden">
+                                            Type
+                                        </TableHead>
+                                        <TableHead className="max-sm:hidden">
+                                            Created at
+                                        </TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="w-[70px]" />
                                     </TableRow>
@@ -197,7 +201,7 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                 site.status === 'deleting';
                                             return (
                                                 <TableRow key={site.id}>
-                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground max-sm:hidden">
                                                         {site.id}
                                                     </TableCell>
                                                     <TableCell>
@@ -210,12 +214,12 @@ export default function ServerSitesIndex({ server: serverProp, sites }: Props) {
                                                             {site.domain}
                                                         </Link>
                                                     </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">
+                                                    <TableCell className="text-xs text-muted-foreground max-sm:hidden">
                                                         <FrameworkLabel
                                                             site={site}
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">
+                                                    <TableCell className="text-xs text-muted-foreground max-sm:hidden">
                                                         {format(
                                                             new Date(
                                                                 site.created_at,

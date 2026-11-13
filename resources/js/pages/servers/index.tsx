@@ -159,12 +159,16 @@ export default function ServersIndex({ servers }: Props) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-12 text-right">
+                                        <TableHead className="w-12 text-right max-sm:hidden">
                                             ID
                                         </TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>IP</TableHead>
-                                        <TableHead>Created at</TableHead>
+                                        <TableHead className="max-sm:hidden">
+                                            IP
+                                        </TableHead>
+                                        <TableHead className="max-sm:hidden">
+                                            Created at
+                                        </TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="w-[70px]" />
                                     </TableRow>
@@ -191,7 +195,7 @@ export default function ServersIndex({ servers }: Props) {
                                                 server.status === 'deleting';
                                             return (
                                                 <TableRow key={server.id}>
-                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                                    <TableCell className="text-right font-mono text-xs text-muted-foreground max-sm:hidden">
                                                         {server.id}
                                                     </TableCell>
                                                     <TableCell>
@@ -203,12 +207,17 @@ export default function ServersIndex({ servers }: Props) {
                                                         >
                                                             {server.name}
                                                         </Link>
+                                                        {/* Phones show the IP here, in place of its own column. */}
+                                                        <p className="font-mono text-xs text-muted-foreground sm:hidden">
+                                                            {server.ip_address ??
+                                                                '—'}
+                                                        </p>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="max-sm:hidden">
                                                         {server.ip_address ??
                                                             '—'}
                                                     </TableCell>
-                                                    <TableCell className="text-muted-foreground">
+                                                    <TableCell className="text-muted-foreground max-sm:hidden">
                                                         {format(
                                                             new Date(
                                                                 server.created_at,
@@ -240,7 +249,7 @@ export default function ServersIndex({ servers }: Props) {
                                                             <Button
                                                                 variant="outline"
                                                                 size="icon"
-                                                                className="h-8 w-8"
+                                                                className="h-8 w-8 max-sm:hidden"
                                                                 asChild
                                                             >
                                                                 <Link

@@ -365,14 +365,21 @@ export default function SitesShow({
                             )}
 
                         <PageActions>
-                            <Button variant="outline" asChild>
+                            {/* Just the icon on phones, to leave the top bar room for the site's name. */}
+                            <Button
+                                variant="outline"
+                                className="max-sm:w-8 max-sm:has-[>svg]:px-0"
+                                asChild
+                            >
                                 <a
                                     href={`https://${siteData.domain}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
                                     <ArrowSquareOutIcon className="h-4 w-4" />
-                                    Visit
+                                    <span className="max-sm:sr-only">
+                                        Visit
+                                    </span>
                                 </a>
                             </Button>
                             {can('deploy') && (

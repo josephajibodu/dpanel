@@ -412,7 +412,8 @@ function DomainRow({
                         </button>
                     )}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                {/* On phones the badges take a line of their own under the hostname. */}
+                <div className="flex shrink-0 items-center gap-2 max-sm:order-last max-sm:w-full max-sm:flex-wrap">
                     {isDeleting && (
                         <span className="border-destructive/40 bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
                             <CircleNotchIcon className="size-3 animate-spin" /> Deleting
@@ -584,13 +585,14 @@ function DomainRow({
                                     Add these records at your DNS provider so traffic reaches this server.
                                 </p>
                             )}
-                            <Table plain>
+                            {/* Tighter cells on phones so the IP address fits without scrolling. */}
+                            <Table plain className="max-sm:[&_td]:px-2 max-sm:[&_th]:px-2">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Type</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Value</TableHead>
-                                        <TableHead className="w-[80px]" />
+                                        <TableHead className="w-[80px] max-sm:hidden" />
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -598,30 +600,34 @@ function DomainRow({
                                         <TableRow key={`${row.type}-${row.name}-${i}`}>
                                             <TableCell className="font-mono text-xs">{row.type}</TableCell>
                                             <TableCell className="font-mono text-xs">
-                                                <span className="mr-1">{row.name}</span>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-6"
-                                                    onClick={() => onCopy(row.name)}
-                                                >
-                                                    <CopyIcon className="size-3" />
-                                                </Button>
+                                                <span className="flex items-center gap-1">
+                                                    <span>{row.name}</span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-6 shrink-0"
+                                                        onClick={() => onCopy(row.name)}
+                                                    >
+                                                        <CopyIcon className="size-3" />
+                                                    </Button>
+                                                </span>
                                             </TableCell>
                                             <TableCell className="font-mono text-xs">
-                                                <span className="mr-1 break-all">{row.value}</span>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-6"
-                                                    onClick={() => onCopy(row.value)}
-                                                >
-                                                    <CopyIcon className="size-3" />
-                                                </Button>
+                                                <span className="flex items-center gap-1">
+                                                    <span className="whitespace-nowrap">{row.value}</span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-6 shrink-0"
+                                                        onClick={() => onCopy(row.value)}
+                                                    >
+                                                        <CopyIcon className="size-3" />
+                                                    </Button>
+                                                </span>
                                             </TableCell>
-                                            <TableCell />
+                                            <TableCell className="max-sm:hidden" />
                                         </TableRow>
                                     ))}
                                 </TableBody>

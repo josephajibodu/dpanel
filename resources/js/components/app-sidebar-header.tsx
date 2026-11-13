@@ -14,6 +14,7 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useActiveUrl } from '@/hooks/use-active-url';
 import { useMainNav } from '@/hooks/use-main-nav';
+import { cn } from '@/lib/utils';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({
@@ -35,52 +36,77 @@ export function AppSidebarHeader({
     );
     const SectionIcon = section?.icon;
 
+    // Below laptop width the bar has room for one breadcrumb: the site or
+    // server switcher when the page has one (the tabs or the sidebar name the
+    // page), otherwise the page itself.
+    const compactIndex =
+        siteIndex >= 0
+            ? siteIndex
+            : serverIndex >= 0
+              ? serverIndex
+              : breadcrumbs.length - 1;
+    const isCompactSwitcher =
+        compactIndex === siteIndex || compactIndex === serverIndex;
+
     return (
         <header className="flex h-13 shrink-0 items-center gap-2 px-4">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-                <SidebarTrigger className="-ml-1" />
+                <SidebarTrigger className="-ml-1 shrink-0" />
 
                 {SectionIcon && (
-                    <SectionIcon className="size-[18px] shrink-0 text-muted-foreground" />
+                    <SectionIcon
+                        className={cn(
+                            'size-[18px] shrink-0 text-muted-foreground',
+                            // The switcher carries its own icon.
+                            isCompactSwitcher && 'max-lg:hidden',
+                        )}
+                    />
                 )}
 
                 {breadcrumbs.length > 0 && (
-                    <Breadcrumb>
-                        <BreadcrumbList>
+                    <Breadcrumb className="min-w-0">
+                        <BreadcrumbList className="flex-nowrap">
                             {breadcrumbs.map((item, index) => {
                                 const isLast = index === breadcrumbs.length - 1;
-                                const isServerItem = index === serverIndex;
-                                const isSiteItem = index === siteIndex;
-                                const isSwitcherItem = isServerItem || isSiteItem;
 
                                 return (
                                     <Fragment key={index}>
-                                        {/* Separator before every item except the first */}
-                                        {index > 0 && !isSwitcherItem && (
-                                            <BreadcrumbSeparator />
+                                        {index > 0 && (
+                                            <BreadcrumbSeparator className="max-lg:hidden" />
                                         )}
 
-                                        {isServerItem ? (
-                                            <ServerBreadcrumbSwitcher
-                                                breadcrumb={item}
-                                                isLast={isLast}
-                                            />
-                                        ) : isSiteItem ? (
-                                            <SiteBreadcrumbSwitcher
-                                                breadcrumb={item}
-                                                isLast={isLast}
-                                            />
-                                        ) : (
-                                            <BreadcrumbItem>
-                                                {isLast ? (
-                                                    <BreadcrumbPage>{item.title}</BreadcrumbPage>
-                                                ) : (
-                                                    <BreadcrumbLink asChild>
-                                                        <Link href={item.href}>{item.title}</Link>
-                                                    </BreadcrumbLink>
-                                                )}
-                                            </BreadcrumbItem>
-                                        )}
+                                        <BreadcrumbItem
+                                            className={cn(
+                                                'min-w-0',
+                                                index !== compactIndex &&
+                                                    'max-lg:hidden',
+                                            )}
+                                        >
+                                            {index === serverIndex ? (
+                                                <ServerBreadcrumbSwitcher
+                                                    breadcrumb={item}
+                                                    isLast={isLast}
+                                                />
+                                            ) : index === siteIndex ? (
+                                                <SiteBreadcrumbSwitcher
+                                                    breadcrumb={item}
+                                                    isLast={isLast}
+                                                />
+                                            ) : isLast ? (
+                                                <BreadcrumbPage className="truncate">
+                                                    {item.title}
+                                                </BreadcrumbPage>
+                                            ) : (
+                                                <BreadcrumbLink
+                                                    asChild
+                                                    className="truncate"
+                                                >
+                                                    <Link href={item.href}>
+                                                        {item.title}
+                                                    </Link>
+                                                </BreadcrumbLink>
+                                            )}
+                                        </BreadcrumbItem>
                                     </Fragment>
                                 );
                             })}

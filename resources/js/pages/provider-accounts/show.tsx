@@ -67,7 +67,7 @@ export default function ProviderAccountShow({ account }: Props) {
                             <ArrowLeftIcon className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <div className="flex flex-1 items-center gap-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
                         <h1 className="text-2xl font-semibold tracking-tight">
                             {data.name}
                         </h1>
@@ -77,7 +77,11 @@ export default function ProviderAccountShow({ account }: Props) {
                         />
                     </div>
                     {canManageProviders && (
-                        <Button variant="outline" onClick={handleValidate}>
+                        <Button
+                            variant="outline"
+                            className="shrink-0"
+                            onClick={handleValidate}
+                        >
                             <ArrowsClockwiseIcon className="h-4 w-4" />
                             Re-validate
                         </Button>

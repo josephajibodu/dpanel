@@ -325,7 +325,7 @@ export default function SiteNginxIndex({
             <Head title={`${webServer} - ${site.domain}`} />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">
                             {webServer}
@@ -336,7 +336,7 @@ export default function SiteNginxIndex({
                             need.
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                         {canManageNginx && (
                             <Button
                                 variant="outline"
@@ -371,9 +371,10 @@ export default function SiteNginxIndex({
                     </div>
                 </div>
 
-                <StatGroup className="flex flex-1 gap-4 overflow-hidden">
+                {/* Side by side from tablets up; stacked on phones. */}
+                <StatGroup className="flex flex-1 flex-col gap-4 md:flex-row md:overflow-hidden">
                     {/* File explorer — domain → section → files */}
-                    <div className="w-64 shrink-0 overflow-y-auto rounded-2xl bg-card shadow-card">
+                    <div className="shrink-0 overflow-y-auto rounded-2xl bg-card shadow-card max-md:max-h-72 md:w-64">
                         {domains.length === 0 && (
                             <p className="px-4 py-3 text-xs text-muted-foreground italic">
                                 No domains configured yet.
@@ -516,7 +517,7 @@ export default function SiteNginxIndex({
                                                                             )}
                                                                             {canManageNginx &&
                                                                                 !section.read_only && (
-                                                                                    <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                                                                                    <div className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover:flex pointer-coarse:flex">
                                                                                         <button
                                                                                             onClick={(
                                                                                                 e,
@@ -568,7 +569,7 @@ export default function SiteNginxIndex({
                     </div>
 
                     {/* Editor pane */}
-                    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-card shadow-card">
+                    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-card shadow-card max-md:h-[32rem] max-md:flex-none">
                         {selectedFile ? (
                             <>
                                 <div className="flex items-center justify-between border-b px-4 py-2.5">
@@ -674,7 +675,7 @@ export default function SiteNginxIndex({
 
                     {/* History panel */}
                     {showHistoryPanel && (
-                        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-card">
+                        <div className="flex shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-card max-md:max-h-80 md:w-72">
                             <div className="flex items-center justify-between border-b px-3 py-2.5">
                                 <span className="text-sm font-medium">
                                     History
