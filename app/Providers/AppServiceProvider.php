@@ -15,6 +15,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -22,6 +23,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureDevCommands();
+        $this->configureErrorPages();
         $this->configureHttpClientLogging();
         $this->configureWelcomeEmail();
 
@@ -87,6 +91,57 @@ class AppServiceProvider extends ServiceProvider
     {
         DevCommands::artisan('schedule:work', 'schedule');
         DevCommands::artisan('flitops:terminal-gateway', 'terminal');
+    }
+
+    /**
+     * Inertia shows any plain HTML error page in a pop-up over the app, so
+     * errors are sent back in a form Inertia understands. A form submit or
+     * action that fails returns to its page with an error toast, and a page
+     * that fails to load shows the error page. With debug on, Laravel's
+     * detailed error page is kept so the stack trace still shows locally.
+     */
+    protected function configureErrorPages(): void
+    {
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response): ExceptionResponse|RedirectResponse|null {
+            $request = $response->request;
+            $status = $response->statusCode();
+
+            if (config('app.debug') || $status < 400) {
+                return null;
+            }
+
+            if ($request->inertia() && ! $request->isMethod('GET') && $request->hasSession()) {
+                return Inertia::flash('toast', [
+                    'type' => 'error',
+                    'message' => $this->errorToastMessage($response),
+                ])->back(303);
+            }
+
+            if ($request->inertia() || ($request->isMethod('GET') && ! $request->expectsJson())) {
+                return $response->render('error-page', [
+                    'status' => $status,
+                    'message' => $status === 403 ? $response->exception->getMessage() : '',
+                ]);
+            }
+
+            return null;
+        });
+    }
+
+    /**
+     * A 403's own message is kept because it was written for the user, such
+     * as the plan upgrade message.
+     */
+    private function errorToastMessage(ExceptionResponse $response): string
+    {
+        return match ($response->statusCode()) {
+            403 => $response->exception->getMessage() ?: "You don't have permission to do that.",
+            404 => "We couldn't find that. It may have been deleted.",
+            419 => 'Your session timed out. Please try again.',
+            429 => 'Too many attempts. Wait a minute and try again.',
+            503 => "We're doing some quick maintenance. Please try again in a few minutes.",
+            default => 'Something went wrong on our end. Please try again.',
+        };
     }
 
     /**

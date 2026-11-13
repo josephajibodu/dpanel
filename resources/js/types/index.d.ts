@@ -6,6 +6,14 @@ import { Team, TeamPermission } from './team';
 
 export type { Plan, PlanFeature, PlanKey, PlanLock } from './plan';
 
+declare module '@inertiajs/core' {
+    export interface InertiaConfig {
+        flashDataType: {
+            toast?: { type: 'success' | 'error'; message: string };
+        };
+    }
+}
+
 export type {
     Team,
     TeamInvitation,
