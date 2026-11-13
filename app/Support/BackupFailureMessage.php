@@ -13,8 +13,9 @@ use Throwable;
 
 /**
  * Turns a backup or restore failure into a message that is safe to show the
- * user. Causes they can fix themselves are named specifically; anything else
- * points at Flitops itself, so it gets a generic message and the real
+ * user. Causes they can fix themselves are named specifically; any other
+ * failed command on the server shows the error line it printed; anything
+ * else points at Flitops itself, so it gets a generic message and the real
  * exception is left to the job's log entry.
  */
 class BackupFailureMessage
@@ -29,14 +30,47 @@ class BackupFailureMessage
             $exception instanceof SshHostKeyMismatchException => $exception->getMessage(),
             $exception instanceof SshConnectionException => "Couldn't connect to the server over SSH. Make sure it's online and reachable, then try again.",
             $exception instanceof TimeoutExceededException => "The {$operation} didn't finish within an hour and was stopped.",
-            $exception instanceof SshCommandException => self::forRemoteOutput($exception->stderr.$exception->output, $backup, $operation),
+            $exception instanceof SshCommandException => self::forRemoteOutput($exception->stderr.$exception->output, $backup, $operation)
+                ?? self::forUnrecognisedRemoteOutput($exception, $backup, $operation),
             default => null,
         };
 
         return $message ?? sprintf(
             "Something went wrong on our end while %s. We've logged the details — try again, and contact support if it keeps happening.",
-            $operation === 'restore' ? 'restoring this backup' : 'running this backup',
+            self::describe($operation),
         );
+    }
+
+    /**
+     * A failed command with no known cause still printed why it failed, and
+     * the last line is usually that reason (`aws: command not found`, a
+     * MySQL error). Only that line is shown, never the command, and the
+     * server's and storage provider's secrets are stripped from it again in
+     * case a tool echoed one.
+     */
+    private static function forUnrecognisedRemoteOutput(SshCommandException $exception, Backup $backup, string $operation): ?string
+    {
+        $output = trim((string) $exception->stderr) ?: trim($exception->output);
+
+        if ($output === '') {
+            return null;
+        }
+
+        $lastLine = trim(Str::afterLast($output, "\n"));
+
+        return sprintf(
+            'The server reported an error while %s: %s',
+            self::describe($operation),
+            Str::limit($backup->redactSecrets($lastLine), 300),
+        );
+    }
+
+    /**
+     * @param  'backup'|'restore'  $operation
+     */
+    private static function describe(string $operation): string
+    {
+        return $operation === 'restore' ? 'restoring this backup' : 'running this backup';
     }
 
     /**

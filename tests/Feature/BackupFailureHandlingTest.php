@@ -92,11 +92,23 @@ it('reports a job timeout', function () {
 });
 
 it('shows a generic message for failures on our end, without any command or secret', function () {
-    $message = BackupFailureMessage::for(($this->failedUpload)('ERROR 1064 (42000): You have an error in your SQL syntax'), $this->backup);
+    $message = BackupFailureMessage::for(($this->failedUpload)(''), $this->backup);
 
     expect($message)->toStartWith('Something went wrong on our end while running this backup.')
         ->not->toContain('mysqldump')
         ->not->toContain('STORAGESECRETVALUE');
+});
+
+it('shows the last line the server printed when a command fails for an unknown reason', function () {
+    $message = BackupFailureMessage::for(($this->failedUpload)("Reading dump\nbash: line 1: aws: command not found\n"), $this->backup, 'restore');
+
+    expect($message)->toBe('The server reported an error while restoring this backup: bash: line 1: aws: command not found');
+});
+
+it('strips storage secrets from the server line it shows', function () {
+    $message = BackupFailureMessage::for(($this->failedUpload)('Key AKIDSTORAGEKEY with secret STORAGESECRETVALUE was refused'), $this->backup);
+
+    expect($message)->toBe('The server reported an error while running this backup: Key [redacted] with secret [redacted] was refused');
 });
 
 it('words the generic message for a restore', function () {

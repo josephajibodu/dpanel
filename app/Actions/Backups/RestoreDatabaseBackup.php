@@ -15,7 +15,7 @@ use RuntimeException;
 
 class RestoreDatabaseBackup
 {
-    use EscapesShell, ImportsForeignDumps, KeepsSecretsOffCommandLine;
+    use EscapesShell, ImportsForeignDumps, KeepsSecretsOffCommandLine, ManagesBackupLifecycle;
 
     public function __construct(
         private SshService $sshService,
@@ -55,6 +55,8 @@ class RestoreDatabaseBackup
         $connection = $this->sshService->connect($server);
 
         try {
+            $this->ensureAwsCliInstalled($connection);
+
             $this->withPrivateDirectory($connection, function (string $directory) use ($connection, $backup, $server, $serverDatabase, $rootPassword, $driver, $s3Uri): void {
                 $mysqlCredentials = $this->uploadMysqlRootCredentials($connection, $directory, $rootPassword);
                 $awsCredentials = $this->uploadStorageCredentials($connection, $directory, $driver);
