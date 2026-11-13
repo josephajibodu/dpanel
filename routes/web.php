@@ -15,6 +15,7 @@ use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProviderAccountController;
 use App\Http\Controllers\RealtimeDiagnosticsController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServerConnectionController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
@@ -111,6 +112,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
 
             Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+            // What the search box (Cmd+K) can jump to
+            Route::get('search', [SearchController::class, 'index'])->name('search');
 
             // SSH Keys (team-scoped URLs; keys remain user-owned)
             Route::resource('ssh-keys', SshKeyController::class)
