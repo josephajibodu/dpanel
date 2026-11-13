@@ -22,6 +22,7 @@ it('shares what a Hobby team leaves out once its one server is used, with the pl
                 'extra_teams' => ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'],
                 'database_backups' => ['message' => 'Backing up databases needs the Pro or Team plan.', 'plan' => 'Pro'],
                 'monitoring' => ['message' => 'Uptime and certificate monitoring needs the Pro or Team plan.', 'plan' => 'Pro'],
+                'octane' => ['message' => 'Running a site on Laravel Octane needs the Pro or Team plan.', 'plan' => 'Pro'],
             ])
             ->where('auth.teamLimit', ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'])
         );

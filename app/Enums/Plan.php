@@ -44,7 +44,7 @@ enum Plan: string
     {
         return match ($this) {
             self::Hobby => [],
-            self::Pro => [PlanFeature::DatabaseBackups, PlanFeature::Monitoring],
+            self::Pro => [PlanFeature::DatabaseBackups, PlanFeature::Monitoring, PlanFeature::Octane],
             self::Team => PlanFeature::cases(),
         };
     }

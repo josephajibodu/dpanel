@@ -12,6 +12,7 @@ enum PlanFeature: string
     case ExtraTeams = 'extra_teams';
     case DatabaseBackups = 'database_backups';
     case Monitoring = 'monitoring';
+    case Octane = 'octane';
 
     /**
      * What the user is told when their plan doesn't include this feature.
@@ -23,6 +24,7 @@ enum PlanFeature: string
             self::ExtraTeams => 'Creating more teams',
             self::DatabaseBackups => 'Backing up databases',
             self::Monitoring => 'Uptime and certificate monitoring',
+            self::Octane => 'Running a site on Laravel Octane',
         };
 
         $plans = implode(' or ', array_map(fn (Plan $plan): string => $plan->label(), Plan::including($this)));

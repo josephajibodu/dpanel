@@ -6,7 +6,8 @@ export type PlanFeature =
     | 'team_members'
     | 'extra_teams'
     | 'database_backups'
-    | 'monitoring';
+    | 'monitoring'
+    | 'octane';
 
 /** Why a control is locked on the current plan, and the cheapest plan that unlocks it. */
 export interface PlanLock {

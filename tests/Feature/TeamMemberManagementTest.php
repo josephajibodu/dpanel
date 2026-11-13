@@ -452,6 +452,7 @@ describe('settings page', function () {
                 ['message' => 'Creating more teams needs the Team plan.', 'plan' => 'Team'],
                 ['message' => 'Backing up databases needs the Pro or Team plan.', 'plan' => 'Pro'],
                 ['message' => 'Uptime and certificate monitoring needs the Pro or Team plan.', 'plan' => 'Pro'],
+                ['message' => 'Running a site on Laravel Octane needs the Pro or Team plan.', 'plan' => 'Pro'],
             ]));
 
         $this->actingAs(teamActor($this->team, 'admin'))

@@ -46,6 +46,7 @@ const comparisonRows: {
     { label: 'Database backups to S3 or R2', values: [false, true, true] },
     { label: 'Queue workers and cron jobs', values: [true, true, true] },
     { label: 'Uptime and certificate monitoring', values: [false, true, true] },
+    { label: 'Laravel Octane', values: [false, true, true] },
     { label: 'Browser terminal', values: [true, true, true] },
     { label: 'Role-based access', values: [false, false, true] },
     { label: 'Support', values: ['Community', 'Email', 'Priority'] },
