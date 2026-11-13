@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { usePermission } from '@/hooks/use-permission';
+import { usePlan } from '@/hooks/use-plan';
 import { useTeamPath } from '@/hooks/use-team-path';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -101,7 +102,9 @@ export default function SitesEdit({
         php_version: siteData.php_version,
         auto_deploy: siteData.auto_deploy,
         single_page_app: siteData.single_page_app,
+        octane_server: siteData.octane_server,
     });
+    const octaneLock = usePlan()?.notIncluded.octane ?? null;
 
     const accountId = form.data.source_control_account_id;
     // The site may be connected through a teammate's account, whose
@@ -449,6 +452,42 @@ export default function SitesEdit({
                                 {form.errors.single_page_app && (
                                     <InputError
                                         message={form.errors.single_page_app}
+                                    />
+                                )}
+                            </FormSection>
+                        )}
+
+                        {siteData.project_type === 'laravel' && (
+                            <FormSection
+                                title="Laravel Octane"
+                                description={
+                                    octaneLock !== null &&
+                                    form.data.octane_server === null
+                                        ? octaneLock.message
+                                        : "Keeps the app loaded in memory with FrankenPHP so pages respond faster. The project must include laravel/octane and trust 127.0.0.1 as a proxy. Requests run on FrankenPHP's own built-in PHP, not the PHP version chosen above. Visitors may see errors for a second or two on each deploy while Octane restarts."
+                                }
+                                action={
+                                    <Switch
+                                        aria-label="Laravel Octane"
+                                        checked={
+                                            form.data.octane_server !== null
+                                        }
+                                        disabled={
+                                            octaneLock !== null &&
+                                            form.data.octane_server === null
+                                        }
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'octane_server',
+                                                checked ? 'frankenphp' : null,
+                                            )
+                                        }
+                                    />
+                                }
+                            >
+                                {form.errors.octane_server && (
+                                    <InputError
+                                        message={form.errors.octane_server}
                                     />
                                 )}
                             </FormSection>

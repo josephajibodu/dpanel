@@ -262,6 +262,12 @@ export default function SitesShow({
                                         label="PHP"
                                         value={`PHP ${siteData.php_version}`}
                                     />
+                                    {siteData.octane_server && (
+                                        <DetailRow
+                                            label="Octane"
+                                            value={`FrankenPHP, port ${siteData.octane_port}`}
+                                        />
+                                    )}
                                     <DetailRow
                                         label="System user"
                                         value={siteData.system_user}

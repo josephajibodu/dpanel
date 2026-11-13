@@ -521,18 +521,19 @@ export function ProcessesPanel({
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        {canManageProcesses && (
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    openEditWorker(
-                                                                        w,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <PencilSimpleIcon className="h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                        )}
+                                                        {canManageProcesses &&
+                                                            !w.runs_octane && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        openEditWorker(
+                                                                            w,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PencilSimpleIcon className="h-4 w-4" />
+                                                                    Edit
+                                                                </DropdownMenuItem>
+                                                            )}
                                                         <DropdownMenuItem
                                                             onClick={() =>
                                                                 fetchLogs(w)
@@ -592,21 +593,25 @@ export function ProcessesPanel({
                                                                     <ArrowsClockwiseIcon className="h-4 w-4" />
                                                                     Restart
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setWorkerToDelete(
-                                                                            w,
-                                                                        );
-                                                                        setDeleteWorkerOpen(
-                                                                            true,
-                                                                        );
-                                                                    }}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                >
-                                                                    <TrashIcon className="h-4 w-4" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
+                                                                {!w.runs_octane && (
+                                                                    <>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                setWorkerToDelete(
+                                                                                    w,
+                                                                                );
+                                                                                setDeleteWorkerOpen(
+                                                                                    true,
+                                                                                );
+                                                                            }}
+                                                                            className="text-destructive focus:text-destructive"
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4" />
+                                                                            Delete
+                                                                        </DropdownMenuItem>
+                                                                    </>
+                                                                )}
                                                             </>
                                                         )}
                                                     </DropdownMenuContent>
