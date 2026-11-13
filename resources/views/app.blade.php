@@ -37,9 +37,12 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600|host-grotesk:400,500,600|jetbrains-mono:400,500&display=swap" rel="stylesheet" />
+        {{-- Start downloading the page's main typeface before the stylesheet asks for it --}}
+        @if ($page['component'] === 'welcome' || str_starts_with($page['component'], 'marketing/'))
+            <link rel="preload" href="{{ Vite::asset('node_modules/@fontsource-variable/host-grotesk/files/host-grotesk-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+        @else
+            <link rel="preload" href="{{ Vite::asset('node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+        @endif
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

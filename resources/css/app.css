@@ -2,6 +2,10 @@
 
 @import 'tw-animate-css';
 
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/host-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
@@ -9,18 +13,19 @@
 
 @theme {
     --font-sans:
-        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        'Inter Variable', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
 
     /* The public site's typeface; the dashboard stays on Inter. */
     --font-marketing:
-        'Host Grotesk', ui-sans-serif, system-ui, sans-serif,
+        'Host Grotesk Variable', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
     --font-log:
-        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        'Liberation Mono', 'Courier New', monospace;
+        'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, 'Liberation Mono', 'Courier New', monospace;
 
     /* Shopify's admin sets body copy at 13px on a 20px line. */
     --text-sm: 0.8125rem;
