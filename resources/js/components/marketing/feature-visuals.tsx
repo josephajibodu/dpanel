@@ -64,12 +64,12 @@ export function BackupVisual() {
 export function TerminalVisual() {
     return (
         <div className="rounded-lg bg-neutral-950 p-3.5 font-log text-[11px] leading-relaxed ring-1 ring-white/10">
-            <p className="text-white/45">Connected to fra-1 as flitops</p>
+            <p className="text-white/55">Connected to fra-1 as flitops</p>
             <p className="mt-1 text-white/85">
                 <span className="text-blue-400">~$</span> php artisan
                 queue:monitor redis:default
             </p>
-            <p className="text-white/45">[redis:default] 0 jobs waiting</p>
+            <p className="text-white/55">[redis:default] 0 jobs waiting</p>
             <p className="text-white/85">
                 <span className="text-blue-400">~$</span>{' '}
                 <span className="inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-white/70" />
@@ -241,8 +241,8 @@ export function PushVisual() {
             <p className="text-white/85">
                 <span className="text-blue-400">~$</span> git push origin main
             </p>
-            <p className="text-white/45">To github.com:acme/storefront.git</p>
-            <p className="text-white/45"> 7be03d1..a41f9c2 main → main</p>
+            <p className="text-white/55">To github.com:acme/storefront.git</p>
+            <p className="text-white/55"> 7be03d1..a41f9c2 main → main</p>
             <p className="mt-2 text-white/85">flitops is deploying a41f9c2</p>
             <p className="text-emerald-400">✓ Live in 14.2s, no downtime</p>
         </div>

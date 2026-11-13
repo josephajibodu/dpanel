@@ -38,7 +38,8 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600|host-grotesk:400,500,600|jetbrains-mono:400,500" rel="stylesheet" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600|host-grotesk:400,500,600|jetbrains-mono:400,500&display=swap" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
