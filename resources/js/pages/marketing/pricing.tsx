@@ -13,6 +13,7 @@ import {
     plans,
     type Currency,
 } from '@/config/plans';
+import { useCurrency } from '@/hooks/use-currency';
 import MarketingLayout from '@/layouts/marketing-layout';
 import { cn } from '@/lib/utils';
 import { contact, register } from '@/routes';
@@ -50,7 +51,8 @@ const comparisonRows: {
     { label: 'Support', values: ['Community', 'Email', 'Priority'] },
 ];
 
-const faqs: FaqItem[] = [
+/** The billing questions, with prices in the visitor's currency. */
+const billingFaqs = (currency: Currency): FaqItem[] => [
     {
         question: 'Is the price per server?',
         answer: 'No. Paid plans include unlimited servers for one flat price. Your cloud provider bills you separately for the servers themselves, at their own rates.',
@@ -61,7 +63,7 @@ const faqs: FaqItem[] = [
     },
     {
         question: 'Will the Hobby plan stay free?',
-        answer: `No. Hobby is free for now. ${freeForNowNote('usd', 'ngn')}.`,
+        answer: `No. Hobby is free for now. ${freeForNowNote(currency)}.`,
     },
     {
         question: 'Can I change plans later?',
@@ -72,11 +74,6 @@ const faqs: FaqItem[] = [
         answer: 'Your servers and sites keep running on your cloud account exactly as they are. You only lose access to the flitops dashboard and automation.',
     },
 ];
-
-const currencyLabels: Record<Currency, string> = {
-    usd: 'USD $',
-    ngn: 'NGN ₦',
-};
 
 function PlanValue({ value }: { value: string | boolean }) {
     if (value === true) {
@@ -102,7 +99,7 @@ function PlanValue({ value }: { value: string | boolean }) {
 
 export default function Pricing() {
     const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
-    const [currency, setCurrency] = useState<Currency>('usd');
+    const currency = useCurrency();
 
     return (
         <MarketingLayout
@@ -114,7 +111,7 @@ export default function Pricing() {
                 title="Flat pricing. Unlimited servers."
                 description="One price for the platform, however large your fleet grows. You pay your cloud provider directly for the servers."
             >
-                <div className="mt-12 flex flex-wrap gap-3">
+                <div className="mt-12">
                     <div
                         role="radiogroup"
                         aria-label="Billing period"
@@ -140,29 +137,6 @@ export default function Pricing() {
                                         −20%
                                     </span>
                                 )}
-                            </button>
-                        ))}
-                    </div>
-                    <div
-                        role="radiogroup"
-                        aria-label="Currency"
-                        className="inline-flex rounded-full bg-secondary p-1 text-sm"
-                    >
-                        {(['usd', 'ngn'] as const).map((option) => (
-                            <button
-                                key={option}
-                                type="button"
-                                role="radio"
-                                aria-checked={currency === option}
-                                onClick={() => setCurrency(option)}
-                                className={cn(
-                                    'rounded-full px-4 py-1.5 font-medium transition-colors',
-                                    currency === option
-                                        ? 'bg-background text-foreground shadow-button'
-                                        : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {currencyLabels[option]}
                             </button>
                         ))}
                     </div>
@@ -303,7 +277,7 @@ export default function Pricing() {
             <section className="px-6 pt-24 sm:pt-32 lg:px-8">
                 <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
                     <SectionHeading title="Billing questions" />
-                    <FaqList items={faqs} />
+                    <FaqList items={billingFaqs(currency)} />
                 </div>
             </section>
 

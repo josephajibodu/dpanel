@@ -15,6 +15,7 @@ import {
     type PlanDetails,
 } from '@/config/plans';
 import { getSettingsSubNavItems } from '@/config/sub-nav-items';
+import { useCurrency } from '@/hooks/use-currency';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { cn } from '@/lib/utils';
@@ -163,7 +164,7 @@ function planSummary(
     return `You’re on the ${planName} plan, using ${serverCount} of its ${servers(serverLimit)}.`;
 }
 
-/** A plan's monthly price in dollars, with the naira price under it. */
+/** A plan's monthly price, in naira in Nigeria and dollars elsewhere. */
 function PlanPrice({
     plan,
     className,
@@ -171,25 +172,26 @@ function PlanPrice({
     plan: PlanDetails;
     className?: string;
 }) {
-    const { usd, ngn } = plan.prices;
+    const currency = useCurrency();
+    const { monthly } = plan.prices[currency];
 
     return (
         <div className={className}>
             <p className="text-2xl font-semibold tracking-tight tabular-nums">
-                {usd.monthly === 0
+                {monthly === 0
                     ? 'Free for now'
-                    : formatPrice(usd.monthly, 'usd')}
-                {usd.monthly > 0 && (
+                    : formatPrice(monthly, currency)}
+                {monthly > 0 && (
                     <span className="ml-1 text-sm font-normal tracking-normal text-muted-foreground">
                         / month
                     </span>
                 )}
             </p>
-            <p className="text-xs text-muted-foreground">
-                {ngn.monthly === 0
-                    ? freeForNowNote('usd', 'ngn')
-                    : `or ${formatPrice(ngn.monthly, 'ngn')} a month`}
-            </p>
+            {monthly === 0 && (
+                <p className="text-xs text-muted-foreground">
+                    {freeForNowNote(currency)}
+                </p>
+            )}
         </div>
     );
 }

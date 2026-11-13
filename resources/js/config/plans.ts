@@ -72,15 +72,10 @@ const hobbyLaterPrice: Record<Currency, number> = { usd: 2, ngn: 2000 };
 
 /**
  * Shown beside Hobby while it costs nothing. It is free only until payments
- * are live, so nothing should call it free forever. Names the later monthly
- * price in each currency given.
+ * are live, so nothing should call it free forever.
  */
-export function freeForNowNote(...currencies: Currency[]): string {
-    const prices = currencies.map((currency) =>
-        formatPrice(hobbyLaterPrice[currency], currency),
-    );
-
-    return `Will be ${prices.join(' or ')} a month later`;
+export function freeForNowNote(currency: Currency): string {
+    return `Will be ${formatPrice(hobbyLaterPrice[currency], currency)} a month later`;
 }
 
 export function formatPrice(amount: number, currency: Currency): string {

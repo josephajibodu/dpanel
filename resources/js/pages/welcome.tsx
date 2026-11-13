@@ -24,6 +24,8 @@ import Scene, { type SceneTone } from '@/components/marketing/scene';
 import SectionHeading from '@/components/marketing/section-heading';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { formatPrice, type Currency } from '@/config/plans';
+import { useCurrency } from '@/hooks/use-currency';
 import MarketingLayout from '@/layouts/marketing-layout';
 import {
     contact,
@@ -116,7 +118,8 @@ const steps: { title: string; description: string; visual: ReactNode }[] = [
     },
 ];
 
-const stats = [
+/** The headline numbers, with the starting price in the visitor's currency. */
+const headlineStats = (currency: Currency) => [
     {
         label: 'Cloud providers',
         value: '4',
@@ -135,7 +138,7 @@ const stats = [
     },
     {
         label: 'To get started',
-        value: '$0',
+        value: formatPrice(0, currency),
         description: 'Free for your first server. No card required.',
     },
 ];
@@ -230,6 +233,8 @@ export default function Welcome({
 }: {
     canRegister?: boolean;
 }) {
+    const currency = useCurrency();
+
     return (
         <MarketingLayout
             title="Deploy to servers you own"
@@ -297,7 +302,7 @@ export default function Welcome({
                     </div>
 
                     <dl className="grid grid-cols-2 border-b border-border lg:grid-cols-4">
-                        {stats.map((stat) => (
+                        {headlineStats(currency).map((stat) => (
                             <div
                                 key={stat.label}
                                 className="border-border py-10 pr-6 not-first:pl-6 max-lg:odd:pl-0 max-lg:even:border-l max-lg:nth-[n+3]:border-t sm:py-12 lg:not-first:border-l"
