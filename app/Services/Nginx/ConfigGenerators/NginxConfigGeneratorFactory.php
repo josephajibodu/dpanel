@@ -12,6 +12,10 @@ class NginxConfigGeneratorFactory
      */
     public static function make(Site $site): BaseNginxConfigGenerator
     {
+        if ($site->usesOctane()) {
+            return new OctaneNginxConfigGenerator;
+        }
+
         $projectType = $site->project_type ?? ProjectType::Laravel;
 
         return match ($projectType) {

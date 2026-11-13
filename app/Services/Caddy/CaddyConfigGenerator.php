@@ -91,6 +91,10 @@ CADDY;
 
     private function handlers(Site $site): string
     {
+        if ($site->usesOctane()) {
+            return $this->octaneHandlers($site);
+        }
+
         $projectType = $site->project_type ?? ProjectType::Laravel;
 
         if ($site->servesAsSinglePageApp()) {
@@ -117,6 +121,29 @@ CADDY;
         }
 
         return $php;
+    }
+
+    /**
+     * A Laravel site on Octane: files that exist are served directly, and
+     * every other request goes to the site's Octane process. Caddy runs
+     * `route` before the site block's own hidden files rule, so the rule is
+     * repeated inside it. The path rule's trailing-slash pattern stops a
+     * request for a folder, such as `/`, being treated as a file.
+     */
+    private function octaneHandlers(Site $site): string
+    {
+        return <<<CADDY
+	# Laravel Octane: files that exist are served directly, everything else goes to the Octane process
+	route {
+		respond @hidden 403
+		@octaneStatic {
+			file
+			not path *.php */
+		}
+		file_server @octaneStatic
+		reverse_proxy 127.0.0.1:{$site->octane_port}
+	}
+CADDY;
     }
 
     /**

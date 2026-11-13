@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OctaneServer;
 use App\Enums\ProjectType;
 use App\Enums\WwwRedirect;
 use App\Models\Server;
@@ -94,6 +95,21 @@ it('sends URLs that match no file to index.html for a single-page app, except mi
         ->toContain("\t\tnot path *.js *.mjs *.css ")
         ->toContain("\trewrite @singlePageApp /index.html\n\tfile_server")
         ->toContain('respond @hidden 403')
+        ->not->toContain('php_fastcgi');
+});
+
+it('hands a Laravel site on Octane to its Octane process, serving files that exist directly', function () {
+    $site = Site::factory()->forServer($this->server)->create([
+        'domain' => 'myapp.com',
+        'octane_server' => OctaneServer::FrankenPhp,
+        'octane_port' => 8100,
+    ]);
+
+    $config = app(CaddyConfigGenerator::class)->generate($site, caddySiteDomain($site), ssl: true);
+
+    expect($config)
+        ->toContain("\troute {\n\t\trespond @hidden 403\n")
+        ->toContain("\t\tfile_server @octaneStatic\n\t\treverse_proxy 127.0.0.1:8100\n\t}")
         ->not->toContain('php_fastcgi');
 });
 

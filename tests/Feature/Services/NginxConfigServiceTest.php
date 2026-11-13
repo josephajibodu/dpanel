@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OctaneServer;
 use App\Enums\ProjectType;
 use App\Enums\WwwRedirect;
 use App\Models\Certificate;
@@ -279,6 +280,41 @@ describe('NginxConfigService', function () {
             expect($config)
                 ->toContain('try_files $uri $uri/ /index.php?$query_string')
                 ->not->toContain('/index.html =404');
+        });
+
+        it('hands a Laravel site on Octane to its Octane process instead of PHP-FPM', function () {
+            $site = Site::factory()->create([
+                'domain' => 'octane.test',
+                'project_type' => ProjectType::Laravel,
+                'octane_server' => OctaneServer::FrankenPhp,
+                'octane_port' => 8100,
+            ]);
+
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+            expect($config)
+                ->toContain('try_files $uri $uri/ @octane;')
+                ->toContain('proxy_pass http://127.0.0.1:8100$suffix;')
+                ->not->toContain('fastcgi_pass');
+        });
+
+        it('ignores the Octane setting on a site that is not Laravel', function () {
+            $site = Site::factory()->create([
+                'domain' => 'symfony-octane.test',
+                'project_type' => ProjectType::Symfony,
+                'octane_server' => OctaneServer::FrankenPhp,
+                'octane_port' => 8100,
+            ]);
+
+            $domain = $site->domains()->where('is_primary', true)->firstOrFail();
+
+            $config = (new NginxConfigService)->generateForSiteDomain($site, $domain);
+
+            expect($config)
+                ->toContain('fastcgi_pass')
+                ->not->toContain('proxy_pass');
         });
 
         it('generates WordPress config with WordPress-specific rules', function () {
