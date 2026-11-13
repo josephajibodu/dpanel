@@ -1,5 +1,6 @@
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
+import { NavSearch } from '@/components/nav-search';
 import { NavUser } from '@/components/nav-user';
 import { TeamSwitcher } from '@/components/team-switcher';
 import {
@@ -27,6 +28,7 @@ export function AppSidebar({
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <TeamSwitcher />
+                <NavSearch />
             </SidebarHeader>
 
             <SidebarContent>
