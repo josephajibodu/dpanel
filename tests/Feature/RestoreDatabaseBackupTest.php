@@ -166,7 +166,7 @@ it('installs the AWS CLI before downloading an imported dump', function () {
 
     app(RestoreDatabaseBackup::class)->execute($backup);
 
-    $installAt = collect($commands)->search(fn (string $command) => str_contains($command, 'apt-get install -y -qq awscli'));
+    $installAt = collect($commands)->search(fn (string $command) => str_contains($command, 'https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip'));
     $downloadAt = collect($commands)->search(fn (string $command) => str_contains($command, 'aws s3 cp'));
     expect($installAt)->toBeInt()
         ->toBeLessThan($downloadAt);

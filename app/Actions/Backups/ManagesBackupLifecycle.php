@@ -22,13 +22,20 @@ trait ManagesBackupLifecycle
     /**
      * The AWS CLI isn't part of provisioning yet — install it lazily so this
      * feature works on already-provisioned servers too, not just new ones.
+     * Ubuntu 24.04 dropped the `awscli` apt package, so it comes from AWS's
+     * own installer for the server's processor (x86_64 or aarch64) instead.
      */
     private function ensureAwsCliInstalled(SshConnection $connection): void
     {
-        $connection->exec(
-            'command -v aws >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq awscli)',
-            180,
-        );
+        $connection->exec(<<<'SH'
+            command -v aws >/dev/null 2>&1 || (
+                dir=$(mktemp -d) && trap 'rm -rf "$dir"' EXIT &&
+                { command -v unzip >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq unzip; }; } &&
+                curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "$dir/awscliv2.zip" &&
+                unzip -q "$dir/awscliv2.zip" -d "$dir" &&
+                sudo "$dir/aws/install"
+            )
+            SH, 300);
     }
 
     /**
