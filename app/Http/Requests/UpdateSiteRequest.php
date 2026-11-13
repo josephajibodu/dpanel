@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\OctaneServer;
 use App\Models\Server;
 use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -44,6 +45,7 @@ class UpdateSiteRequest extends FormRequest
             'php_version' => ['sometimes', 'string', Rule::in($this->getInstalledPhpVersions())],
             'auto_deploy' => ['sometimes', 'boolean'],
             'single_page_app' => ['sometimes', 'boolean'],
+            'octane_server' => ['sometimes', 'nullable', Rule::enum(OctaneServer::class)],
         ];
     }
 

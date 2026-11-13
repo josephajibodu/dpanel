@@ -6,8 +6,10 @@ use App\Actions\Sites\ChangeSiteRepositoryAction;
 use App\Actions\Sites\CreateSiteAction;
 use App\Actions\Sites\DeleteSiteAction;
 use App\Actions\Sites\SetDeployOnPushAction;
+use App\Actions\Sites\SetOctaneAction;
 use App\Data\SiteData;
 use App\Enums\Framework;
+use App\Enums\OctaneServer;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteStatus;
 use App\Events\DeploymentStatusChanged;
@@ -27,6 +29,7 @@ use App\Http\Resources\WorkerResource;
 use App\Jobs\MoveSitePhpPoolJob;
 use App\Jobs\RetryCreateSiteJob;
 use App\Jobs\SyncSiteNginxJob;
+use App\Jobs\SyncSiteOctaneJob;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\Site;
@@ -222,6 +225,7 @@ class SiteController extends Controller
         Site $site,
         SetDeployOnPushAction $setDeployOnPush,
         ChangeSiteRepositoryAction $changeRepository,
+        SetOctaneAction $setOctane,
     ): RedirectResponse {
         $validated = $request->validated();
 
@@ -247,8 +251,16 @@ class SiteController extends Controller
             }
         }
 
+        if (array_key_exists('octane_server', $validated)) {
+            try {
+                $setOctane->execute($site, OctaneServer::tryFrom((string) $validated['octane_server']));
+            } catch (RuntimeException $exception) {
+                return back()->withErrors(['octane_server' => $exception->getMessage()]);
+            }
+        }
+
         $previousPhpVersion = $site->php_version;
-        $site->update(Arr::except($validated, ['auto_deploy', 'repository', 'source_control_account_id']));
+        $site->update(Arr::except($validated, ['auto_deploy', 'octane_server', 'repository', 'source_control_account_id']));
 
         $phpVersionChanged = $site->wasChanged('php_version');
 
@@ -258,6 +270,10 @@ class SiteController extends Controller
             } else {
                 SyncSiteNginxJob::dispatch($site)->onQueue('provisioning');
             }
+        }
+
+        if ($phpVersionChanged && $site->usesOctane() && $server->isReady()) {
+            SyncSiteOctaneJob::dispatch($site);
         }
 
         return redirect()

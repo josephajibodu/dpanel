@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Actions\Database\EscapesShell;
 use App\Actions\Database\KeepsSecretsOffCommandLine;
+use App\Actions\Worker\ControlWorker;
+use App\Enums\WorkerControlAction;
 use App\Models\Site;
 use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshService;
@@ -90,6 +92,14 @@ class SyncEnvironmentJob implements ShouldQueue
             }
 
             $connection->disconnect();
+
+            if ($this->restartQueue && $site->usesOctane()) {
+                $octaneWorker = $site->octaneWorker;
+
+                if ($octaneWorker !== null && in_array($octaneWorker->status, ['active', 'crashed'], true)) {
+                    app(ControlWorker::class)->execute($octaneWorker, WorkerControlAction::Restart);
+                }
+            }
 
             Log::info("Environment variables synced for site {$site->domain}");
 

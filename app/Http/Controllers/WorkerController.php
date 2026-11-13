@@ -44,6 +44,10 @@ class WorkerController extends Controller
         Server $server,
         Worker $worker,
     ): RedirectResponse {
+        if ($worker->runs_octane) {
+            return redirect()->back()->with('error', "This process is managed by the site's Octane setting. Switch Octane off in the site's settings to remove it.");
+        }
+
         app(UpdateWorker::class)->update($worker, $request->validated());
 
         return redirect()
@@ -54,6 +58,10 @@ class WorkerController extends Controller
     public function destroy(Team $team, Server $server, Worker $worker): RedirectResponse
     {
         $this->authorize('manageProcesses', $server);
+
+        if ($worker->runs_octane) {
+            return redirect()->back()->with('error', "This process is managed by the site's Octane setting. Switch Octane off in the site's settings to remove it.");
+        }
 
         app(DestroyWorker::class)->delete($worker);
 
