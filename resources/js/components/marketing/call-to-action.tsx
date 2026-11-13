@@ -47,11 +47,11 @@ export default function CallToAction() {
                     </div>
                 </div>
 
-                <ol className="border-t border-white/25">
+                <ol className="space-y-6">
                     {steps.map((step, index) => (
                         <li
                             key={step}
-                            className="flex items-baseline gap-6 border-b border-white/25 py-5 text-2xl tracking-tight sm:text-3xl"
+                            className="flex items-baseline gap-6 text-2xl tracking-tight sm:text-3xl"
                         >
                             <span className="font-log text-sm tracking-normal text-white/60">
                                 {String(index + 1).padStart(2, '0')}

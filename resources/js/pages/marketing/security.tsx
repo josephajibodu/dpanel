@@ -119,7 +119,7 @@ export default function Security() {
                     {principles.map((principle) => (
                         <div
                             key={principle.title}
-                            className="border-t border-foreground pt-6"
+                            className="border-t border-border pt-6"
                         >
                             <h2 className="text-2xl font-medium tracking-tight">
                                 {principle.title}

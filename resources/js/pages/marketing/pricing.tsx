@@ -232,10 +232,10 @@ export default function Pricing() {
                     <div className="mt-12 overflow-x-auto">
                         <table className="w-full min-w-[640px]">
                             <thead>
-                                <tr className="border-b border-foreground">
+                                <tr className="border-b border-border">
                                     <th
                                         scope="col"
-                                        className="py-4 pr-4 text-left"
+                                        className="pt-6 pr-4 pb-4 text-left"
                                     >
                                         <span className="sr-only">Feature</span>
                                     </th>
@@ -243,15 +243,19 @@ export default function Pricing() {
                                         <th
                                             key={plan.name}
                                             scope="col"
-                                            className="w-1/5 px-4 py-4 text-left text-lg font-medium"
+                                            className={cn(
+                                                'w-1/5 px-6 pt-6 pb-4 text-left text-lg font-medium',
+                                                plan.key === featuredPlan &&
+                                                    'rounded-t-2xl bg-muted',
+                                            )}
                                         >
                                             {plan.name}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border border-b border-border">
-                                {comparisonRows.map((row) => (
+                            <tbody className="divide-y divide-border">
+                                {comparisonRows.map((row, rowIndex) => (
                                     <tr key={row.label}>
                                         <th
                                             scope="row"
@@ -259,14 +263,30 @@ export default function Pricing() {
                                         >
                                             {row.label}
                                         </th>
-                                        {row.values.map((value, index) => (
-                                            <td
-                                                key={index}
-                                                className="px-4 py-4 text-muted-foreground"
-                                            >
-                                                <PlanValue value={value} />
-                                            </td>
-                                        ))}
+                                        {row.values.map((value, index) => {
+                                            const isFeatured =
+                                                plans[index].key ===
+                                                featuredPlan;
+                                            const isLastRow =
+                                                rowIndex ===
+                                                comparisonRows.length - 1;
+
+                                            return (
+                                                <td
+                                                    key={index}
+                                                    className={cn(
+                                                        'px-6 py-4 text-muted-foreground',
+                                                        isFeatured &&
+                                                            'bg-muted text-foreground',
+                                                        isFeatured &&
+                                                            isLastRow &&
+                                                            'rounded-b-2xl',
+                                                    )}
+                                                >
+                                                    <PlanValue value={value} />
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))}
                             </tbody>
