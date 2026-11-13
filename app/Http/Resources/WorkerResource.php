@@ -31,6 +31,7 @@ class WorkerResource extends JsonResource
             'auto_restart' => $this->auto_restart,
             'redirect_stderr' => $this->redirect_stderr,
             'restart_on_deploy' => $this->restart_on_deploy,
+            'runs_octane' => $this->runs_octane,
             'site' => $this->whenLoaded('site', fn () => [
                 'id' => $this->site->id,
                 'domain' => $this->site->domain,

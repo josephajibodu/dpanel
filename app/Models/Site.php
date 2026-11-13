@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Actions\Database\EscapesShell;
 use App\Enums\DeploymentStatus;
 use App\Enums\Framework;
+use App\Enums\OctaneServer;
 use App\Enums\ProjectType;
 use App\Enums\RepositoryProvider;
 use App\Enums\SiteProvisioningStep;
@@ -46,6 +47,8 @@ class Site extends Model
         'package_manager',
         'build_command',
         'single_page_app',
+        'octane_server',
+        'octane_port',
         'status',
         'error_message',
         'uptime_status',
@@ -85,6 +88,8 @@ class Site extends Model
             'aliases' => 'array',
             'auto_deploy' => 'boolean',
             'single_page_app' => 'boolean',
+            'octane_server' => OctaneServer::class,
+            'octane_port' => 'integer',
             'deployment_started_at' => 'datetime',
             'deployment_finished_at' => 'datetime',
             'env_content' => 'encrypted',
@@ -130,6 +135,29 @@ class Site extends Model
     public function servesAsSinglePageApp(): bool
     {
         return $this->project_type === ProjectType::StaticHtml && $this->single_page_app;
+    }
+
+    /**
+     * Whether the web server hands this site's requests to a Laravel Octane
+     * process instead of PHP-FPM. Only Laravel sites can run on Octane.
+     */
+    public function usesOctane(): bool
+    {
+        return $this->project_type === ProjectType::Laravel
+            && $this->octane_server !== null
+            && $this->octane_port !== null;
+    }
+
+    /**
+     * The command that starts this site's Octane process. The site's PHP
+     * version only starts it: FrankenPHP serves requests on its own
+     * built-in PHP.
+     */
+    public function octaneCommand(): string
+    {
+        $php = 'php'.($this->php_version ?: '8.4');
+
+        return "{$php} artisan octane:start --server={$this->octane_server->value} --host=127.0.0.1 --port={$this->octane_port}";
     }
 
     /**
@@ -421,6 +449,17 @@ class Site extends Model
     public function openIncident(): HasOne
     {
         return $this->hasOne(SiteIncident::class)->whereNull('resolved_at');
+    }
+
+    /**
+     * The supervised process that runs Laravel Octane for this site, while
+     * Octane is switched on.
+     *
+     * @return HasOne<Worker, $this>
+     */
+    public function octaneWorker(): HasOne
+    {
+        return $this->hasOne(Worker::class)->where('runs_octane', true);
     }
 
     public function nginxFiles(): HasMany

@@ -150,4 +150,18 @@ return [
 
     'releases_to_keep' => (int) env('RELEASES_TO_KEEP', 5),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Octane Ports
+    |--------------------------------------------------------------------------
+    |
+    | The ports Flitops hands to sites that run on Laravel Octane, one per
+    | site per server. Octane also opens an admin port for each site, which
+    | it works out from the site's port (2119 to 2368 for this range), so
+    | the range is kept to 250 ports to stay clear of other software.
+    |
+    */
+
+    'octane_ports' => ['first' => 8100, 'last' => 8349],
+
 ];

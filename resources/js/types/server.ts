@@ -170,6 +170,7 @@ export interface Worker {
     auto_restart: boolean;
     redirect_stderr: boolean | null;
     restart_on_deploy: boolean;
+    runs_octane: boolean;
     site?: WorkerSite | null;
     created_at: string;
     updated_at: string;

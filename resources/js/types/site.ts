@@ -40,6 +40,8 @@ export interface Site {
     provisioning_steps?: Array<{ value: number; label: string; description: string }>;
     auto_deploy: boolean;
     single_page_app: boolean;
+    octane_server: 'frankenphp' | null;
+    octane_port: number | null;
     server?: Server;
     latest_deployment?: Deployment;
     deployments?: Deployment[];
